@@ -8,11 +8,11 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: 'bg-gradient-to-b from-primary-500 to-primary-700 text-primary-foreground shadow-[0_16px_34px_rgba(14,124,134,0.22),inset_0_1px_0_rgba(255,255,255,0.35),inset_0_-12px_22px_rgba(5,26,36,0.16)] hover:-translate-y-0.5 hover:from-primary-600 hover:to-primary-800',
-        gold: 'bg-gradient-to-b from-accent-500 to-accent-600 text-ink shadow-[0_16px_34px_rgba(217,181,109,0.24),inset_0_1px_0_rgba(255,255,255,0.42)] hover:-translate-y-0.5 hover:to-accent-700',
-        outline: 'border border-primary/18 bg-white text-foreground shadow-[0_12px_28px_rgba(8,37,50,0.07),inset_0_1px_0_rgba(255,255,255,0.9)] hover:-translate-y-0.5 hover:border-primary/35 hover:bg-primary-50 hover:text-primary-800',
+        default: 'bg-primary-900 text-white shadow-[0px_-3px_0px_0px_#080808_inset,0px_1px_0px_0px_rgba(255,255,255,0.30)_inset,0px_2.77px_2.21px_0px_rgba(0,0,0,0.12),0px_6.65px_5.32px_0px_rgba(0,0,0,0.13),0px_12.52px_10.02px_0px_rgba(0,0,0,0.13),0px_22.34px_17.87px_0px_rgba(0,0,0,0.14),0px_41.78px_33.42px_0px_rgba(0,0,0,0.15)] hover:-translate-y-0.5 hover:bg-primary-800',
+        gold: 'bg-accent-500 text-ink shadow-[0px_-3px_0px_0px_rgba(0,0,0,0.06)_inset,0px_1px_0px_0px_rgba(255,255,255,0.60)_inset,0px_3.44px_5.57px_0px_rgba(0,0,0,0.09),0px_22.91px_37.08px_0px_rgba(217,181,109,0.22),0px_14px_34px_0px_rgba(217,181,109,0.18)] hover:-translate-y-0.5 hover:bg-accent-600',
+        outline: 'border border-white/80 bg-[#F4F4F5] text-foreground shadow-[0px_-3px_0px_0px_#E9E9E9_inset,0px_1px_0px_0px_rgba(255,255,255,0.70)_inset,0px_2.77px_2.21px_0px_rgba(0,0,0,0.12),0px_3px_3px_0px_rgba(0,0,0,0.14)] hover:-translate-y-0.5 hover:bg-white hover:text-primary-800',
         ghost: 'text-muted-foreground hover:bg-primary-50 hover:text-primary-800',
-        subtle: 'bg-primary-100 text-primary-800 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] hover:bg-[#CBECEF]'
+        subtle: 'bg-[#F4F4F5] text-primary-800 shadow-[0px_-4px_0px_0px_rgba(0,0,0,0.05)_inset,0px_4px_0px_0px_rgba(255,255,255,0.60)_inset,0px_7.77px_16px_0px_rgba(0,0,0,0.06),0px_3px_3px_0px_rgba(0,0,0,0.10)] hover:bg-white'
       },
       size: {
         default: 'h-11 px-5 py-2',
