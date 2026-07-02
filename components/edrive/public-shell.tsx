@@ -9,6 +9,8 @@ import { publicNavItems } from '@/lib/mock-data';
 import { cn } from '@/lib/utils';
 import { BrandMark } from './brand';
 
+const activeMenuClass = 'border border-white/80 bg-[#F7F7F8] text-primary-900 shadow-[0px_-3px_0px_0px_rgba(0,0,0,0.035)_inset,0px_2px_0px_0px_rgba(255,255,255,0.60)_inset,0px_5px_10px_0px_rgba(0,0,0,0.045),0px_2px_3px_0px_rgba(0,0,0,0.07)]';
+
 export function PublicShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -31,8 +33,8 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
                       key={item.href}
                       href={item.href}
                       className={cn(
-                        'shrink-0 whitespace-nowrap rounded-full px-2.5 py-2 text-[11px] font-semibold leading-none text-muted-foreground transition hover:bg-white hover:text-foreground 2xl:px-3 2xl:text-xs',
-                        active && 'bg-white text-primary-800 shadow-[0px_2px_3px_0px_rgba(0,0,0,0.06),inset_0px_1px_0px_rgba(255,255,255,0.7)]'
+                        'shrink-0 whitespace-nowrap rounded-full border border-transparent px-2.5 py-2 text-[11px] font-semibold leading-none text-muted-foreground transition hover:bg-white hover:text-foreground 2xl:px-3 2xl:text-xs',
+                        active && activeMenuClass
                       )}
                     >
                       {item.label}
@@ -74,7 +76,7 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
                     key={item.href}
                     href={item.href}
                     onClick={() => setOpen(false)}
-                    className={cn('whitespace-nowrap rounded-2xl px-4 py-3 text-sm font-semibold text-muted-foreground transition hover:bg-white hover:text-foreground', active && 'bg-white text-primary-800')}
+                    className={cn('whitespace-nowrap rounded-2xl border border-transparent px-4 py-3 text-sm font-semibold text-muted-foreground transition hover:bg-white hover:text-foreground', active && activeMenuClass)}
                   >
                     {item.label}
                   </Link>
