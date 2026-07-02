@@ -86,6 +86,31 @@ body::selection {
     0px 3px 0px 0px rgba(255, 255, 255, 0.58) inset;
 }
 
+.metric-icon-teal,
+.metric-icon-gold {
+  display: inline-flex;
+  width: 3.75rem;
+  height: 3.75rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  color: #ffffff;
+  box-shadow:
+    0px 8px 18px rgba(8, 37, 50, 0.14),
+    0px -4px 0px rgba(0, 0, 0, 0.12) inset,
+    0px 3px 0px rgba(255, 255, 255, 0.34) inset;
+}
+
+.metric-icon-teal {
+  border: 5px solid rgba(221, 244, 246, 0.95);
+  background: linear-gradient(145deg, #19bfd0, #0e7c86);
+}
+
+.metric-icon-gold {
+  border: 5px solid rgba(246, 232, 196, 0.95);
+  background: linear-gradient(145deg, #e7c87b, #c89b43);
+}
+
 .shine-hover {
   position: relative;
   overflow: hidden;
