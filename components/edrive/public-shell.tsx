@@ -41,6 +41,9 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
               <Phone data-icon aria-hidden="true" />
               +971 50 123 4567
             </a>
+            <Button asChild variant="outline" size="sm">
+              <Link href="/admin">Admin Portal</Link>
+            </Button>
             <Button asChild size="sm">
               <Link href="/booking">
                 <CalendarCheck data-icon aria-hidden="true" />
@@ -62,6 +65,9 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
                   {item.label}
                 </Link>
               ))}
+              <Link href="/admin" onClick={() => setOpen(false)} className="rounded-md px-3 py-3 text-sm font-semibold text-primary transition hover:bg-primary-50">
+                Admin Portal
+              </Link>
               <Button asChild className="mt-3">
                 <Link href="/booking" onClick={() => setOpen(false)}>
                   <CalendarCheck data-icon aria-hidden="true" />
