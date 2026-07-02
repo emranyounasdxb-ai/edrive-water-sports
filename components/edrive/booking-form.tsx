@@ -33,7 +33,7 @@ export function BookingForm() {
             <span className="flex size-14 items-center justify-center rounded-full bg-white text-primary shadow-glass"><CheckCircle2 className="size-7" aria-hidden="true" /></span>
             <h3 className="font-heading text-2xl font-semibold text-foreground">Your request is ready</h3>
             <p className="max-w-md text-sm leading-7 text-muted-foreground">Thank you. This preview shows the confirmation experience guests will see after sending their booking details.</p>
-            <div className="flex flex-col gap-3 sm:flex-row"><Button variant="outline" onClick={() => setSubmitted(false)}>Start another request</Button><Button asChild><a href={whatsappUrl}><MessageCircle data-icon aria-hidden="true" />Continue on WhatsApp</a></Button></div>
+            <div className="flex flex-col gap-3 sm:flex-row"><Button variant="outline" onClick={() => setSubmitted(false)}>Start another request</Button><Button asChild><a href={whatsappUrl} target="_blank" rel="noopener noreferrer"><MessageCircle data-icon aria-hidden="true" />Continue on WhatsApp</a></Button></div>
           </div>
         ) : (
           <form className="flex flex-col gap-6" onSubmit={(event) => { event.preventDefault(); setSubmitted(true); }}>
