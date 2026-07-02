@@ -48,6 +48,14 @@ body::selection {
   box-shadow: 0 24px 60px rgba(8, 37, 50, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.9), inset 0 -18px 34px rgba(8, 37, 50, 0.025);
 }
 
+.premium-dark {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background:
+    radial-gradient(circle at 12% 18%, rgba(14, 124, 134, 0.42), transparent 22rem),
+    linear-gradient(145deg, #082532, #061923);
+  box-shadow: 0 34px 90px rgba(8, 37, 50, 0.20), inset 0 1px 0 rgba(255,255,255,0.14), inset 0 -24px 44px rgba(0,0,0,0.18);
+}
+
 .premium-card-hover {
   transition: transform 240ms ease, box-shadow 240ms ease, border-color 240ms ease;
 }
