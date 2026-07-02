@@ -15,57 +15,70 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen overflow-hidden bg-background">
-      <header className="sticky top-0 z-50 border-b border-border bg-white/95 backdrop-blur-xl">
-        <nav className="container-x flex h-[76px] items-center justify-between gap-4">
-          <Link href="/" aria-label="eDrive Water Sports home" className="shrink-0">
-            <BrandMark />
-          </Link>
+      <header className="sticky top-0 z-[70] bg-background/78 py-3 backdrop-blur-xl">
+        <nav className="container-x">
+          <div className="premium-surface flex h-[72px] items-center justify-between gap-4 rounded-full px-4 sm:px-5">
+            <Link href="/" aria-label="eDrive Water Sports home" className="shrink-0">
+              <BrandMark />
+            </Link>
 
-          <div className="hidden items-center gap-1 xl:flex">
-            {publicNavItems.map((item) => {
-              const active = pathname === item.href;
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={cn('rounded-md px-3 py-2 text-xs font-semibold text-muted-foreground transition hover:bg-primary-50 hover:text-foreground', active && 'bg-primary-50 text-primary-800')}
-                >
-                  {item.label}
+            <div className="hidden items-center gap-1 rounded-full bg-white/45 p-1 xl:flex">
+              {publicNavItems.map((item) => {
+                const active = pathname === item.href;
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={cn(
+                      'rounded-full px-3 py-2 text-xs font-semibold text-muted-foreground transition hover:bg-white hover:text-foreground',
+                      active && 'bg-white text-primary-800 shadow-[0px_2px_3px_0px_rgba(0,0,0,0.06),inset_0px_1px_0px_rgba(255,255,255,0.7)]'
+                    )}
+                  >
+                    {item.label}
+                  </Link>
+                );
+              })}
+            </div>
+
+            <div className="hidden items-center gap-3 md:flex">
+              <a href="tel:+971501234567" className="inline-flex items-center gap-2 rounded-full bg-white/50 px-3 py-2 text-xs font-semibold text-muted-foreground transition hover:bg-white hover:text-primary">
+                <Phone data-icon aria-hidden="true" />
+                +971 50 123 4567
+              </a>
+              <Button asChild variant="outline" size="sm">
+                <Link href="/admin">Admin Portal</Link>
+              </Button>
+              <Button asChild size="sm">
+                <Link href="/booking">
+                  <CalendarCheck data-icon aria-hidden="true" />
+                  Book Now
                 </Link>
-              );
-            })}
-          </div>
+              </Button>
+            </div>
 
-          <div className="hidden items-center gap-4 md:flex">
-            <a href="tel:+971501234567" className="inline-flex items-center gap-2 text-xs font-semibold text-muted-foreground transition hover:text-primary">
-              <Phone data-icon aria-hidden="true" />
-              +971 50 123 4567
-            </a>
-            <Button asChild variant="outline" size="sm">
-              <Link href="/admin">Admin Portal</Link>
-            </Button>
-            <Button asChild size="sm">
-              <Link href="/booking">
-                <CalendarCheck data-icon aria-hidden="true" />
-                Book Now
-              </Link>
+            <Button variant="outline" size="icon" className="xl:hidden" onClick={() => setOpen((value) => !value)} aria-label="Toggle navigation">
+              {open ? <X data-icon aria-hidden="true" /> : <Menu data-icon aria-hidden="true" />}
             </Button>
           </div>
-
-          <Button variant="outline" size="icon" className="xl:hidden" onClick={() => setOpen((value) => !value)} aria-label="Toggle navigation">
-            {open ? <X data-icon aria-hidden="true" /> : <Menu data-icon aria-hidden="true" />}
-          </Button>
         </nav>
 
         {open ? (
-          <div className="border-t border-border bg-white px-4 py-4 shadow-premium xl:hidden">
-            <div className="mx-auto flex max-w-7xl flex-col gap-1">
-              {publicNavItems.map((item) => (
-                <Link key={item.href} href={item.href} onClick={() => setOpen(false)} className="rounded-md px-3 py-3 text-sm font-semibold text-muted-foreground transition hover:bg-primary-50 hover:text-foreground">
-                  {item.label}
-                </Link>
-              ))}
-              <Link href="/admin" onClick={() => setOpen(false)} className="rounded-md px-3 py-3 text-sm font-semibold text-primary transition hover:bg-primary-50">
+          <div className="container-x pt-3 xl:hidden">
+            <div className="premium-surface flex flex-col gap-1 rounded-[2rem] p-3">
+              {publicNavItems.map((item) => {
+                const active = pathname === item.href;
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setOpen(false)}
+                    className={cn('rounded-2xl px-4 py-3 text-sm font-semibold text-muted-foreground transition hover:bg-white hover:text-foreground', active && 'bg-white text-primary-800')}
+                  >
+                    {item.label}
+                  </Link>
+                );
+              })}
+              <Link href="/admin" onClick={() => setOpen(false)} className="rounded-2xl px-4 py-3 text-sm font-semibold text-primary transition hover:bg-white">
                 Admin Portal
               </Link>
               <Button asChild className="mt-3">
