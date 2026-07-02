@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { companyInfo, whatsappUrl } from '@/lib/company-info';
 import { vehicles } from '@/lib/mock-data';
 import { cn } from '@/lib/utils';
 
@@ -32,7 +33,7 @@ export function BookingForm() {
             <span className="flex size-14 items-center justify-center rounded-full bg-white text-primary shadow-glass"><CheckCircle2 className="size-7" aria-hidden="true" /></span>
             <h3 className="font-heading text-2xl font-semibold text-foreground">Your request is ready</h3>
             <p className="max-w-md text-sm leading-7 text-muted-foreground">Thank you. This preview shows the confirmation experience guests will see after sending their booking details.</p>
-            <div className="flex flex-col gap-3 sm:flex-row"><Button variant="outline" onClick={() => setSubmitted(false)}>Start another request</Button><Button asChild><a href="https://wa.me/971501234567"><MessageCircle data-icon aria-hidden="true" />Continue on WhatsApp</a></Button></div>
+            <div className="flex flex-col gap-3 sm:flex-row"><Button variant="outline" onClick={() => setSubmitted(false)}>Start another request</Button><Button asChild><a href={whatsappUrl}><MessageCircle data-icon aria-hidden="true" />Continue on WhatsApp</a></Button></div>
           </div>
         ) : (
           <form className="flex flex-col gap-6" onSubmit={(event) => { event.preventDefault(); setSubmitted(true); }}>
@@ -50,7 +51,7 @@ export function BookingForm() {
 
             <div className="grid gap-4 md:grid-cols-2">
               <label className="grid gap-2 text-sm font-semibold text-foreground">Full name<Input required placeholder="Your name" /></label>
-              <label className="grid gap-2 text-sm font-semibold text-foreground">Phone or WhatsApp<Input required placeholder="+971 50 000 0000" /></label>
+              <label className="grid gap-2 text-sm font-semibold text-foreground">Phone or WhatsApp<Input required placeholder={companyInfo.whatsappDisplay} /></label>
             </div>
             <div className="grid gap-4 md:grid-cols-3">
               <label className="grid gap-2 text-sm font-semibold text-foreground">Date<Input required type="date" defaultValue="2026-07-04" /></label>
@@ -59,7 +60,7 @@ export function BookingForm() {
             </div>
             <div className="grid gap-4 md:grid-cols-2">
               <label className="grid gap-2 text-sm font-semibold text-foreground">Number of guests<Input required type="number" min="1" max="6" defaultValue="2" /></label>
-              <label className="grid gap-2 text-sm font-semibold text-foreground">Preferred location<select className={fieldClass} defaultValue="Dubai Marina"><option>Dubai Marina</option><option>JBR</option><option>Bluewaters</option></select></label>
+              <label className="grid gap-2 text-sm font-semibold text-foreground">Preferred location<select className={fieldClass} defaultValue={companyInfo.locationName}><option>{companyInfo.locationName}</option><option>JBR</option><option>Bluewaters</option></select></label>
             </div>
             <label className="grid gap-2 text-sm font-semibold text-foreground">Notes<Textarea placeholder="Celebration details, rider experience, or anything else we should know" /></label>
             <label className="flex items-start gap-3 rounded-md border border-border bg-[#F7FBFC] p-4 text-sm text-muted-foreground"><input type="checkbox" defaultChecked className="mt-0.5 size-4 accent-[#0E7C86]" /><span><span className="block font-semibold text-foreground">Send updates by WhatsApp</span><span className="mt-1 block text-xs leading-5">Receive availability and meeting-point details on the number above.</span></span></label>
