@@ -40,11 +40,11 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
                       href={item.href}
                       aria-current={active ? 'page' : undefined}
                       className={cn(
-                        'inline-flex h-7 shrink-0 items-center whitespace-nowrap rounded-full border border-transparent px-2.5 text-[11px] font-semibold leading-none text-muted-foreground transition hover:bg-white hover:text-foreground 2xl:px-3 2xl:text-xs',
+                        'inline-flex h-7 shrink-0 items-center justify-center whitespace-nowrap rounded-full border border-transparent px-2.5 text-[11px] font-semibold leading-none text-muted-foreground transition hover:bg-white hover:text-foreground 2xl:px-3 2xl:text-xs',
                         active && activeMenuClass
                       )}
                     >
-                      {item.label}
+                      <span className="relative -top-px block leading-none">{item.label}</span>
                     </Link>
                   );
                 })}
@@ -84,14 +84,14 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
                     href={item.href}
                     onClick={() => setOpen(false)}
                     aria-current={active ? 'page' : undefined}
-                    className={cn('inline-flex h-10 items-center whitespace-nowrap rounded-2xl border border-transparent px-4 text-sm font-semibold text-muted-foreground transition hover:bg-white hover:text-foreground', active && activeMenuClass)}
+                    className={cn('inline-flex h-10 items-center justify-center whitespace-nowrap rounded-2xl border border-transparent px-4 text-sm font-semibold text-muted-foreground transition hover:bg-white hover:text-foreground', active && activeMenuClass)}
                   >
-                    {item.label}
+                    <span className="relative -top-px block leading-none">{item.label}</span>
                   </Link>
                 );
               })}
-              <Link href="/admin" onClick={() => setOpen(false)} className="inline-flex h-10 items-center whitespace-nowrap rounded-2xl px-4 text-sm font-semibold text-primary transition hover:bg-white">
-                Admin Portal
+              <Link href="/admin" onClick={() => setOpen(false)} className="inline-flex h-10 items-center justify-center whitespace-nowrap rounded-2xl px-4 text-sm font-semibold text-primary transition hover:bg-white">
+                <span className="relative -top-px block leading-none">Admin Portal</span>
               </Link>
               <Button asChild className="mt-3">
                 <Link href="/booking" onClick={() => setOpen(false)}>
