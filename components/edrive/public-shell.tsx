@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 import { ArrowRight, CalendarCheck, Instagram, Mail, MapPin, Menu, Phone, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { companyInfo } from '@/lib/company-info';
 import { publicNavItems } from '@/lib/mock-data';
 import { cn } from '@/lib/utils';
 import { BrandMark } from './brand';
@@ -52,9 +53,9 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
             </div>
 
             <div className="hidden shrink-0 items-center gap-2 md:flex 2xl:gap-3">
-              <a href="tel:+971501234567" className="hidden items-center gap-2 whitespace-nowrap rounded-full bg-white/50 px-3 py-2 text-xs font-semibold leading-none text-muted-foreground transition hover:bg-white hover:text-primary 2xl:inline-flex">
+              <a href={`tel:${companyInfo.landlineHref}`} className="hidden items-center gap-2 whitespace-nowrap rounded-full bg-white/50 px-3 py-2 text-xs font-semibold leading-none text-muted-foreground transition hover:bg-white hover:text-primary 2xl:inline-flex">
                 <Phone data-icon aria-hidden="true" />
-                +971 50 123 4567
+                {companyInfo.landlineDisplay}
               </a>
               <Button asChild variant="outline" size="sm" className="whitespace-nowrap">
                 <Link href="/admin">Admin Portal</Link>
@@ -117,7 +118,7 @@ function PublicFooter() {
         <div className="flex flex-col gap-5">
           <BrandMark />
           <p className="max-w-sm text-sm leading-7 text-muted-foreground">
-            Private jet ski and jet car experiences from Dubai Marina, prepared with a premium fleet and attentive local support.
+            Private jet ski and jet car experiences from {companyInfo.locationName}, prepared with a premium fleet and attentive local support.
           </p>
           <a href="https://instagram.com" className="flex size-10 items-center justify-center rounded-md border border-border text-primary transition hover:bg-primary-50" aria-label="Instagram">
             <Instagram data-icon aria-hidden="true" />
@@ -138,9 +139,9 @@ function PublicFooter() {
         </div>
         <div className="flex flex-col gap-4">
           <h3 className="text-sm font-semibold text-foreground">Contact</h3>
-          <a href="tel:+971501234567" className="flex items-center gap-3 text-sm text-muted-foreground transition hover:text-primary"><Phone data-icon aria-hidden="true" />+971 50 123 4567</a>
-          <a href="mailto:bookings@edrivewatersports.ae" className="flex items-center gap-3 text-sm text-muted-foreground transition hover:text-primary"><Mail data-icon aria-hidden="true" />bookings@edrivewatersports.ae</a>
-          <p className="flex items-center gap-3 text-sm text-muted-foreground"><MapPin data-icon aria-hidden="true" />Dubai Marina Walk, UAE</p>
+          <a href={`tel:${companyInfo.landlineHref}`} className="flex items-center gap-3 text-sm text-muted-foreground transition hover:text-primary"><Phone data-icon aria-hidden="true" />{companyInfo.landlineDisplay}</a>
+          <a href={`mailto:${companyInfo.bookingEmail}`} className="flex items-center gap-3 text-sm text-muted-foreground transition hover:text-primary"><Mail data-icon aria-hidden="true" />{companyInfo.bookingEmail}</a>
+          <p className="flex items-center gap-3 text-sm text-muted-foreground"><MapPin data-icon aria-hidden="true" />{companyInfo.locationName}</p>
         </div>
       </div>
       <div className="waterline border-t border-border py-5">
