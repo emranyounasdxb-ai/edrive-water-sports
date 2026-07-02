@@ -3,11 +3,11 @@
 @tailwind utilities;
 
 :root {
-  --background: #edecec;
+  --background: #f1f1f1;
   --foreground: #082532;
   --muted: #5c6f78;
   --surface: #ffffff;
-  --surface-soft: #f4f4f5;
+  --surface-soft: #f7f7f8;
   --line: rgba(8, 37, 50, 0.1);
   --aqua: #0e7c86;
   --aqua-soft: #ddf4f6;
@@ -25,7 +25,7 @@ html {
 body {
   min-height: 100vh;
   color: var(--foreground);
-  background: #edecec;
+  background: #f1f1f1;
   font-family: Inter, ui-sans-serif, system-ui, sans-serif;
   letter-spacing: 0;
 }
@@ -44,30 +44,30 @@ body::selection {
 .bg-white\/70,
 .bg-white\/75,
 .bg-white\/80 {
-  background-color: #edecec !important;
+  background-color: #f1f1f1 !important;
 }
 
 .premium-surface {
-  border: 1px solid rgba(255, 255, 255, 0.78);
-  background: #f4f4f5;
+  border: 1px solid rgba(255, 255, 255, 0.82);
+  background: #f7f7f8;
   box-shadow:
-    0px 7.77px 16px 0px rgba(0, 0, 0, 0.0588235294),
-    0px 3px 3px 0px rgba(0, 0, 0, 0.1019607843),
-    0px -8px 0px 0px rgba(0, 0, 0, 0.0509803922) inset,
-    0px 4px 0px 0px rgba(255, 255, 255, 0.6) inset;
+    0px 6px 12px 0px rgba(0, 0, 0, 0.038),
+    0px 2px 3px 0px rgba(0, 0, 0, 0.065),
+    0px -5px 0px 0px rgba(0, 0, 0, 0.032) inset,
+    0px 3px 0px 0px rgba(255, 255, 255, 0.58) inset;
 }
 
 .premium-surface.bg-primary-900,
 .premium-dark {
   border: 1px solid rgba(255, 255, 255, 0.10);
   background:
-    radial-gradient(circle at 12% 18%, rgba(14, 124, 134, 0.34), transparent 22rem),
+    radial-gradient(circle at 12% 18%, rgba(14, 124, 134, 0.30), transparent 22rem),
     linear-gradient(145deg, #09090b, #111111);
   box-shadow:
-    0px 7.77px 2.21px 0px rgba(0, 0, 0, 0.0588235294),
-    0px 3px 3px 0px rgba(0, 0, 0, 0.1019607843),
-    0px -8px 0px 0px #2e2e2e inset,
-    0px 4px 0px 0px rgba(255, 255, 255, 0.3019607843) inset;
+    0px 6px 12px 0px rgba(0, 0, 0, 0.10),
+    0px 2px 3px 0px rgba(0, 0, 0, 0.14),
+    0px -5px 0px 0px #252525 inset,
+    0px 3px 0px 0px rgba(255, 255, 255, 0.22) inset;
 }
 
 .premium-card-hover {
@@ -75,16 +75,15 @@ body::selection {
 }
 
 .premium-card-hover:hover {
-  transform: translateY(-5px);
+  transform: translateY(-3px);
   border-color: rgba(255, 255, 255, 0.9);
   box-shadow:
-    0px 2.77px 2.21px 0px rgba(0, 0, 0, 0.1215686275),
-    0px 6.65px 5.32px 0px rgba(0, 0, 0, 0.1294117647),
-    0px 12.52px 10.02px 0px rgba(0, 0, 0, 0.1333333333),
-    0px 22.34px 17.87px 0px rgba(0, 0, 0, 0.1411764706),
-    0px 41.78px 33.42px 0px rgba(0, 0, 0, 0.1490196078),
-    0px -8px 0px 0px rgba(0, 0, 0, 0.0509803922) inset,
-    0px 4px 0px 0px rgba(255, 255, 255, 0.6) inset;
+    0px 2px 2px 0px rgba(0, 0, 0, 0.065),
+    0px 5px 6px 0px rgba(0, 0, 0, 0.075),
+    0px 12px 14px 0px rgba(0, 0, 0, 0.085),
+    0px 22px 24px 0px rgba(0, 0, 0, 0.09),
+    0px -5px 0px 0px rgba(0, 0, 0, 0.032) inset,
+    0px 3px 0px 0px rgba(255, 255, 255, 0.58) inset;
 }
 
 .shine-hover {
@@ -97,7 +96,7 @@ body::selection {
   inset: 0;
   content: "";
   pointer-events: none;
-  background: linear-gradient(115deg, transparent 0%, transparent 38%, rgba(255,255,255,0.62) 50%, transparent 62%, transparent 100%);
+  background: linear-gradient(115deg, transparent 0%, transparent 40%, rgba(255,255,255,0.48) 50%, transparent 60%, transparent 100%);
   transform: translateX(-120%);
   transition: transform 700ms ease;
 }
@@ -112,8 +111,8 @@ body::selection {
   gap: 0.55rem;
   width: fit-content;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.72);
-  background: #f4f4f5;
+  border: 1px solid rgba(255, 255, 255, 0.76);
+  background: #f7f7f8;
   padding: 0.45rem 0.8rem;
   color: #0e7c86;
   font-size: 0.68rem;
@@ -121,10 +120,10 @@ body::selection {
   letter-spacing: 0.16em;
   text-transform: uppercase;
   box-shadow:
-    0px 7.77px 16px 0px rgba(0, 0, 0, 0.0588235294),
-    0px 3px 3px 0px rgba(0, 0, 0, 0.1019607843),
-    0px -4px 0px 0px rgba(0, 0, 0, 0.0509803922) inset,
-    0px 2px 0px 0px rgba(255, 255, 255, 0.6) inset;
+    0px 5px 10px 0px rgba(0, 0, 0, 0.038),
+    0px 2px 3px 0px rgba(0, 0, 0, 0.06),
+    0px -3px 0px 0px rgba(0, 0, 0, 0.03) inset,
+    0px 2px 0px 0px rgba(255, 255, 255, 0.56) inset;
 }
 
 .soft-label::before {
@@ -138,13 +137,13 @@ body::selection {
 
 .glass-panel,
 .glass-panel-strong {
-  border: 1px solid rgba(255, 255, 255, 0.78);
-  background: #f4f4f5;
+  border: 1px solid rgba(255, 255, 255, 0.82);
+  background: #f7f7f8;
   box-shadow:
-    0px 7.77px 16px 0px rgba(0, 0, 0, 0.0588235294),
-    0px 3px 3px 0px rgba(0, 0, 0, 0.1019607843),
-    0px -8px 0px 0px rgba(0, 0, 0, 0.0509803922) inset,
-    0px 4px 0px 0px rgba(255, 255, 255, 0.6) inset;
+    0px 6px 12px 0px rgba(0, 0, 0, 0.038),
+    0px 2px 3px 0px rgba(0, 0, 0, 0.065),
+    0px -5px 0px 0px rgba(0, 0, 0, 0.032) inset,
+    0px 3px 0px 0px rgba(255, 255, 255, 0.58) inset;
 }
 
 .heading-luxury {
@@ -178,7 +177,7 @@ body::selection {
 }
 
 .soft-grid {
-  background-image: linear-gradient(rgba(14, 124, 134, 0.045) 1px, transparent 1px), linear-gradient(90deg, rgba(14, 124, 134, 0.045) 1px, transparent 1px);
+  background-image: linear-gradient(rgba(14, 124, 134, 0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(14, 124, 134, 0.04) 1px, transparent 1px);
   background-size: 40px 40px;
 }
 
