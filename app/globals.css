@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 :root {
-  --background: #f7fbfc;
+  --background: #f4f7f8;
   --foreground: #082532;
   --muted: #5c6f78;
   --surface: #ffffff;
@@ -25,7 +25,10 @@ html {
 body {
   min-height: 100vh;
   color: var(--foreground);
-  background: var(--background);
+  background:
+    radial-gradient(circle at 12% 8%, rgba(14, 124, 134, 0.08), transparent 26rem),
+    radial-gradient(circle at 88% 4%, rgba(217, 181, 109, 0.12), transparent 24rem),
+    linear-gradient(180deg, #f7fbfc 0%, #eef4f5 50%, #f7fbfc 100%);
   font-family: Inter, ui-sans-serif, system-ui, sans-serif;
   letter-spacing: 0;
 }
@@ -37,6 +40,67 @@ body::selection {
 
 .container-x {
   @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
+}
+
+.premium-surface {
+  border: 1px solid rgba(8, 37, 50, 0.08);
+  background: linear-gradient(145deg, rgba(255,255,255,0.98), rgba(250,253,253,0.92));
+  box-shadow: 0 24px 60px rgba(8, 37, 50, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.9), inset 0 -18px 34px rgba(8, 37, 50, 0.025);
+}
+
+.premium-card-hover {
+  transition: transform 240ms ease, box-shadow 240ms ease, border-color 240ms ease;
+}
+
+.premium-card-hover:hover {
+  transform: translateY(-4px);
+  border-color: rgba(14, 124, 134, 0.26);
+  box-shadow: 0 34px 82px rgba(8, 37, 50, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.95), inset 0 -18px 34px rgba(8, 37, 50, 0.03);
+}
+
+.shine-hover {
+  position: relative;
+  overflow: hidden;
+}
+
+.shine-hover::after {
+  position: absolute;
+  inset: 0;
+  content: "";
+  pointer-events: none;
+  background: linear-gradient(115deg, transparent 0%, transparent 38%, rgba(255,255,255,0.55) 50%, transparent 62%, transparent 100%);
+  transform: translateX(-120%);
+  transition: transform 700ms ease;
+}
+
+.shine-hover:hover::after {
+  transform: translateX(120%);
+}
+
+.soft-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  width: fit-content;
+  border-radius: 999px;
+  border: 1px solid rgba(217, 181, 109, 0.28);
+  background: linear-gradient(145deg, #fffaf0, #f4fbfc);
+  padding: 0.45rem 0.8rem;
+  color: #0e7c86;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  box-shadow: 0 12px 28px rgba(8, 37, 50, 0.06), inset 0 1px 0 rgba(255,255,255,0.95);
+}
+
+.soft-label::before {
+  width: 0.42rem;
+  height: 0.42rem;
+  border-radius: 999px;
+  content: "";
+  background: var(--gold);
+  box-shadow: 0 0 0 4px rgba(217, 181, 109, 0.18);
 }
 
 .glass-panel,
