@@ -1,11 +1,12 @@
 import { supabase } from '@/lib/supabase/client';
 import type { BookingFormValues } from '@/features/booking/schemas/booking.schema';
 import { combineDubaiDateTime } from '@/features/booking/utils/date';
+import type { BookingStatus } from '@/lib/supabase/types';
 
 export type PublicBookingResult = {
   booking_id: string;
   booking_number: string;
-  status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
+  status: BookingStatus;
   gross_amount_aed: number;
   discount_amount_aed: number;
   net_amount_aed: number;

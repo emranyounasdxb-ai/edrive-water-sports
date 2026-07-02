@@ -12,7 +12,8 @@ const buttonVariants = cva(
         gold: 'bg-accent-500 text-ink shadow-[0px_-2px_0px_0px_rgba(0,0,0,0.045)_inset,0px_1px_0px_0px_rgba(255,255,255,0.52)_inset,0px_3px_5px_0px_rgba(0,0,0,0.055),0px_14px_22px_0px_rgba(217,181,109,0.16)] hover:-translate-y-0.5 hover:bg-accent-600',
         outline: 'border border-white/80 bg-[#F7F7F8] text-foreground shadow-[0px_-2px_0px_0px_#EEEEEE_inset,0px_1px_0px_0px_rgba(255,255,255,0.62)_inset,0px_2px_2px_0px_rgba(0,0,0,0.055),0px_3px_3px_0px_rgba(0,0,0,0.07)] hover:-translate-y-0.5 hover:bg-white hover:text-primary-800',
         ghost: 'text-muted-foreground hover:bg-primary-50 hover:text-primary-800',
-        subtle: 'bg-[#F7F7F8] text-primary-800 shadow-[0px_-3px_0px_0px_rgba(0,0,0,0.035)_inset,0px_2px_0px_0px_rgba(255,255,255,0.55)_inset,0px_5px_10px_0px_rgba(0,0,0,0.04),0px_2px_3px_0px_rgba(0,0,0,0.06)] hover:bg-white'
+        subtle: 'bg-[#F7F7F8] text-primary-800 shadow-[0px_-3px_0px_0px_rgba(0,0,0,0.035)_inset,0px_2px_0px_0px_rgba(255,255,255,0.55)_inset,0px_5px_10px_0px_rgba(0,0,0,0.04),0px_2px_3px_0px_rgba(0,0,0,0.06)] hover:bg-white',
+        danger: 'bg-destructive text-destructive-foreground shadow-sm hover:bg-red-700'
       },
       size: {
         default: 'h-11 px-5 py-2',

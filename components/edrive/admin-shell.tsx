@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { BadgePercent, BarChart3, Bell, CalendarDays, ChevronDown, Home, LayoutDashboard, Menu, MessageSquare, Package, Search, Settings, Ship, Star, Sun, User, UserCog, Users, WalletCards, X } from 'lucide-react';
+import { BadgePercent, BarChart3, Bell, CalendarDays, ChevronDown, ClipboardCheck, CreditCard, Home, LayoutDashboard, Menu, MessageSquare, Package, Search, Settings, Ship, Sun, User, UserCog, UsersRound, X } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,14 +10,9 @@ import { companyInfo } from '@/lib/company-info';
 import { adminNavItems } from '@/lib/mock-data';
 import { cn } from '@/lib/utils';
 import { BrandMark } from './brand';
+import { OperationsProvider } from './admin/operations-store';
 
-const iconMap = { LayoutDashboard, CalendarDays, Ship, Package, BadgePercent, BarChart3, UserCog };
-const extraNavItems = [
-  { href: '/admin/customers', label: 'Customers', icon: Users },
-  { href: '/admin/payments', label: 'Payments', icon: WalletCards },
-  { href: '/admin/reviews', label: 'Reviews', icon: Star },
-  { href: '/admin/system-settings', label: 'Settings', icon: Settings }
-];
+const iconMap = { LayoutDashboard, CalendarDays, ClipboardCheck, CreditCard, Ship, Package, BadgePercent, BarChart3, UserCog, UsersRound, MessageSquare, Settings };
 
 function normalizePath(pathname: string) {
   if (!pathname || pathname === '/') return '/';
@@ -30,6 +25,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
 
   return (
+    <OperationsProvider>
     <div className="min-h-screen bg-[#F4F7F8] text-foreground">
       <div className="flex min-h-screen">
         <aside className="hidden w-[17rem] shrink-0 border-r border-border/70 bg-white/88 p-4 backdrop-blur-xl lg:block">
@@ -94,6 +90,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         </div>
       </div>
     </div>
+    </OperationsProvider>
   );
 }
 
@@ -107,15 +104,10 @@ function IconButtonWithBadge({ icon: Icon, count }: { icon: typeof Bell; count: 
 }
 
 function AdminNav({ currentPath, onNavigate }: { currentPath: string; onNavigate?: () => void }) {
-  const items = [
-    ...adminNavItems,
-    ...extraNavItems
-  ];
-
   return (
     <nav className="flex flex-col gap-1.5">
-      {items.map((item) => {
-        const Icon = 'icon' in item && typeof item.icon === 'string' ? iconMap[item.icon as keyof typeof iconMap] : item.icon;
+      {adminNavItems.map((item) => {
+        const Icon = iconMap[item.icon as keyof typeof iconMap];
         const active = currentPath === normalizePath(item.href);
         return (
           <Link

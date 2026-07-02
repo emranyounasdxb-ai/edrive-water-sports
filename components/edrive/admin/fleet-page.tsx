@@ -1,0 +1,15 @@
+'use client';
+
+import { AlertTriangle, Anchor, CheckCircle2, Wrench } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { formatAed } from './operations-data';
+import { useOperations } from './operations-store';
+import { PageHeader, SummaryTile } from './shared';
+
+export function AdminFleetPage() {
+  const { bookings, vehicles } = useOperations();
+  const count = (statuses: string[]) => vehicles.filter((vehicle) => statuses.includes(vehicle.status)).length;
+  return <div className="flex flex-col gap-6"><PageHeader title="Fleet & vehicles" description="Live assignment, ride, maintenance, damage, and earnings status from operational bookings." /><div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4"><SummaryTile label="Available" value={`${count(['Available'])}`} detail="Ready to assign" icon={CheckCircle2} /><SummaryTile label="Assigned / In Ride" value={`${count(['Assigned', 'In Ride'])}`} detail="Active operations" icon={Anchor} /><SummaryTile label="Maintenance" value={`${count(['Maintenance'])}`} detail="Scheduled service" icon={Wrench} tone="gold" /><SummaryTile label="Damaged" value={`${count(['Damaged'])}`} detail="Needs inspection" icon={AlertTriangle} tone="red" /></div><div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{vehicles.map((vehicle) => { const earnings = bookings.filter((booking) => booking.assignedVehicleId === vehicle.id).reduce((sum, booking) => sum + booking.amountReceived, 0); const assigned = bookings.find((booking) => booking.assignedVehicleId === vehicle.id && ['Confirmed', 'Ready', 'In Progress'].includes(booking.bookingStatus)); return <Card key={vehicle.id}><CardHeader><div className="flex items-start justify-between gap-3"><div><CardTitle>{vehicle.name}</CardTitle><CardDescription>{vehicle.type} · {vehicle.registrationNumber}</CardDescription></div><span className="rounded-md border border-border bg-muted/60 px-2.5 py-1 text-xs font-semibold text-foreground">{vehicle.status}</span></div></CardHeader><CardContent className="flex flex-col gap-4"><div className="grid grid-cols-3 gap-2 text-center"><Metric label="Rate" value={formatAed(vehicle.hourlyRate)} /><Metric label="Capacity" value={`${vehicle.capacity}`} /><Metric label="Earnings" value={formatAed(earnings)} /></div><div className="rounded-xl bg-muted/50 p-3 text-sm"><p className="font-medium text-foreground">{assigned ? `Assigned to ${assigned.bookingCode}` : 'No active assignment'}</p><p className="mt-1 text-xs text-muted-foreground">{vehicle.notes}</p></div><p className="text-xs text-muted-foreground">Next maintenance: {vehicle.nextMaintenanceDate}</p></CardContent></Card>; })}</div></div>;
+}
+
+function Metric({ label, value }: { label: string; value: string }) { return <div className="rounded-xl border border-border bg-white p-2"><p className="truncate text-sm font-semibold text-foreground">{value}</p><p className="mt-1 text-[10px] uppercase tracking-wider text-muted-foreground">{label}</p></div>; }

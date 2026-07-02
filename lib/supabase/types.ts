@@ -3,7 +3,7 @@ export type Json = string | number | boolean | null | { [key: string]: Json | un
 export type VehicleType = Database['public']['Enums']['vehicle_type'];
 export type BookingStatus = Database['public']['Enums']['booking_status'];
 export type DiscountType = Database['public']['Enums']['discount_type'];
-export type StaffRole = 'admin' | 'manager' | 'booking_agent';
+export type StaffRole = 'super_admin' | 'admin' | 'booking_manager' | 'finance' | 'captain' | 'driver' | 'manager' | 'booking_agent';
 
 type Relationship = {
   foreignKeyName: string;
@@ -93,6 +93,11 @@ export type Database = {
           updated_by: string | null;
           created_at: string;
           updated_at: string;
+          operations_status: Database['public']['Enums']['fleet_status'];
+          registration_number: string | null;
+          last_maintenance_date: string | null;
+          next_maintenance_date: string | null;
+          notes: string | null;
         };
         Insert: {
           id?: string;
@@ -113,6 +118,11 @@ export type Database = {
           updated_by?: string | null;
           created_at?: string;
           updated_at?: string;
+          operations_status?: Database['public']['Enums']['fleet_status'];
+          registration_number?: string | null;
+          last_maintenance_date?: string | null;
+          next_maintenance_date?: string | null;
+          notes?: string | null;
         };
         Update: {
           id?: string;
@@ -133,6 +143,11 @@ export type Database = {
           updated_by?: string | null;
           created_at?: string;
           updated_at?: string;
+          operations_status?: Database['public']['Enums']['fleet_status'];
+          registration_number?: string | null;
+          last_maintenance_date?: string | null;
+          next_maintenance_date?: string | null;
+          notes?: string | null;
         };
         Relationships: Relationship[];
       };
@@ -260,6 +275,35 @@ export type Database = {
           updated_by: string | null;
           created_at: string;
           updated_at: string;
+          admin_status: BookingStatus;
+          manager_status: BookingStatus | null;
+          assigned_manager_id: string | null;
+          assigned_vehicle_name: string | null;
+          service_type: string | null;
+          vehicle_type: string | null;
+          guest_count: number;
+          meeting_location: string | null;
+          captain_name: string | null;
+          driver_required: boolean;
+          driver_name: string | null;
+          ride_start_time: string | null;
+          ride_end_time: string | null;
+          extra_time_minutes: number;
+          customer_arrived: boolean;
+          damage_reported: boolean;
+          damage_note: string | null;
+          manager_note: string | null;
+          internal_note: string | null;
+          customer_note: string | null;
+          amount_received_aed: number;
+          amount_pending_aed: number;
+          payment_workflow_status: Database['public']['Enums']['payment_workflow_status'];
+          payment_method: string | null;
+          payment_received_by: string | null;
+          payment_collected_by: string | null;
+          collection_status: Database['public']['Enums']['collection_status'];
+          payment_notes: string | null;
+          source: 'website' | 'admin' | 'walk_in';
         };
         Insert: {
           id?: string;
@@ -280,6 +324,35 @@ export type Database = {
           updated_by?: string | null;
           created_at?: string;
           updated_at?: string;
+          admin_status?: BookingStatus;
+          manager_status?: BookingStatus | null;
+          assigned_manager_id?: string | null;
+          assigned_vehicle_name?: string | null;
+          service_type?: string | null;
+          vehicle_type?: string | null;
+          guest_count?: number;
+          meeting_location?: string | null;
+          captain_name?: string | null;
+          driver_required?: boolean;
+          driver_name?: string | null;
+          ride_start_time?: string | null;
+          ride_end_time?: string | null;
+          extra_time_minutes?: number;
+          customer_arrived?: boolean;
+          damage_reported?: boolean;
+          damage_note?: string | null;
+          manager_note?: string | null;
+          internal_note?: string | null;
+          customer_note?: string | null;
+          amount_received_aed?: number;
+          amount_pending_aed?: number;
+          payment_workflow_status?: Database['public']['Enums']['payment_workflow_status'];
+          payment_method?: string | null;
+          payment_received_by?: string | null;
+          payment_collected_by?: string | null;
+          collection_status?: Database['public']['Enums']['collection_status'];
+          payment_notes?: string | null;
+          source?: 'website' | 'admin' | 'walk_in';
         };
         Update: {
           id?: string;
@@ -300,6 +373,35 @@ export type Database = {
           updated_by?: string | null;
           created_at?: string;
           updated_at?: string;
+          admin_status?: BookingStatus;
+          manager_status?: BookingStatus | null;
+          assigned_manager_id?: string | null;
+          assigned_vehicle_name?: string | null;
+          service_type?: string | null;
+          vehicle_type?: string | null;
+          guest_count?: number;
+          meeting_location?: string | null;
+          captain_name?: string | null;
+          driver_required?: boolean;
+          driver_name?: string | null;
+          ride_start_time?: string | null;
+          ride_end_time?: string | null;
+          extra_time_minutes?: number;
+          customer_arrived?: boolean;
+          damage_reported?: boolean;
+          damage_note?: string | null;
+          manager_note?: string | null;
+          internal_note?: string | null;
+          customer_note?: string | null;
+          amount_received_aed?: number;
+          amount_pending_aed?: number;
+          payment_workflow_status?: Database['public']['Enums']['payment_workflow_status'];
+          payment_method?: string | null;
+          payment_received_by?: string | null;
+          payment_collected_by?: string | null;
+          collection_status?: Database['public']['Enums']['collection_status'];
+          payment_notes?: string | null;
+          source?: 'website' | 'admin' | 'walk_in';
         };
         Relationships: Relationship[];
       };
@@ -314,6 +416,11 @@ export type Database = {
           metadata: Json;
           created_at: string;
           updated_at: string;
+          received_by: string | null;
+          collected_by: string | null;
+          collection_status: Database['public']['Enums']['collection_status'];
+          note: string | null;
+          created_by: string | null;
         };
         Insert: {
           id?: string;
@@ -325,6 +432,11 @@ export type Database = {
           metadata?: Json;
           created_at?: string;
           updated_at?: string;
+          received_by?: string | null;
+          collected_by?: string | null;
+          collection_status?: Database['public']['Enums']['collection_status'];
+          note?: string | null;
+          created_by?: string | null;
         };
         Update: {
           id?: string;
@@ -336,6 +448,44 @@ export type Database = {
           metadata?: Json;
           created_at?: string;
           updated_at?: string;
+          received_by?: string | null;
+          collected_by?: string | null;
+          collection_status?: Database['public']['Enums']['collection_status'];
+          note?: string | null;
+          created_by?: string | null;
+        };
+        Relationships: Relationship[];
+      };
+      booking_status_history: {
+        Row: {
+          id: string;
+          booking_id: string;
+          previous_status: BookingStatus | null;
+          new_status: BookingStatus;
+          changed_by: string | null;
+          changed_by_role: string | null;
+          note: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          booking_id: string;
+          previous_status?: BookingStatus | null;
+          new_status: BookingStatus;
+          changed_by?: string | null;
+          changed_by_role?: string | null;
+          note?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          booking_id?: string;
+          previous_status?: BookingStatus | null;
+          new_status?: BookingStatus;
+          changed_by?: string | null;
+          changed_by_role?: string | null;
+          note?: string | null;
+          created_at?: string;
         };
         Relationships: Relationship[];
       };
@@ -431,8 +581,11 @@ export type Database = {
     };
     Enums: {
       vehicle_type: 'jet_ski' | 'jet_car';
-      booking_status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
+      booking_status: 'pending' | 'contacted' | 'confirmed' | 'ready' | 'in_progress' | 'completed' | 'cancelled' | 'no_show' | 'rescheduled' | 'refund_pending' | 'refunded';
       discount_type: 'percentage' | 'fixed';
+      payment_workflow_status: 'unpaid' | 'partial_paid' | 'paid' | 'refund_pending' | 'refunded';
+      collection_status: 'pending_collection' | 'with_admin' | 'with_manager' | 'with_captain' | 'with_driver' | 'deposited' | 'verified_by_finance';
+      fleet_status: 'available' | 'assigned' | 'in_ride' | 'maintenance' | 'damaged' | 'out_of_service';
     };
     CompositeTypes: Record<PropertyKey, never>;
   };

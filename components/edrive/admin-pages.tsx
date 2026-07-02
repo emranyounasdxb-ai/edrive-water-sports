@@ -31,6 +31,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { bookings, coupons, inventoryItems, jetCarLightImage, jetSkiLightImage, reports, staff, vehicles } from '@/lib/mock-data';
 import { MotionReveal } from './motion-reveal';
 
+export { AdminDashboardPage } from './admin/dashboard-page';
+export { AdminBookingsPage } from './admin/bookings-page';
+export { ManagerOperationsPage } from './admin/manager-page';
+export { AdminReportsPage } from './admin/reports-page';
+export { AdminPaymentsPage } from './admin/payments-page';
+export { AdminFleetPage as AdminVehiclesPage } from './admin/fleet-page';
+
 const chartDays = ['May 10', 'May 11', 'May 12', 'May 13', 'May 14', 'May 15', 'May 16'];
 const bookingsLine = [112, 246, 268, 338, 282, 286, 322];
 const confirmedLine = [92, 172, 180, 225, 178, 202, 222];
@@ -67,7 +74,7 @@ const reviews = [
   { name: 'Omar N.', rating: 4, service: 'Jet Ski', comment: 'Great ride, waiting area can be improved.', status: 'Review' }
 ];
 
-export function AdminDashboardPage() {
+function LegacyAdminDashboardPage() {
   return (
     <div className="flex flex-col gap-5">
       <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-4">
@@ -101,7 +108,7 @@ export function AdminCustomersPage() {
   return <AdminSimpleTablePage label="Customers" title="Customer directory" text="Track guests, VIP customers, contact details, visits, and lifetime spending." actionLabel="Add Customer" metrics={[['Total Customers', '1,842', Users], ['VIP Guests', '126', Star], ['Repeat Rate', '34%', TrendingUp]]}><Card><CardHeader className="flex-row items-center justify-between gap-3"><div className="min-w-0"><CardTitle className="truncate text-base">Customer Records</CardTitle><CardDescription>Guest profiles and booking history summary.</CardDescription></div><Button variant="outline" size="sm"><Search data-icon aria-hidden="true" />Search</Button></CardHeader><CardContent><Table><TableHeader><TableRow><TableHead>Customer</TableHead><TableHead>Email</TableHead><TableHead>Phone</TableHead><TableHead>Visits</TableHead><TableHead>Spend</TableHead><TableHead>Status</TableHead></TableRow></TableHeader><TableBody>{customers.map((customer) => <TableRow key={customer.email}><TableCell><div className="flex items-center gap-3"><span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary-50 text-xs font-bold text-primary">{initials(customer.name)}</span><span className="max-w-[12rem] truncate font-semibold text-foreground">{customer.name}</span></div></TableCell><TableCell>{customer.email}</TableCell><TableCell>{customer.phone}</TableCell><TableCell>{customer.visits}</TableCell><TableCell>{customer.spend}</TableCell><TableCell><Badge variant={customer.status === 'VIP' ? 'gold' : customer.status === 'New' ? 'secondary' : 'success'} className="rounded-full">{customer.status}</Badge></TableCell></TableRow>)}</TableBody></Table></CardContent></Card></AdminSimpleTablePage>;
 }
 
-export function AdminPaymentsPage() {
+function LegacyAdminPaymentsPage() {
   return <AdminSimpleTablePage label="Payments" title="Payment center" text="Review collections, pending payments, refunds, and payment method activity." actionLabel="Record Payment" metrics={[['Collected Today', 'AED 54,320', WalletCards], ['Pending', 'AED 8,240', FileClock], ['Refunds', 'AED 1,450', CreditCard]]}><Card><CardHeader className="flex-row items-center justify-between gap-3"><div className="min-w-0"><CardTitle className="truncate text-base">Recent Payments</CardTitle><CardDescription>Latest payment activity across bookings.</CardDescription></div><Button variant="outline" size="sm"><Download data-icon aria-hidden="true" />Export</Button></CardHeader><CardContent><Table><TableHeader><TableRow><TableHead>Payment ID</TableHead><TableHead>Customer</TableHead><TableHead>Method</TableHead><TableHead>Amount</TableHead><TableHead>Date</TableHead><TableHead>Status</TableHead></TableRow></TableHeader><TableBody>{payments.map((payment) => <TableRow key={payment.id}><TableCell className="font-semibold text-foreground">{payment.id}</TableCell><TableCell>{payment.customer}</TableCell><TableCell>{payment.method}</TableCell><TableCell>{payment.amount}</TableCell><TableCell>{payment.date}</TableCell><TableCell><Badge variant={payment.status === 'Paid' ? 'success' : payment.status === 'Pending' ? 'warning' : 'destructive'} className="rounded-full">{payment.status}</Badge></TableCell></TableRow>)}</TableBody></Table></CardContent></Card></AdminSimpleTablePage>;
 }
 
@@ -119,7 +126,7 @@ export function AdminSettingsPage() {
   return <AdminSimpleTablePage label="Settings" title="System settings" text="Control booking rules, dashboard preferences, notifications, and team access." actionLabel="Save Changes" metrics={[['Booking Status', 'Live', Settings], ['Team Roles', '7', UserCog], ['Alerts', '12', Bell]]}><div className="grid gap-4 lg:grid-cols-2">{settings.map(([title, description, status]) => <Card key={title}><CardContent className="flex items-center justify-between gap-4 p-5"><div className="min-w-0"><p className="truncate font-semibold text-foreground">{title}</p><p className="mt-1 truncate text-sm text-muted-foreground">{description}</p></div><Badge variant={status === 'Live' ? 'gold' : 'success'} className="shrink-0 rounded-full">{status}</Badge></CardContent></Card>)}</div></AdminSimpleTablePage>;
 }
 
-export function AdminBookingsPage() {
+function LegacyAdminBookingsPage() {
   return (
     <div className="flex flex-col gap-6">
       <AdminPageHeader label="Bookings" title="Booking operations" text="Review customer schedules, payment states, assigned craft, and upcoming departures." actionLabel="New Booking" />
@@ -142,7 +149,7 @@ export function AdminBookingsPage() {
   );
 }
 
-export function AdminVehiclesPage() {
+function LegacyAdminVehiclesPage() {
   return (
     <div className="flex flex-col gap-6">
       <AdminPageHeader label="Vehicles" title="Fleet management" text="Review craft status, specifications, hourly pricing, and sale availability." actionLabel="Add Vehicle" />
@@ -235,7 +242,7 @@ export function AdminCouponsPage() {
   );
 }
 
-export function AdminReportsPage() {
+function LegacyAdminReportsPage() {
   return (
     <div className="flex flex-col gap-6">
       <AdminPageHeader label="Reports" title="Performance reports" text="Review revenue trends, activity mix, and demand across Dubai departure points." actionLabel="Download CSV" />

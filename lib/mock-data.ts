@@ -15,11 +15,29 @@ export const publicNavItems = [
 export const adminNavItems = [
   { href: '/admin', label: 'Dashboard', icon: 'LayoutDashboard' },
   { href: '/admin/bookings', label: 'Bookings', icon: 'CalendarDays' },
-  { href: '/admin/vehicles', label: 'Vehicles', icon: 'Ship' },
+  { href: '/admin/manager', label: 'Manager / Operations', icon: 'ClipboardCheck' },
+  { href: '/admin/payments', label: 'Payments', icon: 'CreditCard' },
+  { href: '/admin/vehicles', label: 'Fleet / Vehicles', icon: 'Ship' },
   { href: '/admin/inventory', label: 'Inventory', icon: 'Package' },
-  { href: '/admin/coupons', label: 'Coupons', icon: 'BadgePercent' },
   { href: '/admin/reports', label: 'Reports', icon: 'BarChart3' },
-  { href: '/admin/staff-management', label: 'Staff Management', icon: 'UserCog' }
+  { href: '/admin/staff-management', label: 'Staff', icon: 'UserCog' },
+  { href: '/admin/customers', label: 'Customers', icon: 'UsersRound' },
+  { href: '/admin/coupons', label: 'Coupons', icon: 'BadgePercent' },
+  { href: '/admin/reviews', label: 'Reviews', icon: 'MessageSquare' },
+  { href: '/admin/system-settings', label: 'Settings', icon: 'Settings' }
+];
+
+export const managerNavItems = [
+  { href: '/admin/manager', label: 'Manager Dashboard', icon: 'LayoutDashboard' },
+  { href: '/admin/manager?status=confirmed', label: 'Confirmed Bookings', icon: 'CalendarDays' },
+  { href: '/admin/manager?status=completed', label: 'Completed Bookings', icon: 'ClipboardCheck' },
+  { href: '/admin/payments', label: 'Payment Updates', icon: 'CreditCard' },
+  { href: '/admin/vehicles?status=issues', label: 'Vehicle Issues', icon: 'Ship' }
+];
+
+export const financeNavItems = [
+  { href: '/admin/payments', label: 'Payments', icon: 'CreditCard' },
+  { href: '/admin/reports', label: 'Reports', icon: 'BarChart3' }
 ];
 
 export const fleetHeroImage = '/images/edrive/fleet-hero.png';

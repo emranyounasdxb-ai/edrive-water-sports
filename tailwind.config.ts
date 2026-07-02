@@ -17,6 +17,10 @@ const config: Config = {
         border: 'rgba(8, 37, 50, 0.10)',
         input: 'rgba(8, 37, 50, 0.14)',
         ring: '#1296A3',
+        destructive: {
+          DEFAULT: '#DC2626',
+          foreground: '#FFFFFF'
+        },
         ocean: {
           abyss: '#082532',
           deep: '#0A3442',
