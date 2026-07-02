@@ -9,11 +9,11 @@ export const metadata: Metadata = {
 };
 
 const contacts = [
-  { icon: Phone, title: 'Landline', text: companyInfo.landlineDisplay, href: `tel:${companyInfo.landlineHref}` },
-  { icon: MessageCircle, title: 'WhatsApp', text: companyInfo.whatsappDisplay, href: whatsappUrl },
-  { icon: Mail, title: 'Booking Email', text: companyInfo.bookingEmail, href: `mailto:${companyInfo.bookingEmail}` },
-  { icon: Mail, title: 'General Email', text: companyInfo.supportEmail, href: `mailto:${companyInfo.supportEmail}` },
-  { icon: MapPin, title: 'Location', text: companyInfo.locationName, href: '#map' }
+  { icon: Phone, title: 'Landline', text: companyInfo.landlineDisplay, href: `tel:${companyInfo.landlineHref}`, external: false },
+  { icon: MessageCircle, title: 'WhatsApp', text: companyInfo.whatsappDisplay, href: whatsappUrl, external: true },
+  { icon: Mail, title: 'Booking Email', text: companyInfo.bookingEmail, href: `mailto:${companyInfo.bookingEmail}`, external: false },
+  { icon: Mail, title: 'General Email', text: companyInfo.supportEmail, href: `mailto:${companyInfo.supportEmail}`, external: false },
+  { icon: MapPin, title: 'Location', text: companyInfo.locationName, href: '#map', external: false }
 ];
 
 export default function Page() {
@@ -30,7 +30,7 @@ export default function Page() {
       <section className="container-x py-16">
         <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-5">
           {contacts.map((item) => (
-            <a key={item.title} href={item.href} className="premium-surface premium-card-hover rounded-[2rem] p-6">
+            <a key={item.title} href={item.href} target={item.external ? '_blank' : undefined} rel={item.external ? 'noopener noreferrer' : undefined} className="premium-surface premium-card-hover rounded-[2rem] p-6">
               <item.icon className="size-6 text-primary" aria-hidden="true" />
               <h2 className="mt-4 truncate font-heading text-lg font-semibold text-foreground">{item.title}</h2>
               <p className="mt-2 break-words text-sm leading-6 text-muted-foreground">{item.text}</p>
