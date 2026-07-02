@@ -8,11 +8,11 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: 'bg-primary-900 text-white shadow-[0px_-3px_0px_0px_#080808_inset,0px_1px_0px_0px_rgba(255,255,255,0.30)_inset,0px_2.77px_2.21px_0px_rgba(0,0,0,0.12),0px_6.65px_5.32px_0px_rgba(0,0,0,0.13),0px_12.52px_10.02px_0px_rgba(0,0,0,0.13),0px_22.34px_17.87px_0px_rgba(0,0,0,0.14),0px_41.78px_33.42px_0px_rgba(0,0,0,0.15)] hover:-translate-y-0.5 hover:bg-primary-800',
-        gold: 'bg-accent-500 text-ink shadow-[0px_-3px_0px_0px_rgba(0,0,0,0.06)_inset,0px_1px_0px_0px_rgba(255,255,255,0.60)_inset,0px_3.44px_5.57px_0px_rgba(0,0,0,0.09),0px_22.91px_37.08px_0px_rgba(217,181,109,0.22),0px_14px_34px_0px_rgba(217,181,109,0.18)] hover:-translate-y-0.5 hover:bg-accent-600',
-        outline: 'border border-white/80 bg-[#F4F4F5] text-foreground shadow-[0px_-3px_0px_0px_#E9E9E9_inset,0px_1px_0px_0px_rgba(255,255,255,0.70)_inset,0px_2.77px_2.21px_0px_rgba(0,0,0,0.12),0px_3px_3px_0px_rgba(0,0,0,0.14)] hover:-translate-y-0.5 hover:bg-white hover:text-primary-800',
+        default: 'bg-primary-900 text-white shadow-[0px_-2px_0px_0px_#0A0A0A_inset,0px_1px_0px_0px_rgba(255,255,255,0.24)_inset,0px_2px_2px_0px_rgba(0,0,0,0.08),0px_8px_12px_0px_rgba(0,0,0,0.11),0px_18px_24px_0px_rgba(0,0,0,0.10)] hover:-translate-y-0.5 hover:bg-primary-800',
+        gold: 'bg-accent-500 text-ink shadow-[0px_-2px_0px_0px_rgba(0,0,0,0.045)_inset,0px_1px_0px_0px_rgba(255,255,255,0.52)_inset,0px_3px_5px_0px_rgba(0,0,0,0.055),0px_14px_22px_0px_rgba(217,181,109,0.16)] hover:-translate-y-0.5 hover:bg-accent-600',
+        outline: 'border border-white/80 bg-[#F7F7F8] text-foreground shadow-[0px_-2px_0px_0px_#EEEEEE_inset,0px_1px_0px_0px_rgba(255,255,255,0.62)_inset,0px_2px_2px_0px_rgba(0,0,0,0.055),0px_3px_3px_0px_rgba(0,0,0,0.07)] hover:-translate-y-0.5 hover:bg-white hover:text-primary-800',
         ghost: 'text-muted-foreground hover:bg-primary-50 hover:text-primary-800',
-        subtle: 'bg-[#F4F4F5] text-primary-800 shadow-[0px_-4px_0px_0px_rgba(0,0,0,0.05)_inset,0px_4px_0px_0px_rgba(255,255,255,0.60)_inset,0px_7.77px_16px_0px_rgba(0,0,0,0.06),0px_3px_3px_0px_rgba(0,0,0,0.10)] hover:bg-white'
+        subtle: 'bg-[#F7F7F8] text-primary-800 shadow-[0px_-3px_0px_0px_rgba(0,0,0,0.035)_inset,0px_2px_0px_0px_rgba(255,255,255,0.55)_inset,0px_5px_10px_0px_rgba(0,0,0,0.04),0px_2px_3px_0px_rgba(0,0,0,0.06)] hover:bg-white'
       },
       size: {
         default: 'h-11 px-5 py-2',
