@@ -9,10 +9,16 @@ import { publicNavItems } from '@/lib/mock-data';
 import { cn } from '@/lib/utils';
 import { BrandMark } from './brand';
 
-const activeMenuClass = 'border border-white/80 bg-[#F7F7F8] text-primary-900 shadow-[0px_-3px_0px_0px_rgba(0,0,0,0.035)_inset,0px_2px_0px_0px_rgba(255,255,255,0.60)_inset,0px_5px_10px_0px_rgba(0,0,0,0.045),0px_2px_3px_0px_rgba(0,0,0,0.07)]';
+const activeMenuClass = 'border border-primary-900 bg-primary-900 text-white shadow-[0px_-3px_0px_0px_rgba(0,0,0,0.22)_inset,0px_2px_0px_0px_rgba(255,255,255,0.18)_inset,0px_5px_10px_0px_rgba(8,37,50,0.18),0px_2px_3px_0px_rgba(0,0,0,0.14)] hover:bg-primary-800 hover:text-white';
+
+function normalizePath(pathname: string) {
+  if (!pathname || pathname === '/') return '/';
+  return pathname.replace(/\/$/, '');
+}
 
 export function PublicShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const currentPath = normalizePath(pathname);
   const [open, setOpen] = useState(false);
 
   return (
@@ -27,11 +33,12 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
             <div className="hidden min-w-0 flex-1 items-center justify-center xl:flex">
               <div className="flex max-w-full items-center gap-0.5 rounded-full bg-white/45 p-1 2xl:gap-1">
                 {publicNavItems.map((item) => {
-                  const active = pathname === item.href;
+                  const active = currentPath === normalizePath(item.href);
                   return (
                     <Link
                       key={item.href}
                       href={item.href}
+                      aria-current={active ? 'page' : undefined}
                       className={cn(
                         'shrink-0 whitespace-nowrap rounded-full border border-transparent px-2.5 py-2 text-[11px] font-semibold leading-none text-muted-foreground transition hover:bg-white hover:text-foreground 2xl:px-3 2xl:text-xs',
                         active && activeMenuClass
@@ -70,12 +77,13 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
           <div className="mx-auto w-full max-w-[92rem] px-4 pt-3 sm:px-6 lg:px-8 xl:hidden">
             <div className="premium-surface flex flex-col gap-1 rounded-[2rem] p-3">
               {publicNavItems.map((item) => {
-                const active = pathname === item.href;
+                const active = currentPath === normalizePath(item.href);
                 return (
                   <Link
                     key={item.href}
                     href={item.href}
                     onClick={() => setOpen(false)}
+                    aria-current={active ? 'page' : undefined}
                     className={cn('whitespace-nowrap rounded-2xl border border-transparent px-4 py-3 text-sm font-semibold text-muted-foreground transition hover:bg-white hover:text-foreground', active && activeMenuClass)}
                   >
                     {item.label}
