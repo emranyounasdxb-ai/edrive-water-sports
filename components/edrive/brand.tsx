@@ -1,18 +1,18 @@
-import { Waves } from 'lucide-react';
+import Image from 'next/image';
 import { cn } from '@/lib/utils';
 
 export function BrandMark({ compact = false, inverse = false, className }: { compact?: boolean; inverse?: boolean; className?: string }) {
   return (
     <div className={cn('flex items-center gap-3', className)}>
-      <span className={cn('flex size-10 items-center justify-center rounded-md border', inverse ? 'border-white/20 bg-white/10 text-white' : 'border-primary/15 bg-primary-100 text-primary')}>
-        <Waves data-icon aria-hidden="true" />
-      </span>
-      {!compact ? (
-        <span className="leading-none">
-          <span className={cn('block font-heading text-2xl font-semibold tracking-normal', inverse ? 'text-white' : 'text-foreground')}>eDrive</span>
-          <span className={cn('mt-1 block text-[0.58rem] font-semibold uppercase tracking-[0.3em]', inverse ? 'text-primary-100' : 'text-primary')}>Water Sports</span>
-        </span>
-      ) : null}
+      <Image
+        src="/brand/logo-primary.png"
+        alt="eDrive Water Sports"
+        width={600}
+        height={180}
+        priority
+        className={cn('h-auto w-[8.8rem] object-contain sm:w-[9.6rem]', compact && 'w-[3.3rem]', inverse && 'drop-shadow-[0_8px_18px_rgba(0,0,0,0.28)]')}
+      />
+      <span className="sr-only">eDrive Water Sports</span>
     </div>
   );
 }
