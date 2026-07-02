@@ -16,39 +16,41 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen overflow-hidden bg-background">
       <header className="sticky top-0 z-[70] bg-background/78 py-3 backdrop-blur-xl">
-        <nav className="container-x">
-          <div className="premium-surface flex h-[72px] items-center justify-between gap-4 rounded-full px-4 sm:px-5">
+        <nav className="mx-auto w-full max-w-[92rem] px-4 sm:px-6 lg:px-8">
+          <div className="premium-surface flex min-h-[78px] items-center justify-between gap-3 rounded-[2rem] px-4 sm:px-5 xl:rounded-full 2xl:gap-5">
             <Link href="/" aria-label="eDrive Water Sports home" className="shrink-0">
               <BrandMark />
             </Link>
 
-            <div className="hidden items-center gap-1 rounded-full bg-white/45 p-1 xl:flex">
-              {publicNavItems.map((item) => {
-                const active = pathname === item.href;
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={cn(
-                      'rounded-full px-3 py-2 text-xs font-semibold text-muted-foreground transition hover:bg-white hover:text-foreground',
-                      active && 'bg-white text-primary-800 shadow-[0px_2px_3px_0px_rgba(0,0,0,0.06),inset_0px_1px_0px_rgba(255,255,255,0.7)]'
-                    )}
-                  >
-                    {item.label}
-                  </Link>
-                );
-              })}
+            <div className="hidden min-w-0 flex-1 items-center justify-center xl:flex">
+              <div className="flex max-w-full items-center gap-0.5 rounded-full bg-white/45 p-1 2xl:gap-1">
+                {publicNavItems.map((item) => {
+                  const active = pathname === item.href;
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className={cn(
+                        'shrink-0 whitespace-nowrap rounded-full px-2.5 py-2 text-[11px] font-semibold leading-none text-muted-foreground transition hover:bg-white hover:text-foreground 2xl:px-3 2xl:text-xs',
+                        active && 'bg-white text-primary-800 shadow-[0px_2px_3px_0px_rgba(0,0,0,0.06),inset_0px_1px_0px_rgba(255,255,255,0.7)]'
+                      )}
+                    >
+                      {item.label}
+                    </Link>
+                  );
+                })}
+              </div>
             </div>
 
-            <div className="hidden items-center gap-3 md:flex">
-              <a href="tel:+971501234567" className="inline-flex items-center gap-2 rounded-full bg-white/50 px-3 py-2 text-xs font-semibold text-muted-foreground transition hover:bg-white hover:text-primary">
+            <div className="hidden shrink-0 items-center gap-2 md:flex 2xl:gap-3">
+              <a href="tel:+971501234567" className="hidden items-center gap-2 whitespace-nowrap rounded-full bg-white/50 px-3 py-2 text-xs font-semibold leading-none text-muted-foreground transition hover:bg-white hover:text-primary 2xl:inline-flex">
                 <Phone data-icon aria-hidden="true" />
                 +971 50 123 4567
               </a>
-              <Button asChild variant="outline" size="sm">
+              <Button asChild variant="outline" size="sm" className="whitespace-nowrap">
                 <Link href="/admin">Admin Portal</Link>
               </Button>
-              <Button asChild size="sm">
+              <Button asChild size="sm" className="whitespace-nowrap">
                 <Link href="/booking">
                   <CalendarCheck data-icon aria-hidden="true" />
                   Book Now
@@ -56,14 +58,14 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
               </Button>
             </div>
 
-            <Button variant="outline" size="icon" className="xl:hidden" onClick={() => setOpen((value) => !value)} aria-label="Toggle navigation">
+            <Button variant="outline" size="icon" className="shrink-0 xl:hidden" onClick={() => setOpen((value) => !value)} aria-label="Toggle navigation">
               {open ? <X data-icon aria-hidden="true" /> : <Menu data-icon aria-hidden="true" />}
             </Button>
           </div>
         </nav>
 
         {open ? (
-          <div className="container-x pt-3 xl:hidden">
+          <div className="mx-auto w-full max-w-[92rem] px-4 pt-3 sm:px-6 lg:px-8 xl:hidden">
             <div className="premium-surface flex flex-col gap-1 rounded-[2rem] p-3">
               {publicNavItems.map((item) => {
                 const active = pathname === item.href;
@@ -72,13 +74,13 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
                     key={item.href}
                     href={item.href}
                     onClick={() => setOpen(false)}
-                    className={cn('rounded-2xl px-4 py-3 text-sm font-semibold text-muted-foreground transition hover:bg-white hover:text-foreground', active && 'bg-white text-primary-800')}
+                    className={cn('whitespace-nowrap rounded-2xl px-4 py-3 text-sm font-semibold text-muted-foreground transition hover:bg-white hover:text-foreground', active && 'bg-white text-primary-800')}
                   >
                     {item.label}
                   </Link>
                 );
               })}
-              <Link href="/admin" onClick={() => setOpen(false)} className="rounded-2xl px-4 py-3 text-sm font-semibold text-primary transition hover:bg-white">
+              <Link href="/admin" onClick={() => setOpen(false)} className="whitespace-nowrap rounded-2xl px-4 py-3 text-sm font-semibold text-primary transition hover:bg-white">
                 Admin Portal
               </Link>
               <Button asChild className="mt-3">
