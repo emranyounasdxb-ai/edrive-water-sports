@@ -6,6 +6,7 @@ import { BadgePercent, BarChart3, Bell, CalendarDays, ChevronDown, Home, LayoutD
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { companyInfo } from '@/lib/company-info';
 import { adminNavItems } from '@/lib/mock-data';
 import { cn } from '@/lib/utils';
 import { BrandMark } from './brand';
@@ -76,7 +77,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                 <IconButtonWithBadge icon={MessageSquare} count="3" />
                 <div className="hidden items-center gap-2 border-l border-border pl-3 text-xs text-muted-foreground xl:flex">
                   <Sun className="size-5 text-gold" aria-hidden="true" />
-                  <div><p className="font-bold text-foreground">32°C</p><p>Dubai Marina</p></div>
+                  <div><p className="font-bold text-foreground">32°C</p><p>{companyInfo.locationName}</p></div>
                   <ChevronDown className="size-4" aria-hidden="true" />
                 </div>
                 <div className="hidden items-center gap-3 border-l border-border pl-3 md:flex">
