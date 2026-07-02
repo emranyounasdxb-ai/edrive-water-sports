@@ -23,7 +23,7 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen overflow-hidden bg-background">
-      <header className="sticky top-0 z-[70] bg-background/78 py-2.5 backdrop-blur-xl">
+      <header className="sticky top-0 z-[70] bg-background/78 py-2 backdrop-blur-xl">
         <nav className="mx-auto w-full max-w-[92rem] px-4 sm:px-6 lg:px-8">
           <div className="premium-surface flex min-h-[70px] items-center justify-between gap-3 rounded-[1.75rem] px-4 sm:px-5 xl:rounded-full 2xl:gap-5">
             <Link href="/" aria-label="eDrive Water Sports home" className="shrink-0">
@@ -40,7 +40,7 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
                       href={item.href}
                       aria-current={active ? 'page' : undefined}
                       className={cn(
-                        'shrink-0 whitespace-nowrap rounded-full border border-transparent px-2.5 py-1.5 text-[11px] font-semibold leading-none text-muted-foreground transition hover:bg-white hover:text-foreground 2xl:px-3 2xl:text-xs',
+                        'inline-flex h-7 shrink-0 items-center whitespace-nowrap rounded-full border border-transparent px-2.5 text-[11px] font-semibold leading-none text-muted-foreground transition hover:bg-white hover:text-foreground 2xl:px-3 2xl:text-xs',
                         active && activeMenuClass
                       )}
                     >
@@ -84,13 +84,13 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
                     href={item.href}
                     onClick={() => setOpen(false)}
                     aria-current={active ? 'page' : undefined}
-                    className={cn('whitespace-nowrap rounded-2xl border border-transparent px-4 py-2.5 text-sm font-semibold text-muted-foreground transition hover:bg-white hover:text-foreground', active && activeMenuClass)}
+                    className={cn('inline-flex h-10 items-center whitespace-nowrap rounded-2xl border border-transparent px-4 text-sm font-semibold text-muted-foreground transition hover:bg-white hover:text-foreground', active && activeMenuClass)}
                   >
                     {item.label}
                   </Link>
                 );
               })}
-              <Link href="/admin" onClick={() => setOpen(false)} className="whitespace-nowrap rounded-2xl px-4 py-2.5 text-sm font-semibold text-primary transition hover:bg-white">
+              <Link href="/admin" onClick={() => setOpen(false)} className="inline-flex h-10 items-center whitespace-nowrap rounded-2xl px-4 text-sm font-semibold text-primary transition hover:bg-white">
                 Admin Portal
               </Link>
               <Button asChild className="mt-3">
