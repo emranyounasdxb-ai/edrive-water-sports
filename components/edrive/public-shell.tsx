@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ArrowRight, CalendarCheck, Instagram, Mail, MapPin, Menu, Phone, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { companyInfo } from '@/lib/company-info';
@@ -27,6 +27,25 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const currentPath = normalizePath(pathname);
   const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    const handleExternalLinkClick = (event: MouseEvent) => {
+      const target = event.target as HTMLElement | null;
+      const anchor = target?.closest('a[href]');
+      const href = anchor?.getAttribute('href');
+
+      if (!href || !href.startsWith('http')) return;
+
+      const url = new URL(href, window.location.href);
+      if (url.origin === window.location.origin) return;
+
+      event.preventDefault();
+      window.open(url.href, '_blank', 'noopener,noreferrer');
+    };
+
+    document.addEventListener('click', handleExternalLinkClick);
+    return () => document.removeEventListener('click', handleExternalLinkClick);
+  }, []);
 
   return (
     <div className="min-h-screen overflow-hidden bg-background">
@@ -126,7 +145,7 @@ function PublicFooter() {
           <p className="max-w-sm text-sm leading-7 text-muted-foreground">
             Private jet ski and jet car experiences from {companyInfo.locationName}, prepared with a premium fleet and attentive local support.
           </p>
-          <a href="https://instagram.com" className="flex size-10 items-center justify-center rounded-md border border-border text-primary transition hover:bg-primary-50" aria-label="Instagram">
+          <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="flex size-10 items-center justify-center rounded-md border border-border text-primary transition hover:bg-primary-50" aria-label="Instagram">
             <Instagram data-icon aria-hidden="true" />
           </a>
         </div>
