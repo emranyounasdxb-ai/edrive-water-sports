@@ -12,6 +12,12 @@ import { BrandMark } from './brand';
 
 const activeMenuClass = 'border border-primary/22 bg-primary-100 text-primary-900 shadow-[0px_-2px_0px_0px_rgba(14,124,134,0.10)_inset,0px_1px_0px_0px_rgba(255,255,255,0.65)_inset,0px_4px_8px_0px_rgba(8,37,50,0.055),0px_2px_3px_0px_rgba(8,37,50,0.05)] hover:border-primary/28 hover:bg-primary-100 hover:text-primary-900';
 
+const policyLinks = [
+  { href: '/privacy-policy', label: 'Privacy Policy' },
+  { href: '/terms-and-conditions', label: 'Terms & Conditions' },
+  { href: '/refund-replacement-policy', label: 'Refund / Replacement Policy' }
+];
+
 function normalizePath(pathname: string) {
   if (!pathname || pathname === '/') return '/';
   return pathname.replace(/\/$/, '');
@@ -145,8 +151,16 @@ function PublicFooter() {
         </div>
       </div>
       <div className="waterline border-t border-border py-5">
-        <div className="container-x flex flex-col justify-between gap-3 text-xs text-muted-foreground sm:flex-row">
+        <div className="container-x flex flex-col justify-between gap-4 text-xs text-muted-foreground lg:flex-row lg:items-center">
           <span>(c) 2026 eDrive Water Sports. All rights reserved.</span>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+            {policyLinks.map((item, index) => (
+              <span key={item.href} className="inline-flex items-center gap-3">
+                {index > 0 ? <span className="text-border">|</span> : null}
+                <Link href={item.href} className="font-semibold transition hover:text-primary">{item.label}</Link>
+              </span>
+            ))}
+          </div>
           <Link href="/booking" className="inline-flex items-center gap-2 font-semibold text-primary">Plan your ride <ArrowRight data-icon aria-hidden="true" /></Link>
         </div>
       </div>
