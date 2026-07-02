@@ -1,10 +1,10 @@
-import { AdminShell } from '@/features/admin/components/AdminShell';
-import { AdminSectionPage } from '@/features/admin/pages/AdminSectionPage';
+import type { Metadata } from 'next';
+import { AdminBookingsPage } from '@/components/edrive/admin-pages';
+
+export const metadata: Metadata = {
+  title: 'Bookings'
+};
 
 export default function Page() {
-  return (
-    <AdminShell>
-      <AdminSectionPage section="bookings" />
-    </AdminShell>
-  );
+  return <AdminBookingsPage />;
 }

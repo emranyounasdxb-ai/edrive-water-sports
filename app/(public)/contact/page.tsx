@@ -1,5 +1,10 @@
-import { SimplePublicPage } from '@/features/marketing/pages/SimplePublicPage';
+import type { Metadata } from 'next';
+import { ContactPage } from '@/components/edrive/public-pages';
+
+export const metadata: Metadata = {
+  title: 'Contact'
+};
 
 export default function Page() {
-  return <SimplePublicPage title="Contact" description="Speak with eDrive Water Sports for bookings, sales, partnerships, and concierge assistance." />;
+  return <ContactPage />;
 }

@@ -1,5 +1,10 @@
-import { SimplePublicPage } from '@/features/marketing/pages/SimplePublicPage';
+import type { Metadata } from 'next';
+import { JetCarRentalsPage } from '@/components/edrive/public-pages';
+
+export const metadata: Metadata = {
+  title: 'Jet Car Rentals'
+};
 
 export default function Page() {
-  return <SimplePublicPage title="Jet Car Rentals" description="Book high-impact jet car experiences designed for Dubai waterfront adventures." />;
+  return <JetCarRentalsPage />;
 }

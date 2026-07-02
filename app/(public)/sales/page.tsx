@@ -1,5 +1,10 @@
-import { SimplePublicPage } from '@/features/marketing/pages/SimplePublicPage';
+import type { Metadata } from 'next';
+import { SalesPage } from '@/components/edrive/public-pages';
+
+export const metadata: Metadata = {
+  title: 'Sales'
+};
 
 export default function Page() {
-  return <SimplePublicPage title="Sales" description="Discover premium jet ski and jet car sales inventory with enquiry-driven consultation." />;
+  return <SalesPage />;
 }

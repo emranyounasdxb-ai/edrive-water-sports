@@ -1,10 +1,19 @@
-import { siteConfig } from '@/config/site';
+import type { MetadataRoute } from 'next';
 
 export const dynamic = 'force-static';
 
-export default function robots() {
+const siteUrl = 'https://edrivewatersports.ae';
+
+export default function robots(): MetadataRoute.Robots {
   return {
-    rules: [{ userAgent: '*', allow: '/' }],
-    sitemap: `${siteConfig.url}/sitemap.xml`,
+    rules: [
+      {
+        userAgent: '*',
+        allow: '/',
+        disallow: []
+      }
+    ],
+    sitemap: `${siteUrl}/sitemap.xml`,
+    host: siteUrl
   };
 }

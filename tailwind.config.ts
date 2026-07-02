@@ -1,71 +1,87 @@
 import type { Config } from 'tailwindcss';
 
 const config: Config = {
-  darkMode: ['class'],
   content: [
-    './app/**/*.{ts,tsx}',
-    './components/**/*.{ts,tsx}',
-    './features/**/*.{ts,tsx}',
+    './app/**/*.{js,ts,jsx,tsx,mdx}',
+    './components/**/*.{js,ts,jsx,tsx,mdx}'
   ],
   theme: {
     extend: {
       colors: {
+        background: '#061018',
+        foreground: '#F7FAFC',
+        card: '#0B1B29',
+        'card-foreground': '#F7FAFC',
+        muted: '#102638',
+        'muted-foreground': '#9FB4C7',
+        border: 'rgba(247, 250, 252, 0.14)',
+        input: 'rgba(247, 250, 252, 0.16)',
+        ring: '#66F6FF',
         ocean: {
-          950: '#041017',
-          900: '#071A24',
-          800: '#0B2632',
-          700: '#0E3444',
-          500: '#1589A6',
-          300: '#63D4EA',
+          abyss: '#0A0F19',
+          deep: '#0E1B25',
+          reef: '#073241',
+          teal: '#00D4E0',
+          glow: '#66F6FF',
+          foam: '#E8FBFF'
         },
-        sand: '#D9B56D',
-        pearl: '#F6FBFC',
-        glass: 'rgba(255,255,255,0.08)',
-        border: 'hsl(var(--border))',
-        input: 'hsl(var(--input))',
-        ring: 'hsl(var(--ring))',
-        background: 'hsl(var(--background))',
-        foreground: 'hsl(var(--foreground))',
+        gold: {
+          DEFAULT: '#D4AF37',
+          soft: '#F4D57C',
+          deep: '#9D7421'
+        },
+        pearl: {
+          DEFAULT: '#F7FAFC',
+          muted: '#C6D6E4'
+        },
         primary: {
-          DEFAULT: 'hsl(var(--primary))',
-          foreground: 'hsl(var(--primary-foreground))',
-        },
-        secondary: {
-          DEFAULT: 'hsl(var(--secondary))',
-          foreground: 'hsl(var(--secondary-foreground))',
-        },
-        muted: {
-          DEFAULT: 'hsl(var(--muted))',
-          foreground: 'hsl(var(--muted-foreground))',
+          DEFAULT: '#00D4E0',
+          foreground: '#031016',
+          50: '#E8FBFF',
+          100: '#C7F7FF',
+          500: '#00D4E0',
+          600: '#06AFC0',
+          700: '#087C8B',
+          800: '#0B4D59',
+          900: '#0E1B25'
         },
         accent: {
-          DEFAULT: 'hsl(var(--accent))',
-          foreground: 'hsl(var(--accent-foreground))',
+          DEFAULT: '#D4AF37',
+          foreground: '#081018',
+          50: '#FFF7D6',
+          100: '#FBE7A1',
+          500: '#D4AF37',
+          600: '#B58923',
+          700: '#8D651C'
         },
-        destructive: {
-          DEFAULT: 'hsl(var(--destructive))',
-          foreground: 'hsl(var(--destructive-foreground))',
+        ivory: {
+          DEFAULT: '#F8F6F0',
+          100: '#EFE9DE'
         },
-        card: {
-          DEFAULT: 'hsl(var(--card))',
-          foreground: 'hsl(var(--card-foreground))',
+        ink: {
+          DEFAULT: '#1D2430',
+          deep: '#020A2C'
         },
+        whatsapp: '#25D366'
       },
-      borderRadius: {
-        xl: '1rem',
-        '2xl': '1.5rem',
-        '3xl': '2rem',
+      fontFamily: {
+        sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        body: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        heading: ['Playfair Display', 'Georgia', 'serif'],
+        arabic: ['var(--font-arabic-body)', 'Noto Sans Arabic', 'Tahoma', 'sans-serif'],
+        arabicHeading: ['var(--font-arabic-heading)', 'IBM Plex Sans Arabic', 'Noto Sans Arabic', 'Tahoma', 'sans-serif']
       },
       boxShadow: {
-        luxury: '0 24px 80px rgba(0,0,0,0.42)',
-        glow: '0 0 80px rgba(99,212,234,0.18)',
+        glass: '0 24px 70px rgba(0, 212, 224, 0.08), 0 1px 0 rgba(255, 255, 255, 0.14) inset',
+        premium: '0 32px 120px rgba(0, 0, 0, 0.48)',
+        glow: '0 0 44px rgba(0, 212, 224, 0.28)'
       },
       backgroundImage: {
-        'ocean-radial': 'radial-gradient(circle at top left, rgba(99,212,234,0.2), transparent 32%), radial-gradient(circle at bottom right, rgba(217,181,109,0.15), transparent 30%)',
-      },
-    },
+        'ocean-radial': 'radial-gradient(circle at 20% 20%, rgba(0, 212, 224, 0.18), transparent 28rem), radial-gradient(circle at 80% 10%, rgba(212, 175, 55, 0.13), transparent 24rem), linear-gradient(180deg, #0A0F19 0%, #07141E 48%, #0A0F19 100%)'
+      }
+    }
   },
-  plugins: [],
+  plugins: []
 };
 
 export default config;

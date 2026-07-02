@@ -1,5 +1,10 @@
-import { SimplePublicPage } from '@/features/marketing/pages/SimplePublicPage';
+import type { Metadata } from 'next';
+import { JetSkiRentalsPage } from '@/components/edrive/public-pages';
+
+export const metadata: Metadata = {
+  title: 'Jet Ski Rentals'
+};
 
 export default function Page() {
-  return <SimplePublicPage title="Jet Ski Rentals" description="Explore premium jet ski rental experiences with curated slots and controlled fleet availability." />;
+  return <JetSkiRentalsPage />;
 }

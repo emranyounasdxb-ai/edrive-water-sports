@@ -1,10 +1,5 @@
-import { AdminShell } from '@/features/admin/components/AdminShell';
-import { AdminDashboardPage } from '@/features/admin/pages/AdminDashboardPage';
+import { AdminDashboardPage } from '@/components/edrive/admin-pages';
 
 export default function Page() {
-  return (
-    <AdminShell>
-      <AdminDashboardPage />
-    </AdminShell>
-  );
+  return <AdminDashboardPage />;
 }

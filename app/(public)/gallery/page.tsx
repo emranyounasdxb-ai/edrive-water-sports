@@ -1,5 +1,10 @@
-import { SimplePublicPage } from '@/features/marketing/pages/SimplePublicPage';
+import type { Metadata } from 'next';
+import { GalleryPage } from '@/components/edrive/public-pages';
+
+export const metadata: Metadata = {
+  title: 'Gallery'
+};
 
 export default function Page() {
-  return <SimplePublicPage title="Gallery" description="A luxury ocean-themed showcase for fleet, experiences, and Dubai water sports moments." />;
+  return <GalleryPage />;
 }
