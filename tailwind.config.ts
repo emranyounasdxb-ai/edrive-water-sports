@@ -65,9 +65,9 @@ const config: Config = {
         whatsapp: '#25D366'
       },
       fontFamily: {
-        sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-        body: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-        heading: ['Georgia', 'Times New Roman', 'serif']
+        sans: ['var(--font-inter)', 'Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        body: ['var(--font-inter)', 'Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        heading: ['var(--font-poppins)', 'Poppins', 'ui-sans-serif', 'system-ui', 'sans-serif']
       },
       boxShadow: {
         glass: '0 12px 36px rgba(8, 37, 50, 0.08)',
