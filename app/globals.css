@@ -1,0 +1,51 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 198 72% 5%;
+  --foreground: 190 40% 96%;
+  --card: 198 48% 9%;
+  --card-foreground: 190 40% 96%;
+  --primary: 188 78% 63%;
+  --primary-foreground: 199 80% 6%;
+  --secondary: 42 58% 64%;
+  --secondary-foreground: 199 80% 6%;
+  --muted: 199 34% 18%;
+  --muted-foreground: 190 20% 72%;
+  --accent: 188 78% 63%;
+  --accent-foreground: 199 80% 6%;
+  --destructive: 0 72% 51%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 190 30% 24%;
+  --input: 190 30% 24%;
+  --ring: 188 78% 63%;
+}
+
+* { border-color: hsl(var(--border)); }
+html { scroll-behavior: smooth; }
+body {
+  min-height: 100vh;
+  background: #041017;
+  color: hsl(var(--foreground));
+}
+
+.luxury-container {
+  width: min(1180px, calc(100% - 32px));
+  margin-inline: auto;
+}
+
+.glass-panel {
+  background: linear-gradient(135deg, rgba(255,255,255,0.11), rgba(255,255,255,0.04));
+  border: 1px solid rgba(255,255,255,0.12);
+  box-shadow: 0 24px 80px rgba(0,0,0,0.42);
+  backdrop-filter: blur(18px);
+}
+
+.input-shell {
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(255,255,255,0.07);
+  color: #f6fbfc;
+}
+
+.input-shell::placeholder { color: rgba(246,251,252,0.48); }
