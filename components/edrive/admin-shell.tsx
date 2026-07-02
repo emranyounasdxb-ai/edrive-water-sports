@@ -15,7 +15,7 @@ const extraNavItems = [
   { href: '/admin/customers', label: 'Customers', icon: Users },
   { href: '/admin/payments', label: 'Payments', icon: WalletCards },
   { href: '/admin/reviews', label: 'Reviews', icon: Star },
-  { href: '/admin/settings', label: 'Settings', icon: Settings }
+  { href: '/admin/system-settings', label: 'Settings', icon: Settings }
 ];
 
 function normalizePath(pathname: string) {
