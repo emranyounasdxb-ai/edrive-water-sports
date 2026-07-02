@@ -31,6 +31,12 @@ export function PublicHeader() {
           <Button asChild size="sm">
             <Link href="/booking">Book Now</Link>
           </Button>
+          <Button asChild variant="outline" size="sm" className="hidden md:inline-flex">
+            <Link href="/admin">Admin Portal</Link>
+          </Button>
+          <Button asChild variant="outline" size="sm" className="md:hidden">
+            <Link href="/admin">Admin</Link>
+          </Button>
           <Button variant="ghost" size="sm" className="md:hidden" aria-label="Open menu">
             <Menu className="h-5 w-5" />
           </Button>
