@@ -3,15 +3,19 @@
 @tailwind utilities;
 
 :root {
-  --background: #0a0f19;
-  --foreground: #f7fafc;
-  --muted: #9fb4c7;
-  --glass: rgba(9, 27, 40, 0.68);
-  --glass-strong: rgba(10, 31, 45, 0.86);
-  --line: rgba(247, 250, 252, 0.14);
-  --aqua: #00d4e0;
-  --aqua-glow: #66f6ff;
-  --gold: #d4af37;
+  --background: #f7fbfc;
+  --foreground: #082532;
+  --muted: #5c6f78;
+  --surface: #ffffff;
+  --surface-soft: #f3f8fa;
+  --line: rgba(8, 37, 50, 0.1);
+  --aqua: #0e7c86;
+  --aqua-soft: #ddf4f6;
+  --gold: #d9b56d;
+}
+
+* {
+  border-color: var(--line);
 }
 
 html {
@@ -21,61 +25,41 @@ html {
 body {
   min-height: 100vh;
   color: var(--foreground);
-  background:
-    radial-gradient(circle at 12% 8%, rgba(0, 212, 224, 0.16), transparent 26rem),
-    radial-gradient(circle at 88% 12%, rgba(212, 175, 55, 0.12), transparent 24rem),
-    linear-gradient(180deg, #0a0f19 0%, #07141e 42%, #0a0f19 100%);
+  background: var(--background);
   font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: 0;
 }
 
 body::selection {
-  background: rgba(102, 246, 255, 0.28);
-  color: #fff;
+  color: #082532;
+  background: #bfe9ec;
 }
 
 .container-x {
   @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
 }
 
-.glass-panel {
-  border: 1px solid var(--line);
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(6, 20, 30, 0.66));
-  box-shadow: 0 30px 100px rgba(0, 0, 0, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.14);
-  backdrop-filter: blur(24px);
-}
-
+.glass-panel,
 .glass-panel-strong {
-  border: 1px solid rgba(247, 250, 252, 0.16);
-  background: linear-gradient(135deg, rgba(12, 38, 54, 0.88), rgba(6, 14, 22, 0.82));
-  box-shadow: 0 32px 110px rgba(0, 0, 0, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.12);
-  backdrop-filter: blur(28px);
-}
-
-.ocean-grid {
-  background-image:
-    linear-gradient(rgba(102, 246, 255, 0.07) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(102, 246, 255, 0.07) 1px, transparent 1px);
-  background-size: 56px 56px;
-  mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.7), transparent);
+  border: 1px solid var(--line);
+  background: #ffffff;
+  box-shadow: 0 18px 55px rgba(8, 37, 50, 0.08);
 }
 
 .heading-luxury {
-  @apply font-heading text-4xl font-bold leading-[0.98] tracking-normal text-pearl sm:text-5xl lg:text-7xl;
+  @apply font-heading text-4xl font-semibold leading-[1.05] tracking-normal text-foreground sm:text-5xl lg:text-6xl;
 }
 
 .section-title {
-  @apply font-heading text-3xl font-bold leading-tight tracking-normal text-pearl sm:text-4xl lg:text-5xl;
+  @apply font-heading text-3xl font-semibold leading-tight tracking-normal text-foreground sm:text-4xl;
 }
 
 .fine-label {
-  @apply text-[0.7rem] font-semibold uppercase tracking-[0.22em] text-gold;
+  @apply text-[0.7rem] font-semibold uppercase tracking-[0.2em] text-primary;
 }
 
 .text-gradient-ocean {
-  background: linear-gradient(90deg, #f7fafc 0%, #66f6ff 48%, #d4af37 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  color: #0e7c86;
 }
 
 .waterline {
@@ -89,7 +73,12 @@ body::selection {
   left: 0;
   height: 1px;
   content: "";
-  background: linear-gradient(90deg, transparent, rgba(102, 246, 255, 0.48), rgba(212, 175, 55, 0.42), transparent);
+  background: linear-gradient(90deg, transparent, rgba(14, 124, 134, 0.32), rgba(217, 181, 109, 0.38), transparent);
+}
+
+.soft-grid {
+  background-image: linear-gradient(rgba(14, 124, 134, 0.055) 1px, transparent 1px), linear-gradient(90deg, rgba(14, 124, 134, 0.055) 1px, transparent 1px);
+  background-size: 40px 40px;
 }
 
 @media (prefers-reduced-motion: reduce) {

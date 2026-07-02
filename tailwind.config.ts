@@ -8,76 +8,71 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        background: '#061018',
-        foreground: '#F7FAFC',
-        card: '#0B1B29',
-        'card-foreground': '#F7FAFC',
-        muted: '#102638',
-        'muted-foreground': '#9FB4C7',
-        border: 'rgba(247, 250, 252, 0.14)',
-        input: 'rgba(247, 250, 252, 0.16)',
-        ring: '#66F6FF',
+        background: '#F7FBFC',
+        foreground: '#082532',
+        card: '#FFFFFF',
+        'card-foreground': '#082532',
+        muted: '#EAF4F6',
+        'muted-foreground': '#5C6F78',
+        border: 'rgba(8, 37, 50, 0.10)',
+        input: 'rgba(8, 37, 50, 0.14)',
+        ring: '#1296A3',
         ocean: {
-          abyss: '#0A0F19',
-          deep: '#0E1B25',
-          reef: '#073241',
-          teal: '#00D4E0',
-          glow: '#66F6FF',
-          foam: '#E8FBFF'
+          abyss: '#082532',
+          deep: '#0A3442',
+          reef: '#0E7C86',
+          teal: '#1296A3',
+          glow: '#1296A3',
+          foam: '#DDF4F6'
         },
         gold: {
-          DEFAULT: '#D4AF37',
-          soft: '#F4D57C',
-          deep: '#9D7421'
+          DEFAULT: '#D9B56D',
+          soft: '#F4E4C0',
+          deep: '#9F7832'
         },
         pearl: {
-          DEFAULT: '#F7FAFC',
-          muted: '#C6D6E4'
+          DEFAULT: '#082532',
+          muted: '#5C6F78'
         },
         primary: {
-          DEFAULT: '#00D4E0',
-          foreground: '#031016',
-          50: '#E8FBFF',
-          100: '#C7F7FF',
-          500: '#00D4E0',
-          600: '#06AFC0',
-          700: '#087C8B',
-          800: '#0B4D59',
-          900: '#0E1B25'
+          DEFAULT: '#0E7C86',
+          foreground: '#FFFFFF',
+          50: '#F0FAFB',
+          100: '#DDF4F6',
+          500: '#1296A3',
+          600: '#0E7C86',
+          700: '#0B6670',
+          800: '#0A4C58',
+          900: '#082532'
         },
         accent: {
-          DEFAULT: '#D4AF37',
-          foreground: '#081018',
-          50: '#FFF7D6',
-          100: '#FBE7A1',
-          500: '#D4AF37',
-          600: '#B58923',
-          700: '#8D651C'
+          DEFAULT: '#D9B56D',
+          foreground: '#082532',
+          50: '#FFF9ED',
+          100: '#F8E8C7',
+          500: '#D9B56D',
+          600: '#B88D43',
+          700: '#8E682D'
         },
         ivory: {
-          DEFAULT: '#F8F6F0',
-          100: '#EFE9DE'
+          DEFAULT: '#FFFFFF',
+          100: '#F3F8FA'
         },
         ink: {
-          DEFAULT: '#1D2430',
-          deep: '#020A2C'
+          DEFAULT: '#082532',
+          deep: '#051A24'
         },
         whatsapp: '#25D366'
       },
       fontFamily: {
         sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
         body: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-        heading: ['Playfair Display', 'Georgia', 'serif'],
-        arabic: ['var(--font-arabic-body)', 'Noto Sans Arabic', 'Tahoma', 'sans-serif'],
-        arabicHeading: ['var(--font-arabic-heading)', 'IBM Plex Sans Arabic', 'Noto Sans Arabic', 'Tahoma', 'sans-serif']
+        heading: ['Georgia', 'Times New Roman', 'serif']
       },
       boxShadow: {
-        glass: '0 24px 70px rgba(0, 212, 224, 0.08), 0 1px 0 rgba(255, 255, 255, 0.14) inset',
-        premium: '0 32px 120px rgba(0, 0, 0, 0.48)',
-        glow: '0 0 44px rgba(0, 212, 224, 0.28)'
-      },
-      backgroundImage: {
-        'ocean-radial': 'radial-gradient(circle at 20% 20%, rgba(0, 212, 224, 0.18), transparent 28rem), radial-gradient(circle at 80% 10%, rgba(212, 175, 55, 0.13), transparent 24rem), linear-gradient(180deg, #0A0F19 0%, #07141E 48%, #0A0F19 100%)'
+        glass: '0 12px 36px rgba(8, 37, 50, 0.08)',
+        premium: '0 24px 70px rgba(8, 37, 50, 0.12)',
+        glow: '0 12px 30px rgba(14, 124, 134, 0.16)'
       }
     }
   },

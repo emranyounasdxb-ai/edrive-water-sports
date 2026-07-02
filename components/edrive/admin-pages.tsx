@@ -26,8 +26,8 @@ export function AdminDashboardPage() {
       <AdminPageHeader
         label="Dashboard"
         title="Command center"
-        text="Static operational overview using mock bookings, mock revenue, and mock fleet availability."
-        actionLabel="Export Mock Report"
+        text="A clear view of today's bookings, revenue, fleet availability, and operating priorities."
+        actionLabel="Export Report"
       />
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {dashboardStats.map((stat, index) => (
@@ -52,17 +52,17 @@ export function AdminDashboardPage() {
 export function AdminBookingsPage() {
   return (
     <div className="flex flex-col gap-6">
-      <AdminPageHeader label="Bookings" title="Booking operations" text="Frontend-only booking queue with mock customer, payment, and ride status data." actionLabel="New Mock Booking" />
+      <AdminPageHeader label="Bookings" title="Booking operations" text="Review customer schedules, payment states, assigned craft, and upcoming departures." actionLabel="New Booking" />
       <div className="grid gap-4 md:grid-cols-3">
         <MiniStat title="Confirmed" value="2" icon={CalendarDays} />
         <MiniStat title="Pending" value="1" icon={Filter} />
-        <MiniStat title="Mock Revenue" value="AED 3,040" icon={WalletCards} />
+        <MiniStat title="Booked Revenue" value="AED 3,040" icon={WalletCards} />
       </div>
       <Card>
         <CardHeader className="flex-row items-center justify-between">
           <div>
             <CardTitle>All Bookings</CardTitle>
-            <CardDescription>Static table prepared for future filters and backend state.</CardDescription>
+            <CardDescription>Customer, schedule, vehicle, and payment status overview.</CardDescription>
           </div>
           <Button variant="outline" size="sm">
             <Filter data-icon aria-hidden="true" />
@@ -80,7 +80,7 @@ export function AdminBookingsPage() {
 export function AdminVehiclesPage() {
   return (
     <div className="flex flex-col gap-6">
-      <AdminPageHeader label="Vehicles" title="Fleet management" text="Mock vehicle statuses, specs, hourly rates, and sale availability for the static admin UI." actionLabel="Add Vehicle" />
+      <AdminPageHeader label="Vehicles" title="Fleet management" text="Review craft status, specifications, hourly pricing, and sale availability." actionLabel="Add Vehicle" />
       <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
         {vehicles.map((vehicle, index) => (
           <MotionReveal key={vehicle.id} delay={index * 0.03}>
@@ -102,7 +102,7 @@ export function AdminVehiclesPage() {
                   <FleetSpec label={vehicle.status === 'For Sale' ? 'Price' : 'Rate'} value={vehicle.status === 'For Sale' ? `${Math.round(vehicle.hourlyRate / 1000)}K` : vehicle.hourlyRate} />
                 </div>
                 <p className="text-sm leading-6 text-pearl-muted">{vehicle.description}</p>
-                <Button variant="outline" size="sm" className="w-fit">View Mock Record</Button>
+                <Button variant="outline" size="sm" className="w-fit">View Record</Button>
               </CardContent>
             </Card>
           </MotionReveal>
@@ -115,11 +115,11 @@ export function AdminVehiclesPage() {
 export function AdminInventoryPage() {
   return (
     <div className="flex flex-col gap-6">
-      <AdminPageHeader label="Inventory" title="Dock inventory" text="Static supplies, safety gear, media kits, and maintenance stock levels." actionLabel="Add Item" />
+      <AdminPageHeader label="Inventory" title="Dock inventory" text="Track supplies, safety gear, media kits, and maintenance stock levels." actionLabel="Add Item" />
       <Card>
         <CardHeader>
           <CardTitle>Inventory Items</CardTitle>
-          <CardDescription>Mock reorder thresholds and stock health indicators.</CardDescription>
+          <CardDescription>Reorder thresholds and current stock health.</CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
@@ -155,7 +155,7 @@ export function AdminInventoryPage() {
 export function AdminCouponsPage() {
   return (
     <div className="flex flex-col gap-6">
-      <AdminPageHeader label="Coupons" title="Promotion studio" text="Mock coupon states for future booking discounts, VIP upgrades, and event add-ons." actionLabel="Create Coupon" />
+      <AdminPageHeader label="Coupons" title="Promotion studio" text="Manage booking discounts, VIP upgrades, and seasonal experience offers." actionLabel="Create Coupon" />
       <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
         {coupons.map((coupon, index) => (
           <MotionReveal key={coupon.code} delay={index * 0.04}>
@@ -188,13 +188,13 @@ export function AdminCouponsPage() {
 export function AdminReportsPage() {
   return (
     <div className="flex flex-col gap-6">
-      <AdminPageHeader label="Reports" title="Mock performance reports" text="Static charts for revenue, activities, and location split. No analytics backend is connected." actionLabel="Download CSV" />
+      <AdminPageHeader label="Reports" title="Performance reports" text="Review revenue trends, activity mix, and demand across Dubai departure points." actionLabel="Download CSV" />
       <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
         <RevenueCard large />
         <Card>
           <CardHeader>
             <CardTitle>Location Split</CardTitle>
-            <CardDescription>Mock booking share by dock point.</CardDescription>
+            <CardDescription>Booking share by dock point.</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-5">
             {reports.locations.map((item) => (
@@ -215,7 +215,7 @@ export function AdminReportsPage() {
 export function AdminStaffPage() {
   return (
     <div className="flex flex-col gap-6">
-      <AdminPageHeader label="Staff Management" title="Team schedule" text="Frontend-only staff roster with mock shifts, duty state, and task counts." actionLabel="Invite Staff" />
+      <AdminPageHeader label="Staff Management" title="Team schedule" text="Review shifts, current duty state, and assigned operating tasks." actionLabel="Invite Staff" />
       <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
         {staff.map((member, index) => (
           <MotionReveal key={member.name} delay={index * 0.04}>
@@ -310,7 +310,7 @@ function RecentBookingsCard() {
       <CardHeader className="flex-row items-center justify-between">
         <div>
           <CardTitle>Recent Bookings</CardTitle>
-          <CardDescription>Latest mock customer requests.</CardDescription>
+          <CardDescription>Latest customer requests.</CardDescription>
         </div>
         <Button asChild variant="ghost" size="sm">
           <Link href="/admin/bookings">
@@ -370,16 +370,16 @@ function AvailabilityCard() {
     <Card>
       <CardHeader>
         <CardTitle>Vehicle Availability</CardTitle>
-        <CardDescription>Mock availability snapshot.</CardDescription>
+        <CardDescription>Current fleet availability snapshot.</CardDescription>
       </CardHeader>
       <CardContent className="grid gap-6 sm:grid-cols-[180px_1fr] sm:items-center">
         <div
           className="mx-auto flex size-44 items-center justify-center rounded-full"
           style={{
-            background: 'conic-gradient(#00D4E0 0deg 210deg, #D4AF37 210deg 270deg, #FF795B 270deg 330deg, rgba(255,255,255,0.12) 330deg)'
+            background: 'conic-gradient(#0E7C86 0deg 210deg, #D9B56D 210deg 270deg, #E77A63 270deg 330deg, #EAF4F6 330deg)'
           }}
         >
-          <div className="flex size-28 flex-col items-center justify-center rounded-full bg-ocean-abyss text-center">
+          <div className="flex size-28 flex-col items-center justify-center rounded-full bg-white text-center shadow-sm">
             <span className="text-xs text-muted-foreground">Total</span>
             <span className="font-heading text-3xl font-bold text-pearl">{total}</span>
           </div>
@@ -400,13 +400,13 @@ function RevenueCard({ large = false }: { large?: boolean }) {
     <Card className={large ? 'min-h-[420px]' : undefined}>
       <CardHeader>
         <CardTitle>Revenue Overview</CardTitle>
-        <CardDescription>Static monthly mock revenue.</CardDescription>
+        <CardDescription>Monthly revenue trend.</CardDescription>
       </CardHeader>
       <CardContent>
         <div className={large ? 'flex h-72 items-end gap-3' : 'flex h-44 items-end gap-3'}>
           {reports.revenue.map((item) => (
             <div key={item.month} className="flex flex-1 flex-col items-center gap-2">
-              <div className="w-full rounded-t-md bg-gradient-to-t from-primary/20 to-primary shadow-glow" style={{ height: `${(item.value / max) * 100}%` }} />
+              <div className="w-full rounded-t-md bg-primary/80" style={{ height: `${(item.value / max) * 100}%` }} />
               <span className="text-xs text-muted-foreground">{item.month}</span>
             </div>
           ))}
@@ -421,7 +421,7 @@ function BookingsOverviewCard() {
     <Card>
       <CardHeader>
         <CardTitle>Bookings Overview</CardTitle>
-        <CardDescription>Mock weekly volume by activity.</CardDescription>
+        <CardDescription>Weekly volume by activity.</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-5">
         {reports.activities.map((item) => (
@@ -437,7 +437,7 @@ function ActivityCard() {
     <Card>
       <CardHeader>
         <CardTitle>Popular Activities</CardTitle>
-        <CardDescription>Static activity mix.</CardDescription>
+        <CardDescription>Current activity mix.</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-5">
         {reports.activities.map((item) => (
@@ -462,8 +462,8 @@ function ProgressMetric({ label, value }: { label: string; value: number }) {
 
 function ProgressBar({ value }: { value: number }) {
   return (
-    <div className="h-2 overflow-hidden rounded-full bg-white/10">
-      <div className="h-full rounded-full bg-gradient-to-r from-primary to-gold" style={{ width: `${Math.min(value, 100)}%` }} />
+    <div className="h-2 overflow-hidden rounded-full bg-muted">
+      <div className="h-full rounded-full bg-primary" style={{ width: `${Math.min(value, 100)}%` }} />
     </div>
   );
 }
@@ -482,7 +482,7 @@ function Legend({ color, label, value }: { color: string; label: string; value: 
 
 function FleetSpec({ label, value }: { label: string; value: string | number }) {
   return (
-    <div className="rounded-md border border-white/10 bg-white/[0.045] p-3">
+    <div className="rounded-md border border-border bg-[#F7FBFC] p-3">
       <p className="font-heading text-2xl font-bold text-pearl">{value}</p>
       <p className="mt-1 text-muted-foreground">{label}</p>
     </div>

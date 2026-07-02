@@ -7,66 +7,72 @@ import {
   Car,
   CheckCircle2,
   Clock,
-  Crown,
-  Fuel,
-  Gauge,
-  ImageIcon,
+  Headphones,
   LifeBuoy,
   Mail,
   MapPin,
+  MessageCircle,
   Phone,
   ShieldCheck,
   Ship,
   ShoppingBag,
   Sparkles,
   Star,
-  Ticket,
+  Sun,
   Users,
   Waves
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { BookingForm } from './booking-form';
-import { ContactForm } from './contact-form';
-import { MotionReveal } from './motion-reveal';
 import {
-  fleetHeroImage,
-  fleetShowcaseImage,
+  dubaiWaterfrontImage,
   galleryItems,
+  jetCarLightImage,
+  jetSkiLightImage,
   salesListings,
-  serviceHighlights,
   testimonials,
   vehicles
 } from '@/lib/mock-data';
-import { cn } from '@/lib/utils';
+import { BookingForm } from './booking-form';
+import { ContactForm } from './contact-form';
+import { MotionReveal } from './motion-reveal';
 
 const jetSkis = vehicles.filter((vehicle) => vehicle.category === 'Jet Ski' && vehicle.status !== 'For Sale');
-const jetCars = vehicles.filter((vehicle) => vehicle.category === 'Jet Car');
+const jetCars = vehicles.filter((vehicle) => vehicle.category === 'Jet Car' && vehicle.status !== 'For Sale');
+
+const services = [
+  { icon: Waves, title: 'Jet Ski Rentals', text: 'Responsive premium craft for first-time riders, touring, and high-performance sessions.', href: '/jet-ski-rentals', image: jetSkiLightImage },
+  { icon: Car, title: 'Jet Car Rentals', text: 'A private supercar-on-water experience with a captain and Dubai Marina photo route.', href: '/jet-car-rentals', image: jetCarLightImage },
+  { icon: ShoppingBag, title: 'Jet Ski Sales', text: 'Marina-ready new and pre-owned watercraft with clear history and practical handover support.', href: '/sales', image: jetSkiLightImage },
+  { icon: Ship, title: 'Jet Car Sales', text: 'Selected jet cars for private owners, hospitality partners, and commercial operators.', href: '/sales', image: jetCarLightImage }
+];
+
+const trustItems = [
+  { icon: Sparkles, title: 'Premium Fleet', text: 'Clean, maintained craft prepared before every departure.' },
+  { icon: MapPin, title: 'Dubai Marina Experience', text: 'Routes shaped around the city skyline and calm water.' },
+  { icon: ShieldCheck, title: 'Safety Focused', text: 'Briefing, life jackets, and dock support included.' },
+  { icon: CalendarCheck, title: 'Easy Booking', text: 'Choose your ride and preferred time in a few steps.' },
+  { icon: MessageCircle, title: 'WhatsApp Support', text: 'Local help before, during, and after your experience.' }
+];
 
 export function HomePage() {
   return (
     <>
-      <HeroSection />
-      <StatsBand />
+      <HomeHero />
+      <ServiceOverview />
+      <MarinaExperience />
+      <TrustBand />
       <section className="container-x py-16 sm:py-20">
-        <SectionIntro
-          label="Premium Fleet"
-          title="Choose your water signature"
-          text="Every ride is staged from a polished marina flow: safety briefing, concierge handoff, optional photo stops, and route support."
-          action={{ href: '/booking', label: 'Book Experience' }}
-        />
+        <SectionIntro title="A fleet prepared for the way you want to ride" text="From comfortable touring jet skis to statement-making jet cars, every option includes clear pricing, location, capacity, and direct booking." action={{ href: '/booking', label: 'Check availability' }} />
         <div className="mt-10 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-          {vehicles.slice(0, 5).map((vehicle, index) => (
-            <MotionReveal key={vehicle.id} delay={index * 0.05}>
-              <VehicleCard vehicle={vehicle} />
-            </MotionReveal>
+          {vehicles.filter((vehicle) => vehicle.status !== 'For Sale').slice(0, 3).map((vehicle, index) => (
+            <MotionReveal key={vehicle.id} delay={index * 0.04}><VehicleCard vehicle={vehicle} /></MotionReveal>
           ))}
         </div>
       </section>
-      <ExperienceFlow />
       <TestimonialsSection />
-      <FinalCta />
+      <BookingCta />
     </>
   );
 }
@@ -74,59 +80,39 @@ export function HomePage() {
 export function AboutPage() {
   return (
     <>
-      <PageHero
-        label="About eDrive"
-        title="Luxury water experiences with operational discipline"
-        text="eDrive Water Sports blends premium fleet presentation with practical marina operations, making every booking feel calm, cinematic, and well managed."
-        image={fleetShowcaseImage}
-      />
-      <section className="container-x grid gap-6 py-16 lg:grid-cols-3">
-        {[
-          { icon: Crown, title: 'Premium by default', text: 'High-touch guest handoff, polished vehicle presentation, and refined route planning.' },
-          { icon: ShieldCheck, title: 'Safety first', text: 'Briefings, safety equipment, route support, and weather-aware scheduling are part of the flow.' },
-          { icon: Sparkles, title: 'Built for moments', text: 'Jet cars, glow-lit fleet visuals, and marina photo stops create memorable premium content.' }
-        ].map((item, index) => (
-          <MotionReveal key={item.title} delay={index * 0.06}>
-            <Card className="h-full">
-              <CardHeader>
-                <item.icon data-icon aria-hidden="true" className="text-ocean-glow" />
-                <CardTitle>{item.title}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm leading-7 text-pearl-muted">{item.text}</p>
-              </CardContent>
-            </Card>
-          </MotionReveal>
-        ))}
+      <PageHero title="Made for memorable days on Dubai water" text="eDrive Water Sports brings together a carefully presented fleet, experienced local support, and a straightforward booking journey from Dubai Marina." image={dubaiWaterfrontImage} />
+      <section className="container-x grid gap-12 py-16 lg:grid-cols-[0.9fr_1.1fr] lg:items-center sm:py-20">
+        <MotionReveal>
+          <div className="relative aspect-[4/5] overflow-hidden rounded-lg shadow-premium">
+            <Image src={jetSkiLightImage} alt="Premium jet skis prepared at Dubai Marina" fill className="object-cover" sizes="(max-width: 1024px) 100vw, 42vw" />
+          </div>
+        </MotionReveal>
+        <MotionReveal delay={0.06}>
+          <div className="flex flex-col gap-6">
+            <h2 className="section-title">A polished marina experience, without the fuss</h2>
+            <p className="text-base leading-8 text-muted-foreground">Our team prepares the craft, safety equipment, route guidance, and dock handover before you arrive. Guests get the excitement of Dubai from the water with the confidence of a well-run local operation.</p>
+            <p className="text-base leading-8 text-muted-foreground">Whether you are booking a first jet ski ride, planning a private celebration, or exploring ownership, we keep the advice clear and the experience personal.</p>
+            <div className="grid gap-4 sm:grid-cols-2">
+              {['Daily marina departures', 'Premium safety equipment', 'Private and group bookings', 'Sales and ownership guidance'].map((item) => (
+                <div key={item} className="flex items-center gap-3 border-b border-border pb-4 text-sm font-semibold text-foreground">
+                  <CheckCircle2 className="size-5 text-primary" aria-hidden="true" />{item}
+                </div>
+              ))}
+            </div>
+            <Button asChild className="w-fit"><Link href="/booking">Plan your experience <ArrowRight data-icon aria-hidden="true" /></Link></Button>
+          </div>
+        </MotionReveal>
       </section>
-      <section className="border-y border-white/10 bg-white/[0.035] py-16 sm:py-20">
-        <div className="container-x grid gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
-          <MotionReveal>
-            <div className="relative aspect-[4/5] overflow-hidden rounded-lg border border-white/[0.12]">
-              <Image src={fleetHeroImage} alt="eDrive fleet at the marina" fill className="object-cover" sizes="(max-width: 1024px) 100vw, 45vw" />
-            </div>
-          </MotionReveal>
-          <MotionReveal delay={0.08}>
-            <div className="flex flex-col gap-6">
-              <p className="fine-label">Our Standard</p>
-              <h2 className="section-title">From dock arrival to open-water return, the experience stays composed.</h2>
-              <p className="text-base leading-8 text-pearl-muted">
-                The eDrive frontend showcases a luxury rental operation where fleet availability, customer bookings, coupons,
-                inventory, reports, and staff planning can all be reviewed through static mock screens before backend integration.
-              </p>
-              <div className="grid gap-4 sm:grid-cols-2">
-                {['VIP dock pickup', 'Guided route options', 'Photo-ready fleet', 'Mock admin cockpit'].map((item) => (
-                  <div key={item} className="flex items-center gap-3 rounded-md border border-white/10 bg-white/[0.045] p-4 text-sm font-semibold text-pearl">
-                    <CheckCircle2 data-icon aria-hidden="true" className="text-ocean-glow" />
-                    {item}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </MotionReveal>
+      <section className="border-y border-border bg-white py-16">
+        <div className="container-x grid gap-8 md:grid-cols-3">
+          {[
+            { icon: Sparkles, title: 'Thoughtful presentation', text: 'Clean craft, clear arrival instructions, and a calm dock handover set the tone.' },
+            { icon: ShieldCheck, title: 'Practical safety', text: 'Every experience starts with equipment checks, local guidance, and a route briefing.' },
+            { icon: Headphones, title: 'Local support', text: 'Our booking team stays available by phone and WhatsApp when plans need attention.' }
+          ].map((item) => <OpenFeature key={item.title} {...item} />)}
         </div>
       </section>
-      <FinalCta />
+      <BookingCta />
     </>
   );
 }
@@ -134,20 +120,10 @@ export function AboutPage() {
 export function JetSkiRentalsPage() {
   return (
     <>
-      <PageHero
-        label="Jet Ski Rentals"
-        title="High-performance rides with a luxury marina handoff"
-        text="Select a premium jet ski, choose your time, and arrive to a polished route plan with safety gear ready."
-        image={fleetHeroImage}
-      />
-      <FleetPageContent
-        vehicles={jetSkis}
-        title="Jet ski fleet"
-        text="Hourly mock pricing, specs, and availability states are static for this frontend step."
-        icon="ski"
-      />
-      <IncludedSection />
-      <FinalCta />
+      <PageHero title="Feel Dubai from the water" text="Choose a premium jet ski, meet us at Dubai Marina, and ride with quality safety equipment and local route guidance included." image={jetSkiLightImage} />
+      <FleetPageContent items={jetSkis} title="Choose your jet ski" text="Comfortable cruisers and responsive performance models for solo riders, couples, and guided sessions." />
+      <IncludedSection type="jet ski" />
+      <BookingCta />
     </>
   );
 }
@@ -155,36 +131,26 @@ export function JetSkiRentalsPage() {
 export function JetCarRentalsPage() {
   return (
     <>
-      <PageHero
-        label="Jet Car Rentals"
-        title="The supercar-on-water moment"
-        text="Book a sleek jet car for a marina showcase, coastal cruise, or VIP photo route with captain support included."
-        image={fleetShowcaseImage}
-      />
-      <FleetPageContent
-        vehicles={jetCars}
-        title="Jet car lineup"
-        text="These frontend cards use mock status and pricing while preserving the production booking surface."
-        icon="car"
-      />
-      <section className="container-x grid gap-5 py-16 md:grid-cols-3">
-        {[
-          { title: 'Marina Showcase', text: 'Short cinematic loop with skyline views and photo stop.', price: 'AED 1,250 / hr' },
-          { title: 'Coastal Cruise', text: 'Open-water route with premium captain-led pacing.', price: 'AED 1,650 / 90 min' },
-          { title: 'VIP Event Arrival', text: 'Dock staging for birthdays, proposals, and brand shoots.', price: 'Custom quote' }
-        ].map((route, index) => (
-          <MotionReveal key={route.title} delay={index * 0.05}>
-            <Card className="h-full">
-              <CardHeader>
-                <Badge variant="gold">{route.price}</Badge>
-                <CardTitle>{route.title}</CardTitle>
-                <CardDescription>{route.text}</CardDescription>
-              </CardHeader>
-            </Card>
-          </MotionReveal>
-        ))}
+      <PageHero title="Dubai's most distinctive water ride" text="Take the wheel of a premium jet car with captain support, a private marina route, and an unmatched view of the waterfront." image={jetCarLightImage} />
+      <FleetPageContent items={jetCars} title="Choose your jet car" text="Private two-seat experiences for celebrations, content days, relaxed cruises, and unforgettable arrivals." />
+      <section className="border-y border-border bg-white py-16">
+        <div className="container-x">
+          <SectionIntro title="Choose the pace of your experience" text="Tell us what the occasion calls for and we will help shape the right route." />
+          <div className="mt-10 grid gap-5 md:grid-cols-3">
+            {[
+              { title: 'Marina Discovery', text: 'A relaxed skyline loop with time for waterfront photographs.', price: 'From AED 1,100 / hr' },
+              { title: 'Celebration Cruise', text: 'A private route for birthdays, proposals, and special occasions.', price: 'From AED 1,350 / hr' },
+              { title: 'Content Session', text: 'Flexible pacing and planned stops for personal or brand photography.', price: 'Custom quote' }
+            ].map((route) => (
+              <Card key={route.title} className="h-full">
+                <CardHeader><CardTitle>{route.title}</CardTitle><CardDescription>{route.text}</CardDescription></CardHeader>
+                <CardContent><p className="text-sm font-semibold text-primary">{route.price}</p></CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
       </section>
-      <FinalCta />
+      <BookingCta />
     </>
   );
 }
@@ -192,39 +158,22 @@ export function JetCarRentalsPage() {
 export function SalesPage() {
   return (
     <>
-      <PageHero
-        label="Sales"
-        title="Own a marina-ready watercraft"
-        text="Browse curated sale inventory, staged here with static mock data for the frontend UI phase."
-        image={fleetShowcaseImage}
-      />
-      <section className="container-x py-16">
-        <SectionIntro
-          label="Available Listings"
-          title="Sales inventory"
-          text="Each listing includes service notes, specs, and inquiry CTAs without connecting to a backend."
-        />
+      <PageHero title="Own the experience" text="Explore selected jet skis and jet cars with straightforward specifications, condition notes, and personal sales support." image={dubaiWaterfrontImage} />
+      <section className="container-x py-16 sm:py-20">
+        <SectionIntro title="Watercraft available now" text="Browse selected new and pre-owned craft, with clear specifications and direct support for viewings and ownership questions." />
         <div className="mt-10 grid gap-5 lg:grid-cols-2">
-          {salesListings.map((vehicle) => (
-            <VehicleCard key={vehicle.id} vehicle={vehicle} sale />
-          ))}
-          <Card className="glass-panel-strong">
-            <CardHeader>
-              <ShoppingBag data-icon aria-hidden="true" className="text-gold" />
-              <CardTitle>Looking for a specific model?</CardTitle>
-              <CardDescription>Stage a sales inquiry for sourcing, consignment, or trade-in evaluation.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button asChild variant="gold">
-                <Link href="/contact">
-                  Start Sales Inquiry
-                  <ArrowRight data-icon aria-hidden="true" />
-                </Link>
-              </Button>
-            </CardContent>
+          {salesListings.map((vehicle) => <VehicleCard key={vehicle.id} vehicle={vehicle} sale />)}
+          <Card className="h-full bg-primary-50">
+            <CardHeader><ShoppingBag className="size-6 text-primary" aria-hidden="true" /><CardTitle>Looking for a specific model?</CardTitle><CardDescription>Share your preferred craft, budget, and intended use. Our team can help with sourcing, trade-in, or consignment options.</CardDescription></CardHeader>
+            <CardContent><Button asChild><Link href="/contact">Start a sales inquiry <ArrowRight data-icon aria-hidden="true" /></Link></Button></CardContent>
           </Card>
         </div>
       </section>
+      <section className="border-y border-border bg-white py-16"><div className="container-x grid gap-8 md:grid-cols-3">{[
+        { icon: ShieldCheck, title: 'Clear condition notes', text: 'Service history and key condition details presented before a viewing.' },
+        { icon: Anchor, title: 'Marina-ready handover', text: 'Practical guidance on transport, dock setup, and first use.' },
+        { icon: Headphones, title: 'Ownership support', text: 'A direct point of contact for questions throughout the sales process.' }
+      ].map((item) => <OpenFeature key={item.title} {...item} />)}</div></section>
     </>
   );
 }
@@ -232,28 +181,18 @@ export function SalesPage() {
 export function BookingPage() {
   return (
     <>
-      <PageHero
-        label="Booking"
-        title="Plan the ride before the backend arrives"
-        text="This screen completes the booking UI with local mock state only. No API route, server action, or database call is used."
-        image={fleetHeroImage}
-      />
-      <section className="container-x grid gap-8 py-16 lg:grid-cols-[1fr_0.75fr]">
+      <PageHero title="Book your time on the water" text="Choose your experience and preferred schedule. Our team will confirm availability and final details with you directly." image={dubaiWaterfrontImage} compact />
+      <section className="container-x grid gap-8 py-16 lg:grid-cols-[1fr_0.62fr]">
         <BookingForm />
         <div className="flex flex-col gap-5">
-          {[
-            { icon: Clock, title: 'Operating Hours', text: '9:00 AM to 10:00 PM daily' },
-            { icon: MapPin, title: 'Dock Points', text: 'Dubai Marina, JBR Beach, Bluewaters' },
-            { icon: LifeBuoy, title: 'Included', text: 'Briefing, safety gear, dock coordination, route support' }
-          ].map((item) => (
-            <Card key={item.title}>
-              <CardHeader>
-                <item.icon data-icon aria-hidden="true" className="text-ocean-glow" />
-                <CardTitle>{item.title}</CardTitle>
-                <CardDescription>{item.text}</CardDescription>
-              </CardHeader>
-            </Card>
-          ))}
+          <Card><CardHeader><Clock className="size-6 text-primary" aria-hidden="true" /><CardTitle>Daily departures</CardTitle><CardDescription>9:00 AM to 8:00 PM, subject to weather and marine conditions.</CardDescription></CardHeader></Card>
+          <Card><CardHeader><MapPin className="size-6 text-primary" aria-hidden="true" /><CardTitle>Dubai Marina</CardTitle><CardDescription>Final meeting point and arrival instructions are shared after confirmation.</CardDescription></CardHeader></Card>
+          <Card><CardHeader><LifeBuoy className="size-6 text-primary" aria-hidden="true" /><CardTitle>Included with every ride</CardTitle><CardDescription>Safety briefing, life jacket, dock assistance, and local route guidance.</CardDescription></CardHeader></Card>
+          <div className="rounded-lg border border-primary/15 bg-primary-50 p-5">
+            <p className="text-sm font-semibold text-foreground">Need help choosing?</p>
+            <p className="mt-2 text-sm leading-6 text-muted-foreground">Message our booking team on WhatsApp for a quick recommendation.</p>
+            <Button asChild variant="outline" size="sm" className="mt-4"><a href="https://wa.me/971501234567"><MessageCircle data-icon aria-hidden="true" />WhatsApp us</a></Button>
+          </div>
         </div>
       </section>
     </>
@@ -263,144 +202,81 @@ export function BookingPage() {
 export function GalleryPage() {
   return (
     <>
-      <PageHero
-        label="Gallery"
-        title="A visual fleet built for night water reflections"
-        text="Gallery tiles use local generated water-sports visuals so the static export remains self-contained."
-        image={fleetShowcaseImage}
-      />
-      <section className="container-x py-16">
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+      <PageHero title="Life on the Dubai waterfront" text="A closer look at our fleet, marina departures, private rides, and the views that make every booking feel special." image={dubaiWaterfrontImage} compact />
+      <section className="container-x py-16 sm:py-20">
+        <div className="grid auto-rows-[240px] gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {galleryItems.map((item, index) => (
-            <MotionReveal key={item.title} delay={index * 0.04}>
-              <article className="group overflow-hidden rounded-lg border border-white/10 bg-white/[0.045]">
-                <div className="relative aspect-[4/3] overflow-hidden">
-                  <Image src={item.image} alt={item.title} fill className="object-cover transition duration-500 group-hover:scale-105" sizes="(max-width: 1024px) 50vw, 33vw" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-ocean-abyss/80 via-transparent to-transparent" />
-                </div>
-                <div className="flex items-center justify-between gap-4 p-5">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gold">{item.category}</p>
-                    <h3 className="mt-2 font-heading text-xl font-bold text-pearl">{item.title}</h3>
-                  </div>
-                  <ImageIcon data-icon aria-hidden="true" className="text-ocean-glow" />
+            <MotionReveal key={`${item.title}-${index}`} delay={index * 0.03} className={index === 0 || index === 5 ? 'sm:col-span-2' : ''}>
+              <article className="group relative h-full overflow-hidden rounded-lg bg-muted">
+                <Image src={item.image} alt={item.title} fill className="object-cover transition duration-500 group-hover:scale-[1.03]" sizes="(max-width: 1024px) 100vw, 66vw" />
+                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#082532]/80 to-transparent px-5 pb-5 pt-16 text-white">
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary-100">{item.category}</p>
+                  <h2 className="mt-1 font-heading text-xl font-semibold">{item.title}</h2>
                 </div>
               </article>
             </MotionReveal>
           ))}
         </div>
       </section>
+      <BookingCta />
     </>
   );
 }
 
 export function ContactPage() {
+  const contacts = [
+    { icon: Phone, title: 'Call', text: '+971 50 123 4567', href: 'tel:+971501234567' },
+    { icon: MessageCircle, title: 'WhatsApp', text: 'Chat with our booking team', href: 'https://wa.me/971501234567' },
+    { icon: Mail, title: 'Email', text: 'bookings@edrivewatersports.ae', href: 'mailto:bookings@edrivewatersports.ae' },
+    { icon: MapPin, title: 'Location', text: 'Dubai Marina Walk, UAE', href: 'https://maps.google.com' }
+  ];
   return (
     <>
-      <PageHero
-        label="Contact"
-        title="Speak with the marina concierge"
-        text="Use the frontend-only contact composer or reach the mock team details shown below."
-        image={fleetHeroImage}
-      />
-      <section className="container-x grid gap-8 py-16 lg:grid-cols-[0.75fr_1fr]">
-        <div className="flex flex-col gap-5">
-          {[
-            { icon: Phone, title: 'Phone', text: '+971 50 123 4567', href: 'tel:+971501234567' },
-            { icon: Mail, title: 'Email', text: 'bookings@edrivewatersports.ae', href: 'mailto:bookings@edrivewatersports.ae' },
-            { icon: MapPin, title: 'Marina', text: 'Dubai Marina Walk, UAE', href: 'https://maps.google.com' }
-          ].map((item) => (
-            <Card key={item.title}>
-              <CardHeader>
-                <item.icon data-icon aria-hidden="true" className="text-ocean-glow" />
-                <CardTitle>{item.title}</CardTitle>
-                <CardDescription>
-                  <a href={item.href} className="transition hover:text-ocean-glow">{item.text}</a>
-                </CardDescription>
-              </CardHeader>
-            </Card>
+      <PageHero title="Talk to our Dubai team" text="Ask about availability, group bookings, private events, or watercraft sales. We will help you choose the right next step." image={jetCarLightImage} compact />
+      <section className="container-x py-16">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {contacts.map((item) => (
+            <a key={item.title} href={item.href} className="rounded-lg border border-border bg-white p-5 shadow-glass transition hover:-translate-y-0.5 hover:border-primary/30">
+              <item.icon className="size-6 text-primary" aria-hidden="true" />
+              <h2 className="mt-4 font-heading text-xl font-semibold text-foreground">{item.title}</h2>
+              <p className="mt-2 break-words text-sm leading-6 text-muted-foreground">{item.text}</p>
+            </a>
           ))}
         </div>
-        <ContactForm />
+        <div className="mt-10 grid gap-8 lg:grid-cols-[1fr_0.72fr]">
+          <ContactForm />
+          <div className="overflow-hidden rounded-lg border border-border bg-white shadow-glass">
+            <div className="relative aspect-[4/3]"><Image src={dubaiWaterfrontImage} alt="Dubai Marina service area" fill className="object-cover" sizes="(max-width: 1024px) 100vw, 40vw" /></div>
+            <div className="p-6"><h2 className="font-heading text-2xl font-semibold text-foreground">Serving the Dubai waterfront</h2><p className="mt-3 text-sm leading-7 text-muted-foreground">Our main departure area is Dubai Marina, with arrangements available around JBR and Bluewaters depending on the booking and marine conditions.</p></div>
+          </div>
+        </div>
       </section>
     </>
   );
 }
 
-function HeroSection() {
+function HomeHero() {
   return (
-    <section className="relative min-h-[calc(86vh-5rem)] overflow-hidden">
-      <Image src={fleetShowcaseImage} alt="Luxury jet ski and jet car on Dubai marina water" fill priority className="object-cover" sizes="100vw" />
-      <div className="absolute inset-0 bg-gradient-to-r from-ocean-abyss via-ocean-abyss/[0.78] to-ocean-abyss/[0.22]" />
-      <div className="absolute inset-0 ocean-grid" />
-      <div className="relative container-x flex min-h-[calc(86vh-5rem)] items-center py-14 sm:py-16">
-        <div className="grid w-full gap-10 lg:grid-cols-[1fr_0.8fr] lg:items-end">
-          <MotionReveal>
-            <div className="max-w-3xl">
-              <p className="fine-label">Experience Freedom. Drive the Ocean.</p>
-              <h1 className="heading-luxury mt-5">
-                Premium Water Sports <span className="text-gradient-ocean">Rentals</span>
-              </h1>
-              <p className="mt-6 max-w-2xl text-base leading-8 text-pearl-muted sm:text-lg">
-                Jet skis, jet cars, sales, and private marina moments built with a premium static frontend ready for your backend later.
-              </p>
-              <div className="mt-9 flex flex-col gap-3 sm:flex-row">
-                <Button asChild variant="gold" size="lg">
-                  <Link href="/booking">
-                    Book Your Experience
-                    <ArrowRight data-icon aria-hidden="true" />
-                  </Link>
-                </Button>
-                <Button asChild variant="outline" size="lg">
-                  <Link href="/jet-ski-rentals">
-                    Explore Fleet
-                    <Ship data-icon aria-hidden="true" />
-                  </Link>
-                </Button>
-              </div>
-            </div>
-          </MotionReveal>
-          <MotionReveal delay={0.12} className="hidden lg:block">
-            <div className="glass-panel-strong rounded-lg p-5">
-              <div className="grid gap-4 sm:grid-cols-2">
-                {[
-                  { icon: Waves, label: 'Activity', value: 'Jet Ski + Jet Car' },
-                  { icon: CalendarCheck, label: 'Date', value: 'Jul 04, 2026' },
-                  { icon: Users, label: 'Guests', value: '2-6 riders' },
-                  { icon: MapPin, label: 'Location', value: 'Dubai Marina' }
-                ].map((item) => (
-                  <div key={item.label} className="rounded-md border border-white/10 bg-white/[0.045] p-4">
-                    <item.icon data-icon aria-hidden="true" className="text-ocean-glow" />
-                    <p className="mt-3 text-xs uppercase tracking-[0.18em] text-muted-foreground">{item.label}</p>
-                    <p className="mt-1 text-sm font-semibold text-pearl">{item.value}</p>
-                  </div>
-                ))}
-              </div>
-              <Button asChild className="mt-4 w-full" variant="gold">
-                <Link href="/booking">Check Availability</Link>
-              </Button>
-            </div>
-          </MotionReveal>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function PageHero({ label, title, text, image }: { label: string; title: string; text: string; image: string }) {
-  return (
-    <section className="relative overflow-hidden border-b border-white/10">
-      <div className="absolute inset-0">
-        <Image src={image} alt="" fill priority className="object-cover" sizes="100vw" />
-        <div className="absolute inset-0 bg-gradient-to-r from-ocean-abyss via-ocean-abyss/[0.82] to-ocean-abyss/[0.35]" />
-        <div className="absolute inset-0 ocean-grid" />
-      </div>
-      <div className="relative container-x py-20 sm:py-24 lg:py-28">
+    <section className="bg-white">
+      <div className="container-x grid min-h-[650px] gap-10 py-10 lg:grid-cols-[0.78fr_1.22fr] lg:items-center lg:py-14">
         <MotionReveal>
-          <div className="max-w-3xl">
-            <p className="fine-label">{label}</p>
-            <h1 className="heading-luxury mt-5">{title}</h1>
-            <p className="mt-6 max-w-2xl text-base leading-8 text-pearl-muted sm:text-lg">{text}</p>
+          <div className="max-w-xl">
+            <h1 className="heading-luxury">Dubai,<br />from the water.</h1>
+            <div className="my-6 h-px w-14 bg-gold" />
+            <p className="max-w-lg text-base leading-8 text-muted-foreground sm:text-lg">Private jet ski and jet car experiences that put you at the heart of Dubai Marina. Premium craft, a professional local team, and unforgettable waterfront views.</p>
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+              <Button asChild size="lg"><Link href="/booking"><CalendarCheck data-icon aria-hidden="true" />Book Your Ride</Link></Button>
+              <Button asChild variant="outline" size="lg"><Link href="/jet-ski-rentals">Explore the Fleet <ArrowRight data-icon aria-hidden="true" /></Link></Button>
+            </div>
+            <div className="mt-9 flex flex-wrap gap-x-6 gap-y-3 text-sm text-muted-foreground">
+              <span className="flex items-center gap-2"><ShieldCheck className="size-4 text-primary" aria-hidden="true" />Safety equipment included</span>
+              <span className="flex items-center gap-2"><MapPin className="size-4 text-primary" aria-hidden="true" />Dubai Marina</span>
+            </div>
+          </div>
+        </MotionReveal>
+        <MotionReveal delay={0.06}>
+          <div className="relative aspect-[16/11] overflow-hidden rounded-lg shadow-premium">
+            <Image src={dubaiWaterfrontImage} alt="Jet ski and jet car experience in Dubai Marina" fill priority className="object-cover" sizes="(max-width: 1024px) 100vw, 60vw" />
           </div>
         </MotionReveal>
       </div>
@@ -408,170 +284,18 @@ function PageHero({ label, title, text, image }: { label: string; title: string;
   );
 }
 
-function SectionIntro({ label, title, text, action }: { label: string; title: string; text: string; action?: { href: string; label: string } }) {
+function ServiceOverview() {
   return (
-    <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
-      <div className="max-w-3xl">
-        <p className="fine-label">{label}</p>
-        <h2 className="section-title mt-3">{title}</h2>
-        <p className="mt-4 text-sm leading-7 text-pearl-muted sm:text-base">{text}</p>
-      </div>
-      {action ? (
-        <Button asChild variant="outline">
-          <Link href={action.href}>
-            {action.label}
-            <ArrowRight data-icon aria-hidden="true" />
-          </Link>
-        </Button>
-      ) : null}
-    </div>
-  );
-}
-
-function StatsBand() {
-  return (
-    <section className="border-y border-white/10 bg-white/[0.035]">
-      <div className="container-x grid gap-4 py-8 sm:grid-cols-2 lg:grid-cols-4">
-        {serviceHighlights.map((item, index) => (
-          <MotionReveal key={item.label} delay={index * 0.04}>
-            <div className="rounded-lg border border-white/10 bg-white/[0.045] p-5 text-center">
-              <p className="font-heading text-4xl font-bold text-pearl">{item.value}</p>
-              <p className="mt-2 text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">{item.label}</p>
-            </div>
-          </MotionReveal>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function VehicleCard({ vehicle, sale = false }: { vehicle: (typeof vehicles)[number]; sale?: boolean }) {
-  const statusVariant = vehicle.status === 'Available' ? 'success' : vehicle.status === 'Maintenance' ? 'warning' : vehicle.status === 'For Sale' ? 'gold' : 'secondary';
-
-  return (
-    <Card className="group h-full overflow-hidden">
-      <div className="relative aspect-[16/10] overflow-hidden">
-        <Image src={vehicle.image} alt={vehicle.name} fill className="object-cover transition duration-500 group-hover:scale-105" sizes="(max-width: 1024px) 100vw, 33vw" />
-        <div className="absolute inset-0 bg-gradient-to-t from-ocean-abyss/80 via-transparent to-transparent" />
-        <div className="absolute left-4 top-4 flex gap-2">
-          <Badge variant="gold">{vehicle.tag}</Badge>
-          <Badge variant={statusVariant}>{vehicle.status}</Badge>
-        </div>
-      </div>
-      <CardHeader>
-        <CardTitle>{vehicle.name}</CardTitle>
-        <CardDescription>{vehicle.description}</CardDescription>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-5">
-        <div className="grid grid-cols-3 gap-3 text-xs text-pearl-muted">
-          <Spec icon={Users} value={`${vehicle.seats} seats`} />
-          <Spec icon={Gauge} value={`${vehicle.horsepower} HP`} />
-          <Spec icon={Fuel} value={vehicle.range} />
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {vehicle.specs.map((spec) => (
-            <Badge key={spec} variant="secondary">{spec}</Badge>
-          ))}
-        </div>
-        <div className="flex items-center justify-between gap-4 border-t border-white/10 pt-4">
-          <p className="font-heading text-2xl font-bold text-pearl">
-            {sale ? `AED ${vehicle.hourlyRate.toLocaleString()}` : `AED ${vehicle.hourlyRate}`}
-            {!sale ? <span className="font-sans text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground"> / hr</span> : null}
-          </p>
-          <Button asChild variant="outline" size="sm">
-            <Link href={sale ? '/contact' : '/booking'}>
-              {sale ? 'Inquire' : 'Book'}
-              <ArrowRight data-icon aria-hidden="true" />
-            </Link>
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-function Spec({ icon: Icon, value }: { icon: typeof Users; value: string }) {
-  return (
-    <div className="flex min-h-16 flex-col justify-center gap-2 rounded-md border border-white/10 bg-white/[0.04] p-3">
-      <Icon data-icon aria-hidden="true" className="text-ocean-glow" />
-      <span>{value}</span>
-    </div>
-  );
-}
-
-function FleetPageContent({ vehicles: items, title, text, icon }: { vehicles: typeof vehicles; title: string; text: string; icon: 'ski' | 'car' }) {
-  const Icon = icon === 'car' ? Car : Waves;
-  return (
-    <section className="container-x py-16">
-      <SectionIntro label="Fleet Selection" title={title} text={text} action={{ href: '/booking', label: 'Reserve Now' }} />
-      <div className="mt-10 grid gap-5 lg:grid-cols-2">
-        {items.map((vehicle, index) => (
-          <MotionReveal key={vehicle.id} delay={index * 0.05}>
-            <VehicleCard vehicle={vehicle} />
-          </MotionReveal>
-        ))}
-      </div>
-      <div className="mt-10 grid gap-5 md:grid-cols-3">
-        {[
-          { title: 'Briefing Included', text: 'Guests get a route and safety briefing before leaving the dock.' },
-          { title: 'Photo Route Ready', text: 'Mock route options focus on skyline, marina, and calm-water scenes.' },
-          { title: 'Concierge Handoff', text: 'The frontend flow supports premium arrival and return states.' }
-        ].map((item) => (
-          <Card key={item.title}>
-            <CardHeader>
-              <Icon data-icon aria-hidden="true" className="text-ocean-glow" />
-              <CardTitle>{item.title}</CardTitle>
-              <CardDescription>{item.text}</CardDescription>
-            </CardHeader>
-          </Card>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function IncludedSection() {
-  return (
-    <section className="border-y border-white/10 bg-white/[0.035] py-16">
+    <section className="border-y border-border bg-background py-16 sm:py-20">
       <div className="container-x">
-        <SectionIntro label="Included" title="Everything needed for a polished ride" text="The UI shows inclusions clearly so pricing and expectations are easy to scan on mobile." />
-        <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {[
-            { icon: ShieldCheck, title: 'Safety Gear' },
-            { icon: Anchor, title: 'Dock Support' },
-            { icon: Ticket, title: 'Mock Coupon Ready' },
-            { icon: Star, title: 'Premium Add-ons' }
-          ].map((item) => (
-            <div key={item.title} className="rounded-lg border border-white/10 bg-white/[0.045] p-5">
-              <item.icon data-icon aria-hidden="true" className="text-ocean-glow" />
-              <p className="mt-4 font-semibold text-pearl">{item.title}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function ExperienceFlow() {
-  return (
-    <section className="border-y border-white/10 bg-ocean-deep/[0.62] py-16 sm:py-20">
-      <div className="container-x">
-        <SectionIntro label="Flow" title="A booking path designed for calm execution" text="The frontend contains every customer-facing step without adding server actions or backend calls." />
-        <div className="mt-10 grid gap-5 md:grid-cols-3">
-          {[
-            { title: 'Select', text: 'Choose jet ski, jet car, sales inquiry, or group experience.' },
-            { title: 'Stage', text: 'Enter mock schedule, guests, and route notes in the local form.' },
-            { title: 'Arrive', text: 'Use the completed UI as the future handoff to booking operations.' }
-          ].map((step, index) => (
-            <MotionReveal key={step.title} delay={index * 0.05}>
-              <Card className="h-full">
-                <CardHeader>
-                  <span className="font-heading text-5xl font-bold text-gold">{String(index + 1).padStart(2, '0')}</span>
-                  <CardTitle>{step.title}</CardTitle>
-                  <CardDescription>{step.text}</CardDescription>
-                </CardHeader>
-              </Card>
+        <SectionIntro title="Choose your experience" text="Rent for the day, plan a private water experience, or speak with our team about owning your own craft." />
+        <div className="mt-10 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+          {services.map((service, index) => (
+            <MotionReveal key={service.title} delay={index * 0.04}>
+              <article className="group h-full overflow-hidden rounded-lg border border-border bg-white shadow-glass">
+                <div className="relative aspect-[4/3] overflow-hidden"><Image src={service.image} alt={service.title} fill className="object-cover transition duration-500 group-hover:scale-[1.03]" sizes="(max-width: 1280px) 50vw, 25vw" /></div>
+                <div className="p-5"><service.icon className="size-5 text-primary" aria-hidden="true" /><h3 className="mt-4 font-heading text-xl font-semibold text-foreground">{service.title}</h3><p className="mt-3 text-sm leading-6 text-muted-foreground">{service.text}</p><Link href={service.href} className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-primary">View options <ArrowRight className="size-4" aria-hidden="true" /></Link></div>
+              </article>
             </MotionReveal>
           ))}
         </div>
@@ -580,52 +304,85 @@ function ExperienceFlow() {
   );
 }
 
-function TestimonialsSection() {
+function MarinaExperience() {
   return (
-    <section className="container-x py-16 sm:py-20">
-      <SectionIntro label="Guest Perspective" title="Luxury cues, practical clarity" text="Testimonials are static mock content for visual completeness." />
-      <div className="mt-10 grid gap-5 md:grid-cols-3">
-        {testimonials.map((item, index) => (
-          <MotionReveal key={item.name} delay={index * 0.05}>
-            <Card className="h-full">
-              <CardHeader>
-                <div className="flex gap-1 text-gold">
-                  {Array.from({ length: 5 }).map((_, starIndex) => (
-                    <Star key={starIndex} data-icon aria-hidden="true" />
-                  ))}
-                </div>
-                <CardDescription className="text-base leading-7 text-pearl-muted">“{item.quote}”</CardDescription>
-                <CardTitle className="text-lg">{item.name}</CardTitle>
-                <p className="text-sm text-muted-foreground">{item.role}</p>
-              </CardHeader>
-            </Card>
-          </MotionReveal>
-        ))}
+    <section className="bg-primary-50">
+      <div className="grid lg:grid-cols-2">
+        <div className="flex items-center px-4 py-14 sm:px-8 lg:px-[max(2rem,calc((100vw-80rem)/2))] lg:py-20">
+          <div className="max-w-xl"><Sun className="size-7 text-gold-deep" aria-hidden="true" /><h2 className="section-title mt-5">Iconic views. Unhurried moments.</h2><p className="mt-5 text-base leading-8 text-muted-foreground">Glide past Dubai Marina's skyline, luxury yachts, and open waterfront. Choose a guided route or a private pace, with local support close at hand.</p><Button asChild variant="outline" className="mt-7"><Link href="/gallery">See the experience <ArrowRight data-icon aria-hidden="true" /></Link></Button></div>
+        </div>
+        <div className="relative min-h-[360px] lg:min-h-[500px]"><Image src={dubaiWaterfrontImage} alt="Dubai Marina waterfront from the water" fill className="object-cover" sizes="(max-width: 1024px) 100vw, 50vw" /></div>
       </div>
     </section>
   );
 }
 
-function FinalCta() {
+function TrustBand() {
+  return <section className="border-y border-border bg-white"><div className="container-x grid divide-y divide-border py-8 sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-5">{trustItems.map((item) => <div key={item.title} className="px-5 py-6 first:pl-0 last:pr-0"><item.icon className="size-6 text-primary" aria-hidden="true" /><h3 className="mt-4 text-sm font-semibold text-foreground">{item.title}</h3><p className="mt-2 text-xs leading-5 text-muted-foreground">{item.text}</p></div>)}</div></section>;
+}
+
+function PageHero({ title, text, image, compact = false }: { title: string; text: string; image: string; compact?: boolean }) {
   return (
-    <section className="container-x pb-16 sm:pb-20">
-      <div className="glass-panel-strong rounded-lg p-6 sm:p-10">
-        <div className="grid gap-8 lg:grid-cols-[1fr_auto] lg:items-center">
-          <div>
-            <p className="fine-label">Ready When You Are</p>
-            <h2 className="section-title mt-3">Make the marina your first screen.</h2>
-            <p className="mt-4 max-w-2xl text-sm leading-7 text-pearl-muted">
-              Bookings, contact, sales, and admin are currently static mock flows, ready for future integration after this frontend step.
-            </p>
-          </div>
-          <Button asChild variant="gold" size="lg">
-            <Link href="/booking">
-              Start Booking
-              <ArrowRight data-icon aria-hidden="true" />
-            </Link>
-          </Button>
-        </div>
+    <section className="border-b border-border bg-white">
+      <div className={`container-x grid gap-8 py-10 lg:grid-cols-[0.82fr_1.18fr] lg:items-center ${compact ? 'lg:min-h-[420px]' : 'lg:min-h-[520px]'}`}>
+        <MotionReveal><div className="max-w-xl"><h1 className="font-heading text-4xl font-semibold leading-tight text-foreground sm:text-5xl">{title}</h1><div className="my-5 h-px w-12 bg-gold" /><p className="text-base leading-8 text-muted-foreground">{text}</p></div></MotionReveal>
+        <MotionReveal delay={0.05}><div className={`relative overflow-hidden rounded-lg shadow-premium ${compact ? 'aspect-[16/8]' : 'aspect-[16/10]'}`}><Image src={image} alt="" fill priority className="object-cover" sizes="(max-width: 1024px) 100vw, 58vw" /></div></MotionReveal>
       </div>
     </section>
+  );
+}
+
+function SectionIntro({ title, text, action }: { title: string; text: string; action?: { href: string; label: string } }) {
+  return (
+    <div className="flex flex-col justify-between gap-6 lg:flex-row lg:items-end">
+      <div className="max-w-3xl"><h2 className="section-title">{title}</h2><p className="mt-4 max-w-2xl text-sm leading-7 text-muted-foreground sm:text-base">{text}</p></div>
+      {action ? <Button asChild variant="outline"><Link href={action.href}>{action.label}<ArrowRight data-icon aria-hidden="true" /></Link></Button> : null}
+    </div>
+  );
+}
+
+function VehicleCard({ vehicle, sale = false }: { vehicle: (typeof vehicles)[number]; sale?: boolean }) {
+  const location = vehicle.category === 'Jet Car' ? 'Dubai Marina' : 'Dubai Marina / JBR';
+  return (
+    <Card className="group h-full overflow-hidden">
+      <div className="relative aspect-[16/10] overflow-hidden bg-muted"><Image src={vehicle.image} alt={vehicle.name} fill className="object-cover transition duration-500 group-hover:scale-[1.03]" sizes="(max-width: 1024px) 100vw, 33vw" /></div>
+      <CardHeader><div className="flex items-start justify-between gap-4"><div><CardTitle>{vehicle.name}</CardTitle><CardDescription className="mt-1">{vehicle.category}</CardDescription></div><Badge variant={vehicle.status === 'Available' ? 'success' : vehicle.status === 'For Sale' ? 'gold' : vehicle.status === 'Maintenance' ? 'warning' : 'secondary'}>{vehicle.status}</Badge></div></CardHeader>
+      <CardContent className="flex flex-col gap-5">
+        <p className="text-sm leading-6 text-muted-foreground">{vehicle.description}</p>
+        <div className="grid grid-cols-2 gap-3 border-y border-border py-4 text-sm text-muted-foreground"><span className="flex items-center gap-2"><MapPin className="size-4 text-primary" aria-hidden="true" />{location}</span><span className="flex items-center gap-2"><Users className="size-4 text-primary" aria-hidden="true" />Up to {vehicle.seats}</span></div>
+        <div className="flex items-center justify-between gap-4"><p className="font-heading text-2xl font-semibold text-foreground">AED {vehicle.hourlyRate.toLocaleString()}<span className="font-sans text-xs font-normal text-muted-foreground"> {sale ? '' : '/ hour'}</span></p><Button asChild size="sm"><Link href={sale ? '/contact' : '/booking'}>{sale ? 'Inquire' : 'Book now'}<ArrowRight data-icon aria-hidden="true" /></Link></Button></div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function FleetPageContent({ items, title, text }: { items: typeof vehicles; title: string; text: string }) {
+  return <section className="container-x py-16 sm:py-20"><SectionIntro title={title} text={text} action={{ href: '/booking', label: 'Reserve now' }} /><div className="mt-10 grid gap-5 lg:grid-cols-2 xl:grid-cols-3">{items.map((vehicle, index) => <MotionReveal key={vehicle.id} delay={index * 0.04}><VehicleCard vehicle={vehicle} /></MotionReveal>)}</div></section>;
+}
+
+function IncludedSection({ type }: { type: string }) {
+  return (
+    <section className="border-y border-border bg-white py-16"><div className="container-x"><SectionIntro title={`Included with every ${type} booking`} text="The essentials are prepared before you arrive, so the time at the marina stays simple." /><div className="mt-10 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">{[
+      { icon: ShieldCheck, title: 'Safety briefing', text: 'Clear operating guidance before departure.' },
+      { icon: LifeBuoy, title: 'Quality equipment', text: 'Life jacket and required safety gear included.' },
+      { icon: Anchor, title: 'Dock assistance', text: 'Support with boarding, departure, and return.' },
+      { icon: MapPin, title: 'Route guidance', text: 'Local recommendations shaped around conditions.' }
+    ].map((item) => <OpenFeature key={item.title} {...item} />)}</div></div></section>
+  );
+}
+
+function OpenFeature({ icon: Icon, title, text }: { icon: typeof Sparkles; title: string; text: string }) {
+  return <div><Icon className="size-6 text-primary" aria-hidden="true" /><h3 className="mt-4 font-heading text-xl font-semibold text-foreground">{title}</h3><p className="mt-3 text-sm leading-6 text-muted-foreground">{text}</p></div>;
+}
+
+function TestimonialsSection() {
+  return (
+    <section className="border-y border-border bg-white py-16 sm:py-20"><div className="container-x"><SectionIntro title="What guests remember" text="A few words from recent Dubai waterfront experiences." /><div className="mt-10 grid gap-5 md:grid-cols-3">{testimonials.map((item) => <Card key={item.name} className="h-full"><CardHeader><div className="flex gap-1 text-gold-deep">{Array.from({ length: 5 }).map((_, index) => <Star key={index} className="size-4 fill-current" aria-hidden="true" />)}</div><CardDescription className="mt-3 text-base leading-7">&ldquo;{item.quote}&rdquo;</CardDescription><CardTitle className="pt-3 text-lg">{item.name}</CardTitle><p className="text-sm text-muted-foreground">{item.role}</p></CardHeader></Card>)}</div></div></section>
+  );
+}
+
+function BookingCta() {
+  return (
+    <section className="bg-primary-50 py-14 sm:py-16"><div className="container-x flex flex-col justify-between gap-8 lg:flex-row lg:items-center"><div><h2 className="section-title">Ready for the water?</h2><p className="mt-3 max-w-2xl text-sm leading-7 text-muted-foreground sm:text-base">Choose your craft and preferred time. Our Dubai booking team will take care of the details.</p></div><div className="flex flex-col gap-3 sm:flex-row"><Button asChild size="lg"><Link href="/booking"><CalendarCheck data-icon aria-hidden="true" />Book your ride</Link></Button><Button asChild variant="outline" size="lg"><a href="https://wa.me/971501234567"><MessageCircle data-icon aria-hidden="true" />WhatsApp</a></Button></div></div></section>
   );
 }

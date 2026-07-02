@@ -24,6 +24,9 @@ export const adminNavItems = [
 
 export const fleetHeroImage = '/images/edrive/fleet-hero.png';
 export const fleetShowcaseImage = '/images/edrive/fleet-showcase.png';
+export const dubaiWaterfrontImage = '/images/edrive/dubai-waterfront-hero.png';
+export const jetSkiLightImage = '/images/edrive/jet-ski-fleet-light.png';
+export const jetCarLightImage = '/images/edrive/jet-car-marina-light.png';
 
 export const vehicles = [
   {
@@ -36,8 +39,8 @@ export const vehicles = [
     horsepower: 180,
     range: '2 hr ride window',
     status: 'Available' as VehicleStatus,
-    image: fleetShowcaseImage,
-    description: 'Stable luxury cruiser with confident acceleration and room for two guests plus captain.',
+    image: jetSkiLightImage,
+    description: 'A stable, comfortable cruiser with smooth acceleration and room for up to three riders.',
     specs: ['Bluetooth audio', 'Dry storage', 'Safety lanyard', 'Guided route']
   },
   {
@@ -50,8 +53,8 @@ export const vehicles = [
     horsepower: 230,
     range: '90 min sport ride',
     status: 'Booked' as VehicleStatus,
-    image: fleetHeroImage,
-    description: 'Premium touring jet ski tuned for smoother wake handling and high-end comfort.',
+    image: dubaiWaterfrontImage,
+    description: 'A premium touring jet ski designed for confident handling and a more relaxed ride.',
     specs: ['Touring saddle', 'Aqua underglow', 'Cooler mount', 'Pro guide']
   },
   {
@@ -64,8 +67,8 @@ export const vehicles = [
     horsepower: 250,
     range: 'Marina showcase',
     status: 'Available' as VehicleStatus,
-    image: fleetShowcaseImage,
-    description: 'A head-turning floating supercar experience for premium marina photos and open-water cruising.',
+    image: jetCarLightImage,
+    description: 'A distinctive private water experience for marina cruising, celebrations, and photographs.',
     specs: ['Captain included', 'Photo stop', 'LED cabin', 'VIP dock pickup']
   },
   {
@@ -78,8 +81,8 @@ export const vehicles = [
     horsepower: 220,
     range: 'Coastal cruise',
     status: 'Maintenance' as VehicleStatus,
-    image: fleetHeroImage,
-    description: 'Sleek jet car with low-slung styling, premium seats, and cinematic water-level presence.',
+    image: dubaiWaterfrontImage,
+    description: 'Low-slung styling, comfortable seating, and an easy pace for Dubai waterfront cruising.',
     specs: ['Twin seats', 'Sound system', 'Safety kit', 'Dock concierge']
   },
   {
@@ -92,7 +95,7 @@ export const vehicles = [
     horsepower: 35,
     range: '45 min circuit',
     status: 'Available' as VehicleStatus,
-    image: fleetHeroImage,
+    image: jetSkiLightImage,
     description: 'Compact electric water bike for calmer exploration close to the marina.',
     specs: ['Electric assist', 'Beginner route', 'Low wake', 'Guide optional']
   },
@@ -106,9 +109,23 @@ export const vehicles = [
     horsepower: 180,
     range: '28 engine hours',
     status: 'For Sale' as VehicleStatus,
-    image: fleetShowcaseImage,
-    description: 'Maintained premium cruiser with clean service history and marina-ready detailing.',
+    image: jetSkiLightImage,
+    description: 'A maintained premium cruiser with clear service history and marina-ready detailing.',
     specs: ['Service record', 'Trailer option', 'Warranty check', 'Detail included']
+  },
+  {
+    id: 'SL-02',
+    name: 'Pre-Owned Jet Car Touring',
+    category: 'Jet Car',
+    tag: 'For Sale',
+    hourlyRate: 265000,
+    seats: 2,
+    horsepower: 220,
+    range: '42 engine hours',
+    status: 'For Sale' as VehicleStatus,
+    image: jetCarLightImage,
+    description: 'A carefully presented two-seat jet car with low running hours and recent marina service.',
+    specs: ['Service record', 'Cover included', 'Dock trial', 'Handover support']
   }
 ];
 
@@ -231,18 +248,18 @@ export const staff = [
 ];
 
 export const galleryItems = [
-  { title: 'Aqua Glow Marina Arrival', category: 'Jet Ski', image: fleetShowcaseImage },
-  { title: 'Jet Car Sunset Cruise', category: 'Jet Car', image: fleetHeroImage },
-  { title: 'Private Dock Fleet Lineup', category: 'Fleet', image: fleetShowcaseImage },
-  { title: 'Night Water Reflections', category: 'Experience', image: fleetHeroImage },
-  { title: 'VIP Photo Stop', category: 'Guests', image: fleetShowcaseImage },
-  { title: 'Performance Wake Session', category: 'Jet Ski', image: fleetHeroImage }
+  { title: 'Morning on the Marina', category: 'Dubai Marina', image: dubaiWaterfrontImage },
+  { title: 'Fleet Ready at the Dock', category: 'Jet Ski', image: jetSkiLightImage },
+  { title: 'A Different Way to Drive', category: 'Jet Car', image: jetCarLightImage },
+  { title: 'Open Water Perspective', category: 'Experience', image: dubaiWaterfrontImage },
+  { title: 'Private Marina Departure', category: 'Fleet', image: jetCarLightImage },
+  { title: 'Prepared for the Day', category: 'Jet Ski', image: jetSkiLightImage }
 ];
 
 export const testimonials = [
-  { name: 'Layla M.', role: 'Dubai Marina', quote: 'The jet car felt like a private supercar launch on water. Every detail was handled before we arrived.' },
-  { name: 'Ryan K.', role: 'JBR Beach', quote: 'Fast, polished, and easy to book. The team made the route feel premium without making it complicated.' },
-  { name: 'Hessa A.', role: 'Bluewaters', quote: 'The photos, dock pickup, and captain support made the whole evening feel like a luxury experience.' }
+  { name: 'Layla M.', role: 'Dubai Marina', quote: 'The jet car was the highlight of our weekend. The team had everything ready and made the marina handover effortless.' },
+  { name: 'Ryan K.', role: 'JBR Beach', quote: 'Easy to arrange, well maintained, and exactly the right mix of excitement and professional support.' },
+  { name: 'Hessa A.', role: 'Bluewaters', quote: 'The route, photographs, and attention from the dock team made the experience feel genuinely special.' }
 ];
 
 export const salesListings = vehicles.filter((vehicle) => vehicle.status === 'For Sale');

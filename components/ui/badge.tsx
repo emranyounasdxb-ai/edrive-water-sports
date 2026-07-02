@@ -2,24 +2,19 @@ import * as React from 'react';
 import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
 
-const badgeVariants = cva(
-  'inline-flex items-center rounded-md border px-2.5 py-1 text-xs font-semibold transition-colors',
-  {
-    variants: {
-      variant: {
-        default: 'border-primary/[0.45] bg-primary/[0.14] text-ocean-glow',
-        secondary: 'border-white/[0.12] bg-white/[0.08] text-pearl-muted',
-        gold: 'border-gold/40 bg-gold/[0.13] text-gold-soft',
-        success: 'border-emerald-300/[0.35] bg-emerald-400/[0.12] text-emerald-200',
-        warning: 'border-amber-300/[0.35] bg-amber-400/[0.12] text-amber-200',
-        destructive: 'border-red-300/[0.35] bg-red-400/[0.12] text-red-200'
-      }
-    },
-    defaultVariants: {
-      variant: 'default'
+const badgeVariants = cva('inline-flex items-center rounded-md border px-2.5 py-1 text-xs font-semibold transition-colors', {
+  variants: {
+    variant: {
+      default: 'border-primary/20 bg-primary-100 text-primary-800',
+      secondary: 'border-border bg-[#F3F8FA] text-muted-foreground',
+      gold: 'border-gold/40 bg-accent-50 text-gold-deep',
+      success: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+      warning: 'border-amber-200 bg-amber-50 text-amber-700',
+      destructive: 'border-red-200 bg-red-50 text-red-700'
     }
-  }
-);
+  },
+  defaultVariants: { variant: 'default' }
+});
 
 export interface BadgeProps extends React.HTMLAttributes<HTMLDivElement>, VariantProps<typeof badgeVariants> {}
 
