@@ -6,6 +6,7 @@ import {
   CalendarDays,
   ChevronLeft,
   ChevronRight,
+  CreditCard,
   DollarSign,
   Download,
   FileClock,
@@ -13,8 +14,11 @@ import {
   MessageSquare,
   MoreHorizontal,
   Plus,
+  Search,
+  Settings,
   Ship,
   ShieldCheck,
+  Star,
   TrendingUp,
   UserCog,
   Users,
@@ -38,6 +42,29 @@ const dashboardMetrics = [
   { title: "Today's Revenue", value: 'AED 54,320', detail: '22.4% vs yesterday', icon: DollarSign, tone: 'teal' },
   { title: 'Fleet Available', value: '28 / 40', detail: '70% available', icon: Ship, tone: 'teal' },
   { title: 'Pending Confirmations', value: '37', detail: '6 vs yesterday', icon: FileClock, tone: 'gold' }
+];
+
+const customers = [
+  { name: 'Ahmed Al Mansoori', email: 'ahmed@example.com', phone: '+971 50 221 4500', visits: 8, spend: 'AED 7,650', status: 'VIP' },
+  { name: 'James Smith', email: 'james@example.com', phone: '+971 55 884 1290', visits: 4, spend: 'AED 4,350', status: 'Active' },
+  { name: 'Maria Rodriguez', email: 'maria@example.com', phone: '+971 52 441 8801', visits: 3, spend: 'AED 2,550', status: 'Active' },
+  { name: 'Liam Kim', email: 'liam@example.com', phone: '+971 58 194 2200', visits: 2, spend: 'AED 2,900', status: 'New' },
+  { name: 'Sarah Davis', email: 'sarah@example.com', phone: '+971 56 331 9288', visits: 5, spend: 'AED 5,180', status: 'VIP' }
+];
+
+const payments = [
+  { id: 'PAY-2041', customer: 'Ahmed Al Mansoori', method: 'Visa Card', amount: 'AED 850', date: 'May 16, 2026', status: 'Paid' },
+  { id: 'PAY-2040', customer: 'James Smith', method: 'Mastercard', amount: 'AED 1,450', date: 'May 16, 2026', status: 'Pending' },
+  { id: 'PAY-2039', customer: 'Maria Rodriguez', method: 'Apple Pay', amount: 'AED 850', date: 'May 16, 2026', status: 'Paid' },
+  { id: 'PAY-2038', customer: 'Liam Kim', method: 'Bank Transfer', amount: 'AED 1,450', date: 'May 15, 2026', status: 'Refunded' },
+  { id: 'PAY-2037', customer: 'Sarah Davis', method: 'Cash', amount: 'AED 850', date: 'May 15, 2026', status: 'Paid' }
+];
+
+const reviews = [
+  { name: 'Layla M.', rating: 5, service: 'Jet Car', comment: 'Premium handover and beautiful marina route.', status: 'Published' },
+  { name: 'Ryan K.', rating: 5, service: 'Jet Ski', comment: 'Clean equipment and very professional guide.', status: 'Published' },
+  { name: 'Hessa A.', rating: 5, service: 'Jet Car', comment: 'The whole experience felt private and luxury.', status: 'Featured' },
+  { name: 'Omar N.', rating: 4, service: 'Jet Ski', comment: 'Great ride, waiting area can be improved.', status: 'Review' }
 ];
 
 export function AdminDashboardPage() {
@@ -68,6 +95,28 @@ export function AdminDashboardPage() {
       </div>
     </div>
   );
+}
+
+export function AdminCustomersPage() {
+  return <AdminSimpleTablePage label="Customers" title="Customer directory" text="Track guests, VIP customers, contact details, visits, and lifetime spending." actionLabel="Add Customer" metrics={[['Total Customers', '1,842', Users], ['VIP Guests', '126', Star], ['Repeat Rate', '34%', TrendingUp]]}><Card><CardHeader className="flex-row items-center justify-between gap-3"><div className="min-w-0"><CardTitle className="truncate text-base">Customer Records</CardTitle><CardDescription>Guest profiles and booking history summary.</CardDescription></div><Button variant="outline" size="sm"><Search data-icon aria-hidden="true" />Search</Button></CardHeader><CardContent><Table><TableHeader><TableRow><TableHead>Customer</TableHead><TableHead>Email</TableHead><TableHead>Phone</TableHead><TableHead>Visits</TableHead><TableHead>Spend</TableHead><TableHead>Status</TableHead></TableRow></TableHeader><TableBody>{customers.map((customer) => <TableRow key={customer.email}><TableCell><div className="flex items-center gap-3"><span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary-50 text-xs font-bold text-primary">{initials(customer.name)}</span><span className="max-w-[12rem] truncate font-semibold text-foreground">{customer.name}</span></div></TableCell><TableCell>{customer.email}</TableCell><TableCell>{customer.phone}</TableCell><TableCell>{customer.visits}</TableCell><TableCell>{customer.spend}</TableCell><TableCell><Badge variant={customer.status === 'VIP' ? 'gold' : customer.status === 'New' ? 'secondary' : 'success'} className="rounded-full">{customer.status}</Badge></TableCell></TableRow>)}</TableBody></Table></CardContent></Card></AdminSimpleTablePage>;
+}
+
+export function AdminPaymentsPage() {
+  return <AdminSimpleTablePage label="Payments" title="Payment center" text="Review collections, pending payments, refunds, and payment method activity." actionLabel="Record Payment" metrics={[['Collected Today', 'AED 54,320', WalletCards], ['Pending', 'AED 8,240', FileClock], ['Refunds', 'AED 1,450', CreditCard]]}><Card><CardHeader className="flex-row items-center justify-between gap-3"><div className="min-w-0"><CardTitle className="truncate text-base">Recent Payments</CardTitle><CardDescription>Latest payment activity across bookings.</CardDescription></div><Button variant="outline" size="sm"><Download data-icon aria-hidden="true" />Export</Button></CardHeader><CardContent><Table><TableHeader><TableRow><TableHead>Payment ID</TableHead><TableHead>Customer</TableHead><TableHead>Method</TableHead><TableHead>Amount</TableHead><TableHead>Date</TableHead><TableHead>Status</TableHead></TableRow></TableHeader><TableBody>{payments.map((payment) => <TableRow key={payment.id}><TableCell className="font-semibold text-foreground">{payment.id}</TableCell><TableCell>{payment.customer}</TableCell><TableCell>{payment.method}</TableCell><TableCell>{payment.amount}</TableCell><TableCell>{payment.date}</TableCell><TableCell><Badge variant={payment.status === 'Paid' ? 'success' : payment.status === 'Pending' ? 'warning' : 'destructive'} className="rounded-full">{payment.status}</Badge></TableCell></TableRow>)}</TableBody></Table></CardContent></Card></AdminSimpleTablePage>;
+}
+
+export function AdminReviewsPage() {
+  return <AdminSimpleTablePage label="Reviews" title="Guest reviews" text="Manage guest feedback, featured testimonials, and service quality signals." actionLabel="Request Review" metrics={[['Average Rating', '4.9', Star], ['Published', '324', MessageSquare], ['Featured', '18', ShieldCheck]]}><div className="grid gap-4 lg:grid-cols-2">{reviews.map((review) => <Card key={review.name}><CardContent className="p-5"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="truncate font-semibold text-foreground">{review.name}</p><p className="text-xs text-muted-foreground">{review.service}</p></div><Badge variant={review.status === 'Featured' ? 'gold' : review.status === 'Review' ? 'warning' : 'success'} className="rounded-full">{review.status}</Badge></div><div className="mt-4 flex gap-1 text-gold">{Array.from({ length: review.rating }).map((_, index) => <Star key={index} className="size-4 fill-current" aria-hidden="true" />)}</div><p className="mt-4 text-sm leading-6 text-muted-foreground">{review.comment}</p></CardContent></Card>)}</div></AdminSimpleTablePage>;
+}
+
+export function AdminSettingsPage() {
+  const settings = [
+    ['Booking Rules', 'Deposit, cancellation, and confirmation settings', 'Enabled'],
+    ['Fleet Alerts', 'Maintenance and availability notification controls', 'Enabled'],
+    ['Payment Gateway', 'Card, Apple Pay, cash, and refund preferences', 'Live'],
+    ['Staff Access', 'Role-based permissions for operations users', 'Configured']
+  ];
+  return <AdminSimpleTablePage label="Settings" title="System settings" text="Control booking rules, dashboard preferences, notifications, and team access." actionLabel="Save Changes" metrics={[['Booking Status', 'Live', Settings], ['Team Roles', '7', UserCog], ['Alerts', '12', Bell]]}><div className="grid gap-4 lg:grid-cols-2">{settings.map(([title, description, status]) => <Card key={title}><CardContent className="flex items-center justify-between gap-4 p-5"><div className="min-w-0"><p className="truncate font-semibold text-foreground">{title}</p><p className="mt-1 truncate text-sm text-muted-foreground">{description}</p></div><Badge variant={status === 'Live' ? 'gold' : 'success'} className="shrink-0 rounded-full">{status}</Badge></CardContent></Card>)}</div></AdminSimpleTablePage>;
 }
 
 export function AdminBookingsPage() {
@@ -214,6 +263,10 @@ export function AdminStaffPage() {
   );
 }
 
+function AdminSimpleTablePage({ label, title, text, actionLabel, metrics, children }: { label: string; title: string; text: string; actionLabel: string; metrics: [string, string, LucideIcon][]; children: React.ReactNode }) {
+  return <div className="flex flex-col gap-6"><AdminPageHeader label={label} title={title} text={text} actionLabel={actionLabel} /><div className="grid gap-4 md:grid-cols-3">{metrics.map(([metricTitle, value, Icon]) => <MiniStat key={metricTitle} title={metricTitle} value={value} icon={Icon} />)}</div>{children}</div>;
+}
+
 function DashboardMetricCard({ title, value, detail, icon: Icon, tone }: { title: string; value: string; detail: string; icon: LucideIcon; tone: string }) {
   const isGold = tone === 'gold';
   return (
@@ -283,6 +336,7 @@ function AdminPageHeader({ label, title, text, actionLabel }: { label: string; t
 function ProgressMetric({ label, value }: { label: string; value: number }) { return <div className="flex flex-col gap-2"><div className="flex justify-between gap-3 text-sm"><span className="truncate whitespace-nowrap font-semibold text-foreground">{label}</span><span className="text-muted-foreground">{value}%</span></div><ProgressBar value={value} /></div>; }
 function ProgressBar({ value }: { value: number }) { return <div className="mt-2 h-2 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-primary" style={{ width: `${Math.min(value, 100)}%` }} /></div>; }
 function FleetSpec({ label, value }: { label: string; value: string | number }) { return <div className="rounded-2xl border border-border bg-[#F7FBFC] p-3"><p className="truncate whitespace-nowrap font-heading text-xl font-semibold text-foreground">{value}</p><p className="mt-1 truncate whitespace-nowrap text-muted-foreground">{label}</p></div>; }
+function initials(name: string) { return name.split(' ').map((part) => part[0]).slice(0, 2).join(''); }
 
 function LineChart({ lines, labels, height, maxValue, money = false }: { lines: number[][]; labels: string[]; height: number; maxValue?: number; money?: boolean }) {
   const max = maxValue ?? Math.max(...lines.flat());
