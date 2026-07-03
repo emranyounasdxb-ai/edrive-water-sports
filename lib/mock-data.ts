@@ -1,6 +1,34 @@
 export type VehicleStatus = 'Available' | 'Booked' | 'Maintenance' | 'For Sale';
 export type BookingStatus = 'Confirmed' | 'Pending' | 'Completed' | 'Cancelled';
 
+export type VehicleItem = {
+  id: string;
+  name: string;
+  category: string;
+  tag: string;
+  hourlyRate: number;
+  seats: number;
+  horsepower: number;
+  range: string;
+  status: VehicleStatus;
+  image: string;
+  description: string;
+  specs: string[];
+};
+
+export type GalleryItem = {
+  title: string;
+  category: string;
+  image: string;
+};
+
+export type TestimonialItem = {
+  name: string;
+  role: string;
+  text: string;
+  rating: number;
+};
+
 export const publicNavItems = [
   { href: '/', label: 'Home' },
   { href: '/about', label: 'About' },
@@ -47,13 +75,16 @@ export const dubaiWaterfrontImage = '/images/edrive/dubai-waterfront-hero.png';
 export const jetSkiLightImage = '/images/edrive/jet-ski-fleet-light.png';
 export const jetCarLightImage = '/images/edrive/jet-car-marina-light.png';
 
-export const vehicles = [];
-export const bookings = [];
-export const dashboardStats = [];
-export const inventoryItems = [];
-export const coupons = [];
+export const vehicles: VehicleItem[] = [];
+export const salesListings: VehicleItem[] = [];
+export const galleryItems: GalleryItem[] = [];
+export const testimonials: TestimonialItem[] = [];
+export const bookings: Array<Record<string, never>> = [];
+export const dashboardStats: Array<Record<string, never>> = [];
+export const inventoryItems: Array<Record<string, never>> = [];
+export const coupons: Array<Record<string, never>> = [];
 export const reports = {
-  revenue: [],
-  activities: [],
-  locations: []
+  revenue: [] as Array<Record<string, never>>,
+  activities: [] as Array<Record<string, never>>,
+  locations: [] as Array<Record<string, never>>
 };
