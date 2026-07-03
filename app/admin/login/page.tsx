@@ -120,7 +120,7 @@ export default function Page() {
                   <span className="block text-primary-900">eDrive</span>
                 </h1>
                 <div className="mt-5 h-1 w-20 rounded-full bg-[#B98A42] shadow-[0_8px_20px_rgba(185,138,66,0.26)]" />
-                <p className="mt-5 max-w-sm rounded-2xl border border-white/38 bg-white/34 p-4 text-sm font-semibold leading-7 text-primary-900 shadow-[0_14px_34px_rgba(8,37,50,0.10)] backdrop-blur-md sm:text-base">
+                <p className="ml-1 mt-3 max-w-[21rem] rounded-xl border border-white/24 bg-white/16 px-3.5 py-2.5 text-xs font-semibold leading-5 text-primary-900/90 shadow-[0_10px_24px_rgba(8,37,50,0.07)] backdrop-blur-sm sm:text-sm sm:leading-6">
                   Manage bookings, fleet, staff, customers, and daily operations from one premium control center.
                 </p>
               </div>
