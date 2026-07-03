@@ -14,23 +14,23 @@ export const publicNavItems = [
 
 export const adminNavItems = [
   { href: '/admin', label: 'Dashboard', icon: 'LayoutDashboard' },
-  { href: '/admin/staff', label: 'Staff / Users', icon: 'UserCog' },
+  { href: '/admin/staff-management', label: 'Staff / Users', icon: 'UserCog' },
   { href: '/admin/packages', label: 'Packages / Products', icon: 'Package' },
   { href: '/admin/vehicles', label: 'Vehicles / Fleet', icon: 'Ship' },
   { href: '/admin/bookings', label: 'Bookings', icon: 'CalendarDays' },
-  { href: '/admin/schedule', label: 'Schedule', icon: 'CalendarDays' },
-  { href: '/admin/assignments', label: 'Assignments', icon: 'ClipboardCheck' },
+  { href: '/admin/operations-schedule', label: 'Schedule', icon: 'CalendarDays' },
+  { href: '/admin/vehicle-assignment', label: 'Assignments', icon: 'ClipboardCheck' },
   { href: '/admin/payments', label: 'Payments', icon: 'CreditCard' },
   { href: '/admin/customers', label: 'Customers', icon: 'UsersRound' },
   { href: '/admin/maintenance', label: 'Maintenance', icon: 'Settings' },
   { href: '/admin/reports', label: 'Reports', icon: 'BarChart3' },
-  { href: '/admin/settings', label: 'Settings', icon: 'Settings' }
+  { href: '/admin/system-settings', label: 'Settings', icon: 'Settings' }
 ];
 
 export const managerNavItems = [
   { href: '/admin/manager', label: 'Manager Dashboard', icon: 'LayoutDashboard' },
-  { href: '/admin/assignments', label: 'Assignments', icon: 'ClipboardCheck' },
-  { href: '/admin/schedule', label: 'Schedule', icon: 'CalendarDays' },
+  { href: '/admin/vehicle-assignment', label: 'Assignments', icon: 'ClipboardCheck' },
+  { href: '/admin/operations-schedule', label: 'Schedule', icon: 'CalendarDays' },
   { href: '/admin/vehicles', label: 'Vehicle Status', icon: 'Ship' },
   { href: '/admin/maintenance', label: 'Maintenance', icon: 'Settings' },
   { href: '/admin/payments', label: 'Payment Updates', icon: 'CreditCard' }
