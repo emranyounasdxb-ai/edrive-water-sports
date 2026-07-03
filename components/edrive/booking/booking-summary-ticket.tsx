@@ -1,6 +1,6 @@
 import type { LucideIcon } from 'lucide-react';
-import { CalendarDays, Clock3, MapPin, Ship, UsersRound, Waves } from 'lucide-react';
-import { BookingDraft, formatAed, formatDuration, getBookingTotals, getExperience, durationPackages } from '@/lib/booking-data';
+import { CalendarDays, Clock3, MapPin, TicketCheck, UsersRound } from 'lucide-react';
+import { BookingDraft, durationPackages, formatAed, formatDuration, getBookingTotals, getExperience } from '@/lib/booking-data';
 import { companyInfo } from '@/lib/company-info';
 import { cn } from '@/lib/utils';
 
@@ -45,6 +45,7 @@ export function BookingSummaryTicket({ draft, compact = false }: { draft: Bookin
       <div className="bg-white p-3.5">
         <div className="grid gap-2">
           <SummaryRow icon={Clock3} label={isSales ? 'Inquiry' : 'Duration'} value={isSales ? draft.inquiryType : formatDuration(draft.durationMinutes)} />
+          {draft.selectedPackageName ? <SummaryRow icon={TicketCheck} label="Selected package" value={draft.selectedPackageName} /> : null}
           <SummaryRow icon={UsersRound} label="Party" value={party} />
           <SummaryRow icon={CalendarDays} label="Date" value={displayDate(draft.preferredDate)} />
           <SummaryRow icon={Clock3} label="Time" value={draft.preferredTime || 'Not selected'} />

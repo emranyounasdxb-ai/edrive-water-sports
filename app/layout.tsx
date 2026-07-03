@@ -21,7 +21,7 @@ export const metadata: Metadata = {
     default: 'eDrive Water Sports',
     template: '%s | eDrive Water Sports'
   },
-  description: 'Premium jet ski rentals, jet car rentals, sales, booking, gallery, contact, and static admin UI for eDrive Water Sports.',
+  description: 'Premium jet ski rental Dubai, jet car rental Dubai, water sports packages, fleet, membership, sales, and contact for eDrive Water Sports at Dubai Islands Marina.',
   metadataBase: new URL('https://edrivewatersports.ae'),
   icons: {
     icon: [

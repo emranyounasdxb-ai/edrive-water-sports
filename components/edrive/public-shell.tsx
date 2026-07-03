@@ -3,9 +3,9 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { ArrowRight, CalendarCheck, Instagram, Mail, MapPin, Menu, Phone, X } from 'lucide-react';
+import { ArrowRight, Instagram, Mail, MapPin, Menu, MessageCircle, Phone, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { companyInfo } from '@/lib/company-info';
+import { companyInfo, whatsappUrl } from '@/lib/company-info';
 import { publicNavItems } from '@/lib/mock-data';
 import { cn } from '@/lib/utils';
 import { BrandMark } from './brand';
@@ -83,13 +83,13 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
                 {companyInfo.landlineDisplay}
               </a>
               <Button asChild variant="outline" size="sm" className="whitespace-nowrap">
-                <Link href="/admin/login">Admin Portal</Link>
+                <Link href="/contact">Contact</Link>
               </Button>
               <Button asChild size="sm" className="whitespace-nowrap">
-                <Link href="/booking">
-                  <CalendarCheck data-icon aria-hidden="true" />
-                  Book Now
-                </Link>
+                <a href={whatsappUrl} target="_blank" rel="noopener noreferrer">
+                  <MessageCircle data-icon aria-hidden="true" />
+                  WhatsApp
+                </a>
               </Button>
             </div>
 
@@ -116,14 +116,11 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
                   </Link>
                 );
               })}
-              <Link href="/admin/login" onClick={() => setOpen(false)} className="inline-flex h-10 items-center justify-center whitespace-nowrap rounded-2xl px-4 text-sm font-semibold text-primary transition hover:bg-white">
-                <span className="relative -top-px block leading-none">Admin Portal</span>
-              </Link>
               <Button asChild className="mt-3">
-                <Link href="/booking" onClick={() => setOpen(false)}>
-                  <CalendarCheck data-icon aria-hidden="true" />
-                  Book Your Experience
-                </Link>
+                <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" onClick={() => setOpen(false)}>
+                  <MessageCircle data-icon aria-hidden="true" />
+                  WhatsApp
+                </a>
               </Button>
             </div>
           </div>
@@ -156,11 +153,11 @@ function PublicFooter() {
           ))}
         </div>
         <div className="flex flex-col gap-3">
-          <h3 className="text-sm font-semibold text-foreground">Experiences</h3>
-          <Link href="/jet-ski-rentals" className="text-sm text-muted-foreground transition hover:text-primary">Jet Ski Rentals</Link>
-          <Link href="/jet-car-rentals" className="text-sm text-muted-foreground transition hover:text-primary">Jet Car Rentals</Link>
-          <Link href="/sales" className="text-sm text-muted-foreground transition hover:text-primary">Watercraft Sales</Link>
-          <Link href="/gallery" className="text-sm text-muted-foreground transition hover:text-primary">Gallery</Link>
+          <h3 className="text-sm font-semibold text-foreground">Packages</h3>
+          <Link href="/rentals#jet-ski-packages" className="text-sm text-muted-foreground transition hover:text-primary">Jet Ski Packages</Link>
+          <Link href="/rentals#jet-car-packages" className="text-sm text-muted-foreground transition hover:text-primary">Jet Car Packages</Link>
+          <Link href="/rentals#combo-packages" className="text-sm text-muted-foreground transition hover:text-primary">Combo Packages</Link>
+          <Link href="/rentals#vip-packages" className="text-sm text-muted-foreground transition hover:text-primary">VIP Packages</Link>
         </div>
         <div className="flex flex-col gap-4">
           <h3 className="text-sm font-semibold text-foreground">Contact</h3>
@@ -180,7 +177,7 @@ function PublicFooter() {
               </span>
             ))}
           </div>
-          <Link href="/booking" className="inline-flex items-center gap-2 font-semibold text-primary">Plan your ride <ArrowRight data-icon aria-hidden="true" /></Link>
+          <Link href="/rentals" className="inline-flex items-center gap-2 font-semibold text-primary">Explore packages <ArrowRight data-icon aria-hidden="true" /></Link>
         </div>
       </div>
     </footer>

@@ -2,7 +2,7 @@
 
 import type { LucideIcon } from 'lucide-react';
 import Link from 'next/link';
-import { CalendarDays, Check, Clock3, Home, MapPin, MessageCircle, RefreshCw, Ship, Timer, UsersRound, Waves } from 'lucide-react';
+import { CalendarDays, Check, Clock3, Home, MapPin, MessageCircle, RefreshCw, Ship, TicketCheck, Timer, UsersRound, Waves } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { BookingRequest, formatAed, formatDuration, getExperience } from '@/lib/booking-data';
 import { companyInfo, whatsappUrl } from '@/lib/company-info';
@@ -46,6 +46,7 @@ export function BookingSuccess({ request, onAnother }: { request: BookingRequest
                 <div className="p-5 sm:p-6">
                   <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                     <InfoBox icon={Ship} label="Service" value={experience.title} />
+                    {request.selectedPackageName ? <InfoBox icon={TicketCheck} label="Package" value={request.selectedPackageName} /> : null}
                     <InfoBox icon={CalendarDays} label="Date" value={displayDate(request.preferredDate)} />
                     <InfoBox icon={Clock3} label="Time" value={request.preferredTime} />
                     <InfoBox icon={Timer} label={isSales ? 'Inquiry' : 'Duration'} value={durationLabel} />

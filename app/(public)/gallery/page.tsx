@@ -1,10 +1,18 @@
 import type { Metadata } from 'next';
-import { GalleryPage } from '@/components/edrive/public-pages';
+import { LegacyRoutePage } from '@/components/edrive/public-pages';
 
 export const metadata: Metadata = {
-  title: 'Gallery'
+  title: 'Gallery',
+  robots: { index: false, follow: true }
 };
 
 export default function Page() {
-  return <GalleryPage />;
+  return (
+    <LegacyRoutePage
+      title="Explore the Fleet Instead"
+      text="The public website has been simplified. View the Fleet page for current ride types, premium visuals, and routes into rental packages."
+      href="/fleet"
+      cta="View Fleet"
+    />
+  );
 }

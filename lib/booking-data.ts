@@ -15,6 +15,9 @@ export type ExperienceOption = {
 };
 
 export type BookingDraft = {
+  selectedPackageName?: string;
+  selectedPackageSlug?: string;
+  selectedPackageCategory?: string;
   experienceType: ExperienceId;
   durationMinutes: number;
   inquiryType: string;
@@ -35,6 +38,9 @@ export type BookingRequest = {
   status: 'Pending';
   adminStatus: 'New';
   managerStatus: null;
+  selectedPackageName?: string | null;
+  selectedPackageSlug?: string | null;
+  selectedPackageCategory?: string | null;
   experienceType: ExperienceId;
   serviceType: ServiceType;
   durationMinutes: number;

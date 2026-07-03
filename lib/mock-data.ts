@@ -31,12 +31,10 @@ export type TestimonialItem = {
 
 export const publicNavItems = [
   { href: '/', label: 'Home' },
-  { href: '/about', label: 'About' },
-  { href: '/jet-ski-rentals', label: 'Jet Ski Rentals' },
-  { href: '/jet-car-rentals', label: 'Jet Car Rentals' },
+  { href: '/fleet', label: 'Fleet' },
   { href: '/sales', label: 'Sales' },
-  { href: '/booking', label: 'Booking' },
-  { href: '/gallery', label: 'Gallery' },
+  { href: '/rentals', label: 'Rentals' },
+  { href: '/membership', label: 'Membership' },
   { href: '/contact', label: 'Contact' }
 ];
 
