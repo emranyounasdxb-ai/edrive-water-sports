@@ -35,11 +35,11 @@ import { companyInfo, whatsappUrl } from '@/lib/company-info';
 import {
   dubaiWaterfrontImage,
   fleetHeroImage,
+  fleetShowcaseImage,
   jetCarLightImage,
   jetSkiLightImage
 } from '@/lib/mock-data';
 import {
-  featuredPackageSlugs,
   getBookingHref,
   getPackagesByCategory,
   getPackagesBySlugs,
@@ -57,8 +57,35 @@ import { ContactForm } from './contact-form';
 import { MotionReveal } from './motion-reveal';
 
 const sectionPad = 'py-10 sm:py-12 lg:py-14';
-const featuredPackages = getPackagesBySlugs(featuredPackageSlugs);
 const popularPackages = getPackagesBySlugs(popularPackageSlugs);
+const homePopularPackages = getPackagesBySlugs([
+  'marina-rush-jet-ski',
+  'dubai-jet-car-cruise',
+  'jet-ski-jet-car-combo',
+  'family-splash-day',
+  'vip-sunset-marine-experience'
+]);
+
+const homePackageImages: Record<PublicPackageCategory, string> = {
+  'jet-ski': jetSkiLightImage,
+  'jet-car': jetCarLightImage,
+  combo: fleetHeroImage,
+  family: jetSkiLightImage,
+  vip: fleetShowcaseImage
+};
+
+const homeFleetItems = [
+  { name: 'SEA-DOO GTX 300', type: 'Jet Ski', image: jetSkiLightImage },
+  { name: 'Jet Car EVO', type: 'Jet Car', image: jetCarLightImage },
+  { name: 'Luxury Support Boat', type: 'Support', image: fleetShowcaseImage }
+];
+
+const homeRentalCategories: Array<{ label: string; href: string; icon: LucideIcon }> = [
+  { label: 'Jet Skis', href: '/rentals#jet-ski-packages', icon: Waves },
+  { label: 'Jet Cars', href: '/rentals#jet-car-packages', icon: Car },
+  { label: 'Combo Deals', href: '/rentals#combo-packages', icon: Sailboat },
+  { label: 'Equipment', href: '/contact', icon: LifeBuoy }
+];
 
 const categoryIcons: Record<PublicPackageCategory, LucideIcon> = {
   'jet-ski': Waves,
@@ -134,83 +161,240 @@ const membershipTiers = [
 export function HomePage() {
   return (
     <>
-      <PublicHero
-        title="Premium Jet Ski & Jet Car Experiences in Dubai"
-        text="Ride across Dubai's most beautiful waters with eDrive Water Sports. Choose from premium jet ski rides, luxury jet car experiences, combo packages, and exclusive member offers."
-        image={dubaiWaterfrontImage}
-        imageAlt="Premium jet ski and jet car experiences at Dubai Islands Marina"
-        actions={[
-          { href: '/rentals', label: 'Explore Rentals', icon: Waves },
-          { href: '/fleet', label: 'View Fleet', icon: Ship, variant: 'outline' },
-          { href: whatsappUrl, label: 'WhatsApp Us', icon: MessageCircle, variant: 'gold', external: true }
-        ]}
-      />
+      <HomeHero />
 
-      <section id="popular-packages" className={cn('container-x', sectionPad)}>
-        <SectionHeader
-          title="Popular Dubai Water Sports Packages"
-          text="Start with the most requested jet ski, jet car, family, combo, and VIP packages from our curated public package collection."
-          action={{ href: '/rentals', label: 'View All 50 Packages' }}
-        />
-        <PackageGrid packages={featuredPackages} className="mt-7 lg:grid-cols-4" />
-      </section>
-
-      <section className="border-y border-border bg-white/70">
-        <div className={cn('container-x', sectionPad)}>
-          <SectionHeader title="Fleet Preview" text="Choose a powerful jet ski or a head-turning jet car, then book from the package that fits your ride style." />
-          <div className="mt-7 grid gap-5 md:grid-cols-2">
-            <FleetPreviewCard title="Premium Jet Ski Rides" text="Responsive jet skis for first-time riders, skyline photo routes, and longer Dubai coastline tours." image={jetSkiLightImage} href="/fleet" cta="View Fleet" icon={Waves} />
-            <FleetPreviewCard title="Luxury Jet Car Cruises" text="A supercar-on-water feeling for couples, birthdays, VIP guests, and content-friendly marine moments." image={jetCarLightImage} href="/rentals" cta="View Rental Packages" icon={Car} />
+      <section id="popular-packages" className="bg-[#f4f5f5]">
+        <div className="container-x py-7 sm:py-8">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <h2 className="whitespace-nowrap font-heading text-lg font-semibold text-foreground sm:text-3xl">Popular Packages</h2>
+              <Waves className="size-5 text-primary" aria-hidden="true" />
+            </div>
+            <Link href="/rentals" className="inline-flex shrink-0 items-center gap-2 text-[11px] font-bold text-primary-900 transition hover:text-primary sm:text-sm">
+              View All Packages
+              <ArrowRight className="size-4" aria-hidden="true" />
+            </Link>
+          </div>
+          <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+            {homePopularPackages.map((packageItem, index) => (
+              <MotionReveal key={packageItem.slug} delay={index * 0.025}>
+                <HomePackageCard packageItem={packageItem} />
+              </MotionReveal>
+            ))}
           </div>
         </div>
       </section>
 
-      <section className={cn('container-x', sectionPad)}>
-        <SectionHeader title="Why Choose eDrive" text="Premium support, clean ride planning, and a Dubai Islands location make every public booking feel easy from the first click." />
-        <FeatureGrid items={whyChoose} className="mt-7 lg:grid-cols-3" />
-      </section>
-
-      <section className="bg-primary-900 text-white">
-        <div className="container-x grid gap-6 py-10 lg:grid-cols-2 lg:py-14">
-          <ExperienceSplit title="Jet Ski Energy" text="Fast, guided, and photo-friendly jet ski Dubai Islands packages for riders who want movement, sea spray, and skyline views." image={jetSkiLightImage} href="/rentals#jet-ski-packages" cta="Jet Ski Packages" icon={Waves} />
-          <ExperienceSplit title="Jet Car Luxury" text="A premium jet car Dubai experience for couples, celebrations, and guests who want something unmistakably different." image={jetCarLightImage} href="/rentals#jet-car-packages" cta="Jet Car Packages" icon={Car} />
+      <section className="bg-[#f4f5f5] pb-8 sm:pb-10">
+        <div className="container-x grid gap-4 xl:grid-cols-[1.18fr_0.72fr_1.1fr]">
+          <HomeFleetPanel />
+          <HomeMembershipPanel />
+          <HomeRentalsPanel />
         </div>
       </section>
 
-      <section className={cn('container-x grid gap-7 lg:grid-cols-[0.9fr_1.1fr] lg:items-center', sectionPad)}>
-        <div>
-          <h2 className="section-title">Membership Benefits for Frequent Riders</h2>
-          <p className="mt-4 text-sm leading-7 text-muted-foreground sm:text-base">eDrive membership is built for Dubai residents, repeat riders, couples, families, and VIP guests who want priority support and better package recommendations.</p>
-          <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-            <Button asChild><Link href="/membership"><Crown data-icon aria-hidden="true" />Join Membership</Link></Button>
-            <Button asChild variant="outline"><Link href="/membership#member-benefits">View Member Benefits</Link></Button>
-          </div>
-        </div>
-        <div className="grid gap-4 sm:grid-cols-3">
-          {membershipTiers.map((tier) => <TierMiniCard key={tier.name} tier={tier} />)}
-        </div>
-      </section>
-
-      <section className="border-y border-border bg-white/70">
-        <div className={cn('container-x', sectionPad)}>
-          <SectionHeader title="Recommended Experiences" text="Not sure where to start? These package groups cover the most common Dubai water sports plans." />
-          <RelatedLinks links={[
-            { href: '/rentals#jet-ski-packages', label: 'Jet Ski Packages', text: packageCategoryDescriptions['jet-ski'] },
-            { href: '/rentals#jet-car-packages', label: 'Jet Car Packages', text: packageCategoryDescriptions['jet-car'] },
-            { href: '/rentals#vip-packages', label: 'VIP Packages', text: packageCategoryDescriptions.vip },
-            { href: '/rentals#family-packages', label: 'Family Packages', text: packageCategoryDescriptions.family }
-          ]} />
-        </div>
-      </section>
-
-      <section className={cn('container-x', sectionPad)}>
-        <SectionHeader title="Safety, Support, and Trust" text="The eDrive team keeps the public booking flow simple while making the ride experience feel polished and well prepared." />
-        <FeatureGrid items={safetyItems} className="mt-7 lg:grid-cols-4" />
-      </section>
-
-      <LocationHighlight />
-      <FinalCta title="Ready to choose your Dubai water sports package?" text="Explore the full rentals page, choose a static marketing package, and send your preferred date, time, guests, and notes." />
+      <HomeContactStrip />
     </>
+  );
+}
+
+function HomeHero() {
+  return (
+    <section className="relative isolate min-h-[620px] overflow-hidden bg-primary-900 text-white sm:min-h-[540px] lg:min-h-[490px]">
+      <Image
+        src={dubaiWaterfrontImage}
+        alt="Jet ski and jet car riding across the Dubai waterfront"
+        fill
+        priority
+        className="object-cover object-[68%_68%]"
+        sizes="100vw"
+      />
+      <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(5,27,39,0.98)_0%,rgba(5,35,48,0.90)_34%,rgba(5,35,48,0.38)_58%,rgba(5,35,48,0.04)_82%)]" />
+      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(4,23,33,0.36)_0%,transparent_38%,rgba(4,23,33,0.24)_100%)]" />
+
+      <div className="container-x relative flex min-h-[620px] items-end pb-6 pt-28 sm:min-h-[540px] sm:items-center sm:pb-10 sm:pt-28 lg:min-h-[490px] lg:pb-8 lg:pt-24">
+        <MotionReveal>
+          <div className="max-w-2xl">
+            <h1 className="font-heading text-4xl font-semibold leading-[1.03] text-white sm:text-5xl lg:text-[3.45rem]">
+              Premium Water Sports
+              <span className="mt-1 block text-primary-300">Dubai Islands</span>
+            </h1>
+            <p className="mt-5 max-w-xl text-base leading-7 text-white/82 sm:text-lg">Jet Skis. Jet Cars. Unforgettable moments on the water.</p>
+
+            <div className="mt-7 grid max-w-lg gap-4 sm:grid-cols-2">
+              <HeroFeature icon={ShieldCheck} title="Premium Experience" text="Top-of-the-line fleet for your adventure" />
+              <HeroFeature icon={MapPin} title="Dubai Islands" text="Stunning views and crystal-clear waters" />
+            </div>
+
+            <div className="mt-8 flex max-w-xl flex-col overflow-hidden rounded-[1.2rem] border border-white/16 bg-primary-900/92 shadow-[0_18px_45px_rgba(0,0,0,0.28)] sm:flex-row">
+              <Link href="/rentals" className="inline-flex min-h-14 flex-1 items-center justify-center gap-2 px-5 text-sm font-bold text-accent-300 transition hover:bg-white/10">
+                <CalendarCheck className="size-4" aria-hidden="true" />
+                Book Your Adventure
+              </Link>
+              <Link href="/rentals" className="inline-flex min-h-14 flex-[1.1] items-center justify-between gap-3 border-t border-white/12 bg-primary px-5 text-xs font-semibold text-white transition hover:bg-primary-600 sm:border-l sm:border-t-0">
+                <span>Choose your package and book in minutes</span>
+                <ArrowRight className="size-4 shrink-0" aria-hidden="true" />
+              </Link>
+            </div>
+          </div>
+        </MotionReveal>
+      </div>
+    </section>
+  );
+}
+
+function HeroFeature({ icon: Icon, title, text }: { icon: LucideIcon; title: string; text: string }) {
+  return (
+    <div className="flex items-start gap-3">
+      <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl border border-primary-300/55 bg-primary-900/36 text-primary-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.16)] backdrop-blur">
+        <Icon className="size-5" aria-hidden="true" />
+      </span>
+      <div>
+        <p className="text-sm font-bold text-white">{title}</p>
+        <p className="mt-1 text-xs leading-5 text-white/68">{text}</p>
+      </div>
+    </div>
+  );
+}
+
+function HomePackageCard({ packageItem }: { packageItem: PublicPackage }) {
+  const bookingHref = getBookingHref(packageItem.slug);
+  const whatsappMessage = encodeURIComponent(`Hello eDrive, I am interested in the ${packageItem.name} package.`);
+  const CategoryIcon = categoryIcons[packageItem.category];
+
+  return (
+    <article className="premium-surface premium-card-hover group flex h-full min-w-0 flex-col overflow-hidden rounded-[1.4rem] p-2">
+      <div className="relative aspect-[16/9] overflow-hidden rounded-[1rem] bg-primary-50">
+        <Image
+          src={homePackageImages[packageItem.category]}
+          alt={packageItem.name}
+          fill
+          className="object-cover transition duration-700 group-hover:scale-105"
+          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 20vw"
+        />
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(3,24,34,0.08),transparent_52%,rgba(3,24,34,0.24))]" />
+        {packageItem.badge ? <Badge className="absolute left-2.5 top-2.5" variant={packageItem.category === 'vip' ? 'gold' : 'default'}>{packageItem.badge}</Badge> : null}
+      </div>
+      <div className="flex flex-1 flex-col px-2 pb-2 pt-3">
+        <h3 className="font-heading text-lg font-semibold leading-tight text-foreground">{packageItem.name}</h3>
+        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] font-semibold text-muted-foreground">
+          <span className="inline-flex items-center gap-1"><Clock className="size-3.5 text-primary" aria-hidden="true" />{packageItem.duration}</span>
+          <span className="inline-flex items-center gap-1"><CategoryIcon className="size-3.5 text-primary" aria-hidden="true" />{packageCategoryLabels[packageItem.category]}</span>
+        </div>
+        <p className="mt-2 min-h-10 text-xs leading-5 text-muted-foreground"><span className="font-bold text-foreground">Best for:</span> {packageItem.bestFor}</p>
+        <p className="mt-1 h-10 overflow-hidden text-xs leading-5 text-muted-foreground">{packageItem.description}</p>
+        <div className="mt-auto grid gap-2 pt-3">
+          <Button asChild size="sm" className="w-full px-3 text-[11px]"><Link href={bookingHref}><CalendarCheck data-icon aria-hidden="true" />Book This Package</Link></Button>
+          <Button asChild size="sm" variant="outline" className="w-full px-3 text-[11px]"><a href={`${whatsappUrl}?text=${whatsappMessage}`} target="_blank" rel="noopener noreferrer"><MessageCircle data-icon aria-hidden="true" />Ask on WhatsApp</a></Button>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function HomeFleetPanel() {
+  const featureChips = [
+    [Sparkles, 'Latest Models'],
+    [BadgeCheck, 'Well Maintained'],
+    [ShieldCheck, 'Safety First'],
+    [LifeBuoy, 'Insured & Certified']
+  ] as const;
+
+  return (
+    <section className="premium-surface h-full rounded-[1.6rem] p-3 sm:p-4">
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-2"><h2 className="font-heading text-xl font-semibold text-foreground">Our Fleet</h2><Waves className="size-4 text-primary" aria-hidden="true" /></div>
+        <Link href="/fleet" className="inline-flex items-center gap-1 text-xs font-bold text-primary transition hover:text-primary-700">View Full Fleet<ArrowRight className="size-3.5" aria-hidden="true" /></Link>
+      </div>
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-3">
+        {homeFleetItems.map((item) => (
+          <div key={item.name} className="min-w-0">
+            <div className="relative aspect-[4/3] overflow-hidden rounded-[1rem] bg-primary-50">
+              <Image src={item.image} alt={item.name} fill className="object-cover transition duration-500 hover:scale-105" sizes="(max-width: 640px) 100vw, 16vw" />
+            </div>
+            <div className="px-1 pt-2">
+              <p className="truncate text-xs font-bold text-foreground">{item.name}</p>
+              <p className="mt-1 text-[11px] font-semibold text-primary">{item.type}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-4 grid grid-cols-2 gap-x-3 gap-y-2 border-t border-border pt-3 sm:grid-cols-4">
+        {featureChips.map(([Icon, label]) => (
+          <span key={label} className="flex min-w-0 items-center gap-1.5 text-[10px] font-semibold leading-4 text-muted-foreground">
+            <Icon className="size-3.5 shrink-0 text-primary" aria-hidden="true" />
+            {label}
+          </span>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function HomeMembershipPanel() {
+  const benefits = ['Up to 20% Off on All Bookings', 'Priority Reservation', 'Exclusive Member Events', 'Flexible Plans for Everyone'];
+
+  return (
+    <section className="premium-dark relative flex h-full min-h-[22rem] flex-col overflow-hidden rounded-[1.6rem] p-5 text-white">
+      <Crown className="absolute -bottom-7 -right-7 size-40 text-accent-500/18" strokeWidth={1.2} aria-hidden="true" />
+      <div className="relative">
+        <div className="flex items-center gap-2 text-xs font-bold text-accent-300"><Crown className="size-4" aria-hidden="true" />Membership</div>
+        <h2 className="mt-4 font-heading text-3xl font-semibold leading-tight text-white">More Rides.<br />More Perks.</h2>
+        <p className="mt-3 text-xs leading-5 text-white/68">Join eDrive Club for priority booking and member-only offers.</p>
+        <ul className="mt-5 grid gap-2">
+          {benefits.map((benefit) => <li key={benefit} className="flex items-start gap-2 text-xs leading-5 text-white/84"><CheckCircle2 className="mt-0.5 size-3.5 shrink-0 text-accent-300" aria-hidden="true" />{benefit}</li>)}
+        </ul>
+      </div>
+      <Button asChild variant="gold" className="relative mt-auto w-full"><Link href="/membership">Explore Membership<ArrowRight data-icon aria-hidden="true" /></Link></Button>
+    </section>
+  );
+}
+
+function HomeRentalsPanel() {
+  return (
+    <section className="premium-surface h-full rounded-[1.6rem] p-3 sm:p-4">
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-2"><h2 className="font-heading text-xl font-semibold text-foreground">Rentals</h2><Waves className="size-4 text-primary" aria-hidden="true" /></div>
+        <Link href="/rentals" className="inline-flex items-center gap-1 text-xs font-bold text-primary transition hover:text-primary-700">View All Rentals<ArrowRight className="size-3.5" aria-hidden="true" /></Link>
+      </div>
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        {homeRentalCategories.map(({ label, href, icon: Icon }) => (
+          <Link key={label} href={href} className="group flex items-center gap-3 rounded-[1rem] border border-border bg-white px-3 py-3 shadow-[0_5px_12px_rgba(8,37,50,0.04)] transition hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-[0_10px_20px_rgba(8,37,50,0.08)]">
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary-50 text-primary"><Icon className="size-5" aria-hidden="true" /></span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-bold text-foreground">{label}</span>
+              <span className="mt-1 block text-[10px] font-semibold text-muted-foreground">View Options</span>
+            </span>
+            <ArrowRight className="size-3.5 shrink-0 text-primary transition group-hover:translate-x-0.5" aria-hidden="true" />
+          </Link>
+        ))}
+      </div>
+      <Button asChild variant="outline" className="mt-4 w-full"><Link href="/rentals">View All Rentals<ArrowRight data-icon aria-hidden="true" /></Link></Button>
+    </section>
+  );
+}
+
+function HomeContactStrip() {
+  return (
+    <section className="bg-[#f4f5f5] pb-9 sm:pb-11">
+      <div className="container-x">
+        <div className="premium-dark grid gap-5 rounded-[1.6rem] px-5 py-5 text-white sm:px-6 lg:grid-cols-[1.25fr_0.9fr_auto] lg:items-center">
+          <div>
+            <p className="text-xs font-bold text-accent-300">Ready to Ride?</p>
+            <h2 className="mt-1 font-heading text-3xl font-semibold text-white">Let&apos;s Make Waves</h2>
+            <p className="mt-2 text-xs leading-5 text-white/68">Our team is here to help you plan the perfect experience.</p>
+          </div>
+          <div className="grid gap-2 text-xs text-white/82">
+            <a href={`tel:${companyInfo.landlineHref}`} className="inline-flex items-center gap-2 transition hover:text-accent-300"><Phone className="size-4 text-primary-200" aria-hidden="true" />{companyInfo.landlineDisplay}</a>
+            <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 transition hover:text-accent-300"><MessageCircle className="size-4 text-primary-200" aria-hidden="true" />Chat on WhatsApp</a>
+            <a href={`mailto:${companyInfo.bookingEmail}`} className="inline-flex items-center gap-2 transition hover:text-accent-300"><Mail className="size-4 text-primary-200" aria-hidden="true" />{companyInfo.bookingEmail}</a>
+          </div>
+          <Button asChild variant="outline" className="border-white/20 bg-white text-primary-900 hover:bg-primary-50"><Link href="/contact">Contact Us<ArrowRight data-icon aria-hidden="true" /></Link></Button>
+        </div>
+      </div>
+    </section>
   );
 }
 
