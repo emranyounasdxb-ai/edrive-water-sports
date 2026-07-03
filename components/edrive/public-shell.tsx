@@ -83,7 +83,7 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
                 {companyInfo.landlineDisplay}
               </a>
               <Button asChild variant="outline" size="sm" className="whitespace-nowrap">
-                <Link href="/admin">Admin Portal</Link>
+                <Link href="/admin/login">Admin Portal</Link>
               </Button>
               <Button asChild size="sm" className="whitespace-nowrap">
                 <Link href="/booking">
@@ -116,7 +116,7 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
                   </Link>
                 );
               })}
-              <Link href="/admin" onClick={() => setOpen(false)} className="inline-flex h-10 items-center justify-center whitespace-nowrap rounded-2xl px-4 text-sm font-semibold text-primary transition hover:bg-white">
+              <Link href="/admin/login" onClick={() => setOpen(false)} className="inline-flex h-10 items-center justify-center whitespace-nowrap rounded-2xl px-4 text-sm font-semibold text-primary transition hover:bg-white">
                 <span className="relative -top-px block leading-none">Admin Portal</span>
               </Link>
               <Button asChild className="mt-3">
