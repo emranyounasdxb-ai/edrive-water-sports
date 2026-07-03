@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Apple, LockKeyhole, ShieldCheck } from 'lucide-react';
+import { LockKeyhole, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { demoUsers, setDemoUser, type PortalRole } from '@/lib/demo-auth';
@@ -88,16 +88,6 @@ export default function Page() {
                 </CardContent>
               </Card>
             ))}
-
-            <Card className="border-dashed">
-              <CardContent className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <p className="font-semibold text-foreground">Future customer sign-in</p>
-                  <p className="mt-1 text-sm leading-6 text-muted-foreground">Google and Apple login can help capture email and sometimes name, but phone number still normally needs a booking form field.</p>
-                </div>
-                <div className="flex gap-2"><Button disabled variant="outline">Google later</Button><Button disabled variant="outline"><Apple className="size-4" aria-hidden="true" />Apple later</Button></div>
-              </CardContent>
-            </Card>
           </div>
         </section>
       </div>

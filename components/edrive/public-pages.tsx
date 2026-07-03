@@ -184,20 +184,12 @@ export function SalesPage() {
 export function BookingPage() {
   return (
     <>
-      <PageHero label="Booking" title="Book your time on the water" text="Choose your experience and preferred schedule. Our team will confirm availability and final details with you directly." image={dubaiWaterfrontImage} compact />
-      <section className="container-x grid gap-8 py-16 lg:grid-cols-[1fr_0.62fr]">
-        <BookingForm />
-        <div className="flex flex-col gap-5">
-          <InfoCard icon={Clock} title="Daily departures" text="9:00 AM to 8:00 PM, subject to weather and marine conditions." />
-          <InfoCard icon={MapPin} title="Dubai Marina" text="Final meeting point and arrival instructions are shared after confirmation." />
-          <InfoCard icon={LifeBuoy} title="Included with every ride" text="Safety briefing, life jacket, dock assistance, and local route guidance." />
-          <div className="premium-surface rounded-[2rem] p-6">
-            <p className="text-sm font-semibold text-foreground">Need help choosing?</p>
-            <p className="mt-2 text-sm leading-6 text-muted-foreground">Message our booking team on WhatsApp for a quick recommendation.</p>
-            <Button asChild variant="outline" size="sm" className="mt-4"><a href="https://wa.me/971501234567"><MessageCircle data-icon aria-hidden="true" />WhatsApp us</a></Button>
-          </div>
-        </div>
+      <section className="container-x pt-10 text-center sm:pt-14">
+        <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary">Booking Request</p>
+        <h1 className="mx-auto mt-3 max-w-3xl font-heading text-4xl font-semibold leading-tight text-foreground sm:text-5xl">Plan your time on the water</h1>
+        <p className="mx-auto mt-3 max-w-2xl text-sm leading-7 text-muted-foreground sm:text-base">Choose your experience and preferred schedule. Our team will confirm availability and final details directly.</p>
       </section>
+      <BookingForm />
     </>
   );
 }
