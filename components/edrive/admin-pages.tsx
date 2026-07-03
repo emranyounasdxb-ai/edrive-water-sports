@@ -1,16 +1,16 @@
 'use client';
 
-import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
-import { BarChart3, CalendarDays, ClipboardCheck, CreditCard, FileClock, Package, Plus, Settings, Ship, UserCog, UsersRound, WalletCards, X } from 'lucide-react';
+import { BarChart3, CalendarDays, ClipboardCheck, CreditCard, FileClock, ImagePlus, Package, Plus, Settings, Ship, UploadCloud, UserCog, UsersRound, WalletCards, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 type Metric = [string, string, LucideIcon];
-type FieldType = 'text' | 'email' | 'tel' | 'number' | 'select' | 'textarea' | 'date';
-type Field = { name: string; label: string; type: FieldType; options?: string[]; placeholder?: string; required?: boolean };
+type FieldType = 'text' | 'email' | 'tel' | 'number' | 'select' | 'textarea' | 'date' | 'image';
+type Field = { name: string; label: string; type: FieldType; options?: string[]; placeholder?: string; required?: boolean; note?: string };
 type RecordItem = Record<string, string> & { id: string };
 
 const storageKeys = { staff: 'edrive-admin-staff', packages: 'edrive-admin-packages', vehicles: 'edrive-admin-vehicles' };
@@ -34,7 +34,7 @@ const packageFields: Field[] = [
   { name: 'basePrice', label: 'Base Price', type: 'number', required: true },
   { name: 'vat', label: 'VAT %', type: 'number', placeholder: '5' },
   { name: 'capacity', label: 'Capacity / Max Guests', type: 'number' },
-  { name: 'image', label: 'Package Image URL', type: 'text' },
+  { name: 'image', label: 'Package Image', type: 'image', note: 'Recommended size: 1600 × 1000 px. Format: WebP, JPG, or PNG. Max file size: 2 MB.' },
   { name: 'shortDescription', label: 'Short Description', type: 'textarea', required: true },
   { name: 'status', label: 'Status', type: 'select', options: ['Active', 'Inactive', 'Draft'], required: true }
 ];
@@ -52,7 +52,7 @@ const vehicleFields: Field[] = [
   { name: 'installationDate', label: 'DATE OF INSTALLATION', type: 'date' },
   { name: 'expiryDate', label: 'EXPIRY DATE', type: 'date' },
   { name: 'capacity', label: 'Capacity', type: 'number', required: true },
-  { name: 'image', label: 'Main Image URL', type: 'text' },
+  { name: 'image', label: 'Main Image', type: 'image', note: 'Recommended size: 1200 × 800 px. Format: WebP, JPG, or PNG. Max file size: 2 MB.' },
   { name: 'status', label: 'Status', type: 'select', options: ['Available', 'Booked', 'Maintenance', 'Inactive', 'For Sale'], required: true },
   { name: 'notes', label: 'Notes', type: 'textarea' }
 ];
@@ -89,14 +89,56 @@ export function AdminReviewsPage() { return <AdminCustomersPage />; }
 
 function ManagementPage({ label, title, text, action, metrics, fields, items, columns, headers, empty, onAdd }: { label: string; title: string; text: string; action: string; metrics: Metric[]; fields: Field[]; items: RecordItem[]; columns: string[]; headers: string[]; empty: string; onAdd: (values: Record<string, string>) => void }) {
   const [open, setOpen] = useState(false);
-  return <PageShell label={label} title={title} text={text} action={action} metrics={metrics} onAction={() => setOpen(true)}><Records columns={headers} empty={empty} rows={items} keys={columns} />{open ? <EntryDrawer title={action} fields={fields} onClose={() => setOpen(false)} onSubmit={(values) => { onAdd(values); setOpen(false); }} /> : null}</PageShell>;
+  return <PageShell label={label} title={title} text={text} action={action} metrics={metrics} onAction={() => setOpen(true)}><Records columns={headers} empty={empty} rows={items} keys={columns} />{open ? <EntryModal title={action} fields={fields} onClose={() => setOpen(false)} onSubmit={(values) => { onAdd(values); setOpen(false); }} /> : null}</PageShell>;
 }
 
-function EntryDrawer({ title, fields, onClose, onSubmit }: { title: string; fields: Field[]; onClose: () => void; onSubmit: (values: Record<string, string>) => void }) {
+function EntryModal({ title, fields, onClose, onSubmit }: { title: string; fields: Field[]; onClose: () => void; onSubmit: (values: Record<string, string>) => void }) {
   const initial = useMemo(() => Object.fromEntries(fields.map((field) => [field.name, field.options?.[0] ?? ''])), [fields]);
   const [values, setValues] = useState<Record<string, string>>(initial);
   function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); onSubmit(values); }
-  return <div className="fixed inset-0 z-50 bg-primary-900/25 backdrop-blur-sm"><div className="ml-auto h-full w-full max-w-xl overflow-y-auto bg-white p-5 shadow-2xl"><div className="mb-5 flex items-start justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">Admin Form</p><h2 className="mt-1 font-heading text-2xl font-semibold text-foreground">{title}</h2></div><button type="button" onClick={onClose} className="flex size-10 items-center justify-center rounded-full border border-border text-muted-foreground hover:text-primary"><X className="size-4" aria-hidden="true" /></button></div><form onSubmit={submit} className="grid gap-4">{fields.map((field) => <label key={field.name} className="grid gap-1.5 text-sm font-semibold text-foreground">{field.label}{field.type === 'select' ? <select required={field.required} value={values[field.name] ?? ''} onChange={(event) => setValues((current) => ({ ...current, [field.name]: event.target.value }))} className="h-11 rounded-xl border border-border bg-white px-3 text-sm text-foreground outline-none focus:border-primary">{field.options?.map((option) => <option key={option}>{option}</option>)}</select> : field.type === 'textarea' ? <textarea required={field.required} value={values[field.name] ?? ''} onChange={(event) => setValues((current) => ({ ...current, [field.name]: event.target.value }))} placeholder={field.placeholder} className="min-h-24 rounded-xl border border-border bg-white px-3 py-3 text-sm text-foreground outline-none focus:border-primary" /> : <input required={field.required} type={field.type} value={values[field.name] ?? ''} onChange={(event) => setValues((current) => ({ ...current, [field.name]: event.target.value }))} placeholder={field.placeholder} className="h-11 rounded-xl border border-border bg-white px-3 text-sm text-foreground outline-none focus:border-primary" />}</label>)}<div className="sticky bottom-0 mt-3 flex justify-end gap-3 border-t border-border bg-white pt-4"><Button type="button" variant="outline" onClick={onClose}>Cancel</Button><Button type="submit">Save</Button></div></form></div></div>;
+  function setFile(field: Field, event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setValues((current) => ({ ...current, [field.name]: file.name }));
+  }
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-primary-900/35 p-4 backdrop-blur-sm">
+      <div className="flex max-h-[92vh] w-full max-w-[34rem] flex-col overflow-hidden rounded-[1.6rem] border border-white/80 bg-white shadow-[0_28px_80px_rgba(8,37,50,0.28)]">
+        <div className="flex items-start justify-between gap-4 border-b border-border/70 bg-[#F7FAFA] px-5 py-4">
+          <div><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Admin Form</p><h2 className="mt-1 font-heading text-xl font-semibold text-foreground">{title}</h2></div>
+          <button type="button" onClick={onClose} className="flex size-9 items-center justify-center rounded-full border border-border bg-white text-muted-foreground transition hover:text-primary"><X className="size-4" aria-hidden="true" /></button>
+        </div>
+        <form onSubmit={submit} className="flex min-h-0 flex-1 flex-col">
+          <div className="grid gap-3 overflow-y-auto px-5 py-4 sm:grid-cols-2">
+            {fields.map((field) => <FieldInput key={field.name} field={field} value={values[field.name] ?? ''} onChange={(value) => setValues((current) => ({ ...current, [field.name]: value }))} onFile={(event) => setFile(field, event)} />)}
+          </div>
+          <div className="flex justify-end gap-3 border-t border-border/70 bg-white px-5 py-4"><Button type="button" variant="outline" onClick={onClose}>Cancel</Button><Button type="submit">Save</Button></div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function FieldInput({ field, value, onChange, onFile }: { field: Field; value: string; onChange: (value: string) => void; onFile: (event: ChangeEvent<HTMLInputElement>) => void }) {
+  if (field.type === 'image') {
+    return (
+      <label className="grid gap-2 text-sm font-semibold text-foreground sm:col-span-2">
+        {field.label}
+        <div className="rounded-[1.15rem] border border-dashed border-primary/35 bg-primary-50/65 p-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-3"><span className="flex size-11 items-center justify-center rounded-2xl bg-white text-primary shadow-sm"><ImagePlus className="size-5" aria-hidden="true" /></span><div><p className="text-sm font-semibold text-foreground">{value || 'No image selected'}</p><p className="mt-1 text-xs font-normal leading-5 text-muted-foreground">{field.note}</p></div></div>
+            <span className="relative inline-flex"><input type="file" accept="image/webp,image/jpeg,image/png" onChange={onFile} className="absolute inset-0 cursor-pointer opacity-0" /><Button type="button" variant="outline" size="sm"><UploadCloud className="size-4" aria-hidden="true" />Upload Image</Button></span>
+          </div>
+        </div>
+      </label>
+    );
+  }
+  return (
+    <label className={`grid gap-1.5 text-sm font-semibold text-foreground ${field.type === 'textarea' ? 'sm:col-span-2' : ''}`}>
+      {field.label}
+      {field.type === 'select' ? <select required={field.required} value={value} onChange={(event) => onChange(event.target.value)} className="h-10 rounded-xl border border-border bg-white px-3 text-sm text-foreground outline-none focus:border-primary">{field.options?.map((option) => <option key={option}>{option}</option>)}</select> : field.type === 'textarea' ? <textarea required={field.required} value={value} onChange={(event) => onChange(event.target.value)} placeholder={field.placeholder} className="min-h-20 rounded-xl border border-border bg-white px-3 py-3 text-sm text-foreground outline-none focus:border-primary" /> : <input required={field.required} type={field.type} value={value} onChange={(event) => onChange(event.target.value)} placeholder={field.placeholder} className="h-10 rounded-xl border border-border bg-white px-3 text-sm text-foreground outline-none focus:border-primary" />}
+    </label>
+  );
 }
 
 function PageShell({ label, title, text, action, metrics, children, onAction }: { label: string; title: string; text: string; action: string; metrics: Metric[]; children: ReactNode; onAction?: () => void }) { return <div className="flex flex-col gap-5"><div className="flex flex-col gap-4 rounded-[1.75rem] border border-white/80 bg-white/85 p-5 shadow-[0_18px_45px_rgba(8,37,50,0.06)] lg:flex-row lg:items-end lg:justify-between"><div className="max-w-3xl"><div className="mb-3 flex flex-wrap items-center gap-2"><span className="rounded-full bg-primary-50 px-3 py-1 text-xs font-bold uppercase tracking-[0.16em] text-primary">{label}</span><Badge variant="secondary" className="rounded-full">Database ready</Badge></div><h1 className="font-heading text-3xl font-semibold text-foreground">{title}</h1><p className="mt-2 text-sm leading-6 text-muted-foreground">{text}</p></div><Button type="button" onClick={onAction}><Plus data-icon aria-hidden="true" />{action}</Button></div><div className="grid gap-4 md:grid-cols-3 xl:grid-cols-4">{metrics.map(([metric, value, Icon]) => <Card key={metric}><CardContent className="flex items-center justify-between gap-4 p-5"><div><p className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">{metric}</p><p className="mt-2 font-heading text-2xl font-semibold text-foreground">{value}</p></div><span className="flex size-11 items-center justify-center rounded-2xl bg-primary-50 text-primary"><Icon className="size-5" aria-hidden="true" /></span></CardContent></Card>)}</div>{children}</div>; }
