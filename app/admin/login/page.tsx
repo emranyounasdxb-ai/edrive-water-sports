@@ -48,22 +48,23 @@ export default function Page() {
         <section className="grid flex-1 overflow-hidden rounded-[2rem] border border-white/85 bg-white/70 shadow-[0_28px_90px_rgba(8,37,50,0.13)] backdrop-blur-xl lg:grid-cols-[1fr_0.92fr]">
           <div className="relative min-h-[34rem] overflow-hidden rounded-[2rem] bg-primary-900 p-6 text-white sm:p-9 lg:m-3 lg:min-h-0">
             <img src="/images/admin/login-hero.webp" alt="eDrive Water Sports admin portal" className="absolute inset-0 h-full w-full object-cover object-center" />
-            <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(2,26,34,0.94)_0%,rgba(3,41,50,0.82)_36%,rgba(4,57,67,0.50)_68%,rgba(3,34,43,0.72)_100%)]" />
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_16%,rgba(14,124,134,0.26),transparent_32%),linear-gradient(180deg,rgba(0,0,0,0.14)_0%,rgba(0,0,0,0.10)_42%,rgba(0,0,0,0.50)_100%)]" />
-            <div className="absolute inset-x-0 bottom-0 h-[34%] bg-[linear-gradient(180deg,transparent,rgba(9,164,174,0.40))]" />
+            <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(2,26,34,0.58)_0%,rgba(3,41,50,0.36)_36%,rgba(4,57,67,0.08)_68%,rgba(3,34,43,0.20)_100%)]" />
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_28%_16%,rgba(14,124,134,0.16),transparent_32%),linear-gradient(180deg,rgba(0,0,0,0.03)_0%,rgba(0,0,0,0.05)_44%,rgba(0,0,0,0.22)_100%)]" />
+            <div className="absolute inset-x-0 bottom-0 h-[28%] bg-[linear-gradient(180deg,transparent,rgba(9,164,174,0.18))]" />
+            <div className="absolute left-0 top-0 h-full w-[58%] bg-[linear-gradient(90deg,rgba(1,23,31,0.36),rgba(1,23,31,0.16),transparent)]" />
             <div className="absolute -right-28 top-10 size-[34rem] rounded-full border border-white/10" />
-            <div className="absolute right-8 top-20 size-[27rem] rounded-full border border-primary/25" />
+            <div className="absolute right-8 top-20 size-[27rem] rounded-full border border-primary/20" />
 
             <div className="relative z-10 flex h-full min-h-[30rem] flex-col justify-between">
               <div>
-                <span className="inline-flex items-center gap-2 rounded-full border border-gold/55 bg-primary-900/58 px-4 py-2 text-xs font-bold uppercase tracking-[0.2em] text-gold shadow-[0_12px_30px_rgba(0,0,0,0.18)] backdrop-blur">
+                <span className="inline-flex items-center gap-2 rounded-full border border-gold/55 bg-primary-900/42 px-4 py-2 text-xs font-bold uppercase tracking-[0.2em] text-gold shadow-[0_12px_30px_rgba(0,0,0,0.16)] backdrop-blur">
                   <ShieldCheck className="size-4 text-gold" aria-hidden="true" /> Secure Portal
                 </span>
-                <h1 className="mt-8 max-w-xl font-heading text-4xl font-semibold leading-[1.04] text-white drop-shadow-[0_8px_20px_rgba(0,0,0,0.28)] sm:text-5xl xl:text-[3.55rem]">
+                <h1 className="mt-8 max-w-xl font-heading text-4xl font-semibold leading-[1.04] text-white drop-shadow-[0_8px_20px_rgba(0,0,0,0.38)] sm:text-5xl xl:text-[3.55rem]">
                   Welcome to <span className="text-primary">eDrive</span><br />Admin
                 </h1>
                 <div className="mt-6 h-1 w-20 rounded-full bg-gold shadow-[0_8px_20px_rgba(200,151,74,0.28)]" />
-                <p className="mt-6 max-w-md text-sm font-medium leading-7 text-white/88 drop-shadow sm:text-base">
+                <p className="mt-6 max-w-md text-sm font-semibold leading-7 text-white drop-shadow-[0_4px_14px_rgba(0,0,0,0.34)] sm:text-base">
                   Manage bookings, fleet, staff, customers, and daily operations from one premium control center.
                 </p>
               </div>
@@ -74,9 +75,9 @@ export default function Page() {
                   ['Fleet', Ship],
                   ['Marine ops', Waves]
                 ].map(([label, Icon]) => (
-                  <div key={String(label)} className="rounded-2xl border border-white/18 bg-white/14 px-4 py-3 shadow-[0_16px_36px_rgba(0,0,0,0.20)] backdrop-blur-md">
+                  <div key={String(label)} className="rounded-2xl border border-white/18 bg-primary-900/24 px-4 py-3 shadow-[0_16px_36px_rgba(0,0,0,0.16)] backdrop-blur-md">
                     <Icon className="mb-2 size-5 text-gold" aria-hidden="true" />
-                    <p className="text-xs font-bold text-white/92">{String(label)}</p>
+                    <p className="text-xs font-bold text-white">{String(label)}</p>
                   </div>
                 ))}
               </div>
