@@ -1,6 +1,6 @@
 import type { LucideIcon } from 'lucide-react';
 import { CalendarDays, Clock3, MapPin, Ship, UsersRound, Waves } from 'lucide-react';
-import { BookingDraft, formatAed, formatDuration, getBookingTotals, getExperience } from '@/lib/booking-data';
+import { BookingDraft, formatAed, formatDuration, getBookingTotals, getExperience, durationPackages } from '@/lib/booking-data';
 import { companyInfo } from '@/lib/company-info';
 import { cn } from '@/lib/utils';
 
@@ -9,10 +9,17 @@ function displayDate(value: string) {
   return new Intl.DateTimeFormat('en-AE', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(`${value}T12:00:00`));
 }
 
+function getPackagePrice(draft: BookingDraft) {
+  const experience = getExperience(draft.experienceType);
+  if (experience.serviceType === 'sales_inquiry') return 0;
+  return durationPackages[draft.experienceType as 'jet-ski-rental' | 'jet-car-rental'].find((item) => item.minutes === draft.durationMinutes)?.price ?? 0;
+}
+
 export function BookingSummaryTicket({ draft, compact = false }: { draft: BookingDraft; compact?: boolean }) {
   const experience = getExperience(draft.experienceType);
   const totals = getBookingTotals(draft);
   const isSales = experience.serviceType === 'sales_inquiry';
+  const packagePrice = getPackagePrice(draft);
   const totalLabel = isSales ? 'Request quote' : formatAed(totals.totalAmount);
   const party = `${draft.vehicleQuantity} ${draft.vehicleQuantity === 1 ? 'vehicle' : 'vehicles'} · ${draft.guestCount} ${draft.guestCount === 1 ? 'guest' : 'guests'}`;
 
@@ -46,10 +53,22 @@ export function BookingSummaryTicket({ draft, compact = false }: { draft: Bookin
       </div>
 
       <div className="border-t border-border/70 bg-[#F7F8F8] p-3.5">
+        {!isSales ? (
+          <div className="mb-3 rounded-[1.15rem] border border-border/80 bg-white p-3">
+            <div className="mb-2 flex items-center gap-2">
+              <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-muted-foreground">Cost Breakdown</p>
+              <span className="h-px flex-1 bg-border" />
+            </div>
+            <BreakdownLine label={`${experience.title} · ${formatDuration(draft.durationMinutes)}`} value={formatAed(packagePrice)} />
+            <BreakdownLine label={`Vehicles × ${draft.vehicleQuantity}`} value={formatAed(totals.subtotal)} />
+            <BreakdownLine label="Sub Total" value={formatAed(totals.subtotal)} strong />
+            <BreakdownLine label="VAT (5%)" value={formatAed(totals.vatAmount)} />
+          </div>
+        ) : null}
         <div className="rounded-[1.15rem] border border-primary-900/10 bg-primary-900 p-3 text-white">
           <div className="flex items-end justify-between gap-3">
             <div>
-              <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-gold">{isSales ? 'Pricing' : 'Estimated total'}</p>
+              <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-gold">{isSales ? 'Pricing' : 'Total price'}</p>
               {!isSales ? <p className="mt-1 text-[10px] font-semibold text-white/60">Includes 5% VAT</p> : null}
             </div>
             <p className="text-right font-heading text-xl font-semibold leading-none text-gold">{totalLabel}</p>
@@ -72,6 +91,15 @@ function SummaryRow({ icon: Icon, label, value }: { icon: LucideIcon; label: str
         <p className="text-[9px] font-bold uppercase tracking-[0.16em] text-muted-foreground">{label}</p>
         <p className="mt-0.5 truncate text-sm font-semibold leading-5 text-foreground">{value}</p>
       </div>
+    </div>
+  );
+}
+
+function BreakdownLine({ label, value, strong = false }: { label: string; value: string; strong?: boolean }) {
+  return (
+    <div className={cn('flex items-center justify-between gap-3 py-1 text-[11px] leading-4', strong ? 'font-bold text-foreground' : 'font-medium text-muted-foreground')}>
+      <span className="min-w-0 truncate">{label}</span>
+      <span className="shrink-0 font-semibold text-foreground">{value}</span>
     </div>
   );
 }
