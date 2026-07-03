@@ -14,6 +14,12 @@ const trustItems = [
   { label: 'Operations dashboard', icon: LayoutDashboard }
 ];
 
+const heroItems = [
+  { label: 'Bookings', icon: CalendarCheck },
+  { label: 'Fleet', icon: Ship },
+  { label: 'Marine ops', icon: Waves }
+];
+
 export default function Page() {
   const router = useRouter();
   const [email, setEmail] = useState('admin@edrive.ae');
@@ -36,57 +42,21 @@ export default function Page() {
   }
 
   return (
-    <main className="min-h-screen overflow-hidden bg-[radial-gradient(circle_at_8%_12%,rgba(14,124,134,0.12),transparent_28%),radial-gradient(circle_at_95%_8%,rgba(200,151,74,0.14),transparent_26%),linear-gradient(135deg,#F5F8F8_0%,#EDF5F5_48%,#F8F2E8_100%)] px-4 py-4 sm:px-6 lg:px-8">
+    <main className="min-h-screen overflow-hidden bg-[radial-gradient(circle_at_14%_12%,rgba(14,124,134,0.12),transparent_28%),radial-gradient(circle_at_88%_8%,rgba(200,151,74,0.16),transparent_25%),linear-gradient(135deg,#F5F8F8_0%,#EEF7F7_48%,#F8F2E8_100%)] px-4 py-4 sm:px-6 lg:px-8">
       <div className="mx-auto flex min-h-[calc(100vh-2rem)] w-full max-w-7xl flex-col gap-5">
-        <header className="flex items-center justify-between rounded-[1.8rem] border border-white/85 bg-white/72 px-5 py-4 shadow-[0_18px_55px_rgba(8,37,50,0.08)] backdrop-blur-xl sm:px-8">
+        <header className="flex items-center justify-between rounded-[1.8rem] border border-white/85 bg-white/76 px-5 py-4 shadow-[0_18px_55px_rgba(8,37,50,0.08)] backdrop-blur-xl sm:px-8">
           <Link href="/" className="w-fit"><BrandMark /></Link>
           <Button asChild variant="outline" className="rounded-full border-gold/55 bg-white/85 px-5 text-primary-900 shadow-sm hover:border-gold hover:bg-white">
             <Link href="/"><Globe2 className="size-4" aria-hidden="true" />Back to website</Link>
           </Button>
         </header>
 
-        <section className="grid flex-1 overflow-hidden rounded-[2rem] border border-white/85 bg-white/70 shadow-[0_28px_90px_rgba(8,37,50,0.13)] backdrop-blur-xl lg:grid-cols-[1fr_0.92fr]">
-          <div className="relative min-h-[34rem] overflow-hidden rounded-[2rem] bg-primary-900 p-6 text-white sm:p-9 lg:m-3 lg:min-h-0">
-            <img src="/images/admin/login-hero.webp" alt="eDrive Water Sports admin portal" className="absolute inset-0 h-full w-full object-cover object-center" />
-            <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(2,26,34,0.58)_0%,rgba(3,41,50,0.36)_36%,rgba(4,57,67,0.08)_68%,rgba(3,34,43,0.20)_100%)]" />
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_28%_16%,rgba(14,124,134,0.16),transparent_32%),linear-gradient(180deg,rgba(0,0,0,0.03)_0%,rgba(0,0,0,0.05)_44%,rgba(0,0,0,0.22)_100%)]" />
-            <div className="absolute inset-x-0 bottom-0 h-[28%] bg-[linear-gradient(180deg,transparent,rgba(9,164,174,0.18))]" />
-            <div className="absolute left-0 top-0 h-full w-[58%] bg-[linear-gradient(90deg,rgba(1,23,31,0.36),rgba(1,23,31,0.16),transparent)]" />
-            <div className="absolute -right-28 top-10 size-[34rem] rounded-full border border-white/10" />
-            <div className="absolute right-8 top-20 size-[27rem] rounded-full border border-primary/20" />
-
-            <div className="relative z-10 flex h-full min-h-[30rem] flex-col justify-between">
-              <div>
-                <span className="inline-flex items-center gap-2 rounded-full border border-gold/55 bg-primary-900/42 px-4 py-2 text-xs font-bold uppercase tracking-[0.2em] text-gold shadow-[0_12px_30px_rgba(0,0,0,0.16)] backdrop-blur">
-                  <ShieldCheck className="size-4 text-gold" aria-hidden="true" /> Secure Portal
-                </span>
-                <h1 className="mt-8 max-w-xl font-heading text-4xl font-semibold leading-[1.04] text-white drop-shadow-[0_8px_20px_rgba(0,0,0,0.38)] sm:text-5xl xl:text-[3.55rem]">
-                  Welcome to <span className="text-primary">eDrive</span><br />Admin
-                </h1>
-                <div className="mt-6 h-1 w-20 rounded-full bg-gold shadow-[0_8px_20px_rgba(200,151,74,0.28)]" />
-                <p className="mt-6 max-w-md text-sm font-semibold leading-7 text-white drop-shadow-[0_4px_14px_rgba(0,0,0,0.34)] sm:text-base">
-                  Manage bookings, fleet, staff, customers, and daily operations from one premium control center.
-                </p>
-              </div>
-
-              <div className="grid max-w-[31rem] gap-3 sm:grid-cols-3">
-                {[
-                  ['Bookings', CalendarCheck],
-                  ['Fleet', Ship],
-                  ['Marine ops', Waves]
-                ].map(([label, Icon]) => (
-                  <div key={String(label)} className="rounded-2xl border border-white/18 bg-primary-900/24 px-4 py-3 shadow-[0_16px_36px_rgba(0,0,0,0.16)] backdrop-blur-md">
-                    <Icon className="mb-2 size-5 text-gold" aria-hidden="true" />
-                    <p className="text-xs font-bold text-white">{String(label)}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <div className="flex items-center justify-center p-5 sm:p-8 lg:p-10">
-            <div className="w-full max-w-[34rem] rounded-[2rem] border border-white/90 bg-white/90 p-5 shadow-[0_26px_70px_rgba(8,37,50,0.12),inset_0_1px_0_rgba(255,255,255,0.95)] backdrop-blur-xl sm:p-8">
-              <div className="mb-8 flex items-center gap-4">
+        <section className="grid flex-1 overflow-hidden rounded-[2rem] border border-white/85 bg-white/72 shadow-[0_28px_90px_rgba(8,37,50,0.13)] backdrop-blur-xl lg:grid-cols-[0.88fr_1.08fr]">
+          <div className="relative flex items-center justify-center overflow-hidden p-5 sm:p-8 lg:p-10">
+            <div className="absolute left-8 top-10 size-64 rounded-full bg-primary/10 blur-3xl" />
+            <div className="absolute bottom-10 right-12 size-72 rounded-full bg-gold/16 blur-3xl" />
+            <div className="relative w-full max-w-[34rem] rounded-[2rem] border border-white/90 bg-white/92 p-5 shadow-[0_26px_70px_rgba(8,37,50,0.12),inset_0_1px_0_rgba(255,255,255,0.95)] backdrop-blur-xl sm:p-8">
+              <div className="mb-7 flex items-center gap-4">
                 <span className="flex size-16 items-center justify-center rounded-full border border-gold/30 bg-[linear-gradient(135deg,#15BEC4,#0E7C86)] text-white shadow-[0_18px_35px_rgba(14,124,134,0.25)]"><LockKeyhole className="size-7" aria-hidden="true" /></span>
                 <div>
                   <h2 className="font-heading text-3xl font-semibold text-primary-900 sm:text-4xl">Admin Login</h2>
@@ -126,6 +96,39 @@ export default function Page() {
                   <div key={label} className="flex items-center justify-center gap-2 rounded-2xl border border-border bg-white/80 px-3 py-3 text-center text-xs font-bold text-primary-900 shadow-sm">
                     <Icon className="size-4 shrink-0 text-primary" aria-hidden="true" />
                     <span>{label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="relative min-h-[34rem] overflow-hidden rounded-[2rem] bg-[#F7F0E4] p-6 text-primary-900 sm:p-9 lg:m-3 lg:min-h-0">
+            <img src="/images/admin/login-hero.webp" alt="eDrive Water Sports admin portal" className="absolute inset-0 h-full w-full object-cover object-center" />
+            <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.80)_0%,rgba(255,255,255,0.56)_34%,rgba(255,255,255,0.16)_64%,rgba(255,255,255,0.02)_100%)]" />
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_26%_18%,rgba(255,255,255,0.46),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.06)_0%,rgba(255,255,255,0.05)_52%,rgba(8,80,88,0.18)_100%)]" />
+            <div className="absolute inset-x-0 bottom-0 h-[26%] bg-[linear-gradient(180deg,transparent,rgba(245,239,228,0.42))]" />
+            <div className="absolute -right-28 top-10 size-[34rem] rounded-full border border-white/40" />
+            <div className="absolute right-8 top-20 size-[27rem] rounded-full border border-gold/20" />
+
+            <div className="relative z-10 flex h-full min-h-[30rem] flex-col justify-between">
+              <div>
+                <span className="inline-flex items-center gap-2 rounded-full border border-gold/45 bg-white/52 px-4 py-2 text-xs font-bold uppercase tracking-[0.2em] text-[#9A6B25] shadow-[0_12px_30px_rgba(8,37,50,0.12)] backdrop-blur-md">
+                  <ShieldCheck className="size-4 text-[#9A6B25]" aria-hidden="true" /> Secure Portal
+                </span>
+                <h1 className="mt-7 max-w-[32rem] font-heading text-4xl font-semibold leading-[1.04] text-[#8B6426] drop-shadow-[0_1px_0_rgba(255,255,255,0.75)] sm:text-5xl xl:text-[3.15rem]">
+                  Welcome to <span className="text-primary-900">eDrive</span><br />Admin
+                </h1>
+                <div className="mt-5 h-1 w-20 rounded-full bg-[#B98A42] shadow-[0_8px_20px_rgba(185,138,66,0.26)]" />
+                <p className="mt-5 max-w-sm rounded-2xl border border-white/38 bg-white/34 p-4 text-sm font-semibold leading-7 text-primary-900 shadow-[0_14px_34px_rgba(8,37,50,0.10)] backdrop-blur-md sm:text-base">
+                  Manage bookings, fleet, staff, customers, and daily operations from one premium control center.
+                </p>
+              </div>
+
+              <div className="flex max-w-[35rem] flex-wrap gap-3">
+                {heroItems.map(({ label, icon: Icon }) => (
+                  <div key={label} className="flex min-w-[8.25rem] items-center gap-2 rounded-full border border-white/45 bg-white/38 px-4 py-2.5 shadow-[0_12px_28px_rgba(8,37,50,0.12)] backdrop-blur-md">
+                    <Icon className="size-4 text-[#9A6B25]" aria-hidden="true" />
+                    <p className="text-xs font-bold text-primary-900">{label}</p>
                   </div>
                 ))}
               </div>
