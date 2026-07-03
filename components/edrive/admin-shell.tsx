@@ -1,13 +1,14 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { BadgePercent, BarChart3, Bell, CalendarDays, ChevronDown, ClipboardCheck, CreditCard, Home, LayoutDashboard, Menu, MessageSquare, Package, Search, Settings, Ship, Sun, User, UserCog, UsersRound, X } from 'lucide-react';
-import { useState } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
+import { BadgePercent, BarChart3, Bell, CalendarDays, ChevronDown, ClipboardCheck, CreditCard, Home, LayoutDashboard, LogOut, Menu, MessageSquare, Package, Search, Settings, Ship, Sun, User, UserCog, UsersRound, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { clearDemoUser, getDemoUserFromStorage, isManagerPathAllowed, type DemoUser } from '@/lib/demo-auth';
 import { companyInfo } from '@/lib/company-info';
-import { adminNavItems } from '@/lib/mock-data';
+import { adminNavItems, managerNavItems } from '@/lib/mock-data';
 import { cn } from '@/lib/utils';
 import { BrandMark } from './brand';
 import { OperationsProvider } from './admin/operations-store';
@@ -21,8 +22,46 @@ function normalizePath(pathname: string) {
 
 export function AdminShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const currentPath = normalizePath(pathname);
   const [open, setOpen] = useState(false);
+  const [user, setUser] = useState<DemoUser | null>(null);
+  const [ready, setReady] = useState(false);
+  const isLoginPage = currentPath === '/admin/login';
+
+  useEffect(() => {
+    if (isLoginPage) {
+      setReady(true);
+      return;
+    }
+
+    const activeUser = getDemoUserFromStorage();
+    if (!activeUser) {
+      router.replace('/admin/login');
+      return;
+    }
+
+    if (activeUser.role === 'manager' && !isManagerPathAllowed(currentPath)) {
+      router.replace('/admin/manager');
+      return;
+    }
+
+    setUser(activeUser);
+    setReady(true);
+  }, [currentPath, isLoginPage, router]);
+
+  if (isLoginPage) return <>{children}</>;
+
+  if (!ready || !user) {
+    return <div className="flex min-h-screen items-center justify-center bg-[#F4F7F8] text-sm font-semibold text-muted-foreground">Loading portal...</div>;
+  }
+
+  const navItems = user.role === 'manager' ? managerNavItems : adminNavItems;
+
+  const handleLogout = () => {
+    clearDemoUser();
+    router.replace('/admin/login');
+  };
 
   return (
     <OperationsProvider>
@@ -30,16 +69,16 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
       <div className="flex min-h-screen">
         <aside className="hidden w-[17rem] shrink-0 border-r border-border/70 bg-white/88 p-4 backdrop-blur-xl lg:block">
           <div className="flex h-full flex-col">
-            <Link href="/admin" className="mb-7 block px-3 pt-2">
+            <Link href={user.role === 'manager' ? '/admin/manager' : '/admin'} className="mb-7 block px-3 pt-2">
               <BrandMark />
             </Link>
-            <AdminNav currentPath={currentPath} />
+            <AdminNav currentPath={currentPath} navItems={navItems} />
             <div className="premium-surface mt-auto overflow-hidden rounded-[1.5rem] p-4">
               <div className="mb-4 h-24 rounded-[1.15rem] bg-[linear-gradient(135deg,#EAF8FA,#FFFFFF_48%,#F4E7C7)] p-4">
                 <div className="flex h-full items-end justify-between gap-3">
                   <div>
-                    <p className="text-xs font-bold text-foreground">Premium Water</p>
-                    <p className="text-xs text-muted-foreground">Experiences in Dubai</p>
+                    <p className="text-xs font-bold text-foreground">{user.roleLabel}</p>
+                    <p className="text-xs text-muted-foreground">{user.email}</p>
                   </div>
                   <Ship className="size-9 text-primary" aria-hidden="true" />
                 </div>
@@ -58,7 +97,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                 </Button>
                 <div className="hidden items-center gap-2 rounded-full bg-[#F4F7F8] px-3 py-2 text-xs font-semibold text-muted-foreground sm:flex">
                   <Home className="size-4 text-primary" aria-hidden="true" />
-                  Operations
+                  {user.role === 'manager' ? 'Manager Operations' : 'Operations'}
                 </div>
               </div>
 
@@ -78,13 +117,14 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                 </div>
                 <div className="hidden items-center gap-3 border-l border-border pl-3 md:flex">
                   <div className="flex size-10 items-center justify-center rounded-full bg-[#F0E6D7] text-primary shadow-sm"><User className="size-5" aria-hidden="true" /></div>
-                  <div className="hidden lg:block"><p className="text-sm font-bold text-foreground">Admin User</p><p className="text-xs text-muted-foreground">Super Admin</p></div>
+                  <div className="hidden lg:block"><p className="text-sm font-bold text-foreground">{user.name}</p><p className="text-xs text-muted-foreground">{user.roleLabel}</p></div>
                   <ChevronDown className="size-4 text-muted-foreground" aria-hidden="true" />
                 </div>
+                <Button type="button" size="sm" variant="outline" onClick={handleLogout} className="hidden sm:inline-flex"><LogOut className="size-4" aria-hidden="true" />Logout</Button>
                 <Button asChild size="sm" className="hidden sm:inline-flex"><Link href="/">View Site</Link></Button>
               </div>
             </div>
-            {open ? <div className="border-t border-border bg-white p-4 lg:hidden"><AdminNav currentPath={currentPath} onNavigate={() => setOpen(false)} /></div> : null}
+            {open ? <div className="border-t border-border bg-white p-4 lg:hidden"><AdminNav currentPath={currentPath} navItems={navItems} onNavigate={() => setOpen(false)} /><Button type="button" variant="outline" className="mt-4 w-full" onClick={handleLogout}><LogOut className="size-4" aria-hidden="true" />Logout</Button></div> : null}
           </header>
           <main className="px-4 py-5 sm:px-6 lg:px-8 lg:py-7">{children}</main>
         </div>
@@ -103,12 +143,12 @@ function IconButtonWithBadge({ icon: Icon, count }: { icon: typeof Bell; count: 
   );
 }
 
-function AdminNav({ currentPath, onNavigate }: { currentPath: string; onNavigate?: () => void }) {
+function AdminNav({ currentPath, navItems, onNavigate }: { currentPath: string; navItems: typeof adminNavItems; onNavigate?: () => void }) {
   return (
     <nav className="flex flex-col gap-1.5">
-      {adminNavItems.map((item) => {
+      {navItems.map((item) => {
         const Icon = iconMap[item.icon as keyof typeof iconMap];
-        const active = currentPath === normalizePath(item.href);
+        const active = currentPath === normalizePath(item.href.split('?')[0]);
         return (
           <Link
             key={item.href}
