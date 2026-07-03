@@ -24,11 +24,10 @@ export const demoUsers: Record<PortalRole, DemoUser> = {
 
 export const portalSessionKey = 'edrive-portal-user';
 
-export const managerAllowedPaths = ['/admin/manager', '/admin/payments', '/admin/vehicles'];
+export const managerAllowedPaths = ['/admin/manager', '/admin/vehicle-assignment', '/admin/operations-schedule', '/admin/payments', '/admin/vehicles', '/admin/maintenance'];
 
 export function getDemoUserFromStorage(): DemoUser | null {
   if (typeof window === 'undefined') return null;
-
   try {
     const value = window.localStorage.getItem(portalSessionKey);
     if (!value) return null;
