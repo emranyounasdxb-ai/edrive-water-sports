@@ -14,98 +14,21 @@ import { BrandMark } from './brand';
 import { OperationsProvider } from './admin/operations-store';
 
 const iconMap = { LayoutDashboard, CalendarDays, ClipboardCheck, CreditCard, Ship, Package, BadgePercent, BarChart3, UserCog, UsersRound, MessageSquare, Settings };
-
-type PortalUser = { name: string; email: string; role: string; roleLabel: string };
-
-function normalizePath(pathname: string) {
-  if (!pathname || pathname === '/') return '/';
-  return pathname.replace(/\/$/, '');
-}
-
-function isManagerRole(role: string) {
-  return role === 'manager';
-}
-
-function isManagerPathAllowed(pathname: string) {
-  return ['/admin/manager', '/admin/vehicle-assignment', '/admin/operations-schedule', '/admin/payments', '/admin/vehicles', '/admin/maintenance'].some((path) => pathname === path || pathname.startsWith(`${path}/`));
-}
-
-function roleLabel(role: string) {
-  const labels: Record<string, string> = { super_admin: 'Super Admin', admin: 'Admin', booking_staff: 'Booking Staff', manager: 'Manager', finance: 'Finance', maintenance_staff: 'Maintenance Staff' };
-  return labels[role] ?? 'Admin';
-}
+type PortalUser = { name: string; email: string; role: string; roleLabel: string; avatarUrl: string };
+function normalizePath(pathname: string) { if (!pathname || pathname === '/') return '/'; return pathname.replace(/\/$/, ''); }
+function isManagerRole(role: string) { return role === 'manager'; }
+function isManagerPathAllowed(pathname: string) { return ['/admin/manager', '/admin/vehicle-assignment', '/admin/operations-schedule', '/admin/payments', '/admin/vehicles', '/admin/maintenance'].some((path) => pathname === path || pathname.startsWith(`${path}/`)); }
+function roleLabel(role: string) { const labels: Record<string, string> = { super_admin: 'Super Admin', admin: 'Admin', booking_staff: 'Booking Staff', manager: 'Manager', finance: 'Finance', maintenance_staff: 'Maintenance Staff' }; return labels[role] ?? 'Admin'; }
+function ProfileAvatar({ src, size = 'md' }: { src?: string; size?: 'sm' | 'md' }) { const className = size === 'sm' ? 'size-9' : 'size-10'; return src ? <img src={src} alt="Profile" className={`${className} rounded-full border border-white object-cover shadow-sm`} /> : <div className={`flex ${className} items-center justify-center rounded-full bg-[#F0E6D7] text-primary shadow-sm`}><User className="size-5" aria-hidden="true" /></div>; }
 
 export function AdminShell({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
-  const router = useRouter();
-  const currentPath = normalizePath(pathname);
-  const [open, setOpen] = useState(false);
-  const [user, setUser] = useState<PortalUser | null>(null);
-  const [ready, setReady] = useState(false);
-  const isLoginPage = currentPath === '/admin/login';
-
-  useEffect(() => {
-    let active = true;
-    async function loadUser() {
-      if (isLoginPage) { setReady(true); return; }
-      const { data: sessionData } = await supabase.auth.getSession();
-      const authUser = sessionData.session?.user;
-      if (!authUser) { router.replace('/admin/login'); return; }
-      const { data: profile } = await supabase.from('admin_users').select('full_name,email,role,status').eq('auth_user_id', authUser.id).maybeSingle();
-      if (!active) return;
-      if (!profile || profile.status !== 'active') { await supabase.auth.signOut(); router.replace('/admin/login'); return; }
-      const nextUser = { name: profile.full_name || authUser.email || 'Admin', email: profile.email || authUser.email || '', role: profile.role || 'admin', roleLabel: roleLabel(profile.role || 'admin') };
-      if (isManagerRole(nextUser.role) && !isManagerPathAllowed(currentPath)) { router.replace('/admin/manager'); return; }
-      setUser(nextUser);
-      setReady(true);
-    }
-    loadUser();
-    return () => { active = false; };
-  }, [currentPath, isLoginPage, router]);
-
+  const pathname = usePathname(); const router = useRouter(); const currentPath = normalizePath(pathname); const [open, setOpen] = useState(false); const [user, setUser] = useState<PortalUser | null>(null); const [ready, setReady] = useState(false); const isLoginPage = currentPath === '/admin/login';
+  useEffect(() => { let active = true; async function loadUser() { if (isLoginPage) { setReady(true); return; } const { data: sessionData } = await supabase.auth.getSession(); const authUser = sessionData.session?.user; if (!authUser) { router.replace('/admin/login'); return; } const { data: profile } = await supabase.from('admin_users').select('full_name,email,role,status,avatar_url').eq('auth_user_id', authUser.id).maybeSingle(); if (!active) return; if (!profile || profile.status !== 'active') { await supabase.auth.signOut(); router.replace('/admin/login'); return; } const nextUser = { name: profile.full_name || authUser.email || 'Admin', email: profile.email || authUser.email || '', role: profile.role || 'admin', roleLabel: roleLabel(profile.role || 'admin'), avatarUrl: profile.avatar_url || '' }; if (isManagerRole(nextUser.role) && !isManagerPathAllowed(currentPath)) { router.replace('/admin/manager'); return; } setUser(nextUser); setReady(true); } loadUser(); return () => { active = false; }; }, [currentPath, isLoginPage, router]);
   if (isLoginPage) return <>{children}</>;
-
   if (!ready || !user) return <div className="flex min-h-screen items-center justify-center bg-[#F4F7F8] text-sm font-semibold text-muted-foreground">Loading portal...</div>;
-
   const navItems = isManagerRole(user.role) ? managerNavItems : adminNavItems;
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    router.replace('/admin/login');
-  };
-
-  return (
-    <OperationsProvider>
-    <div className="min-h-screen bg-[#F4F7F8] text-foreground">
-      <div className="flex min-h-screen">
-        <aside className="hidden w-[17rem] shrink-0 border-r border-border/70 bg-white/88 p-4 backdrop-blur-xl lg:block">
-          <div className="flex h-full flex-col">
-            <Link href={isManagerRole(user.role) ? '/admin/manager' : '/admin'} className="mb-7 block px-3 pt-2"><BrandMark /></Link>
-            <AdminNav currentPath={currentPath} navItems={navItems} />
-            <div className="premium-surface mt-auto overflow-hidden rounded-[1.5rem] p-4">
-              <div className="mb-4 h-24 rounded-[1.15rem] bg-[linear-gradient(135deg,#EAF8FA,#FFFFFF_48%,#F4E7C7)] p-4"><div className="flex h-full items-end justify-between gap-3"><div><p className="text-xs font-bold text-foreground">{user.roleLabel}</p><p className="text-xs text-muted-foreground">{user.email}</p></div><Ship className="size-9 text-primary" aria-hidden="true" /></div></div>
-              <p className="font-heading text-lg italic text-gold-deep">Drive the Extraordinary</p>
-            </div>
-          </div>
-        </aside>
-
-        <div className="min-w-0 flex-1">
-          <header className="sticky top-0 z-40 border-b border-border/70 bg-white/88 backdrop-blur-xl">
-            <div className="flex h-[78px] items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
-              <div className="flex min-w-0 items-center gap-3"><Button variant="outline" size="icon" className="lg:hidden" onClick={() => setOpen((value) => !value)} aria-label="Toggle admin navigation">{open ? <X data-icon aria-hidden="true" /> : <Menu data-icon aria-hidden="true" />}</Button><div className="hidden items-center gap-2 rounded-full bg-[#F4F7F8] px-3 py-2 text-xs font-semibold text-muted-foreground sm:flex"><Home className="size-4 text-primary" aria-hidden="true" />{isManagerRole(user.role) ? 'Manager Operations' : 'Admin Operations'}</div></div>
-              <div className="hidden w-full max-w-[34rem] items-center gap-2 rounded-2xl border border-border/70 bg-white px-4 shadow-[0_10px_24px_rgba(8,37,50,0.04),inset_0_1px_0_rgba(255,255,255,0.9)] md:flex"><Search className="size-4 text-muted-foreground" aria-hidden="true" /><Input className="h-11 border-0 bg-transparent px-0 text-sm shadow-none focus-visible:ring-0" placeholder="Search bookings, staff, packages, vehicles..." /><span className="rounded-lg border border-border px-2 py-1 text-xs text-muted-foreground">/</span></div>
-              <div className="flex shrink-0 items-center gap-2 sm:gap-3"><IconButtonWithBadge icon={Bell} count="0" /><IconButtonWithBadge icon={MessageSquare} count="0" /><div className="hidden items-center gap-2 border-l border-border pl-3 text-xs text-muted-foreground xl:flex"><Sun className="size-5 text-gold" aria-hidden="true" /><div><p className="font-bold text-foreground">Dubai</p><p>{companyInfo.locationName}</p></div><ChevronDown className="size-4" aria-hidden="true" /></div><div className="hidden items-center gap-3 border-l border-border pl-3 md:flex"><div className="flex size-10 items-center justify-center rounded-full bg-[#F0E6D7] text-primary shadow-sm"><User className="size-5" aria-hidden="true" /></div><div className="hidden lg:block"><p className="text-sm font-bold text-foreground">{user.name}</p><p className="text-xs text-muted-foreground">{user.roleLabel}</p></div><ChevronDown className="size-4 text-muted-foreground" aria-hidden="true" /></div><Button type="button" size="sm" variant="outline" onClick={handleLogout} className="hidden sm:inline-flex"><LogOut className="size-4" aria-hidden="true" />Logout</Button><Button asChild size="sm" className="hidden sm:inline-flex"><Link href="/">View Site</Link></Button></div>
-            </div>
-            {open ? <div className="border-t border-border bg-white p-4 lg:hidden"><AdminNav currentPath={currentPath} navItems={navItems} onNavigate={() => setOpen(false)} /><Button type="button" variant="outline" className="mt-4 w-full" onClick={handleLogout}><LogOut className="size-4" aria-hidden="true" />Logout</Button></div> : null}
-          </header>
-          <main className="px-4 py-5 sm:px-6 lg:px-8 lg:py-7">{children}</main>
-        </div>
-      </div>
-    </div>
-    </OperationsProvider>
-  );
+  const handleLogout = async () => { await supabase.auth.signOut(); router.replace('/admin/login'); };
+  return <OperationsProvider><div className="min-h-screen bg-[#F4F7F8] text-foreground"><div className="flex min-h-screen"><aside className="hidden w-[17rem] shrink-0 border-r border-border/70 bg-white/88 p-4 backdrop-blur-xl lg:block"><div className="flex h-full flex-col"><Link href={isManagerRole(user.role) ? '/admin/manager' : '/admin'} className="mb-7 block px-3 pt-2"><BrandMark /></Link><AdminNav currentPath={currentPath} navItems={navItems} /><div className="premium-surface mt-auto overflow-hidden rounded-[1.5rem] p-4"><div className="mb-4 h-24 rounded-[1.15rem] bg-[linear-gradient(135deg,#EAF8FA,#FFFFFF_48%,#F4E7C7)] p-4"><div className="flex h-full items-end justify-between gap-3"><div><p className="text-xs font-bold text-foreground">{user.roleLabel}</p><p className="text-xs text-muted-foreground">{user.email}</p></div><ProfileAvatar src={user.avatarUrl} /></div></div><p className="font-heading text-lg italic text-gold-deep">Drive the Extraordinary</p></div></div></aside><div className="min-w-0 flex-1"><header className="sticky top-0 z-40 border-b border-border/70 bg-white/88 backdrop-blur-xl"><div className="flex h-[78px] items-center justify-between gap-4 px-4 sm:px-6 lg:px-8"><div className="flex min-w-0 items-center gap-3"><Button variant="outline" size="icon" className="lg:hidden" onClick={() => setOpen((value) => !value)} aria-label="Toggle admin navigation">{open ? <X data-icon aria-hidden="true" /> : <Menu data-icon aria-hidden="true" />}</Button><div className="hidden items-center gap-2 rounded-full bg-[#F4F7F8] px-3 py-2 text-xs font-semibold text-muted-foreground sm:flex"><Home className="size-4 text-primary" aria-hidden="true" />{isManagerRole(user.role) ? 'Manager Operations' : 'Admin Operations'}</div></div><div className="hidden w-full max-w-[34rem] items-center gap-2 rounded-2xl border border-border/70 bg-white px-4 shadow-[0_10px_24px_rgba(8,37,50,0.04),inset_0_1px_0_rgba(255,255,255,0.9)] md:flex"><Search className="size-4 text-muted-foreground" aria-hidden="true" /><Input className="h-11 border-0 bg-transparent px-0 text-sm shadow-none focus-visible:ring-0" placeholder="Search bookings, staff, packages, vehicles..." /><span className="rounded-lg border border-border px-2 py-1 text-xs text-muted-foreground">/</span></div><div className="flex shrink-0 items-center gap-2 sm:gap-3"><IconButtonWithBadge icon={Bell} count="0" /><IconButtonWithBadge icon={MessageSquare} count="0" /><div className="hidden items-center gap-2 border-l border-border pl-3 text-xs text-muted-foreground xl:flex"><Sun className="size-5 text-gold" aria-hidden="true" /><div><p className="font-bold text-foreground">Dubai</p><p>{companyInfo.locationName}</p></div><ChevronDown className="size-4" aria-hidden="true" /></div><div className="hidden items-center gap-3 border-l border-border pl-3 md:flex"><ProfileAvatar src={user.avatarUrl} /><div className="hidden lg:block"><p className="text-sm font-bold text-foreground">{user.name}</p><p className="text-xs text-muted-foreground">{user.roleLabel}</p></div><ChevronDown className="size-4 text-muted-foreground" aria-hidden="true" /></div><Button type="button" size="sm" variant="outline" onClick={handleLogout} className="hidden sm:inline-flex"><LogOut className="size-4" aria-hidden="true" />Logout</Button><Button asChild size="sm" className="hidden sm:inline-flex"><Link href="/">View Site</Link></Button></div></div>{open ? <div className="border-t border-border bg-white p-4 lg:hidden"><AdminNav currentPath={currentPath} navItems={navItems} onNavigate={() => setOpen(false)} /><Button type="button" variant="outline" className="mt-4 w-full" onClick={handleLogout}><LogOut className="size-4" aria-hidden="true" />Logout</Button></div> : null}</header><main className="px-4 py-5 sm:px-6 lg:px-8 lg:py-7">{children}</main></div></div></div></OperationsProvider>;
 }
-
 function IconButtonWithBadge({ icon: Icon, count }: { icon: typeof Bell; count: string }) { return <button className="relative flex size-10 items-center justify-center rounded-full bg-white text-muted-foreground shadow-[0_8px_18px_rgba(8,37,50,0.06),inset_0_1px_0_rgba(255,255,255,0.9)] transition hover:text-primary" type="button"><Icon className="size-4" aria-hidden="true" /><span className="absolute -right-0.5 -top-0.5 flex size-4 items-center justify-center rounded-full bg-primary text-[9px] font-bold text-white">{count}</span></button>; }
-
 function AdminNav({ currentPath, navItems, onNavigate }: { currentPath: string; navItems: typeof adminNavItems; onNavigate?: () => void }) { return <nav className="flex flex-col gap-1.5">{navItems.map((item) => { const Icon = iconMap[item.icon as keyof typeof iconMap] ?? LayoutDashboard; const active = currentPath === normalizePath(item.href.split('?')[0]); return <Link key={item.href} href={item.href} onClick={onNavigate} className={cn('flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold text-muted-foreground transition hover:bg-primary-50 hover:text-primary-900', active && 'bg-primary-100 text-primary-900 shadow-[0px_-3px_0px_0px_rgba(14,124,134,0.08)_inset,0px_2px_0px_0px_rgba(255,255,255,0.65)_inset,0px_8px_18px_rgba(8,37,50,0.07)]')}><span className={cn('flex size-8 items-center justify-center rounded-xl bg-white text-muted-foreground shadow-sm', active && 'bg-[#DDF4F6] text-primary')}><Icon className="size-4" aria-hidden="true" /></span>{item.label}</Link>; })}</nav>; }
