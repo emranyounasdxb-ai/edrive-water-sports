@@ -115,8 +115,9 @@ export default function Page() {
                 <span className="inline-flex items-center gap-2 rounded-full border border-gold/45 bg-white/52 px-4 py-2 text-xs font-bold uppercase tracking-[0.2em] text-[#9A6B25] shadow-[0_12px_30px_rgba(8,37,50,0.12)] backdrop-blur-md">
                   <ShieldCheck className="size-4 text-[#9A6B25]" aria-hidden="true" /> Secure Portal
                 </span>
-                <h1 className="mt-7 max-w-[32rem] font-heading text-4xl font-semibold leading-[1.04] text-[#8B6426] drop-shadow-[0_1px_0_rgba(255,255,255,0.75)] sm:text-5xl xl:text-[3.15rem]">
-                  Welcome to <span className="text-primary-900">eDrive</span><br />Admin
+                <h1 className="mt-7 max-w-[28rem] font-heading text-[3.2rem] font-semibold leading-[0.96] tracking-[-0.04em] text-[#8B6426] drop-shadow-[0_1px_0_rgba(255,255,255,0.75)] sm:text-[4.2rem] xl:text-[4.85rem]">
+                  <span className="block">Welcome to</span>
+                  <span className="block text-primary-900">eDrive</span>
                 </h1>
                 <div className="mt-5 h-1 w-20 rounded-full bg-[#B98A42] shadow-[0_8px_20px_rgba(185,138,66,0.26)]" />
                 <p className="mt-5 max-w-sm rounded-2xl border border-white/38 bg-white/34 p-4 text-sm font-semibold leading-7 text-primary-900 shadow-[0_14px_34px_rgba(8,37,50,0.10)] backdrop-blur-md sm:text-base">
