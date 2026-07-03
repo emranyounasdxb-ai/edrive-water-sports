@@ -2,34 +2,33 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { FormEvent, useState } from 'react';
 import { LockKeyhole, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { demoUsers, setDemoUser, type PortalRole } from '@/lib/demo-auth';
 import { BrandMark } from '@/components/edrive/brand';
-
-const loginCards: Array<{ role: PortalRole; title: string; description: string; access: string[] }> = [
-  {
-    role: 'admin',
-    title: 'Admin Login',
-    description: 'Full portal access for bookings, reports, payments, fleet, staff, customers, coupons, reviews, and settings.',
-    access: ['New website bookings', 'Confirm or cancel bookings', 'Reports and payment summaries']
-  },
-  {
-    role: 'manager',
-    title: 'Manager Login',
-    description: 'Operations access for confirmed bookings, ride updates, payment updates, vehicle assignment, and issue notes.',
-    access: ['Confirmed bookings only', 'Captain / driver / vehicle updates', 'Payment and collection updates']
-  }
-];
+import { supabase } from '@/lib/supabase-client';
 
 export default function Page() {
   const router = useRouter();
+  const [email, setEmail] = useState('admin@edrive.ae');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleLogin = (role: PortalRole) => {
-    setDemoUser(role);
-    router.push(role === 'manager' ? '/admin/manager' : '/admin');
-  };
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError('');
+    setLoading(true);
+    const { error: loginError } = await supabase.auth.signInWithPassword({ email, password });
+    setLoading(false);
+    if (loginError) {
+      setError(loginError.message);
+      return;
+    }
+    router.push('/admin');
+    router.refresh();
+  }
 
   return (
     <main className="min-h-screen bg-[#F4F7F8] px-4 py-6 sm:px-6 lg:px-8">
@@ -46,49 +45,38 @@ export default function Page() {
               <div className="absolute -bottom-24 -left-20 size-72 rounded-full bg-gold/30 blur-3xl" />
               <div className="relative">
                 <span className="soft-label border-white/15 bg-white/10 text-white">Secure Portal</span>
-                <h1 className="mt-6 max-w-lg font-heading text-4xl font-semibold leading-tight text-white sm:text-5xl">Choose who is signing in</h1>
-                <p className="mt-5 max-w-xl text-sm leading-7 text-white/72 sm:text-base">This is a temporary role-based login for testing. Later it can be replaced with Supabase Auth using the same role flow.</p>
+                <h1 className="mt-6 max-w-lg font-heading text-4xl font-semibold leading-tight text-white sm:text-5xl">Sign in to eDrive admin</h1>
+                <p className="mt-5 max-w-xl text-sm leading-7 text-white/72 sm:text-base">Use your Supabase admin account to manage staff, packages, vehicles, bookings, customers, and payments.</p>
               </div>
-              <div className="relative grid gap-3 sm:grid-cols-2">
-                <div className="rounded-2xl border border-white/12 bg-white/10 p-4 backdrop-blur">
-                  <p className="text-xs uppercase tracking-[0.18em] text-white/55">Admin</p>
-                  <p className="mt-2 font-semibold text-white">{demoUsers.admin.email}</p>
-                </div>
-                <div className="rounded-2xl border border-white/12 bg-white/10 p-4 backdrop-blur">
-                  <p className="text-xs uppercase tracking-[0.18em] text-white/55">Manager</p>
-                  <p className="mt-2 font-semibold text-white">{demoUsers.manager.email}</p>
-                </div>
+              <div className="relative rounded-2xl border border-white/12 bg-white/10 p-4 backdrop-blur">
+                <p className="text-xs uppercase tracking-[0.18em] text-white/55">Super Admin</p>
+                <p className="mt-2 font-semibold text-white">admin@edrive.ae</p>
               </div>
             </CardContent>
           </Card>
 
-          <div className="grid gap-5">
-            {loginCards.map((item) => (
-              <Card key={item.role} className="premium-card-hover">
-                <CardHeader className="gap-4 sm:flex-row sm:items-start sm:justify-between">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-3">
-                      <span className="flex size-11 items-center justify-center rounded-2xl bg-primary-100 text-primary"><LockKeyhole className="size-5" aria-hidden="true" /></span>
-                      <div>
-                        <CardTitle>{item.title}</CardTitle>
-                        <CardDescription>{demoUsers[item.role].email}</CardDescription>
-                      </div>
-                    </div>
-                    <p className="mt-4 text-sm leading-7 text-muted-foreground">{item.description}</p>
-                  </div>
-                  <Button type="button" onClick={() => handleLogin(item.role)} className="shrink-0">Login as {demoUsers[item.role].roleLabel}</Button>
-                </CardHeader>
-                <CardContent className="grid gap-3 sm:grid-cols-3">
-                  {item.access.map((access) => (
-                    <div key={access} className="flex items-start gap-2 rounded-2xl bg-primary-50 px-3 py-3 text-xs font-semibold text-primary-900">
-                      <ShieldCheck className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" />
-                      <span>{access}</span>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+          <Card className="premium-card-hover self-center">
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <span className="flex size-11 items-center justify-center rounded-2xl bg-primary-100 text-primary"><LockKeyhole className="size-5" aria-hidden="true" /></span>
+                <div>
+                  <CardTitle>Admin Login</CardTitle>
+                  <CardDescription>Supabase secure authentication</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSubmit} className="grid gap-4">
+                <label className="grid gap-1.5 text-sm font-semibold text-foreground">Email<input type="email" value={email} onChange={(event) => setEmail(event.target.value)} required className="h-11 rounded-xl border border-border bg-white px-3 text-sm outline-none focus:border-primary" /></label>
+                <label className="grid gap-1.5 text-sm font-semibold text-foreground">Password<input type="password" value={password} onChange={(event) => setPassword(event.target.value)} required className="h-11 rounded-xl border border-border bg-white px-3 text-sm outline-none focus:border-primary" /></label>
+                {error ? <p className="rounded-xl bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">{error}</p> : null}
+                <Button type="submit" disabled={loading}>{loading ? 'Signing in...' : 'Sign in'}</Button>
+              </form>
+              <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                {['Role-based portal access', 'Database-backed admin records'].map((item) => <div key={item} className="flex items-start gap-2 rounded-2xl bg-primary-50 px-3 py-3 text-xs font-semibold text-primary-900"><ShieldCheck className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" /><span>{item}</span></div>)}
+              </div>
+            </CardContent>
+          </Card>
         </section>
       </div>
     </main>
