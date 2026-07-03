@@ -25,7 +25,7 @@ export type GalleryItem = {
 export type TestimonialItem = {
   name: string;
   role: string;
-  text: string;
+  quote: string;
   rating: number;
 };
 
