@@ -3,14 +3,14 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
-import { ArrowRight, Instagram, Mail, MapPin, Menu, MessageCircle, Phone, X } from 'lucide-react';
+import { ArrowRight, CalendarCheck, Instagram, LockKeyhole, Mail, MapPin, Menu, MessageCircle, Phone, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { companyInfo, whatsappUrl } from '@/lib/company-info';
 import { publicNavItems } from '@/lib/mock-data';
 import { cn } from '@/lib/utils';
 import { BrandMark } from './brand';
 
-const activeMenuClass = 'bg-primary-100 text-primary-900 shadow-[0_7px_18px_rgba(8,37,50,0.08)]';
+const activeMenuClass = 'bg-primary-100 text-primary-900 shadow-[0_4px_12px_rgba(8,37,50,0.07)]';
 
 const policyLinks = [
   { href: '/privacy-policy', label: 'Privacy Policy' },
@@ -26,20 +26,19 @@ function normalizePath(pathname: string) {
 export function PublicShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const currentPath = normalizePath(pathname);
-  const isHome = currentPath === '/';
   const [open, setOpen] = useState(false);
 
   return (
     <div className="min-h-screen overflow-hidden bg-background">
-      <header className={cn(isHome ? 'absolute inset-x-0 top-0 z-[70] py-4' : 'sticky top-0 z-[70] bg-background/82 py-3 backdrop-blur-xl')}>
-        <nav className="mx-auto w-full max-w-[88rem] px-4 sm:px-6 lg:px-8">
-          <div className="flex min-h-[62px] items-center justify-between gap-4 rounded-full border border-white/45 bg-white/82 px-5 shadow-[0_14px_42px_rgba(8,37,50,0.12)] backdrop-blur-xl">
+      <header className="sticky top-0 z-[70] bg-transparent py-3">
+        <nav className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="flex min-h-[48px] items-center justify-between gap-3 rounded-full border border-white/70 bg-white/90 px-4 shadow-[0_12px_35px_rgba(8,37,50,0.11)] backdrop-blur-xl">
             <Link href="/" aria-label="eDrive Water Sports home" className="flex shrink-0 items-center">
-              <BrandMark className="[&_img]:h-11 [&_img]:w-auto" />
+              <BrandMark className="[&_img]:h-9 [&_img]:w-auto" />
             </Link>
 
-            <div className="hidden min-w-0 flex-1 items-center justify-center xl:flex">
-              <div className="flex items-center gap-1 rounded-full bg-white/58 p-1">
+            <div className="hidden min-w-0 flex-1 items-center justify-center lg:flex">
+              <div className="flex items-center gap-1">
                 {publicNavItems.map((item) => {
                   const active = currentPath === normalizePath(item.href);
                   return (
@@ -48,7 +47,7 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
                       href={item.href}
                       aria-current={active ? 'page' : undefined}
                       className={cn(
-                        'inline-flex h-9 shrink-0 items-center justify-center whitespace-nowrap rounded-full px-4 text-sm font-bold leading-none text-primary-900/62 transition hover:bg-primary-50 hover:text-primary-900',
+                        'inline-flex h-8 shrink-0 items-center justify-center whitespace-nowrap rounded-full px-3 text-[11px] font-bold leading-none text-muted-foreground transition hover:bg-primary-50 hover:text-primary-900 xl:px-4 xl:text-xs',
                         active && activeMenuClass
                       )}
                     >
@@ -60,27 +59,27 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
             </div>
 
             <div className="hidden shrink-0 items-center gap-2 md:flex">
-              <a href={`tel:${companyInfo.landlineHref}`} className="hidden items-center gap-2 whitespace-nowrap rounded-full bg-white px-4 py-2.5 text-xs font-bold leading-none text-primary-900 shadow-sm transition hover:bg-primary-50 hover:text-primary 2xl:inline-flex">
-                <Phone data-icon aria-hidden="true" />
+              <a href={`tel:${companyInfo.landlineHref}`} className="hidden items-center gap-2 whitespace-nowrap rounded-full px-3 py-2 text-[11px] font-bold leading-none text-muted-foreground transition hover:bg-primary-50 hover:text-primary lg:inline-flex">
+                <Phone className="size-3.5" aria-hidden="true" />
                 {companyInfo.landlineDisplay}
               </a>
-              <Button asChild size="sm" className="whitespace-nowrap rounded-full bg-primary-900 shadow-sm hover:bg-primary-800">
-                <a href={whatsappUrl} target="_blank" rel="noopener noreferrer">
-                  <MessageCircle data-icon aria-hidden="true" />
-                  WhatsApp
-                </a>
+              <Button asChild variant="outline" size="sm" className="h-8 rounded-full px-3 text-[11px]">
+                <Link href="/admin"><LockKeyhole data-icon aria-hidden="true" />Admin Portal</Link>
+              </Button>
+              <Button asChild size="sm" className="h-8 rounded-full bg-primary-900 px-3 text-[11px] shadow-sm hover:bg-primary-800">
+                <Link href="/rentals"><CalendarCheck data-icon aria-hidden="true" />Book Now</Link>
               </Button>
             </div>
 
-            <Button variant="outline" size="icon" className="shrink-0 rounded-full xl:hidden" onClick={() => setOpen((value) => !value)} aria-label="Toggle navigation">
+            <Button variant="outline" size="icon" className="size-9 shrink-0 rounded-full lg:hidden" onClick={() => setOpen((value) => !value)} aria-label="Toggle navigation">
               {open ? <X data-icon aria-hidden="true" /> : <Menu data-icon aria-hidden="true" />}
             </Button>
           </div>
         </nav>
 
         {open ? (
-          <div className="mx-auto w-full max-w-[88rem] px-4 pt-3 sm:px-6 lg:px-8 xl:hidden">
-            <div className="premium-surface flex flex-col gap-1 rounded-[2rem] p-3">
+          <div className="mx-auto w-full max-w-7xl px-4 pt-3 sm:px-6 lg:px-8 lg:hidden">
+            <div className="premium-surface flex flex-col gap-1 rounded-[1.5rem] p-3">
               {publicNavItems.map((item) => {
                 const active = currentPath === normalizePath(item.href);
                 return (
@@ -89,24 +88,26 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
                     href={item.href}
                     onClick={() => setOpen(false)}
                     aria-current={active ? 'page' : undefined}
-                    className={cn('inline-flex h-11 items-center justify-center whitespace-nowrap rounded-2xl px-4 text-sm font-bold text-muted-foreground transition hover:bg-white hover:text-foreground', active && activeMenuClass)}
+                    className={cn('inline-flex h-10 items-center justify-center whitespace-nowrap rounded-2xl px-4 text-sm font-bold text-muted-foreground transition hover:bg-white hover:text-foreground', active && activeMenuClass)}
                   >
                     <span className="relative -top-px block leading-none">{item.label}</span>
                   </Link>
                 );
               })}
-              <Button asChild className="mt-3 rounded-full">
-                <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" onClick={() => setOpen(false)}>
-                  <MessageCircle data-icon aria-hidden="true" />
-                  WhatsApp
-                </a>
-              </Button>
+              <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                <Button asChild variant="outline" className="rounded-full">
+                  <Link href="/admin" onClick={() => setOpen(false)}><LockKeyhole data-icon aria-hidden="true" />Admin Portal</Link>
+                </Button>
+                <Button asChild className="rounded-full">
+                  <Link href="/rentals" onClick={() => setOpen(false)}><CalendarCheck data-icon aria-hidden="true" />Book Now</Link>
+                </Button>
+              </div>
             </div>
           </div>
         ) : null}
       </header>
 
-      <main>{children}</main>
+      <main className="-mt-[72px] pt-[72px]">{children}</main>
       <PublicFooter />
     </div>
   );
