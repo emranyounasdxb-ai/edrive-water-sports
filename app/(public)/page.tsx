@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { HomeExpansionSections } from '@/components/edrive/home-expansion';
 import { HomePage } from '@/components/edrive/public-pages';
 
 export const metadata: Metadata = {
@@ -7,5 +8,10 @@ export const metadata: Metadata = {
 };
 
 export default function Page() {
-  return <HomePage />;
+  return (
+    <>
+      <HomePage />
+      <HomeExpansionSections />
+    </>
+  );
 }
