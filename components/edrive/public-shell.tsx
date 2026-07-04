@@ -45,7 +45,7 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
               'flex min-h-[50px] items-center justify-between gap-3 rounded-full px-4 ring-1 transition-all duration-300 ease-out',
               'shadow-[inset_0_1px_0_rgba(255,255,255,1),inset_0_-10px_22px_rgba(8,37,50,0.025),0_18px_42px_rgba(8,37,50,0.18),0_3px_8px_rgba(255,255,255,0.65)]',
               scrolled
-                ? 'border border-white/72 bg-white/78 ring-primary-900/5 backdrop-blur-2xl shadow-[inset_0_1px_0_rgba(255,255,255,0.9),inset_0_-10px_22px_rgba(8,37,50,0.025),0_16px_36px_rgba(8,37,50,0.13)]'
+                ? 'border border-white/90 bg-white/90 ring-black/5 backdrop-blur-sm shadow-[inset_0_1px_0_rgba(255,255,255,0.95),inset_0_-10px_22px_rgba(8,37,50,0.025),0_14px_32px_rgba(8,37,50,0.12)]'
                 : 'border border-white bg-white ring-black/5'
             )}
           >
@@ -54,7 +54,7 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
             </Link>
 
             <div className="hidden min-w-0 flex-1 items-center justify-center lg:flex">
-              <div className={cn('flex items-center gap-1 rounded-full p-1 transition-all duration-300', scrolled ? 'bg-white/46 shadow-[inset_0_1px_5px_rgba(8,37,50,0.045)] backdrop-blur-xl' : 'bg-white shadow-[inset_0_1px_4px_rgba(8,37,50,0.05)]')}>
+              <div className={cn('flex items-center gap-1 rounded-full p-1 transition-all duration-300', scrolled ? 'bg-white/82 shadow-[inset_0_1px_5px_rgba(8,37,50,0.04)] backdrop-blur-sm' : 'bg-white shadow-[inset_0_1px_4px_rgba(8,37,50,0.05)]')}>
                 {publicNavItems.map((item) => {
                   const active = currentPath === normalizePath(item.href);
                   return (
@@ -63,7 +63,7 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
                       href={item.href}
                       aria-current={active ? 'page' : undefined}
                       className={cn(
-                        'inline-flex h-8 shrink-0 items-center justify-center whitespace-nowrap rounded-full px-3 text-[11px] font-bold leading-none text-slate-600 transition hover:bg-primary-50 hover:text-primary-900 xl:px-4 xl:text-xs',
+                        'inline-flex h-8 shrink-0 items-center justify-center whitespace-nowrap rounded-full px-3 text-[11px] font-bold leading-none text-slate-700 transition hover:bg-primary-50 hover:text-primary-900 xl:px-4 xl:text-xs',
                         active && activeMenuClass
                       )}
                     >
@@ -75,11 +75,11 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
             </div>
 
             <div className="hidden shrink-0 items-center gap-2 md:flex">
-              <a href={`tel:${companyInfo.landlineHref}`} className={cn('hidden items-center gap-2 whitespace-nowrap rounded-full px-3 py-2 text-[11px] font-bold leading-none text-primary-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_5px_14px_rgba(8,37,50,0.055)] transition hover:bg-primary-100 hover:text-primary lg:inline-flex', scrolled ? 'bg-primary-50/74 backdrop-blur-xl' : 'bg-primary-50')}>
+              <a href={`tel:${companyInfo.landlineHref}`} className={cn('hidden items-center gap-2 whitespace-nowrap rounded-full px-3 py-2 text-[11px] font-bold leading-none text-primary-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_5px_14px_rgba(8,37,50,0.055)] transition hover:bg-primary-100 hover:text-primary lg:inline-flex', scrolled ? 'bg-primary-50/90 backdrop-blur-sm' : 'bg-primary-50')}>
                 <Phone className="size-3.5" aria-hidden="true" />
                 {companyInfo.landlineDisplay}
               </a>
-              <Button asChild variant="outline" size="sm" className={cn('h-8 rounded-full px-3 text-[11px] shadow-[inset_0_1px_0_rgba(255,255,255,0.95),0_6px_15px_rgba(8,37,50,0.075)] hover:bg-primary-50', scrolled ? 'border-white/70 bg-white/72 backdrop-blur-xl' : 'border-border bg-white')}>
+              <Button asChild variant="outline" size="sm" className={cn('h-8 rounded-full px-3 text-[11px] shadow-[inset_0_1px_0_rgba(255,255,255,0.95),0_6px_15px_rgba(8,37,50,0.075)] hover:bg-primary-50', scrolled ? 'border-white/90 bg-white/90 backdrop-blur-sm' : 'border-border bg-white')}>
                 <Link href="/admin"><LockKeyhole data-icon aria-hidden="true" />Admin Portal</Link>
               </Button>
               <Button asChild size="sm" className="h-8 rounded-full bg-primary-900 px-3 text-[11px] shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_9px_20px_rgba(8,37,50,0.2)] hover:bg-primary-800">
@@ -87,7 +87,7 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
               </Button>
             </div>
 
-            <Button variant="outline" size="icon" className={cn('size-9 shrink-0 rounded-full lg:hidden', scrolled ? 'bg-white/72 backdrop-blur-xl' : 'bg-white')} onClick={() => setOpen((value) => !value)} aria-label="Toggle navigation">
+            <Button variant="outline" size="icon" className={cn('size-9 shrink-0 rounded-full lg:hidden', scrolled ? 'bg-white/90 backdrop-blur-sm' : 'bg-white')} onClick={() => setOpen((value) => !value)} aria-label="Toggle navigation">
               {open ? <X data-icon aria-hidden="true" /> : <Menu data-icon aria-hidden="true" />}
             </Button>
           </div>
