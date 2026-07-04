@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ArrowRight, CalendarCheck, Instagram, LockKeyhole, Mail, MapPin, Menu, Phone, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { companyInfo } from '@/lib/company-info';
@@ -10,7 +10,7 @@ import { publicNavItems } from '@/lib/mock-data';
 import { cn } from '@/lib/utils';
 import { BrandMark } from './brand';
 
-const activeMenuClass = 'bg-primary-100 text-primary-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.95),0_7px_18px_rgba(8,37,50,0.08)]';
+const activeMenuClass = 'bg-primary-100 text-primary-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.95),0_8px_18px_rgba(8,37,50,0.09)]';
 
 const policyLinks = [
   { href: '/privacy-policy', label: 'Privacy Policy' },
@@ -27,18 +27,34 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const currentPath = normalizePath(pathname);
   const [open, setOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const updateHeader = () => setScrolled(window.scrollY > 32);
+    updateHeader();
+    window.addEventListener('scroll', updateHeader, { passive: true });
+    return () => window.removeEventListener('scroll', updateHeader);
+  }, []);
 
   return (
     <div className="min-h-screen overflow-hidden bg-background">
       <header className="fixed inset-x-0 top-0 z-[90] py-3">
         <nav className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex min-h-[50px] items-center justify-between gap-3 rounded-full border border-white bg-white px-4 shadow-[inset_0_1px_0_rgba(255,255,255,1),inset_0_-1px_0_rgba(8,37,50,0.04),0_18px_45px_rgba(8,37,50,0.18)] ring-1 ring-black/5">
+          <div
+            className={cn(
+              'flex min-h-[50px] items-center justify-between gap-3 rounded-full px-4 ring-1 transition-all duration-300 ease-out',
+              'shadow-[inset_0_1px_0_rgba(255,255,255,1),inset_0_-10px_22px_rgba(8,37,50,0.025),0_18px_42px_rgba(8,37,50,0.18),0_3px_8px_rgba(255,255,255,0.65)]',
+              scrolled
+                ? 'border border-white/72 bg-white/78 ring-primary-900/5 backdrop-blur-2xl shadow-[inset_0_1px_0_rgba(255,255,255,0.9),inset_0_-10px_22px_rgba(8,37,50,0.025),0_16px_36px_rgba(8,37,50,0.13)]'
+                : 'border border-white bg-white ring-black/5'
+            )}
+          >
             <Link href="/" aria-label="eDrive Water Sports home" className="flex shrink-0 items-center">
               <BrandMark className="[&_img]:h-9 [&_img]:w-auto" />
             </Link>
 
             <div className="hidden min-w-0 flex-1 items-center justify-center lg:flex">
-              <div className="flex items-center gap-1 rounded-full bg-white p-1 shadow-[inset_0_1px_3px_rgba(8,37,50,0.045)]">
+              <div className={cn('flex items-center gap-1 rounded-full p-1 transition-all duration-300', scrolled ? 'bg-white/46 shadow-[inset_0_1px_5px_rgba(8,37,50,0.045)] backdrop-blur-xl' : 'bg-white shadow-[inset_0_1px_4px_rgba(8,37,50,0.05)]')}>
                 {publicNavItems.map((item) => {
                   const active = currentPath === normalizePath(item.href);
                   return (
@@ -59,19 +75,19 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
             </div>
 
             <div className="hidden shrink-0 items-center gap-2 md:flex">
-              <a href={`tel:${companyInfo.landlineHref}`} className="hidden items-center gap-2 whitespace-nowrap rounded-full bg-primary-50 px-3 py-2 text-[11px] font-bold leading-none text-primary-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)] transition hover:bg-primary-100 hover:text-primary lg:inline-flex">
+              <a href={`tel:${companyInfo.landlineHref}`} className={cn('hidden items-center gap-2 whitespace-nowrap rounded-full px-3 py-2 text-[11px] font-bold leading-none text-primary-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_5px_14px_rgba(8,37,50,0.055)] transition hover:bg-primary-100 hover:text-primary lg:inline-flex', scrolled ? 'bg-primary-50/74 backdrop-blur-xl' : 'bg-primary-50')}>
                 <Phone className="size-3.5" aria-hidden="true" />
                 {companyInfo.landlineDisplay}
               </a>
-              <Button asChild variant="outline" size="sm" className="h-8 rounded-full border-border bg-white px-3 text-[11px] shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_5px_14px_rgba(8,37,50,0.08)] hover:bg-primary-50">
+              <Button asChild variant="outline" size="sm" className={cn('h-8 rounded-full px-3 text-[11px] shadow-[inset_0_1px_0_rgba(255,255,255,0.95),0_6px_15px_rgba(8,37,50,0.075)] hover:bg-primary-50', scrolled ? 'border-white/70 bg-white/72 backdrop-blur-xl' : 'border-border bg-white')}>
                 <Link href="/admin"><LockKeyhole data-icon aria-hidden="true" />Admin Portal</Link>
               </Button>
-              <Button asChild size="sm" className="h-8 rounded-full bg-primary-900 px-3 text-[11px] shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_8px_18px_rgba(8,37,50,0.18)] hover:bg-primary-800">
+              <Button asChild size="sm" className="h-8 rounded-full bg-primary-900 px-3 text-[11px] shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_9px_20px_rgba(8,37,50,0.2)] hover:bg-primary-800">
                 <Link href="/rentals"><CalendarCheck data-icon aria-hidden="true" />Book Now</Link>
               </Button>
             </div>
 
-            <Button variant="outline" size="icon" className="size-9 shrink-0 rounded-full bg-white lg:hidden" onClick={() => setOpen((value) => !value)} aria-label="Toggle navigation">
+            <Button variant="outline" size="icon" className={cn('size-9 shrink-0 rounded-full lg:hidden', scrolled ? 'bg-white/72 backdrop-blur-xl' : 'bg-white')} onClick={() => setOpen((value) => !value)} aria-label="Toggle navigation">
               {open ? <X data-icon aria-hidden="true" /> : <Menu data-icon aria-hidden="true" />}
             </Button>
           </div>
