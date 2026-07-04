@@ -10,7 +10,11 @@ export function BrandMark({ compact = false, inverse = false, className }: { com
         width={600}
         height={220}
         priority
-        className={cn('h-auto w-[8.8rem] object-contain sm:w-[9.6rem]', compact && 'w-[3.3rem]', inverse && 'drop-shadow-[0_8px_18px_rgba(0,0,0,0.28)]')}
+        className={cn(
+          'h-auto w-[9.8rem] object-contain sm:w-[11rem] lg:w-[12.5rem]',
+          compact && 'w-[4.4rem] sm:w-[5rem] lg:w-[5.4rem]',
+          inverse && 'drop-shadow-[0_8px_18px_rgba(0,0,0,0.28)]'
+        )}
       />
       <span className="sr-only">eDrive Water Sports</span>
     </div>
