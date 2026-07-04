@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { FormEvent, useState } from 'react';
-import { ArrowRightToLine, BriefcaseBusiness, Building2, CalendarCheck, Eye, Globe2, LayoutDashboard, LockKeyhole, Mail, ShieldCheck, Ship, UserRound, Waves } from 'lucide-react';
+import { ArrowRightToLine, BriefcaseBusiness, Building2, CalendarCheck, Eye, EyeOff, Globe2, LayoutDashboard, LockKeyhole, Mail, ShieldCheck, Ship, UserRound, Waves } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { BrandMark } from '@/components/edrive/brand';
 import { supabase } from '@/lib/supabase-client';
@@ -50,6 +50,7 @@ export default function Page() {
   const [loginType, setLoginType] = useState<LoginType>('staff');
   const [email, setEmail] = useState('admin@edrive.ae');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -62,7 +63,7 @@ export default function Page() {
 
     if (loginError || !loginData.user) {
       setLoading(false);
-      setError('Email ya password sahi nahi hai. Please dobara check karein.');
+      setError('Invalid email or password. Please check your login details and try again.');
       return;
     }
 
@@ -80,7 +81,7 @@ export default function Page() {
       if (profileError || !profile || profile.status !== 'active') {
         await supabase.auth.signOut();
         setLoading(false);
-        setError('Ye account active eDrive staff profile se linked nahi hai. Please B2B Agent select karein ya admin se contact karein.');
+        setError('This account is not linked to an active eDrive staff profile. Please select B2B Agent or contact the administrator.');
         return;
       }
 
@@ -100,7 +101,7 @@ export default function Page() {
     if (agentError || !agent || agent.status !== 'active') {
       await supabase.auth.signOut();
       setLoading(false);
-      setError('Ye account active B2B agent profile se linked nahi hai. Please eDrive Staff select karein ya admin se contact karein.');
+      setError('This account is not linked to an active B2B agent profile. Please select eDrive Staff or contact the administrator.');
       return;
     }
 
@@ -167,8 +168,15 @@ export default function Page() {
                   Password
                   <span className="flex h-14 items-center gap-3 rounded-2xl border border-border bg-white px-4 shadow-[0_10px_24px_rgba(8,37,50,0.04)] focus-within:border-primary">
                     <LockKeyhole className="size-5 text-muted-foreground" aria-hidden="true" />
-                    <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} required className="h-full min-w-0 flex-1 bg-transparent text-sm font-semibold text-primary-900 outline-none" />
-                    <Eye className="size-5 text-muted-foreground" aria-hidden="true" />
+                    <input type={showPassword ? 'text' : 'password'} value={password} onChange={(event) => setPassword(event.target.value)} required className="h-full min-w-0 flex-1 bg-transparent text-sm font-semibold text-primary-900 outline-none" />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((current) => !current)}
+                      className="flex size-9 items-center justify-center rounded-full text-muted-foreground transition hover:bg-primary-50 hover:text-primary"
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    >
+                      {showPassword ? <EyeOff className="size-5" aria-hidden="true" /> : <Eye className="size-5" aria-hidden="true" />}
+                    </button>
                   </span>
                 </label>
 
