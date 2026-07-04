@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { ArrowRight, Instagram, Mail, MapPin, Menu, MessageCircle, Phone, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { companyInfo, whatsappUrl } from '@/lib/company-info';
@@ -29,81 +29,63 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
   const isHome = currentPath === '/';
   const [open, setOpen] = useState(false);
 
-  useEffect(() => {
-    const handleExternalLinkClick = (event: MouseEvent) => {
-      const target = event.target as HTMLElement | null;
-      const anchor = target?.closest('a[href]');
-      const href = anchor?.getAttribute('href');
-
-      if (!href || !href.startsWith('http')) return;
-
-      const url = new URL(href, window.location.href);
-      if (url.origin === window.location.origin) return;
-
-      event.preventDefault();
-      window.open(url.href, '_blank', 'noopener,noreferrer');
-    };
-
-    document.addEventListener('click', handleExternalLinkClick);
-    return () => document.removeEventListener('click', handleExternalLinkClick);
-  }, []);
-
   return (
     <div className="min-h-screen overflow-hidden bg-background">
-      <header className={cn(isHome ? 'absolute inset-x-0 top-0 z-[70] py-2' : 'sticky top-0 z-[70] bg-background/78 py-2 backdrop-blur-xl')}>
+      <header className={cn(isHome ? 'absolute inset-x-0 top-0 z-[70] py-4' : 'sticky top-0 z-[70] bg-background/80 py-3 backdrop-blur-xl')}>
         <nav className="mx-auto w-full max-w-[92rem] px-4 sm:px-6 lg:px-8">
-          <div className={cn('flex min-h-[70px] items-center justify-between gap-3 px-4 sm:px-5 2xl:gap-5', isHome ? 'relative' : 'premium-surface rounded-[1.75rem] xl:rounded-full')}>
-            <Link href="/" aria-label="eDrive Water Sports home" className="relative z-10 shrink-0">
-              <BrandMark inverse={isHome} className={cn(isHome && '[&_img]:brightness-125')} />
-            </Link>
+          <div className="rounded-[2rem] border border-white/80 bg-white/88 px-4 py-3 shadow-[0_18px_55px_rgba(8,37,50,0.12)] backdrop-blur-xl sm:px-5 xl:rounded-full">
+            <div className="flex min-h-[58px] items-center justify-between gap-4">
+              <Link href="/" aria-label="eDrive Water Sports home" className="relative z-10 flex shrink-0 items-center">
+                <BrandMark className="[&_img]:h-12 [&_img]:w-auto" />
+              </Link>
 
-            <div className={cn('hidden min-w-0 flex-1 items-center justify-center xl:flex', isHome && 'absolute left-1/2 -translate-x-1/2')}>
-              <div className={cn('flex max-w-full items-center gap-0.5 p-1 2xl:gap-1', isHome ? 'rounded-none bg-transparent' : 'rounded-full bg-white/45')}>
-                {publicNavItems.map((item) => {
-                  const active = currentPath === normalizePath(item.href);
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      aria-current={active ? 'page' : undefined}
-                      className={cn(
-                        'inline-flex h-8 shrink-0 items-center justify-center whitespace-nowrap border border-transparent px-2.5 text-[11px] font-semibold leading-none transition 2xl:px-3 2xl:text-xs',
-                        isHome ? 'rounded-none text-white/78 hover:border-b-primary-300 hover:text-white' : 'rounded-full text-muted-foreground hover:bg-white hover:text-foreground',
-                        active && (isHome ? 'border-b-primary-300 text-white' : activeMenuClass)
-                      )}
-                    >
-                      <span className="relative -top-px block leading-none">{item.label}</span>
-                    </Link>
-                  );
-                })}
+              <div className="hidden min-w-0 flex-1 items-center justify-center xl:flex">
+                <div className="flex max-w-full items-center gap-1 rounded-full border border-border/80 bg-white/72 p-1 shadow-inner">
+                  {publicNavItems.map((item) => {
+                    const active = currentPath === normalizePath(item.href);
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        aria-current={active ? 'page' : undefined}
+                        className={cn(
+                          'inline-flex h-10 shrink-0 items-center justify-center whitespace-nowrap rounded-full border border-transparent px-4 text-sm font-bold leading-none text-muted-foreground transition hover:bg-primary-50 hover:text-primary-900 2xl:px-5',
+                          active && activeMenuClass
+                        )}
+                      >
+                        <span className="relative -top-px block leading-none">{item.label}</span>
+                      </Link>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
 
-            {!isHome ? <div className="hidden shrink-0 items-center gap-2 md:flex 2xl:gap-3">
-              <a href={`tel:${companyInfo.landlineHref}`} className="hidden items-center gap-2 whitespace-nowrap rounded-full bg-white/50 px-3 py-2 text-xs font-semibold leading-none text-muted-foreground transition hover:bg-white hover:text-primary 2xl:inline-flex">
-                <Phone data-icon aria-hidden="true" />
-                {companyInfo.landlineDisplay}
-              </a>
-              <Button asChild variant="outline" size="sm" className="whitespace-nowrap">
-                <Link href="/contact">Contact</Link>
-              </Button>
-              <Button asChild size="sm" className="whitespace-nowrap">
-                <a href={whatsappUrl} target="_blank" rel="noopener noreferrer">
-                  <MessageCircle data-icon aria-hidden="true" />
-                  WhatsApp
+              <div className="hidden shrink-0 items-center gap-2 md:flex 2xl:gap-3">
+                <a href={`tel:${companyInfo.landlineHref}`} className="hidden items-center gap-2 whitespace-nowrap rounded-full bg-primary-50 px-4 py-3 text-xs font-bold leading-none text-primary-900 transition hover:bg-white hover:text-primary 2xl:inline-flex">
+                  <Phone data-icon aria-hidden="true" />
+                  {companyInfo.landlineDisplay}
                 </a>
-              </Button>
-            </div> : null}
+                <Button asChild variant="outline" size="sm" className="whitespace-nowrap rounded-full">
+                  <Link href="/contact">Contact</Link>
+                </Button>
+                <Button asChild size="sm" className="whitespace-nowrap rounded-full">
+                  <a href={whatsappUrl} target="_blank" rel="noopener noreferrer">
+                    <MessageCircle data-icon aria-hidden="true" />
+                    WhatsApp
+                  </a>
+                </Button>
+              </div>
 
-            <Button variant="outline" size="icon" className={cn('shrink-0 xl:hidden', isHome && 'border-white/25 bg-primary-900/55 text-white hover:bg-primary-900 hover:text-white')} onClick={() => setOpen((value) => !value)} aria-label="Toggle navigation">
-              {open ? <X data-icon aria-hidden="true" /> : <Menu data-icon aria-hidden="true" />}
-            </Button>
+              <Button variant="outline" size="icon" className="shrink-0 rounded-full xl:hidden" onClick={() => setOpen((value) => !value)} aria-label="Toggle navigation">
+                {open ? <X data-icon aria-hidden="true" /> : <Menu data-icon aria-hidden="true" />}
+              </Button>
+            </div>
           </div>
         </nav>
 
         {open ? (
           <div className="mx-auto w-full max-w-[92rem] px-4 pt-3 sm:px-6 lg:px-8 xl:hidden">
-            <div className={cn('premium-surface flex flex-col gap-1 rounded-[2rem] p-3', isHome && 'premium-dark border-white/15')}>
+            <div className="premium-surface flex flex-col gap-1 rounded-[2rem] p-3">
               {publicNavItems.map((item) => {
                 const active = currentPath === normalizePath(item.href);
                 return (
@@ -112,13 +94,13 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
                     href={item.href}
                     onClick={() => setOpen(false)}
                     aria-current={active ? 'page' : undefined}
-                    className={cn('inline-flex h-10 items-center justify-center whitespace-nowrap rounded-2xl border border-transparent px-4 text-sm font-semibold transition', isHome ? 'text-white/75 hover:bg-white/10 hover:text-white' : 'text-muted-foreground hover:bg-white hover:text-foreground', active && (isHome ? 'border-primary-300/45 bg-white/10 text-white' : activeMenuClass))}
+                    className={cn('inline-flex h-11 items-center justify-center whitespace-nowrap rounded-2xl border border-transparent px-4 text-sm font-bold text-muted-foreground transition hover:bg-white hover:text-foreground', active && activeMenuClass)}
                   >
                     <span className="relative -top-px block leading-none">{item.label}</span>
                   </Link>
                 );
               })}
-              <Button asChild className="mt-3">
+              <Button asChild className="mt-3 rounded-full">
                 <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" onClick={() => setOpen(false)}>
                   <MessageCircle data-icon aria-hidden="true" />
                   WhatsApp
