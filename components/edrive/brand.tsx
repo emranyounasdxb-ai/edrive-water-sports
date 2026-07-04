@@ -5,10 +5,10 @@ export function BrandMark({ compact = false, inverse = false, className }: { com
   return (
     <div className={cn('flex items-center gap-3', className)}>
       <Image
-        src="/brand/logo-primary.png"
+        src="/brand/edrive-logo-header.png"
         alt="eDrive Water Sports"
         width={600}
-        height={180}
+        height={220}
         priority
         className={cn('h-auto w-[8.8rem] object-contain sm:w-[9.6rem]', compact && 'w-[3.3rem]', inverse && 'drop-shadow-[0_8px_18px_rgba(0,0,0,0.28)]')}
       />
