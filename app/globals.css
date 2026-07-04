@@ -206,6 +206,16 @@ body::selection {
   background-size: 40px 40px;
 }
 
+main > section.soft-grid:first-child {
+  padding-top: 6.25rem;
+}
+
+@media (max-width: 767px) {
+  main > section.soft-grid:first-child {
+    padding-top: 7.25rem;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
