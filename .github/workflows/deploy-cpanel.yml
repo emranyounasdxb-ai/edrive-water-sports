@@ -29,10 +29,14 @@ jobs:
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
           NEXT_PUBLIC_SITE_URL: https://edrivedubai.ae
 
+      - name: Install lftp
+        run: sudo apt-get update && sudo apt-get install -y lftp
+
       - name: Upload build to hosting
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
-        with:
-          server: ${{ secrets.CPANEL_FTP_SERVER }}
-          username: ${{ secrets.CPANEL_FTP_USERNAME }}
-          local-dir: ./out/
-          server-dir: ${{ secrets.CPANEL_FTP_DIR }}
+        env:
+          FTP_HOST: ${{ secrets.CPANEL_FTP_SERVER }}
+          FTP_USER: ${{ secrets.CPANEL_FTP_USERNAME }}
+          FTP_KEY: ${{ secrets.CPANEL_FTP_PASSWORD }}
+          FTP_DIR: ${{ secrets.CPANEL_FTP_DIR }}
+        run: |
+          lftp -c "set ftp:ssl-allow no; open -u \"$FTP_USER\",\"$FTP_KEY\" \"$FTP_HOST\"; mirror -R --delete --verbose --exclude-glob .well-known/** ./out/ \"$FTP_DIR\""
