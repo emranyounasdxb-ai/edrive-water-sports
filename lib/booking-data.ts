@@ -66,9 +66,7 @@ export type BookingRequest = {
 
 export const experienceOptions: ExperienceOption[] = [
   { id: 'jet-ski-rental', title: 'Jet Ski Rental', shortDescription: 'A guided premium ride with safety equipment and marina support.', serviceType: 'rental', image: jetSkiLightImage, startingPrice: 300, capacity: 2, recommended: true },
-  { id: 'jet-car-rental', title: 'Jet Car Rental', shortDescription: 'A private supercar-on-water experience with captain support.', serviceType: 'rental', image: jetCarLightImage, startingPrice: 700, capacity: 2 },
-  { id: 'jet-ski-sales', title: 'Jet Ski Sales Inquiry', shortDescription: 'Ask about new or pre-owned jet skis and ownership support.', serviceType: 'sales_inquiry', image: jetSkiLightImage, startingPrice: null, capacity: 2 },
-  { id: 'jet-car-sales', title: 'Jet Car Sales Inquiry', shortDescription: 'Request pricing, availability, or a viewing for a jet car.', serviceType: 'sales_inquiry', image: jetCarLightImage, startingPrice: null, capacity: 2 },
+  { id: 'jet-car-rental', title: 'Jet Car Rental', shortDescription: 'A private supercar-on-water experience with captain support.', serviceType: 'rental', image: jetCarLightImage, startingPrice: 700, capacity: 2 }
 ];
 
 export const durationPackages: Record<'jet-ski-rental' | 'jet-car-rental', Array<{ minutes: number; price: number }>> = {
