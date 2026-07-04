@@ -10,7 +10,7 @@ import { publicNavItems } from '@/lib/mock-data';
 import { cn } from '@/lib/utils';
 import { BrandMark } from './brand';
 
-const activeMenuClass = 'border border-primary/22 bg-primary-100 text-primary-900 shadow-[0px_-2px_0px_0px_rgba(14,124,134,0.10)_inset,0px_1px_0px_0px_rgba(255,255,255,0.65)_inset,0px_4px_8px_0px_rgba(8,37,50,0.055),0px_2px_3px_0px_rgba(8,37,50,0.05)] hover:border-primary/28 hover:bg-primary-100 hover:text-primary-900';
+const activeMenuClass = 'bg-primary-100 text-primary-900 shadow-[0_7px_18px_rgba(8,37,50,0.08)]';
 
 const policyLinks = [
   { href: '/privacy-policy', label: 'Privacy Policy' },
@@ -31,60 +31,55 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen overflow-hidden bg-background">
-      <header className={cn(isHome ? 'absolute inset-x-0 top-0 z-[70] py-4' : 'sticky top-0 z-[70] bg-background/80 py-3 backdrop-blur-xl')}>
-        <nav className="mx-auto w-full max-w-[92rem] px-4 sm:px-6 lg:px-8">
-          <div className="rounded-[2rem] border border-white/80 bg-white/88 px-4 py-3 shadow-[0_18px_55px_rgba(8,37,50,0.12)] backdrop-blur-xl sm:px-5 xl:rounded-full">
-            <div className="flex min-h-[58px] items-center justify-between gap-4">
-              <Link href="/" aria-label="eDrive Water Sports home" className="relative z-10 flex shrink-0 items-center">
-                <BrandMark className="[&_img]:h-12 [&_img]:w-auto" />
-              </Link>
+      <header className={cn(isHome ? 'absolute inset-x-0 top-0 z-[70] py-4' : 'sticky top-0 z-[70] bg-background/82 py-3 backdrop-blur-xl')}>
+        <nav className="mx-auto w-full max-w-[88rem] px-4 sm:px-6 lg:px-8">
+          <div className="flex min-h-[62px] items-center justify-between gap-4 rounded-full border border-white/45 bg-white/82 px-5 shadow-[0_14px_42px_rgba(8,37,50,0.12)] backdrop-blur-xl">
+            <Link href="/" aria-label="eDrive Water Sports home" className="flex shrink-0 items-center">
+              <BrandMark className="[&_img]:h-11 [&_img]:w-auto" />
+            </Link>
 
-              <div className="hidden min-w-0 flex-1 items-center justify-center xl:flex">
-                <div className="flex max-w-full items-center gap-1 rounded-full border border-border/80 bg-white/72 p-1 shadow-inner">
-                  {publicNavItems.map((item) => {
-                    const active = currentPath === normalizePath(item.href);
-                    return (
-                      <Link
-                        key={item.href}
-                        href={item.href}
-                        aria-current={active ? 'page' : undefined}
-                        className={cn(
-                          'inline-flex h-10 shrink-0 items-center justify-center whitespace-nowrap rounded-full border border-transparent px-4 text-sm font-bold leading-none text-muted-foreground transition hover:bg-primary-50 hover:text-primary-900 2xl:px-5',
-                          active && activeMenuClass
-                        )}
-                      >
-                        <span className="relative -top-px block leading-none">{item.label}</span>
-                      </Link>
-                    );
-                  })}
-                </div>
+            <div className="hidden min-w-0 flex-1 items-center justify-center xl:flex">
+              <div className="flex items-center gap-1 rounded-full bg-white/58 p-1">
+                {publicNavItems.map((item) => {
+                  const active = currentPath === normalizePath(item.href);
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      aria-current={active ? 'page' : undefined}
+                      className={cn(
+                        'inline-flex h-9 shrink-0 items-center justify-center whitespace-nowrap rounded-full px-4 text-sm font-bold leading-none text-primary-900/62 transition hover:bg-primary-50 hover:text-primary-900',
+                        active && activeMenuClass
+                      )}
+                    >
+                      <span className="relative -top-px block leading-none">{item.label}</span>
+                    </Link>
+                  );
+                })}
               </div>
+            </div>
 
-              <div className="hidden shrink-0 items-center gap-2 md:flex 2xl:gap-3">
-                <a href={`tel:${companyInfo.landlineHref}`} className="hidden items-center gap-2 whitespace-nowrap rounded-full bg-primary-50 px-4 py-3 text-xs font-bold leading-none text-primary-900 transition hover:bg-white hover:text-primary 2xl:inline-flex">
-                  <Phone data-icon aria-hidden="true" />
-                  {companyInfo.landlineDisplay}
+            <div className="hidden shrink-0 items-center gap-2 md:flex">
+              <a href={`tel:${companyInfo.landlineHref}`} className="hidden items-center gap-2 whitespace-nowrap rounded-full bg-white px-4 py-2.5 text-xs font-bold leading-none text-primary-900 shadow-sm transition hover:bg-primary-50 hover:text-primary 2xl:inline-flex">
+                <Phone data-icon aria-hidden="true" />
+                {companyInfo.landlineDisplay}
+              </a>
+              <Button asChild size="sm" className="whitespace-nowrap rounded-full bg-primary-900 shadow-sm hover:bg-primary-800">
+                <a href={whatsappUrl} target="_blank" rel="noopener noreferrer">
+                  <MessageCircle data-icon aria-hidden="true" />
+                  WhatsApp
                 </a>
-                <Button asChild variant="outline" size="sm" className="whitespace-nowrap rounded-full">
-                  <Link href="/contact">Contact</Link>
-                </Button>
-                <Button asChild size="sm" className="whitespace-nowrap rounded-full">
-                  <a href={whatsappUrl} target="_blank" rel="noopener noreferrer">
-                    <MessageCircle data-icon aria-hidden="true" />
-                    WhatsApp
-                  </a>
-                </Button>
-              </div>
-
-              <Button variant="outline" size="icon" className="shrink-0 rounded-full xl:hidden" onClick={() => setOpen((value) => !value)} aria-label="Toggle navigation">
-                {open ? <X data-icon aria-hidden="true" /> : <Menu data-icon aria-hidden="true" />}
               </Button>
             </div>
+
+            <Button variant="outline" size="icon" className="shrink-0 rounded-full xl:hidden" onClick={() => setOpen((value) => !value)} aria-label="Toggle navigation">
+              {open ? <X data-icon aria-hidden="true" /> : <Menu data-icon aria-hidden="true" />}
+            </Button>
           </div>
         </nav>
 
         {open ? (
-          <div className="mx-auto w-full max-w-[92rem] px-4 pt-3 sm:px-6 lg:px-8 xl:hidden">
+          <div className="mx-auto w-full max-w-[88rem] px-4 pt-3 sm:px-6 lg:px-8 xl:hidden">
             <div className="premium-surface flex flex-col gap-1 rounded-[2rem] p-3">
               {publicNavItems.map((item) => {
                 const active = currentPath === normalizePath(item.href);
@@ -94,7 +89,7 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
                     href={item.href}
                     onClick={() => setOpen(false)}
                     aria-current={active ? 'page' : undefined}
-                    className={cn('inline-flex h-11 items-center justify-center whitespace-nowrap rounded-2xl border border-transparent px-4 text-sm font-bold text-muted-foreground transition hover:bg-white hover:text-foreground', active && activeMenuClass)}
+                    className={cn('inline-flex h-11 items-center justify-center whitespace-nowrap rounded-2xl px-4 text-sm font-bold text-muted-foreground transition hover:bg-white hover:text-foreground', active && activeMenuClass)}
                   >
                     <span className="relative -top-px block leading-none">{item.label}</span>
                   </Link>
