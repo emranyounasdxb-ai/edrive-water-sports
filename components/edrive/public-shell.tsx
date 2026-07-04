@@ -3,14 +3,14 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
-import { ArrowRight, CalendarCheck, Instagram, LockKeyhole, Mail, MapPin, Menu, MessageCircle, Phone, X } from 'lucide-react';
+import { ArrowRight, CalendarCheck, Instagram, LockKeyhole, Mail, MapPin, Menu, Phone, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { companyInfo, whatsappUrl } from '@/lib/company-info';
+import { companyInfo } from '@/lib/company-info';
 import { publicNavItems } from '@/lib/mock-data';
 import { cn } from '@/lib/utils';
 import { BrandMark } from './brand';
 
-const activeMenuClass = 'bg-primary-100 text-primary-900 shadow-[0_4px_12px_rgba(8,37,50,0.07)]';
+const activeMenuClass = 'bg-primary-100 text-primary-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.85),0_7px_18px_rgba(8,37,50,0.08)]';
 
 const policyLinks = [
   { href: '/privacy-policy', label: 'Privacy Policy' },
@@ -30,15 +30,15 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen overflow-hidden bg-background">
-      <header className="sticky top-0 z-[70] bg-transparent py-3">
+      <header className="fixed inset-x-0 top-0 z-[90] py-3">
         <nav className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex min-h-[48px] items-center justify-between gap-3 rounded-full border border-white/70 bg-white/90 px-4 shadow-[0_12px_35px_rgba(8,37,50,0.11)] backdrop-blur-xl">
+          <div className="flex min-h-[48px] items-center justify-between gap-3 rounded-full border border-white/90 bg-white/88 px-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.95),inset_0_-1px_0_rgba(8,37,50,0.04),0_18px_48px_rgba(8,37,50,0.16)] ring-1 ring-primary-900/5 backdrop-blur-2xl">
             <Link href="/" aria-label="eDrive Water Sports home" className="flex shrink-0 items-center">
               <BrandMark className="[&_img]:h-9 [&_img]:w-auto" />
             </Link>
 
             <div className="hidden min-w-0 flex-1 items-center justify-center lg:flex">
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1 rounded-full bg-white/40 p-1 shadow-[inset_0_1px_3px_rgba(8,37,50,0.04)]">
                 {publicNavItems.map((item) => {
                   const active = currentPath === normalizePath(item.href);
                   return (
@@ -63,15 +63,15 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
                 <Phone className="size-3.5" aria-hidden="true" />
                 {companyInfo.landlineDisplay}
               </a>
-              <Button asChild variant="outline" size="sm" className="h-8 rounded-full px-3 text-[11px]">
+              <Button asChild variant="outline" size="sm" className="h-8 rounded-full border-white bg-white/72 px-3 text-[11px] shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_5px_14px_rgba(8,37,50,0.08)] hover:bg-primary-50">
                 <Link href="/admin"><LockKeyhole data-icon aria-hidden="true" />Admin Portal</Link>
               </Button>
-              <Button asChild size="sm" className="h-8 rounded-full bg-primary-900 px-3 text-[11px] shadow-sm hover:bg-primary-800">
+              <Button asChild size="sm" className="h-8 rounded-full bg-primary-900 px-3 text-[11px] shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_8px_18px_rgba(8,37,50,0.18)] hover:bg-primary-800">
                 <Link href="/rentals"><CalendarCheck data-icon aria-hidden="true" />Book Now</Link>
               </Button>
             </div>
 
-            <Button variant="outline" size="icon" className="size-9 shrink-0 rounded-full lg:hidden" onClick={() => setOpen((value) => !value)} aria-label="Toggle navigation">
+            <Button variant="outline" size="icon" className="size-9 shrink-0 rounded-full bg-white/82 lg:hidden" onClick={() => setOpen((value) => !value)} aria-label="Toggle navigation">
               {open ? <X data-icon aria-hidden="true" /> : <Menu data-icon aria-hidden="true" />}
             </Button>
           </div>
@@ -79,7 +79,7 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
 
         {open ? (
           <div className="mx-auto w-full max-w-7xl px-4 pt-3 sm:px-6 lg:px-8 lg:hidden">
-            <div className="premium-surface flex flex-col gap-1 rounded-[1.5rem] p-3">
+            <div className="premium-surface flex flex-col gap-1 rounded-[1.5rem] p-3 shadow-[0_18px_45px_rgba(8,37,50,0.16)]">
               {publicNavItems.map((item) => {
                 const active = currentPath === normalizePath(item.href);
                 return (
@@ -107,7 +107,7 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
         ) : null}
       </header>
 
-      <main className="-mt-[72px] pt-[72px]">{children}</main>
+      <main>{children}</main>
       <PublicFooter />
     </div>
   );
