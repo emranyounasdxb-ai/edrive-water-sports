@@ -40,9 +40,9 @@ export const publicNavItems = [
 
 export const adminNavItems = [
   { href: '/admin', label: 'Dashboard', icon: 'LayoutDashboard' },
-  { href: '/admin/staff-management', label: 'Staff / Users', icon: 'UserCog' },
-  { href: '/admin/packages', label: 'Packages / Products', icon: 'Package' },
-  { href: '/admin/vehicles', label: 'Vehicles / Fleet', icon: 'Ship' },
+  { href: '/admin/staff-management', label: 'Staff', icon: 'UserCog' },
+  { href: '/admin/packages', label: 'Packages', icon: 'Package' },
+  { href: '/admin/vehicles', label: 'Fleet', icon: 'Ship' },
   { href: '/admin/bookings', label: 'Bookings', icon: 'CalendarDays' },
   { href: '/admin/operations-schedule', label: 'Schedule', icon: 'CalendarDays' },
   { href: '/admin/vehicle-assignment', label: 'Assignments', icon: 'ClipboardCheck' },
