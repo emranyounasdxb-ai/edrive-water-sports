@@ -26,6 +26,8 @@ const staffFields: Field[] = [
   { name: 'fullName', label: 'Full Name', type: 'text', required: true },
   { name: 'email', label: 'Email', type: 'email', required: true },
   { name: 'phone', label: 'Phone / WhatsApp', type: 'tel', required: true },
+  { name: 'passportNumber', label: 'Passport Number', type: 'text', placeholder: 'Passport no.' },
+  { name: 'emiratesId', label: 'Emirates ID / EID Number', type: 'text', placeholder: '784-XXXX-XXXXXXX-X' },
   { name: 'role', label: 'Role', type: 'select', options: ['Super Admin', 'Admin', 'Booking Staff', 'Manager / Operations', 'Finance', 'Maintenance Staff'], required: true },
   { name: 'department', label: 'Department', type: 'select', options: ['Admin', 'Booking', 'Operations', 'Finance', 'Maintenance', 'Management'] },
   { name: 'status', label: 'Status', type: 'select', options: ['Active', 'Inactive', 'Suspended'], required: true },
@@ -89,7 +91,7 @@ function useTable(table: string, mapper: (row: Record<string, unknown>) => Recor
 }
 
 function mapStaff(row: Record<string, unknown>): RecordItem {
-  return { id: String(row.id), avatar: String(row.avatar_url || ''), avatarUrl: String(row.avatar_url || ''), fullName: String(row.full_name || ''), email: String(row.email || ''), phone: String(row.phone || ''), role: reverse(roleMap, String(row.role || '')), department: String(row.department || ''), status: reverse(statusMap, String(row.status || '')), notes: String(row.notes || '') };
+  return { id: String(row.id), avatar: String(row.avatar_url || ''), avatarUrl: String(row.avatar_url || ''), fullName: String(row.full_name || ''), email: String(row.email || ''), phone: String(row.phone || ''), passportNumber: String(row.passport_number || ''), emiratesId: String(row.emirates_id || ''), role: reverse(roleMap, String(row.role || '')), department: String(row.department || ''), status: reverse(statusMap, String(row.status || '')), notes: String(row.notes || '') };
 }
 function mapPackage(row: Record<string, unknown>): RecordItem { return { id: String(row.id), image: String(row.image_url || ''), title: String(row.title || ''), category: reverse(categoryMap, String(row.category || '')), duration: `${row.duration_minutes || ''} minutes`, basePrice: String(row.base_price || ''), status: reverse(statusMap, String(row.status || '')) }; }
 function mapVehicle(row: Record<string, unknown>): RecordItem { return { id: String(row.id), image: String(row.main_image_url || ''), code: String(row.vehicle_code || ''), name: String(row.vehicle_name || ''), type: reverse(typeMap, String(row.vehicle_type || '')), regNo: String(row.reg_no || ''), deviceImei: String(row.device_imei || ''), expiryDate: String(row.expiry_date || ''), status: reverse(statusMap, String(row.status || '')) }; }
@@ -100,18 +102,18 @@ export function AdminStaffPage() {
   const table = useTable('admin_users', mapStaff);
   async function add(v: Record<string, string>, files: Record<string, File>) {
     const avatarUrl = await uploadImage('staff-avatars', files.avatar);
-    const { error } = await supabase.from('admin_users').insert({ avatar_url: avatarUrl, full_name: v.fullName, email: v.email, phone: v.phone, role: roleMap[v.role] || 'admin', department: v.department, status: statusMap[v.status] || 'active', notes: v.notes });
+    const { error } = await supabase.from('admin_users').insert({ avatar_url: avatarUrl, full_name: v.fullName, email: v.email, phone: v.phone, passport_number: v.passportNumber, emirates_id: v.emiratesId, role: roleMap[v.role] || 'admin', department: v.department, status: statusMap[v.status] || 'active', notes: v.notes });
     if (error) throw error;
     await table.refresh();
   }
   async function update(record: RecordItem, v: Record<string, string>, files: Record<string, File>) {
     const uploadedAvatar = await uploadImage('staff-avatars', files.avatar);
     const avatarUrl = uploadedAvatar || v.avatar || record.avatarUrl || '';
-    const { error } = await supabase.from('admin_users').update({ avatar_url: avatarUrl, full_name: v.fullName, email: v.email, phone: v.phone, role: roleMap[v.role] || 'admin', department: v.department, status: statusMap[v.status] || 'active', notes: v.notes }).eq('id', record.id);
+    const { error } = await supabase.from('admin_users').update({ avatar_url: avatarUrl, full_name: v.fullName, email: v.email, phone: v.phone, passport_number: v.passportNumber, emirates_id: v.emiratesId, role: roleMap[v.role] || 'admin', department: v.department, status: statusMap[v.status] || 'active', notes: v.notes }).eq('id', record.id);
     if (error) throw error;
     await table.refresh();
   }
-  return <ManagementPage label="Staff / Users" title="Staff and login access" text="Create admins, booking staff, managers, operations staff, and finance users with role-based access." action="Add Staff" metrics={[["Active Staff", String(table.items.filter((i) => i.status === 'Active').length), UserCog], ["Managers", String(table.items.filter((i) => i.role === 'Manager / Operations').length), UsersRound], ["Inactive Staff", String(table.items.filter((i) => i.status !== 'Active').length), FileClock]]} fields={staffFields} table={table} columns={['avatarUrl', 'fullName', 'role', 'email', 'phone', 'status']} headers={['Photo', 'Staff Name', 'Role', 'Email', 'Phone', 'Status']} empty="No staff users added yet." onAdd={add} onUpdate={update} />;
+  return <ManagementPage label="Staff" title="Staff and login access" text="Create admins, booking staff, managers, operations staff, and finance users with role-based access." action="Add Staff" metrics={[["Active Staff", String(table.items.filter((i) => i.status === 'Active').length), UserCog], ["Managers", String(table.items.filter((i) => i.role === 'Manager / Operations').length), UsersRound], ["Inactive Staff", String(table.items.filter((i) => i.status !== 'Active').length), FileClock]]} fields={staffFields} table={table} columns={['avatarUrl', 'fullName', 'role', 'passportNumber', 'emiratesId', 'phone', 'status']} headers={['Photo', 'Staff Name', 'Role', 'Passport No.', 'Emirates ID', 'Phone', 'Status']} empty="No staff users added yet." onAdd={add} onUpdate={update} />;
 }
 
 export function AdminPackagesPage() { const table = useTable('packages', mapPackage); async function add(v: Record<string,string>, files: Record<string,File>) { const imageUrl = await uploadImage('package-images', files.image); const minutes = Number((v.duration || '0').replace(/\D/g, '')) || 0; const slug = v.slug || v.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''); const { error } = await supabase.from('packages').insert({ title: v.title, slug, category: categoryMap[v.category], duration_minutes: minutes, base_price: Number(v.basePrice || 0), vat_percent: Number(v.vat || 5), capacity: Number(v.capacity || 2), image_url: imageUrl, short_description: v.shortDescription, status: statusMap[v.status] || 'draft' }); if (error) throw error; await table.refresh(); } return <ManagementPage label="Packages / Products" title="Rental packages and product cards" text="Add Jet Ski and Jet Car rental packages. Active packages will power website cards and booking selection." action="Add Package" metrics={[["Active Packages", String(table.items.filter((i) => i.status === 'Active').length), Package], ["Jet Ski", String(table.items.filter((i) => i.category === 'Jet Ski Rental').length), CalendarDays], ["Jet Car", String(table.items.filter((i) => i.category === 'Jet Car Rental').length), FileClock]]} fields={packageFields} table={table} columns={['image','title','category','duration','basePrice','status']} headers={['Image','Package','Category','Duration','Base Price','Status']} empty="No rental packages added yet." onAdd={add} />; }
