@@ -185,7 +185,7 @@ export function HomePage() {
         </div>
       </section>
 
-      <section className="bg-[#f4f5f5] pb-8 sm:pb-10">
+      <section className="bg-[#f4f5f5] pb-9 sm:pb-10">
         <div className="container-x grid gap-4 xl:grid-cols-[1.18fr_0.72fr_1.1fr]">
           <HomeFleetPanel />
           <HomeMembershipPanel />
