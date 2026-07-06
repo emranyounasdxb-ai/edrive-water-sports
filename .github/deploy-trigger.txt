@@ -1,0 +1,3 @@
+Deploy trigger after weather key setup.
+Date: 2026-07-06
+Purpose: rebuild static site with GitHub Actions secrets.
