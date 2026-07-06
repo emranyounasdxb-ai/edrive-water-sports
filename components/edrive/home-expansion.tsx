@@ -47,10 +47,10 @@ const trustStats = [
 ];
 
 const faqs = [
-  ['Which experience is best for first-time guests?', 'Dubai Islands Quick Splash, Beginner Friendly Jet Ski Ride, and 30-Minute Jet Car Trial are easy starting points for new guests.'],
-  ['Can I book a jet ski and jet car together?', 'Yes. Combo packages are designed for guests who want both jet ski and jet car experiences in one plan.'],
-  ['Do packages connect to the admin panel?', 'No. Public packages are marketing cards. Booking requests are handled through the public booking flow and direct team confirmation.'],
-  ['Can I contact eDrive before choosing?', 'Yes. Use WhatsApp or the Contact page and the team can suggest the best package based on guests, timing, and ride style.']
+  ['Which eDrive water sports experience is best for first-time guests?', 'For first-time guests, a 30-minute jet ski ride or a 20-minute jet car experience is a comfortable way to enjoy Dubai water sports with team guidance before the ride.'],
+  ['Can I book a jet ski and jet car combo in Dubai?', 'Yes. Guests can plan a jet ski and jet car combo for friends, couples, families, birthdays, and VIP marine moments in Dubai.'],
+  ['How do I choose the right package duration?', 'Choose 20 or 30 minutes for a quick Dubai marina experience, or 60 minutes when you want more cruising time, photos, and a relaxed premium ride.'],
+  ['Can I contact eDrive before booking?', 'Yes. You can contact eDrive on WhatsApp or phone before booking and our team will suggest the best jet ski, jet car, or combo package for your date and group size.']
 ];
 
 export function HomeExpansionSections() {
@@ -220,9 +220,9 @@ export function HomeExpansionSections() {
       <section className="border-y border-border bg-white/80">
         <div className="container-x grid gap-7 py-10 sm:py-12 lg:grid-cols-[0.8fr_1.2fr] lg:py-14">
           <div>
-            <span className="text-xs font-bold uppercase tracking-[0.2em] text-primary">Questions</span>
-            <h2 className="mt-2 font-heading text-3xl font-semibold text-foreground sm:text-4xl">Home page FAQ</h2>
-            <p className="mt-3 text-sm leading-7 text-muted-foreground">Quick answers help guests understand the package flow before they click booking.</p>
+            <span className="text-xs font-bold uppercase tracking-[0.2em] text-primary">Dubai ride questions</span>
+            <h2 className="mt-2 font-heading text-3xl font-semibold text-foreground sm:text-4xl">Dubai Water Sports FAQ</h2>
+            <p className="mt-3 text-sm leading-7 text-muted-foreground">Everything guests need to know before booking a jet ski, jet car, combo, or VIP water sports experience in Dubai.</p>
           </div>
           <div className="grid gap-3">
             {faqs.map(([question, answer]) => (
