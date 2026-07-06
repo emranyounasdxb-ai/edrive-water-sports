@@ -154,6 +154,20 @@ main > section.bg-\[\#f4f5f5\].pb-9 .premium-dark.grid > a:last-child:hover {
   letter-spacing: -0.035em;
 }
 
+#popular-packages article h3 + div {
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  min-height: 2.2rem;
+  align-content: start;
+  gap: 0.24rem !important;
+}
+
+#popular-packages article h3 + div > span {
+  display: inline-flex !important;
+  width: 100%;
+  white-space: nowrap;
+}
+
 #popular-packages article p,
 #popular-packages article span {
   min-width: 0;
