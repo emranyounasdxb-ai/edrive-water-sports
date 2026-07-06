@@ -97,7 +97,16 @@ export function LivePackageShowcase({ title = 'Live Booking Packages', text = 'L
 }
 
 function LivePackageCard({ item }: { item: LivePackage }) {
-  const bookingHref = `/booking?package=${encodeURIComponent(item.slug)}`;
+  const params = new URLSearchParams({
+    package: item.slug,
+    packageName: item.title,
+    location: item.location,
+    duration: String(item.duration_minutes),
+    price: String(item.base_price),
+    capacity: String(item.capacity),
+    category: item.category
+  });
+  const bookingHref = `/booking?${params.toString()}`;
   const whatsappMessage = encodeURIComponent(`Hello eDrive, I am interested in ${item.title} from ${item.location}.`);
   return (
     <article className="premium-surface premium-card-hover flex h-full min-w-0 flex-col overflow-hidden rounded-[1.75rem] p-4">
