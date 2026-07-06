@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { Inter, Poppins } from 'next/font/google';
 import './globals.css';
 import './contact-cta.css';
+import './hero-cta.css';
 
 const inter = Inter({
   subsets: ['latin'],
