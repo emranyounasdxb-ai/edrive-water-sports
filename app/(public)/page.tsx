@@ -12,7 +12,7 @@ export default function Page() {
   return (
     <>
       <HomePage />
-      <LivePackageShowcase title="Jet Car Packages" text="Popular active packages managed from the dashboard with B2C prices." limit={5} compact />
+      <LivePackageShowcase title="Jet Car Packages" limit={5} compact />
       <HomeExpansionSections />
     </>
   );
