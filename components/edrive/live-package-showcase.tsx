@@ -38,13 +38,8 @@ function categoryLabel(value: string) {
   return 'Package';
 }
 
-function isUploadedPackageImage(value: string | null) {
-  return Boolean(value && value.includes('/images/edrive/packages/'));
-}
-
-function fallbackImage(item: LivePackage, index = 0) {
+function imageForLivePackage(item: LivePackage, index = 0) {
   const seed = Number(item.display_order || index || 0);
-  if (isUploadedPackageImage(item.image_url)) return item.image_url || '';
   return getLivePackageImage(item.category, seed);
 }
 
@@ -108,8 +103,7 @@ export function LivePackageShowcase({ title = 'Live Booking Packages', text = ''
 }
 
 function LivePackageCard({ item, index }: { item: LivePackage; index: number }) {
-  const [imageFailed, setImageFailed] = useState(false);
-  const imageSrc = fallbackImage(item, index);
+  const imageSrc = imageForLivePackage(item, index);
   const params = new URLSearchParams({
     package: item.slug,
     packageName: item.title,
@@ -123,17 +117,15 @@ function LivePackageCard({ item, index }: { item: LivePackage; index: number }) 
   const whatsappMessage = encodeURIComponent(`Hello eDrive, I am interested in ${item.title} from ${item.location}.`);
   return (
     <article className="premium-surface premium-card-hover flex h-full min-w-0 flex-col overflow-hidden rounded-[1.75rem] p-4">
-      <div className="relative aspect-[16/10] w-full overflow-hidden rounded-[1.35rem] bg-gradient-to-br from-primary-900 via-primary-700 to-accent-500 p-5 text-white">
-        {imageSrc && !imageFailed ? <img src={imageSrc} alt={item.title} onError={() => setImageFailed(true)} className="absolute inset-0 h-full w-full object-cover object-center" loading="lazy" /> : null}
-        <div className="absolute inset-0 bg-gradient-to-t from-primary-950/88 via-primary-900/42 to-primary-900/10" aria-hidden="true" />
+      <div className="relative aspect-[16/10] w-full overflow-hidden rounded-[1.35rem] bg-cover bg-center p-5 text-white" style={{ backgroundImage: `linear-gradient(to top, rgba(3, 31, 42, 0.86), rgba(3, 31, 42, 0.32), rgba(3, 31, 42, 0.06)), url(${imageSrc})` }}>
         <div className="relative flex h-full flex-col justify-between">
           <div className="flex items-start justify-between gap-4">
-            <span className="flex size-11 items-center justify-center rounded-2xl bg-white/15"><TicketCheck className="size-5" aria-hidden="true" /></span>
+            <span className="flex size-11 items-center justify-center rounded-2xl bg-white/15 backdrop-blur-sm"><TicketCheck className="size-5" aria-hidden="true" /></span>
             <Badge variant="gold">{categoryLabel(item.category)}</Badge>
           </div>
           <div>
-            <h3 className="font-heading text-2xl font-semibold leading-tight text-white">{item.title}</h3>
-            <p className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-white/72"><MapPin className="size-3.5" aria-hidden="true" />{item.location}</p>
+            <h3 className="font-heading text-2xl font-semibold leading-tight text-white drop-shadow-sm">{item.title}</h3>
+            <p className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-white/82"><MapPin className="size-3.5" aria-hidden="true" />{item.location}</p>
           </div>
         </div>
       </div>
