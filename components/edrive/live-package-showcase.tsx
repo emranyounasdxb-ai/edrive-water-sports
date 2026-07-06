@@ -19,6 +19,7 @@ type LivePackage = {
   base_price: number;
   b2b_price: number;
   capacity: number;
+  image_url: string | null;
   short_description: string | null;
   status: string;
   is_featured: boolean;
@@ -36,6 +37,14 @@ function categoryLabel(value: string) {
   return 'Package';
 }
 
+function fallbackImage(item: LivePackage) {
+  if (item.image_url) return item.image_url;
+  if (item.category === 'jet_ski_rental') return '/images/packages/jet-ski.webp';
+  if (item.category === 'jet_car_rental' && Number(item.capacity) >= 4) return '/images/packages/jet-car-4-seater.webp';
+  if (item.category === 'jet_car_rental') return '/images/packages/jet-car-2-seater.webp';
+  return '';
+}
+
 export function LivePackageShowcase({ title = 'Live Booking Packages', text = 'Location-wise packages and prices loaded from the dashboard.', limit, compact = false }: { title?: string; text?: string; limit?: number; compact?: boolean }) {
   const [items, setItems] = useState<LivePackage[]>([]);
   const [loading, setLoading] = useState(true);
@@ -46,7 +55,7 @@ export function LivePackageShowcase({ title = 'Live Booking Packages', text = 'L
       setLoading(true);
       const { data } = await supabase
         .from('packages')
-        .select('id,title,slug,category,location,duration_minutes,base_price,b2b_price,capacity,short_description,status,is_featured,display_order')
+        .select('id,title,slug,category,location,duration_minutes,base_price,b2b_price,capacity,image_url,short_description,status,is_featured,display_order')
         .eq('status', 'active')
         .order('display_order', { ascending: true })
         .order('location', { ascending: true })
@@ -97,6 +106,8 @@ export function LivePackageShowcase({ title = 'Live Booking Packages', text = 'L
 }
 
 function LivePackageCard({ item }: { item: LivePackage }) {
+  const [imageFailed, setImageFailed] = useState(false);
+  const imageSrc = fallbackImage(item);
   const params = new URLSearchParams({
     package: item.slug,
     packageName: item.title,
@@ -110,13 +121,19 @@ function LivePackageCard({ item }: { item: LivePackage }) {
   const whatsappMessage = encodeURIComponent(`Hello eDrive, I am interested in ${item.title} from ${item.location}.`);
   return (
     <article className="premium-surface premium-card-hover flex h-full min-w-0 flex-col overflow-hidden rounded-[1.75rem] p-4">
-      <div className="rounded-[1.35rem] bg-gradient-to-br from-primary-900 via-primary-700 to-accent-500 p-5 text-white">
-        <div className="flex items-start justify-between gap-4">
-          <span className="flex size-11 items-center justify-center rounded-2xl bg-white/15"><TicketCheck className="size-5" aria-hidden="true" /></span>
-          <Badge variant="gold">{categoryLabel(item.category)}</Badge>
+      <div className="relative min-h-[14rem] overflow-hidden rounded-[1.35rem] bg-gradient-to-br from-primary-900 via-primary-700 to-accent-500 p-5 text-white">
+        {imageSrc && !imageFailed ? <img src={imageSrc} alt={item.title} onError={() => setImageFailed(true)} className="absolute inset-0 h-full w-full object-cover" /> : null}
+        <div className="absolute inset-0 bg-gradient-to-t from-primary-950/88 via-primary-900/42 to-primary-900/10" aria-hidden="true" />
+        <div className="relative flex h-full min-h-[12rem] flex-col justify-between">
+          <div className="flex items-start justify-between gap-4">
+            <span className="flex size-11 items-center justify-center rounded-2xl bg-white/15"><TicketCheck className="size-5" aria-hidden="true" /></span>
+            <Badge variant="gold">{categoryLabel(item.category)}</Badge>
+          </div>
+          <div>
+            <h3 className="font-heading text-2xl font-semibold leading-tight text-white">{item.title}</h3>
+            <p className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-white/72"><MapPin className="size-3.5" aria-hidden="true" />{item.location}</p>
+          </div>
         </div>
-        <h3 className="mt-6 font-heading text-2xl font-semibold leading-tight text-white">{item.title}</h3>
-        <p className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-white/72"><MapPin className="size-3.5" aria-hidden="true" />{item.location}</p>
       </div>
       <div className="flex flex-1 flex-col p-2 pt-4">
         <div className="grid gap-2 rounded-[1.1rem] bg-primary-50 px-4 py-3 text-sm">
