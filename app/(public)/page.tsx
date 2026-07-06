@@ -12,7 +12,7 @@ export default function Page() {
   return (
     <>
       <HomePage />
-      <LivePackageShowcase title="Jet Car Packages" limit={5} compact />
+      <LivePackageShowcase title="Jet Car Packages" text="Explore premium jet car rental packages in Dubai with clear prices, flexible ride durations, and unforgettable marina views." limit={5} compact />
       <HomeExpansionSections />
     </>
   );
