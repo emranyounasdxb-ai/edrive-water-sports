@@ -22,13 +22,15 @@ export const jetSkiPackageImages = Array.from(
   (_, index) => `${jetSkiBase}/jet-ski-package-${formatNumber(index + 1)}.webp`
 );
 
+const visibleJetSkiPackageImages = jetSkiPackageImages.slice(1);
+
 export const jetCarPackageImages = Array.from(
   { length: 21 },
   (_, index) => `${jetCarBase}/jet-car-package-${formatNumber(index + 1)}.webp`
 );
 
 export function getJetSkiPackageImage(index = 0) {
-  return jetSkiPackageImages[normalizeIndex(index, jetSkiPackageImages.length)];
+  return visibleJetSkiPackageImages[normalizeIndex(index, visibleJetSkiPackageImages.length)];
 }
 
 export function getJetCarPackageImage(index = 0) {
