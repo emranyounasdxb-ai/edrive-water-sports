@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/supabase-client';
 import { whatsappUrl } from '@/lib/company-info';
+import { getLivePackageImage } from '@/lib/edrive-package-images';
 import { cn } from '@/lib/utils';
 
 type LivePackage = {
@@ -37,12 +38,10 @@ function categoryLabel(value: string) {
   return 'Package';
 }
 
-function fallbackImage(item: LivePackage) {
+function fallbackImage(item: LivePackage, index = 0) {
   if (item.image_url) return item.image_url;
-  if (item.category === 'jet_ski_rental') return '/images/packages/jet-ski.webp';
-  if (item.category === 'jet_car_rental' && Number(item.capacity) >= 4) return '/images/packages/jet-car-4-seater.webp';
-  if (item.category === 'jet_car_rental') return '/images/packages/jet-car-2-seater.webp';
-  return '';
+  const seed = Number(item.display_order || index || 0);
+  return getLivePackageImage(item.category, seed);
 }
 
 export function LivePackageShowcase({ title = 'Live Booking Packages', text = '', limit, compact = false }: { title?: string; text?: string; limit?: number; compact?: boolean }) {
@@ -97,16 +96,16 @@ export function LivePackageShowcase({ title = 'Live Booking Packages', text = ''
         </div>
 
         <div className={cn('mt-7 grid gap-5 md:grid-cols-2', compact ? 'xl:grid-cols-5' : 'xl:grid-cols-3')}>
-          {loading ? Array.from({ length: limit || 6 }).map((_, index) => <div key={index} className="h-72 animate-pulse rounded-[1.75rem] bg-white/80" />) : visibleItems.map((item) => <LivePackageCard key={item.id} item={item} />)}
+          {loading ? Array.from({ length: limit || 6 }).map((_, index) => <div key={index} className="h-72 animate-pulse rounded-[1.75rem] bg-white/80" />) : visibleItems.map((item, index) => <LivePackageCard key={item.id} item={item} index={index} />)}
         </div>
       </div>
     </section>
   );
 }
 
-function LivePackageCard({ item }: { item: LivePackage }) {
+function LivePackageCard({ item, index }: { item: LivePackage; index: number }) {
   const [imageFailed, setImageFailed] = useState(false);
-  const imageSrc = fallbackImage(item);
+  const imageSrc = fallbackImage(item, index);
   const params = new URLSearchParams({
     package: item.slug,
     packageName: item.title,
@@ -120,10 +119,10 @@ function LivePackageCard({ item }: { item: LivePackage }) {
   const whatsappMessage = encodeURIComponent(`Hello eDrive, I am interested in ${item.title} from ${item.location}.`);
   return (
     <article className="premium-surface premium-card-hover flex h-full min-w-0 flex-col overflow-hidden rounded-[1.75rem] p-4">
-      <div className="relative min-h-[14rem] overflow-hidden rounded-[1.35rem] bg-gradient-to-br from-primary-900 via-primary-700 to-accent-500 p-5 text-white">
-        {imageSrc && !imageFailed ? <img src={imageSrc} alt={item.title} onError={() => setImageFailed(true)} className="absolute inset-0 h-full w-full object-cover" /> : null}
+      <div className="relative aspect-[16/10] w-full overflow-hidden rounded-[1.35rem] bg-gradient-to-br from-primary-900 via-primary-700 to-accent-500 p-5 text-white">
+        {imageSrc && !imageFailed ? <img src={imageSrc} alt={item.title} onError={() => setImageFailed(true)} className="absolute inset-0 h-full w-full object-cover object-center" loading="lazy" /> : null}
         <div className="absolute inset-0 bg-gradient-to-t from-primary-950/88 via-primary-900/42 to-primary-900/10" aria-hidden="true" />
-        <div className="relative flex h-full min-h-[12rem] flex-col justify-between">
+        <div className="relative flex h-full flex-col justify-between">
           <div className="flex items-start justify-between gap-4">
             <span className="flex size-11 items-center justify-center rounded-2xl bg-white/15"><TicketCheck className="size-5" aria-hidden="true" /></span>
             <Badge variant="gold">{categoryLabel(item.category)}</Badge>
