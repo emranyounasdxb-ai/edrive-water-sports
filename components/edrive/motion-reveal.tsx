@@ -14,10 +14,10 @@ export function MotionReveal({ children, className, delay = 0 }: MotionRevealPro
 
   return (
     <motion.div
-      initial={prefersReducedMotion ? false : { opacity: 0, y: 24 }}
+      initial={false}
       whileInView={prefersReducedMotion ? undefined : { opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: '-80px' }}
-      transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1], delay }}
+      viewport={{ once: true, margin: '120px' }}
+      transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1], delay }}
       className={cn(className)}
     >
       {children}
