@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { HomeExpansionSections } from '@/components/edrive/home-expansion';
+import { LivePackageShowcase } from '@/components/edrive/live-package-showcase';
 import { HomePage } from '@/components/edrive/public-pages';
 
 export const metadata: Metadata = {
@@ -11,6 +12,7 @@ export default function Page() {
   return (
     <>
       <HomePage />
+      <LivePackageShowcase title="Jet Car Packages" text="Popular active packages managed from the dashboard with B2C prices." limit={5} compact />
       <HomeExpansionSections />
     </>
   );
