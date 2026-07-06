@@ -70,7 +70,7 @@ export const financeNavItems = [
 
 export const fleetHeroImage = '/images/edrive/packages/jet-ski/jet-ski-package-31.webp';
 export const fleetShowcaseImage = '/images/edrive/packages/jet-car/jet-car-package-12.webp';
-export const dubaiWaterfrontImage = '/images/edrive/packages/jet-ski/jet-ski-package-32.webp';
+export const dubaiWaterfrontImage = '/images/edrive/dubai-waterfront-hero.png';
 export const jetSkiLightImage = '/images/edrive/packages/jet-ski/jet-ski-package-14.webp';
 export const jetCarLightImage = '/images/edrive/packages/jet-car/jet-car-package-06.webp';
 
