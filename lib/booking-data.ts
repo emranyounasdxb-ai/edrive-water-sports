@@ -18,6 +18,10 @@ export type BookingDraft = {
   selectedPackageName?: string;
   selectedPackageSlug?: string;
   selectedPackageCategory?: string;
+  selectedPackageLocation?: string;
+  selectedPackagePrice?: number;
+  selectedPackageB2BPrice?: number;
+  selectedPackageCapacity?: number;
   experienceType: ExperienceId;
   durationMinutes: number;
   inquiryType: string;
@@ -41,6 +45,8 @@ export type BookingRequest = {
   selectedPackageName?: string | null;
   selectedPackageSlug?: string | null;
   selectedPackageCategory?: string | null;
+  selectedPackageLocation?: string | null;
+  selectedPackagePrice?: number | null;
   experienceType: ExperienceId;
   serviceType: ServiceType;
   durationMinutes: number;
@@ -66,12 +72,12 @@ export type BookingRequest = {
 
 export const experienceOptions: ExperienceOption[] = [
   { id: 'jet-ski-rental', title: 'Jet Ski Rental', shortDescription: 'A guided premium ride with safety equipment and marina support.', serviceType: 'rental', image: jetSkiLightImage, startingPrice: 300, capacity: 2, recommended: true },
-  { id: 'jet-car-rental', title: 'Jet Car Rental', shortDescription: 'A private supercar-on-water experience with captain support.', serviceType: 'rental', image: jetCarLightImage, startingPrice: 700, capacity: 2 }
+  { id: 'jet-car-rental', title: 'Jet Car Rental', shortDescription: 'A private supercar-on-water experience with captain support.', serviceType: 'rental', image: jetCarLightImage, startingPrice: 500, capacity: 2 }
 ];
 
 export const durationPackages: Record<'jet-ski-rental' | 'jet-car-rental', Array<{ minutes: number; price: number }>> = {
   'jet-ski-rental': [{ minutes: 30, price: 300 }, { minutes: 60, price: 450 }, { minutes: 90, price: 600 }, { minutes: 120, price: 700 }],
-  'jet-car-rental': [{ minutes: 30, price: 700 }, { minutes: 60, price: 1200 }, { minutes: 90, price: 1700 }, { minutes: 120, price: 2100 }],
+  'jet-car-rental': [{ minutes: 20, price: 500 }, { minutes: 30, price: 650 }, { minutes: 60, price: 1100 }],
 };
 
 export const inquiryTypes = ['New Unit', 'Pre-Owned Unit', 'Test Ride Request', 'Price Quote'];
@@ -96,11 +102,17 @@ export function getExperience(id: ExperienceId) {
   return experienceOptions.find((experience) => experience.id === id) ?? experienceOptions[0];
 }
 
+export function getPackageUnitPrice(draft: BookingDraft) {
+  const experience = getExperience(draft.experienceType);
+  if (experience.serviceType === 'sales_inquiry') return 0;
+  if (typeof draft.selectedPackagePrice === 'number') return draft.selectedPackagePrice;
+  return durationPackages[draft.experienceType as 'jet-ski-rental' | 'jet-car-rental'].find((item) => item.minutes === draft.durationMinutes)?.price ?? 0;
+}
+
 export function getBookingTotals(draft: BookingDraft) {
   const experience = getExperience(draft.experienceType);
   if (experience.serviceType === 'sales_inquiry') return { subtotal: 0, vatAmount: 0, totalAmount: 0 };
-  const packagePrice = durationPackages[draft.experienceType as 'jet-ski-rental' | 'jet-car-rental'].find((item) => item.minutes === draft.durationMinutes)?.price ?? 0;
-  const subtotal = packagePrice * draft.vehicleQuantity;
+  const subtotal = getPackageUnitPrice(draft) * draft.vehicleQuantity;
   const vatAmount = subtotal * 0.05;
   return { subtotal, vatAmount, totalAmount: subtotal + vatAmount };
 }
