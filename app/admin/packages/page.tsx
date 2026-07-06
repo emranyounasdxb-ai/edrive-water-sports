@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
-import { MapPin, Pencil, Plus, TicketCheck, X } from 'lucide-react';
+import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
+import { Car, MapPin, Pencil, Plus, Search, TicketCheck, Waves, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -79,6 +79,10 @@ export default function Page() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<PackageRecord | null>(null);
   const [locationFilter, setLocationFilter] = useState('All');
+  const [categoryFilter, setCategoryFilter] = useState('All');
+  const [capacityFilter, setCapacityFilter] = useState('All');
+  const [durationFilter, setDurationFilter] = useState('All');
+  const [searchTerm, setSearchTerm] = useState('');
 
   async function loadPackages() {
     setLoading(true);
@@ -87,6 +91,7 @@ export default function Page() {
       .from('packages')
       .select('id,title,slug,category,location,duration_minutes,base_price,b2b_price,vat_percent,capacity,short_description,status,is_featured,display_order')
       .order('location')
+      .order('category')
       .order('capacity')
       .order('duration_minutes');
 
@@ -97,7 +102,23 @@ export default function Page() {
 
   useEffect(() => { loadPackages(); }, []);
 
-  const filteredItems = useMemo(() => locationFilter === 'All' ? items : items.filter((item) => item.location === locationFilter), [items, locationFilter]);
+  const filteredItems = useMemo(() => {
+    const query = searchTerm.trim().toLowerCase();
+    return items.filter((item) => {
+      const matchesLocation = locationFilter === 'All' || item.location === locationFilter;
+      const matchesCategory = categoryFilter === 'All' || item.category === categoryFilter;
+      const matchesCapacity = capacityFilter === 'All' || item.capacity === capacityFilter;
+      const matchesDuration = durationFilter === 'All' || item.durationMinutes === durationFilter;
+      const matchesSearch = !query || `${item.title} ${item.location} ${item.category} ${item.shortDescription}`.toLowerCase().includes(query);
+      return matchesLocation && matchesCategory && matchesCapacity && matchesDuration && matchesSearch;
+    });
+  }, [items, locationFilter, categoryFilter, capacityFilter, durationFilter, searchTerm]);
+
+  const activeCount = items.filter((item) => item.status === 'Active').length;
+  const jetCarCount = items.filter((item) => item.category === 'Jet Car Rental').length;
+  const jetSkiCount = items.filter((item) => item.category === 'Jet Ski Rental').length;
+  const durationOptions = Array.from(new Set(items.map((item) => item.durationMinutes))).sort((a, b) => Number(a) - Number(b));
+  const capacityOptions = Array.from(new Set(items.map((item) => item.capacity))).sort((a, b) => Number(a) - Number(b));
 
   async function savePackage(values: PackageFormValues) {
     setError('');
@@ -140,44 +161,94 @@ export default function Page() {
     else await loadPackages();
   }
 
+  function clearFilters() {
+    setLocationFilter('All');
+    setCategoryFilter('All');
+    setCapacityFilter('All');
+    setDurationFilter('All');
+    setSearchTerm('');
+  }
+
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-col gap-4 rounded-[1.75rem] border border-white/80 bg-white/85 p-5 shadow-[0_18px_45px_rgba(8,37,50,0.06)] lg:flex-row lg:items-end lg:justify-between">
         <div className="max-w-3xl">
-          <div className="mb-3 flex flex-wrap items-center gap-2"><span className="rounded-full bg-primary-50 px-3 py-1 text-xs font-bold uppercase tracking-[0.16em] text-primary">Packages</span><Badge variant="secondary" className="rounded-full">Supabase connected</Badge><Badge className="rounded-full bg-primary text-white">B2C + B2B pricing</Badge></div>
+          <div className="mb-3 flex flex-wrap items-center gap-2">
+            <span className="rounded-full bg-primary-50 px-3 py-1 text-xs font-bold uppercase tracking-[0.16em] text-primary">Packages</span>
+            <Badge variant="secondary" className="rounded-full">Supabase connected</Badge>
+            <Badge className="rounded-full bg-primary text-white">B2C + B2B pricing</Badge>
+          </div>
           <h1 className="font-heading text-3xl font-semibold text-foreground">Package pricing manager</h1>
-          <p className="mt-2 text-sm leading-6 text-muted-foreground">Manage location-wise packages, durations, public prices, partner prices, capacity, and active status.</p>
+          <p className="mt-2 text-sm leading-6 text-muted-foreground">Manage packages by area, ride type, duration, price, capacity, and active status.</p>
         </div>
         <Button type="button" onClick={() => { setEditing(null); setOpen(true); }}><Plus data-icon aria-hidden="true" />Add Package</Button>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <Metric label="Total Packages" value={String(items.length)} icon={<TicketCheck className="size-5" />} />
-        <Metric label="Active Packages" value={String(items.filter((item) => item.status === 'Active').length)} icon={<TicketCheck className="size-5" />} />
-        <Metric label="Locations" value={String(new Set(items.map((item) => item.location)).size)} icon={<MapPin className="size-5" />} />
+      <div className="grid gap-4 md:grid-cols-5">
+        <Metric label="Total" value={String(items.length)} icon={<TicketCheck className="size-5" />} />
+        <Metric label="Active" value={String(activeCount)} icon={<TicketCheck className="size-5" />} />
+        <Metric label="Areas" value={String(new Set(items.map((item) => item.location)).size)} icon={<MapPin className="size-5" />} />
+        <Metric label="Jet Cars" value={String(jetCarCount)} icon={<Car className="size-5" />} />
+        <Metric label="Jet Skis" value={String(jetSkiCount)} icon={<Waves className="size-5" />} />
       </div>
 
       <Card>
-        <CardHeader className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div><CardTitle className="text-base">Location pricing table</CardTitle><CardDescription>Public website uses B2C price. Agent workflows can use B2B price.</CardDescription></div>
-          <label className="grid gap-1.5 text-sm font-semibold text-foreground">Filter location<select value={locationFilter} onChange={(event) => setLocationFilter(event.target.value)} className="h-10 rounded-xl border border-border bg-white px-3 text-sm text-foreground outline-none focus:border-primary">{['All', ...locations].map((location) => <option key={location}>{location}</option>)}</select></label>
+        <CardHeader className="gap-4">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <CardTitle className="text-base">Package filters</CardTitle>
+              <CardDescription>Filter by area, ride type, seater, duration, or package name.</CardDescription>
+            </div>
+            <Button type="button" variant="outline" size="sm" onClick={clearFilters}>Clear Filters</Button>
+          </div>
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
+            <FilterSelect label="Area" value={locationFilter} options={['All', ...locations]} onChange={setLocationFilter} />
+            <FilterSelect label="Ride type" value={categoryFilter} options={['All', 'Jet Car Rental', 'Jet Ski Rental']} onChange={setCategoryFilter} />
+            <FilterSelect label="Seater" value={capacityFilter} options={['All', ...capacityOptions]} onChange={setCapacityFilter} suffix=" seater" />
+            <FilterSelect label="Duration" value={durationFilter} options={['All', ...durationOptions]} onChange={setDurationFilter} suffix=" min" />
+            <label className="grid gap-1.5 text-sm font-semibold text-foreground xl:col-span-2">
+              Search
+              <span className="relative">
+                <Search className="pointer-events-none absolute left-3 top-3 size-4 text-muted-foreground" aria-hidden="true" />
+                <input value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} placeholder="Search package, area, type..." className="h-10 w-full rounded-xl border border-border bg-white pl-9 pr-3 text-sm text-foreground outline-none focus:border-primary" />
+              </span>
+            </label>
+          </div>
+        </CardHeader>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <CardTitle className="text-base">Pricing table</CardTitle>
+            <CardDescription>Showing {filteredItems.length} of {items.length} packages. Public website uses B2C price. Agent workflows can use B2B price.</CardDescription>
+          </div>
+          <div className="flex flex-wrap gap-2 text-xs font-semibold text-muted-foreground">
+            {locationFilter !== 'All' ? <Badge variant="secondary">{locationFilter}</Badge> : null}
+            {categoryFilter !== 'All' ? <Badge variant="secondary">{categoryFilter}</Badge> : null}
+            {capacityFilter !== 'All' ? <Badge variant="secondary">{capacityFilter} seater</Badge> : null}
+            {durationFilter !== 'All' ? <Badge variant="secondary">{durationFilter} min</Badge> : null}
+          </div>
         </CardHeader>
         <CardContent>
           {error ? <p className="mb-4 rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</p> : null}
-          <div className="overflow-x-auto">
+          <div className="max-h-[70vh] overflow-auto rounded-2xl border border-border/70">
             <Table>
-              <TableHeader><TableRow>{['Package', 'Location', 'Duration', 'Capacity', 'B2C', 'B2B', 'Status', 'Action'].map((column) => <TableHead key={column}>{column}</TableHead>)}</TableRow></TableHeader>
+              <TableHeader className="sticky top-0 z-10 bg-white">
+                <TableRow>{['Package', 'Area', 'Type', 'Duration', 'Capacity', 'B2C', 'B2B', 'Status', 'Action'].map((column) => <TableHead key={column}>{column}</TableHead>)}</TableRow>
+              </TableHeader>
               <TableBody>
                 {filteredItems.length ? filteredItems.map((row) => <TableRow key={row.id}>
                   <TableCell className="min-w-[15rem]"><p className="font-semibold text-foreground">{row.title}</p><p className="mt-1 max-w-[18rem] truncate text-xs text-muted-foreground">{row.shortDescription || row.slug}</p></TableCell>
                   <TableCell>{row.location}</TableCell>
+                  <TableCell><Badge variant="secondary">{row.category.replace(' Rental', '')}</Badge></TableCell>
                   <TableCell>{row.durationMinutes} min</TableCell>
                   <TableCell>{row.capacity} seater</TableCell>
                   <TableCell className="font-semibold text-primary-900">{formatAed(row.basePrice)}</TableCell>
                   <TableCell>{formatAed(row.b2bPrice)}</TableCell>
                   <TableCell><Badge variant={row.status === 'Active' ? 'default' : 'secondary'}>{row.status}</Badge></TableCell>
                   <TableCell><div className="flex flex-wrap gap-2"><Button type="button" size="sm" variant="outline" onClick={() => { setEditing(row); setOpen(true); }}><Pencil className="size-4" aria-hidden="true" />Edit</Button><Button type="button" size="sm" variant="subtle" onClick={() => deactivatePackage(row)}>Deactivate</Button></div></TableCell>
-                </TableRow>) : <TableRow><TableCell colSpan={8} className="h-28 text-center text-sm text-muted-foreground">{loading ? 'Loading packages...' : 'No packages found. Run the package catalog SQL once, or add packages manually.'}</TableCell></TableRow>}
+                </TableRow>) : <TableRow><TableCell colSpan={9} className="h-28 text-center text-sm text-muted-foreground">{loading ? 'Loading packages...' : 'No packages found for the selected filters.'}</TableCell></TableRow>}
               </TableBody>
             </Table>
           </div>
@@ -189,8 +260,12 @@ export default function Page() {
   );
 }
 
-function Metric({ label, value, icon }: { label: string; value: string; icon: React.ReactNode }) {
+function Metric({ label, value, icon }: { label: string; value: string; icon: ReactNode }) {
   return <Card><CardContent className="flex items-center justify-between gap-4 p-5"><div><p className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">{label}</p><p className="mt-2 font-heading text-2xl font-semibold text-foreground">{value}</p></div><span className="flex size-11 items-center justify-center rounded-2xl bg-primary-50 text-primary">{icon}</span></CardContent></Card>;
+}
+
+function FilterSelect({ label, value, options, onChange, suffix = '' }: { label: string; value: string; options: string[]; onChange: (value: string) => void; suffix?: string }) {
+  return <label className="grid gap-1.5 text-sm font-semibold text-foreground">{label}<select value={value} onChange={(event) => onChange(event.target.value)} className="h-10 rounded-xl border border-border bg-white px-3 text-sm text-foreground outline-none focus:border-primary">{options.map((option) => <option key={option} value={option}>{option === 'All' ? 'All' : `${option}${suffix}`}</option>)}</select></label>;
 }
 
 function PackageModal({ initialValues, onClose, onSubmit }: { initialValues?: PackageRecord; onClose: () => void; onSubmit: (values: PackageFormValues) => Promise<void> }) {
