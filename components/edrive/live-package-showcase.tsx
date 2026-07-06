@@ -38,13 +38,13 @@ function categoryLabel(value: string) {
   return 'Package';
 }
 
-function isLegacyPackageImage(value: string | null) {
-  return !value || value.includes('/images/packages/') || value.includes('/images/placeholders/');
+function isUploadedPackageImage(value: string | null) {
+  return Boolean(value && value.includes('/images/edrive/packages/'));
 }
 
 function fallbackImage(item: LivePackage, index = 0) {
   const seed = Number(item.display_order || index || 0);
-  if (item.image_url && !isLegacyPackageImage(item.image_url)) return item.image_url;
+  if (isUploadedPackageImage(item.image_url)) return item.image_url || '';
   return getLivePackageImage(item.category, seed);
 }
 
