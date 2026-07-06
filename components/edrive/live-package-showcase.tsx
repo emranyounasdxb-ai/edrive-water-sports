@@ -98,14 +98,14 @@ export function LivePackageShowcase({ title = 'Live Booking Packages', text = 'L
         </div>
 
         <div className={cn('mt-7 grid gap-5 md:grid-cols-2', compact ? 'xl:grid-cols-5' : 'xl:grid-cols-3')}>
-          {loading ? Array.from({ length: limit || 6 }).map((_, index) => <div key={index} className="h-72 animate-pulse rounded-[1.75rem] bg-white/80" />) : visibleItems.map((item) => <LivePackageCard key={item.id} item={item} />)}
+          {loading ? Array.from({ length: limit || 6 }).map((_, index) => <div key={index} className="h-72 animate-pulse rounded-[1.75rem] bg-white/80" />) : visibleItems.map((item) => <LivePackageCard key={item.id} item={item} compact={compact} />)}
         </div>
       </div>
     </section>
   );
 }
 
-function LivePackageCard({ item }: { item: LivePackage }) {
+function LivePackageCard({ item, compact }: { item: LivePackage; compact?: boolean }) {
   const [imageFailed, setImageFailed] = useState(false);
   const imageSrc = fallbackImage(item);
   const params = new URLSearchParams({
@@ -142,9 +142,9 @@ function LivePackageCard({ item }: { item: LivePackage }) {
           <p className="flex items-center gap-1.5 text-xs text-muted-foreground"><Users className="size-3.5 text-primary" aria-hidden="true" />{item.capacity} seater</p>
         </div>
         <p className="mt-3 text-sm leading-6 text-muted-foreground">{item.short_description || 'Premium eDrive water sports package with team support and booking confirmation.'}</p>
-        <div className="mt-auto flex flex-col gap-2 pt-5 sm:flex-row">
-          <Button asChild size="sm" className="flex-1"><Link href={bookingHref}>Book Now<ArrowRight data-icon aria-hidden="true" /></Link></Button>
-          <Button asChild size="sm" variant="outline" className="flex-1"><a href={`${whatsappUrl}?text=${whatsappMessage}`} target="_blank" rel="noopener noreferrer"><MessageCircle data-icon aria-hidden="true" />Ask</a></Button>
+        <div className={cn('mt-auto grid min-w-0 gap-2 pt-5', compact ? 'grid-cols-[minmax(0,1fr)_4.9rem]' : 'grid-cols-[minmax(0,1fr)_5.2rem]')}>
+          <Button asChild size="sm" className="h-9 min-w-0 rounded-full px-3 text-xs font-bold shadow-[0_8px_18px_rgba(8,37,50,0.18)]"><Link href={bookingHref} className="min-w-0 justify-center truncate">Book Now<ArrowRight className="ml-1 size-3.5 shrink-0" aria-hidden="true" /></Link></Button>
+          <Button asChild size="sm" variant="outline" className="h-9 min-w-0 rounded-full border-emerald-300 bg-emerald-500 px-2 text-xs font-bold text-white shadow-[0_8px_18px_rgba(16,185,129,0.2)] hover:bg-emerald-600 hover:text-white"><a href={`${whatsappUrl}?text=${whatsappMessage}`} target="_blank" rel="noopener noreferrer" className="justify-center"><MessageCircle className="size-3.5 shrink-0" aria-hidden="true" />Ask</a></Button>
         </div>
       </div>
     </article>
