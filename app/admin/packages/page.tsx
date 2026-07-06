@@ -178,36 +178,36 @@ export default function Page() {
             <Badge variant="secondary" className="rounded-full">Supabase connected</Badge>
             <Badge className="rounded-full bg-primary text-white">B2C + B2B pricing</Badge>
           </div>
-          <h1 className="font-heading text-3xl font-semibold text-foreground">Package pricing manager</h1>
-          <p className="mt-2 text-sm leading-6 text-muted-foreground">Manage packages by area, ride type, duration, price, capacity, and active status.</p>
+          <h1 className="font-heading text-3xl font-semibold text-foreground">Package Pricing Manager</h1>
+          <p className="mt-2 text-sm leading-6 text-muted-foreground">Manage location-wise B2C and B2B rates for Jet Car and Jet Ski bookings.</p>
         </div>
         <Button type="button" onClick={() => { setEditing(null); setOpen(true); }}><Plus data-icon aria-hidden="true" />Add Package</Button>
       </div>
 
       <div className="grid gap-4 md:grid-cols-5">
-        <Metric label="Total" value={String(items.length)} icon={<TicketCheck className="size-5" />} />
-        <Metric label="Active" value={String(activeCount)} icon={<TicketCheck className="size-5" />} />
-        <Metric label="Areas" value={String(new Set(items.map((item) => item.location)).size)} icon={<MapPin className="size-5" />} />
-        <Metric label="Jet Cars" value={String(jetCarCount)} icon={<Car className="size-5" />} />
-        <Metric label="Jet Skis" value={String(jetSkiCount)} icon={<Waves className="size-5" />} />
+        <Metric label="Total Packages" value={String(items.length)} description="All pricing rows" icon={<TicketCheck className="size-5" />} />
+        <Metric label="Active Rates" value={String(activeCount)} description="Visible for booking" icon={<TicketCheck className="size-5" />} />
+        <Metric label="Booking Areas" value={String(new Set(items.map((item) => item.location)).size)} description="Service locations" icon={<MapPin className="size-5" />} />
+        <Metric label="Jet Car Packages" value={String(jetCarCount)} description="Active jet car rates" icon={<Car className="size-5" />} />
+        <Metric label="Jet Ski Packages" value={String(jetSkiCount)} description="Active jet ski rates" icon={<Waves className="size-5" />} />
       </div>
 
       <Card>
         <CardHeader className="gap-4">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <CardTitle className="text-base">Package filters</CardTitle>
-              <CardDescription>Filter by area, ride type, seater, duration, or package name.</CardDescription>
+              <CardTitle className="text-base">Pricing Filters</CardTitle>
+              <CardDescription>Filter packages by booking area, ride type, seating, duration, or package name.</CardDescription>
             </div>
             <Button type="button" variant="outline" size="sm" onClick={clearFilters}>Clear Filters</Button>
           </div>
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
-            <FilterSelect label="Area" value={locationFilter} options={['All', ...locations]} onChange={setLocationFilter} />
-            <FilterSelect label="Ride type" value={categoryFilter} options={['All', 'Jet Car Rental', 'Jet Ski Rental']} onChange={setCategoryFilter} />
-            <FilterSelect label="Seater" value={capacityFilter} options={['All', ...capacityOptions]} onChange={setCapacityFilter} suffix=" seater" />
+            <FilterSelect label="Booking Area" value={locationFilter} options={['All', ...locations]} onChange={setLocationFilter} />
+            <FilterSelect label="Ride Type" value={categoryFilter} options={['All', 'Jet Car Rental', 'Jet Ski Rental']} onChange={setCategoryFilter} />
+            <FilterSelect label="Seating" value={capacityFilter} options={['All', ...capacityOptions]} onChange={setCapacityFilter} suffix=" seater" />
             <FilterSelect label="Duration" value={durationFilter} options={['All', ...durationOptions]} onChange={setDurationFilter} suffix=" min" />
             <label className="grid gap-1.5 text-sm font-semibold text-foreground xl:col-span-2">
-              Search
+              Search Packages
               <span className="relative">
                 <Search className="pointer-events-none absolute left-3 top-3 size-4 text-muted-foreground" aria-hidden="true" />
                 <input value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} placeholder="Search package, area, type..." className="h-10 w-full rounded-xl border border-border bg-white pl-9 pr-3 text-sm text-foreground outline-none focus:border-primary" />
@@ -220,8 +220,8 @@ export default function Page() {
       <Card>
         <CardHeader className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <CardTitle className="text-base">Pricing table</CardTitle>
-            <CardDescription>Showing {filteredItems.length} of {items.length} packages. Public website uses B2C price. Agent workflows can use B2B price.</CardDescription>
+            <CardTitle className="text-base">Pricing Rates Table</CardTitle>
+            <CardDescription>Showing {filteredItems.length} of {items.length} pricing rows. Public website uses B2C price. Agent workflows can use B2B price.</CardDescription>
           </div>
           <div className="flex flex-wrap gap-2 text-xs font-semibold text-muted-foreground">
             {locationFilter !== 'All' ? <Badge variant="secondary">{locationFilter}</Badge> : null}
@@ -260,8 +260,8 @@ export default function Page() {
   );
 }
 
-function Metric({ label, value, icon }: { label: string; value: string; icon: ReactNode }) {
-  return <Card><CardContent className="flex items-center justify-between gap-4 p-5"><div><p className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">{label}</p><p className="mt-2 font-heading text-2xl font-semibold text-foreground">{value}</p></div><span className="flex size-11 items-center justify-center rounded-2xl bg-primary-50 text-primary">{icon}</span></CardContent></Card>;
+function Metric({ label, value, description, icon }: { label: string; value: string; description: string; icon: ReactNode }) {
+  return <Card><CardContent className="flex items-center justify-between gap-4 p-5"><div><p className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">{label}</p><p className="mt-2 font-heading text-2xl font-semibold text-foreground">{value}</p><p className="mt-1 text-xs font-semibold text-muted-foreground">{description}</p></div><span className="flex size-11 items-center justify-center rounded-2xl bg-primary-50 text-primary">{icon}</span></CardContent></Card>;
 }
 
 function FilterSelect({ label, value, options, onChange, suffix = '' }: { label: string; value: string; options: string[]; onChange: (value: string) => void; suffix?: string }) {
