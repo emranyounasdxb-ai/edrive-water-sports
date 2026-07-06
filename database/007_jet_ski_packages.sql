@@ -1,0 +1,25 @@
+insert into public.packages (title, slug, category, location, duration_minutes, base_price, b2b_price, vat_percent, capacity, short_description, status, is_featured, display_order) values
+('Jumeirah Jet Ski - 30 Minutes', 'jumeirah-jet-ski-30-minutes', 'jet_ski_rental', 'Jumeirah', 30, 300, 200, 5, 2, 'Premium jet ski ride from Jumeirah. Price is per jet ski.', 'active', true, 510),
+('Jumeirah Jet Ski - 60 Minutes', 'jumeirah-jet-ski-60-minutes', 'jet_ski_rental', 'Jumeirah', 60, 550, 350, 5, 2, 'Premium jet ski ride from Jumeirah. Price is per jet ski.', 'active', true, 520),
+('Dubai Marina Jet Ski - 30 Minutes', 'dubai-marina-jet-ski-30-minutes', 'jet_ski_rental', 'Dubai Marina', 30, 300, 200, 5, 2, 'Premium jet ski ride from Dubai Marina. Price is per jet ski.', 'active', true, 530),
+('Dubai Marina Jet Ski - 60 Minutes', 'dubai-marina-jet-ski-60-minutes', 'jet_ski_rental', 'Dubai Marina', 60, 550, 350, 5, 2, 'Premium jet ski ride from Dubai Marina. Price is per jet ski.', 'active', true, 540),
+('Dubai Harbour Jet Ski - 30 Minutes', 'dubai-harbour-jet-ski-30-minutes', 'jet_ski_rental', 'Dubai Harbour', 30, 300, 200, 5, 2, 'Premium jet ski ride from Dubai Harbour. Price is per jet ski.', 'active', true, 550),
+('Dubai Harbour Jet Ski - 60 Minutes', 'dubai-harbour-jet-ski-60-minutes', 'jet_ski_rental', 'Dubai Harbour', 60, 550, 350, 5, 2, 'Premium jet ski ride from Dubai Harbour. Price is per jet ski.', 'active', true, 560),
+('Dubai Islands Jet Ski - 30 Minutes', 'dubai-islands-jet-ski-30-minutes', 'jet_ski_rental', 'Dubai Islands', 30, 300, 200, 5, 2, 'Premium jet ski ride from Dubai Islands. Price is per jet ski.', 'active', true, 570),
+('Dubai Islands Jet Ski - 60 Minutes', 'dubai-islands-jet-ski-60-minutes', 'jet_ski_rental', 'Dubai Islands', 60, 550, 350, 5, 2, 'Premium jet ski ride from Dubai Islands. Price is per jet ski.', 'active', true, 580),
+('Fishing Harbour Jet Ski - 30 Minutes', 'fishing-harbour-jet-ski-30-minutes', 'jet_ski_rental', 'Fishing Harbour', 30, 300, 200, 5, 2, 'Premium jet ski ride from Fishing Harbour. Price is per jet ski.', 'active', true, 590),
+('Fishing Harbour Jet Ski - 60 Minutes', 'fishing-harbour-jet-ski-60-minutes', 'jet_ski_rental', 'Fishing Harbour', 60, 550, 350, 5, 2, 'Premium jet ski ride from Fishing Harbour. Price is per jet ski.', 'active', true, 600)
+on conflict (slug) do update set
+  title = excluded.title,
+  category = excluded.category,
+  location = excluded.location,
+  duration_minutes = excluded.duration_minutes,
+  base_price = excluded.base_price,
+  b2b_price = excluded.b2b_price,
+  vat_percent = excluded.vat_percent,
+  capacity = excluded.capacity,
+  short_description = excluded.short_description,
+  status = excluded.status,
+  is_featured = excluded.is_featured,
+  display_order = excluded.display_order,
+  updated_at = now();
