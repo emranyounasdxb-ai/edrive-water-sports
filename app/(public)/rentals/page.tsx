@@ -11,10 +11,7 @@ export default function Page() {
   return (
     <>
       <RentalsPage />
-      <LivePackageShowcase
-        title="Bookable Location Packages"
-        text="These active packages are managed from the dashboard and show current B2C prices by location, duration, and capacity."
-      />
+      <LivePackageShowcase title="Bookable Location Packages" text="Choose your preferred ride, location, duration, and seating option." />
     </>
   );
 }
