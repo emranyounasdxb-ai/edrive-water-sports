@@ -34,7 +34,7 @@ insert into public.packages (
 select
   package_locations.location_name || ' ' || package_templates.title_suffix,
   lower(regexp_replace(package_locations.location_name || '-' || package_templates.package_code, '[^a-z0-9]+', '-', 'g')),
-  package_templates.category,
+  package_templates.category::public.rental_category,
   package_locations.location_name,
   package_templates.duration_minutes,
   package_templates.base_price,
