@@ -145,6 +145,32 @@ main > section.bg-\[\#f4f5f5\].pb-9 .premium-dark.grid > a:last-child:hover {
     0 2px 0 rgba(87, 56, 14, 0.2);
 }
 
+#popular-packages article h3 {
+  min-height: 1.35rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.92rem;
+  letter-spacing: -0.035em;
+}
+
+#popular-packages article p,
+#popular-packages article span {
+  min-width: 0;
+}
+
+@media (min-width: 1024px) {
+  #popular-packages article h3 {
+    font-size: 0.84rem;
+  }
+}
+
+@media (min-width: 1440px) {
+  #popular-packages article h3 {
+    font-size: 0.92rem;
+  }
+}
+
 @media (min-width: 768px) {
   main > section.bg-\[\#f4f5f5\].pb-9 .premium-dark.grid > div:nth-child(2) {
     grid-template-columns: 10.9rem 12.4rem 10.9rem;
