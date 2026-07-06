@@ -1,3 +1,5 @@
+import { getCategoryPackageImage, getPackageImageBySlug } from './edrive-package-images';
+
 export type PublicPackageCategory = 'jet-ski' | 'jet-car' | 'combo' | 'family' | 'vip';
 
 export type PublicPackage = {
@@ -11,6 +13,8 @@ export type PublicPackage = {
   description: string;
   image: string;
 };
+
+type PublicPackageContent = Omit<PublicPackage, 'image'>;
 
 export const packageCategoryLabels: Record<PublicPackageCategory, string> = {
   'jet-ski': 'Jet Ski',
@@ -29,16 +33,16 @@ export const packageCategoryDescriptions: Record<PublicPackageCategory, string> 
 };
 
 export const packageCategoryImageFallbacks: Record<PublicPackageCategory, string> = {
-  'jet-ski': '/images/placeholders/jet-ski-package.webp',
-  'jet-car': '/images/placeholders/jet-car-package.webp',
-  combo: '/images/placeholders/combo-package.webp',
-  family: '/images/placeholders/family-package.webp',
-  vip: '/images/placeholders/vip-package.webp'
+  'jet-ski': getCategoryPackageImage('jet-ski', 0),
+  'jet-car': getCategoryPackageImage('jet-car', 0),
+  combo: getCategoryPackageImage('combo', 0),
+  family: getCategoryPackageImage('family', 0),
+  vip: getCategoryPackageImage('vip', 0)
 };
 
 export const publicPackageCategories: PublicPackageCategory[] = ['jet-ski', 'jet-car', 'combo', 'family', 'vip'];
 
-export const publicPackages: PublicPackage[] = [
+const publicPackageData: PublicPackageContent[] = [
   {
     slug: 'dubai-islands-quick-splash',
     name: 'Dubai Islands Quick Splash',
@@ -47,8 +51,7 @@ export const publicPackages: PublicPackage[] = [
     duration: '30 minutes',
     priceLabel: 'From AED 300',
     bestFor: 'Beginners, solo riders, quick rides',
-    description: 'A short jet ski Dubai Islands ride with premium dock support, ideal for first-time guests who want instant water sports energy.',
-    image: packageCategoryImageFallbacks['jet-ski']
+    description: 'A short jet ski Dubai Islands ride with premium dock support, ideal for first-time guests who want instant water sports energy.'
   },
   {
     slug: 'marina-rush-jet-ski',
@@ -58,8 +61,7 @@ export const publicPackages: PublicPackage[] = [
     duration: '60 minutes',
     priceLabel: 'From AED 450',
     bestFor: 'Adrenaline seekers and skyline photos',
-    description: 'A lively jet ski rental Dubai route with open-water bursts, skyline views, and a confident guided pace.',
-    image: packageCategoryImageFallbacks['jet-ski']
+    description: 'A lively jet ski rental Dubai route with open-water bursts, skyline views, and a confident guided pace.'
   },
   {
     slug: 'burj-al-arab-photo-ride',
@@ -69,8 +71,7 @@ export const publicPackages: PublicPackage[] = [
     duration: '90 minutes',
     priceLabel: 'From AED 600',
     bestFor: 'Iconic Dubai photo moments',
-    description: 'A premium jet ski ride shaped around smooth cruising and memorable Burj Al Arab photo stops when conditions allow.',
-    image: packageCategoryImageFallbacks['jet-ski']
+    description: 'A premium jet ski ride shaped around smooth cruising and memorable Burj Al Arab photo stops when conditions allow.'
   },
   {
     slug: 'atlantis-wave-explorer',
@@ -80,8 +81,7 @@ export const publicPackages: PublicPackage[] = [
     duration: '90 minutes',
     priceLabel: 'From AED 600',
     bestFor: 'Palm views and guided exploring',
-    description: 'A scenic jet ski Dubai experience for guests who want a broader coastline ride and premium route guidance.',
-    image: packageCategoryImageFallbacks['jet-ski']
+    description: 'A scenic jet ski Dubai experience for guests who want a broader coastline ride and premium route guidance.'
   },
   {
     slug: 'palm-jumeirah-jet-ski-tour',
@@ -91,8 +91,7 @@ export const publicPackages: PublicPackage[] = [
     duration: '120 minutes',
     priceLabel: 'From AED 700',
     bestFor: 'Longer touring and Dubai landmarks',
-    description: 'A relaxed luxury jet ski rental Dubai tour with more time on the water and a polished Palm Jumeirah feel.',
-    image: packageCategoryImageFallbacks['jet-ski']
+    description: 'A relaxed luxury jet ski rental Dubai tour with more time on the water and a polished Palm Jumeirah feel.'
   },
   {
     slug: 'sunrise-jet-ski-ride',
@@ -102,8 +101,7 @@ export const publicPackages: PublicPackage[] = [
     duration: '60 minutes',
     priceLabel: 'Ask for price',
     bestFor: 'Early riders and calm water',
-    description: 'A peaceful early ride with soft Dubai light, cooler conditions, and a smooth start to the day on the water.',
-    image: packageCategoryImageFallbacks['jet-ski']
+    description: 'A peaceful early ride with soft Dubai light, cooler conditions, and a smooth start to the day on the water.'
   },
   {
     slug: 'golden-hour-jet-ski',
@@ -113,8 +111,7 @@ export const publicPackages: PublicPackage[] = [
     duration: '60 minutes',
     priceLabel: 'From AED 450',
     bestFor: 'Couples, friends, evening photos',
-    description: 'A warm golden-hour jet ski session designed for flattering photos, premium views, and an easy Dubai Islands departure.',
-    image: packageCategoryImageFallbacks['jet-ski']
+    description: 'A warm golden-hour jet ski session designed for flattering photos, premium views, and an easy Dubai Islands departure.'
   },
   {
     slug: 'sunset-splash-experience',
@@ -124,8 +121,7 @@ export const publicPackages: PublicPackage[] = [
     duration: '90 minutes',
     priceLabel: 'From AED 600',
     bestFor: 'Evening adventures and content',
-    description: 'A sunset-focused water sports Dubai package with extra time for relaxed cruising and picture-ready moments.',
-    image: packageCategoryImageFallbacks['jet-ski']
+    description: 'A sunset-focused water sports Dubai package with extra time for relaxed cruising and picture-ready moments.'
   },
   {
     slug: 'couple-jet-ski-escape',
@@ -135,8 +131,7 @@ export const publicPackages: PublicPackage[] = [
     duration: '60 minutes',
     priceLabel: 'From AED 450',
     bestFor: 'Couples and anniversary rides',
-    description: 'A couple-friendly jet ski Dubai ride with clear support, smooth timing, and an easy booking path for two.',
-    image: packageCategoryImageFallbacks['jet-ski']
+    description: 'A couple-friendly jet ski Dubai ride with clear support, smooth timing, and an easy booking path for two.'
   },
   {
     slug: 'friends-water-adventure',
@@ -146,8 +141,7 @@ export const publicPackages: PublicPackage[] = [
     duration: '60 minutes',
     priceLabel: 'Custom quote',
     bestFor: 'Small friend groups',
-    description: 'A lively group-friendly jet ski rental Dubai package for friends who want shared energy and simple coordination.',
-    image: packageCategoryImageFallbacks['jet-ski']
+    description: 'A lively group-friendly jet ski rental Dubai package for friends who want shared energy and simple coordination.'
   },
   {
     slug: 'solo-rider-express',
@@ -157,8 +151,7 @@ export const publicPackages: PublicPackage[] = [
     duration: '30 minutes',
     priceLabel: 'From AED 300',
     bestFor: 'Solo guests and quick sessions',
-    description: 'A focused ride for solo guests who want a premium jet ski session without needing a long schedule.',
-    image: packageCategoryImageFallbacks['jet-ski']
+    description: 'A focused ride for solo guests who want a premium jet ski session without needing a long schedule.'
   },
   {
     slug: 'dubai-skyline-jet-ski-tour',
@@ -168,8 +161,7 @@ export const publicPackages: PublicPackage[] = [
     duration: '90 minutes',
     priceLabel: 'From AED 600',
     bestFor: 'Skyline photos and touring',
-    description: 'A guided Dubai skyline route combining jet ski excitement with wide waterfront views and premium photo opportunities.',
-    image: packageCategoryImageFallbacks['jet-ski']
+    description: 'A guided Dubai skyline route combining jet ski excitement with wide waterfront views and premium photo opportunities.'
   },
   {
     slug: '30-minute-adrenaline-ride',
@@ -179,8 +171,7 @@ export const publicPackages: PublicPackage[] = [
     duration: '30 minutes',
     priceLabel: 'From AED 300',
     bestFor: 'Fast rides and first timers',
-    description: 'A compact jet ski package with quick acceleration, safety briefing, and a smooth first taste of Dubai water sports.',
-    image: packageCategoryImageFallbacks['jet-ski']
+    description: 'A compact jet ski package with quick acceleration, safety briefing, and a smooth first taste of Dubai water sports.'
   },
   {
     slug: '60-minute-explorer-ride',
@@ -190,8 +181,7 @@ export const publicPackages: PublicPackage[] = [
     duration: '60 minutes',
     priceLabel: 'From AED 450',
     bestFor: 'Balanced ride time',
-    description: 'A balanced jet ski rental package with enough time for cruising, photos, and a proper Dubai Islands marine experience.',
-    image: packageCategoryImageFallbacks['jet-ski']
+    description: 'A balanced jet ski rental package with enough time for cruising, photos, and a proper Dubai Islands marine experience.'
   },
   {
     slug: '90-minute-premium-coast-ride',
@@ -201,8 +191,7 @@ export const publicPackages: PublicPackage[] = [
     duration: '90 minutes',
     priceLabel: 'From AED 600',
     bestFor: 'Longer coast rides',
-    description: 'A premium coast ride for guests who want extra time, guided comfort, and a more complete jet ski Dubai route.',
-    image: packageCategoryImageFallbacks['jet-ski']
+    description: 'A premium coast ride for guests who want extra time, guided comfort, and a more complete jet ski Dubai route.'
   },
   {
     slug: '120-minute-ultimate-jet-ski-tour',
@@ -212,8 +201,7 @@ export const publicPackages: PublicPackage[] = [
     duration: '120 minutes',
     priceLabel: 'From AED 700',
     bestFor: 'Full jet ski touring',
-    description: 'A longer luxury jet ski rental Dubai tour built for guests who want landmark views and a complete water sports session.',
-    image: packageCategoryImageFallbacks['jet-ski']
+    description: 'A longer luxury jet ski rental Dubai tour built for guests who want landmark views and a complete water sports session.'
   },
   {
     slug: 'beginner-friendly-jet-ski-ride',
@@ -223,8 +211,7 @@ export const publicPackages: PublicPackage[] = [
     duration: '30 minutes',
     priceLabel: 'From AED 300',
     bestFor: 'First-time riders',
-    description: 'A supportive beginner jet ski ride with safety briefing, steady guidance, and a confidence-building pace.',
-    image: packageCategoryImageFallbacks['jet-ski']
+    description: 'A supportive beginner jet ski ride with safety briefing, steady guidance, and a confidence-building pace.'
   },
   {
     slug: 'vip-guided-jet-ski-experience',
@@ -234,8 +221,7 @@ export const publicPackages: PublicPackage[] = [
     duration: '90 minutes',
     priceLabel: 'Custom quote',
     bestFor: 'Private guided sessions',
-    description: 'A private guided jet ski Dubai experience with elevated timing support and a more personal premium route.',
-    image: packageCategoryImageFallbacks['jet-ski']
+    description: 'A private guided jet ski Dubai experience with elevated timing support and a more personal premium route.'
   },
   {
     slug: 'dubai-jet-car-cruise',
@@ -245,8 +231,7 @@ export const publicPackages: PublicPackage[] = [
     duration: '30 minutes',
     priceLabel: 'From AED 700',
     bestFor: 'First jet car ride and photos',
-    description: 'A signature jet car rental Dubai cruise with luxury water-car styling, captain support, and easy photo moments.',
-    image: packageCategoryImageFallbacks['jet-car']
+    description: 'A signature jet car rental Dubai cruise with luxury water-car styling, captain support, and easy photo moments.'
   },
   {
     slug: 'luxury-water-car-experience',
@@ -256,8 +241,7 @@ export const publicPackages: PublicPackage[] = [
     duration: '60 minutes',
     priceLabel: 'From AED 1,200',
     bestFor: 'Luxury cruising and couples',
-    description: 'A refined jet car Dubai experience with comfortable pacing, premium marina views, and standout water-level presence.',
-    image: packageCategoryImageFallbacks['jet-car']
+    description: 'A refined jet car Dubai experience with comfortable pacing, premium marina views, and standout water-level presence.'
   },
   {
     slug: 'jet-car-photo-session-ride',
@@ -267,8 +251,7 @@ export const publicPackages: PublicPackage[] = [
     duration: '60 minutes',
     priceLabel: 'Ask for price',
     bestFor: 'Content, birthdays, influencers',
-    description: 'A photo-friendly jet car ride planned around clean angles, calm pauses, and a polished Dubai marine backdrop.',
-    image: packageCategoryImageFallbacks['jet-car']
+    description: 'A photo-friendly jet car ride planned around clean angles, calm pauses, and a polished Dubai marine backdrop.'
   },
   {
     slug: 'couple-jet-car-experience',
@@ -278,8 +261,7 @@ export const publicPackages: PublicPackage[] = [
     duration: '60 minutes',
     priceLabel: 'From AED 1,200',
     bestFor: 'Couples and special dates',
-    description: 'A private couple jet car Dubai cruise for guests who want comfort, style, and a memorable shared ride.',
-    image: packageCategoryImageFallbacks['jet-car']
+    description: 'A private couple jet car Dubai cruise for guests who want comfort, style, and a memorable shared ride.'
   },
   {
     slug: 'vip-jet-car-drive',
@@ -289,8 +271,7 @@ export const publicPackages: PublicPackage[] = [
     duration: '90 minutes',
     priceLabel: 'Custom quote',
     bestFor: 'VIP clients and private hosts',
-    description: 'A VIP jet car experience with premium support, flexible pacing, and a luxury-first Dubai waterfront feel.',
-    image: packageCategoryImageFallbacks['jet-car']
+    description: 'A VIP jet car experience with premium support, flexible pacing, and a luxury-first Dubai waterfront feel.'
   },
   {
     slug: 'sunset-jet-car-cruise',
@@ -300,8 +281,7 @@ export const publicPackages: PublicPackage[] = [
     duration: '60 minutes',
     priceLabel: 'From AED 1,200',
     bestFor: 'Golden-hour jet car photos',
-    description: 'A sunset jet car cruise that pairs luxury water-car presence with soft evening light and relaxed route planning.',
-    image: packageCategoryImageFallbacks['jet-car']
+    description: 'A sunset jet car cruise that pairs luxury water-car presence with soft evening light and relaxed route planning.'
   },
   {
     slug: 'dubai-islands-jet-car-tour',
@@ -311,8 +291,7 @@ export const publicPackages: PublicPackage[] = [
     duration: '90 minutes',
     priceLabel: 'From AED 1,700',
     bestFor: 'Dubai Islands exploring',
-    description: 'A premium Dubai Islands jet car tour for guests who want longer cruising and a distinctive marine experience.',
-    image: packageCategoryImageFallbacks['jet-car']
+    description: 'A premium Dubai Islands jet car tour for guests who want longer cruising and a distinctive marine experience.'
   },
   {
     slug: 'marina-view-jet-car-ride',
@@ -322,8 +301,7 @@ export const publicPackages: PublicPackage[] = [
     duration: '60 minutes',
     priceLabel: 'From AED 1,200',
     bestFor: 'Marina views and relaxed cruising',
-    description: 'A stylish jet car ride with a calm marina pace, great water-level views, and premium support throughout.',
-    image: packageCategoryImageFallbacks['jet-car']
+    description: 'A stylish jet car ride with a calm marina pace, great water-level views, and premium support throughout.'
   },
   {
     slug: 'premium-sports-jet-car-ride',
@@ -333,8 +311,7 @@ export const publicPackages: PublicPackage[] = [
     duration: '60 minutes',
     priceLabel: 'From AED 1,200',
     bestFor: 'Luxury sports styling',
-    description: 'A sporty jet car rental package designed for guests who want statement visuals and smooth Dubai marine cruising.',
-    image: packageCategoryImageFallbacks['jet-car']
+    description: 'A sporty jet car rental package designed for guests who want statement visuals and smooth Dubai marine cruising.'
   },
   {
     slug: '30-minute-jet-car-trial',
@@ -344,8 +321,7 @@ export const publicPackages: PublicPackage[] = [
     duration: '30 minutes',
     priceLabel: 'From AED 700',
     bestFor: 'Trying the jet car',
-    description: 'A short trial-style jet car Dubai ride for guests who want the look, the photos, and a quick luxury cruise.',
-    image: packageCategoryImageFallbacks['jet-car']
+    description: 'A short trial-style jet car Dubai ride for guests who want the look, the photos, and a quick luxury cruise.'
   },
   {
     slug: '60-minute-jet-car-experience',
@@ -355,8 +331,7 @@ export const publicPackages: PublicPackage[] = [
     duration: '60 minutes',
     priceLabel: 'From AED 1,200',
     bestFor: 'Balanced jet car ride time',
-    description: 'A balanced one-hour jet car rental Dubai package with enough time for cruising, photos, and relaxed enjoyment.',
-    image: packageCategoryImageFallbacks['jet-car']
+    description: 'A balanced one-hour jet car rental Dubai package with enough time for cruising, photos, and relaxed enjoyment.'
   },
   {
     slug: '90-minute-jet-car-adventure',
@@ -366,8 +341,7 @@ export const publicPackages: PublicPackage[] = [
     duration: '90 minutes',
     priceLabel: 'From AED 1,700',
     bestFor: 'Extended jet car cruising',
-    description: 'An extended jet car adventure with more waterfront time and a flexible route for special occasions or content.',
-    image: packageCategoryImageFallbacks['jet-car']
+    description: 'An extended jet car adventure with more waterfront time and a flexible route for special occasions or content.'
   },
   {
     slug: '120-minute-ultimate-jet-car-cruise',
@@ -377,8 +351,7 @@ export const publicPackages: PublicPackage[] = [
     duration: '120 minutes',
     priceLabel: 'From AED 2,100',
     bestFor: 'Long luxury cruises',
-    description: 'A full-length jet car Dubai cruise for guests who want maximum time, comfort, and a premium marine arrival.',
-    image: packageCategoryImageFallbacks['jet-car']
+    description: 'A full-length jet car Dubai cruise for guests who want maximum time, comfort, and a premium marine arrival.'
   },
   {
     slug: 'birthday-jet-car-experience',
@@ -388,8 +361,7 @@ export const publicPackages: PublicPackage[] = [
     duration: '60 minutes',
     priceLabel: 'Custom quote',
     bestFor: 'Birthdays and celebrations',
-    description: 'A celebration-ready jet car package with easy coordination, photo-friendly timing, and a premium birthday feel.',
-    image: packageCategoryImageFallbacks['jet-car']
+    description: 'A celebration-ready jet car package with easy coordination, photo-friendly timing, and a premium birthday feel.'
   },
   {
     slug: 'jet-ski-jet-car-combo',
@@ -399,8 +371,7 @@ export const publicPackages: PublicPackage[] = [
     duration: '60-120 minutes',
     priceLabel: 'Custom quote',
     bestFor: 'Guests who want both experiences',
-    description: 'A simple jet ski and jet car package Dubai visitors can book together for a complete eDrive water sports day.',
-    image: packageCategoryImageFallbacks.combo
+    description: 'A simple jet ski and jet car package Dubai visitors can book together for a complete eDrive water sports day.'
   },
   {
     slug: 'couple-luxury-water-combo',
@@ -410,8 +381,7 @@ export const publicPackages: PublicPackage[] = [
     duration: '90-120 minutes',
     priceLabel: 'Custom quote',
     bestFor: 'Couples and special trips',
-    description: 'A couple-focused combo pairing jet ski excitement with a luxury jet car cruise for a memorable Dubai date.',
-    image: packageCategoryImageFallbacks.combo
+    description: 'A couple-focused combo pairing jet ski excitement with a luxury jet car cruise for a memorable Dubai date.'
   },
   {
     slug: 'friends-adventure-combo',
@@ -421,8 +391,7 @@ export const publicPackages: PublicPackage[] = [
     duration: '90-120 minutes',
     priceLabel: 'Custom quote',
     bestFor: 'Friends and small groups',
-    description: 'A high-energy combo for friends who want variety, shared photos, and a premium Dubai Islands water sports plan.',
-    image: packageCategoryImageFallbacks.combo
+    description: 'A high-energy combo for friends who want variety, shared photos, and a premium Dubai Islands water sports plan.'
   },
   {
     slug: 'dubai-islands-combo-ride',
@@ -432,8 +401,7 @@ export const publicPackages: PublicPackage[] = [
     duration: '60-120 minutes',
     priceLabel: 'Custom quote',
     bestFor: 'Dubai Islands visitors',
-    description: 'A flexible combo ride based at Dubai Islands, blending jet ski motion with jet car style in one itinerary.',
-    image: packageCategoryImageFallbacks.combo
+    description: 'A flexible combo ride based at Dubai Islands, blending jet ski motion with jet car style in one itinerary.'
   },
   {
     slug: 'sunset-combo-experience',
@@ -443,8 +411,7 @@ export const publicPackages: PublicPackage[] = [
     duration: '90-120 minutes',
     priceLabel: 'Custom quote',
     bestFor: 'Golden-hour groups and couples',
-    description: 'A sunset combo package for guests who want beautiful light, water sports energy, and luxury jet car presence.',
-    image: packageCategoryImageFallbacks.combo
+    description: 'A sunset combo package for guests who want beautiful light, water sports energy, and luxury jet car presence.'
   },
   {
     slug: 'vip-marine-combo',
@@ -454,8 +421,7 @@ export const publicPackages: PublicPackage[] = [
     duration: 'Custom duration',
     priceLabel: 'Custom quote',
     bestFor: 'Private VIP bookings',
-    description: 'A private marine combo with elevated planning, preferred timings, and premium support from arrival to finish.',
-    image: packageCategoryImageFallbacks.combo
+    description: 'A private marine combo with elevated planning, preferred timings, and premium support from arrival to finish.'
   },
   {
     slug: 'family-water-sports-combo',
@@ -465,8 +431,7 @@ export const publicPackages: PublicPackage[] = [
     duration: '90-120 minutes',
     priceLabel: 'Custom quote',
     bestFor: 'Families and mixed ages',
-    description: 'A family-friendly combo with clear coordination, flexible pacing, and experiences selected around comfort and fun.',
-    image: packageCategoryImageFallbacks.combo
+    description: 'A family-friendly combo with clear coordination, flexible pacing, and experiences selected around comfort and fun.'
   },
   {
     slug: 'ultimate-edrive-experience',
@@ -476,8 +441,7 @@ export const publicPackages: PublicPackage[] = [
     duration: 'Custom duration',
     priceLabel: 'Custom quote',
     bestFor: 'Guests who want the full offer',
-    description: 'The most complete eDrive package, combining premium ride planning, jet ski energy, and luxury jet car cruising.',
-    image: packageCategoryImageFallbacks.combo
+    description: 'The most complete eDrive package, combining premium ride planning, jet ski energy, and luxury jet car cruising.'
   },
   {
     slug: 'family-splash-day',
@@ -487,8 +451,7 @@ export const publicPackages: PublicPackage[] = [
     duration: '60-120 minutes',
     priceLabel: 'Custom quote',
     bestFor: 'Families with flexible needs',
-    description: 'A family water sports Dubai package built around comfort, clear support, and easy scheduling for all guests.',
-    image: packageCategoryImageFallbacks.family
+    description: 'A family water sports Dubai package built around comfort, clear support, and easy scheduling for all guests.'
   },
   {
     slug: 'group-adventure-ride',
@@ -498,8 +461,7 @@ export const publicPackages: PublicPackage[] = [
     duration: '60-120 minutes',
     priceLabel: 'Custom quote',
     bestFor: 'Groups and friends',
-    description: 'A coordinated group ride for Dubai visitors who want a simple plan, multiple guests, and premium water support.',
-    image: packageCategoryImageFallbacks.family
+    description: 'A coordinated group ride for Dubai visitors who want a simple plan, multiple guests, and premium water support.'
   },
   {
     slug: 'friends-weekend-package',
@@ -509,8 +471,7 @@ export const publicPackages: PublicPackage[] = [
     duration: '60-120 minutes',
     priceLabel: 'Custom quote',
     bestFor: 'Weekend plans',
-    description: 'A weekend-ready package for friends who want Dubai water sports, flexible timing, and easy WhatsApp coordination.',
-    image: packageCategoryImageFallbacks.family
+    description: 'A weekend-ready package for friends who want Dubai water sports, flexible timing, and easy WhatsApp coordination.'
   },
   {
     slug: 'birthday-group-experience',
@@ -520,8 +481,7 @@ export const publicPackages: PublicPackage[] = [
     duration: 'Custom group timing',
     priceLabel: 'Custom quote',
     bestFor: 'Birthday groups',
-    description: 'A celebration package for birthdays, with group planning support and ride options shaped around the occasion.',
-    image: packageCategoryImageFallbacks.family
+    description: 'A celebration package for birthdays, with group planning support and ride options shaped around the occasion.'
   },
   {
     slug: 'corporate-water-sports-day',
@@ -531,8 +491,7 @@ export const publicPackages: PublicPackage[] = [
     duration: 'Custom group timing',
     priceLabel: 'Custom quote',
     bestFor: 'Teams and company outings',
-    description: 'A corporate water sports Dubai experience with practical group coordination, premium presentation, and team-friendly timing.',
-    image: packageCategoryImageFallbacks.family
+    description: 'A corporate water sports Dubai experience with practical group coordination, premium presentation, and team-friendly timing.'
   },
   {
     slug: 'vip-sunset-marine-experience',
@@ -542,8 +501,7 @@ export const publicPackages: PublicPackage[] = [
     duration: '90-180 minutes',
     priceLabel: 'Custom quote',
     bestFor: 'Sunset VIP bookings',
-    description: 'A VIP sunset marine experience with preferred timing, polished support, and a premium Dubai Islands atmosphere.',
-    image: packageCategoryImageFallbacks.vip
+    description: 'A VIP sunset marine experience with preferred timing, polished support, and a premium Dubai Islands atmosphere.'
   },
   {
     slug: 'private-guided-water-tour',
@@ -553,8 +511,7 @@ export const publicPackages: PublicPackage[] = [
     duration: '90-180 minutes',
     priceLabel: 'Custom quote',
     bestFor: 'Private guided touring',
-    description: 'A private guided water tour for guests who want a tailored Dubai marine route and attentive support.',
-    image: packageCategoryImageFallbacks.vip
+    description: 'A private guided water tour for guests who want a tailored Dubai marine route and attentive support.'
   },
   {
     slug: 'premium-photo-video-ride',
@@ -564,8 +521,7 @@ export const publicPackages: PublicPackage[] = [
     duration: '90-180 minutes',
     priceLabel: 'Custom quote',
     bestFor: 'Content-focused guests',
-    description: 'A premium photo and video ride planned around timing, route, and smooth moments for standout Dubai content.',
-    image: packageCategoryImageFallbacks.vip
+    description: 'A premium photo and video ride planned around timing, route, and smooth moments for standout Dubai content.'
   },
   {
     slug: 'luxury-couple-marine-ride',
@@ -575,8 +531,7 @@ export const publicPackages: PublicPackage[] = [
     duration: '90-180 minutes',
     priceLabel: 'Custom quote',
     bestFor: 'Luxury couples and proposals',
-    description: 'A luxury couple marine ride with private-feeling support, beautiful timing, and refined Dubai water sports details.',
-    image: packageCategoryImageFallbacks.vip
+    description: 'A luxury couple marine ride with private-feeling support, beautiful timing, and refined Dubai water sports details.'
   },
   {
     slug: 'full-premium-edrive-day',
@@ -586,10 +541,14 @@ export const publicPackages: PublicPackage[] = [
     duration: 'Custom VIP timing',
     priceLabel: 'Custom quote',
     bestFor: 'Full premium planning',
-    description: 'A complete premium eDrive day for VIP guests who want custom timing, multiple ride styles, and elevated service.',
-    image: packageCategoryImageFallbacks.vip
+    description: 'A complete premium eDrive day for VIP guests who want custom timing, multiple ride styles, and elevated service.'
   }
 ];
+
+export const publicPackages: PublicPackage[] = publicPackageData.map((item) => ({
+  ...item,
+  image: getPackageImageBySlug(item.slug) || packageCategoryImageFallbacks[item.category]
+}));
 
 export const featuredPackageSlugs = [
   'marina-rush-jet-ski',
