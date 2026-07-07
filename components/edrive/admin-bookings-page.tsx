@@ -29,6 +29,23 @@ type BookingRow = {
   created_at: string | null;
 };
 
+type DebugState = {
+  projectHost: string;
+  table: string;
+  count: number | null;
+  receivedRows: number;
+  lastError: string;
+  lastLoadedAt: string;
+};
+
+const supabaseProjectHost = (() => {
+  try {
+    return new URL(process.env.NEXT_PUBLIC_SUPABASE_URL || '').host || 'missing-url';
+  } catch {
+    return 'invalid-url';
+  }
+})();
+
 function niceDate(value: string | null) {
   if (!value) return 'Not selected';
   return new Intl.DateTimeFormat('en-AE', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(`${value}T12:00:00`));
@@ -51,17 +68,44 @@ export function AdminBookingsLivePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [query, setQuery] = useState('');
+  const [debug, setDebug] = useState<DebugState>({
+    projectHost: supabaseProjectHost,
+    table: bookingRequestsTable,
+    count: null,
+    receivedRows: 0,
+    lastError: '',
+    lastLoadedAt: '-'
+  });
 
   async function loadBookings() {
     setLoading(true);
     setError('');
-    const { data, error: queryError } = await supabase
-      .from(bookingRequestsTable)
-      .select('id, booking_code, status, admin_status, selected_package_name, selected_package_category, experience_type, service_type, preferred_date, preferred_time, customer_name, customer_phone, customer_email, total_amount, payment_status, created_at')
-      .order('created_at', { ascending: false });
 
-    if (queryError) setError(queryError.message);
-    else setBookings((data || []) as BookingRow[]);
+    const { data, error: queryError, count } = await supabase
+      .from(bookingRequestsTable)
+      .select('*', { count: 'exact' })
+      .order('created_at', { ascending: false })
+      .limit(100);
+
+    const rows = (data || []) as BookingRow[];
+    const message = queryError?.message || '';
+
+    setDebug({
+      projectHost: supabaseProjectHost,
+      table: bookingRequestsTable,
+      count: typeof count === 'number' ? count : null,
+      receivedRows: rows.length,
+      lastError: message,
+      lastLoadedAt: new Date().toLocaleString('en-AE')
+    });
+
+    if (queryError) {
+      setError(message);
+      setBookings([]);
+    } else {
+      setBookings(rows);
+    }
+
     setLoading(false);
   }
 
@@ -97,6 +141,17 @@ export function AdminBookingsLivePage() {
           <Metric title="Pending Payments" value={formatAed(pendingPayment)} icon={WalletCards} />
         </div>
 
+        <Card className="mt-5 rounded-[1.35rem] border-primary/15 bg-primary-50/55">
+          <CardContent className="grid gap-2 p-4 text-xs text-primary-900 md:grid-cols-2 xl:grid-cols-5">
+            <div><span className="font-bold">Project:</span> {debug.projectHost}</div>
+            <div><span className="font-bold">Table:</span> {debug.table}</div>
+            <div><span className="font-bold">Count:</span> {debug.count ?? '-'}</div>
+            <div><span className="font-bold">Rows received:</span> {debug.receivedRows}</div>
+            <div><span className="font-bold">Loaded:</span> {debug.lastLoadedAt}</div>
+            {debug.lastError ? <div className="rounded-lg bg-red-50 px-3 py-2 font-semibold text-red-700 md:col-span-2 xl:col-span-5">Supabase error: {debug.lastError}</div> : null}
+          </CardContent>
+        </Card>
+
         <Card className="mt-6 overflow-hidden rounded-[1.5rem] border-border/80 bg-white">
           <CardHeader className="gap-4 border-b border-border/70 bg-[#F7FAFA] sm:flex-row sm:items-center sm:justify-between">
             <CardTitle className="font-heading text-xl font-semibold">Booking list</CardTitle>
@@ -123,8 +178,8 @@ export function AdminBookingsLivePage() {
                 <TableBody>
                   {loading ? <TableRow><TableCell colSpan={7} className="py-8 text-center text-sm text-muted-foreground">Loading bookings...</TableCell></TableRow> : null}
                   {!loading && filtered.length === 0 ? <TableRow><TableCell colSpan={7} className="py-8 text-center text-sm text-muted-foreground">No booking requests found.</TableCell></TableRow> : null}
-                  {filtered.map((booking) => (
-                    <TableRow key={booking.id}>
+                  {filtered.map((booking, index) => (
+                    <TableRow key={booking.id || `${booking.booking_code}-${index}`}>
                       <TableCell className="font-bold text-primary-900">{booking.booking_code}</TableCell>
                       <TableCell>
                         <div className="font-semibold text-foreground">{booking.customer_name || '-'}</div>
