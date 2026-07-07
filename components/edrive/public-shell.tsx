@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { ArrowRight, CalendarCheck, Instagram, LockKeyhole, Mail, MapPin, Menu, Phone, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { companyInfo } from '@/lib/company-info';
+import { companyInfo, whatsappUrl } from '@/lib/company-info';
 import { publicNavItems } from '@/lib/mock-data';
 import { cn } from '@/lib/utils';
 import { BrandMark } from './brand';
@@ -34,7 +34,7 @@ function buildExperienceInquiryMessage(title: string) {
   return [
     `Hello eDrive, I am interested in this water sports experience: ${title}.`,
     '',
-    'Please suggest the best available live package, price, duration, and timing for this experience.',
+    'Please suggest the best available package, price, duration, and timing for this experience.',
     '',
     'My preferred date:',
     'Number of guests:',
@@ -42,16 +42,21 @@ function buildExperienceInquiryMessage(title: string) {
   ].join('\n');
 }
 
-function normalizeStaticExperienceCards() {
-  const staticBookingLinks = Array.from(document.querySelectorAll<HTMLAnchorElement>('a[href*="/booking?package="]'))
-    .filter((anchor) => anchor.textContent?.toLowerCase().includes('book this package'));
+function normalizeBookingButtonsAndMessages() {
+  const bookingLinks = Array.from(document.querySelectorAll<HTMLAnchorElement>('a[href^="/booking"], a[href*="/booking?"]'));
 
+  bookingLinks.forEach((anchor) => {
+    const currentText = anchor.textContent?.trim().toLowerCase() || '';
+    anchor.href = '/booking';
+    if (currentText.includes('book') || currentText.includes('open booking')) {
+      updateLinkText(anchor, 'Book Now');
+    }
+  });
+
+  const staticBookingLinks = bookingLinks.filter((anchor) => anchor.closest('article'));
   staticBookingLinks.forEach((anchor) => {
     const card = anchor.closest('article');
     const title = card?.querySelector('h3')?.textContent?.trim() || 'eDrive water sports experience';
-    anchor.href = '/booking';
-    updateLinkText(anchor, 'Open Booking System');
-
     const whatsappAnchor = card?.querySelector<HTMLAnchorElement>('a[href*="wa.me"]');
     if (!whatsappAnchor) return;
 
@@ -84,7 +89,8 @@ function normalizeExperienceHeadings(pathname: string) {
     'Jet Ski and Jet Car Packages Dubai': 'Jet Ski and Jet Car Experience Ideas',
     'Family Water Sports Packages': 'Family Water Sports Experience Ideas',
     'VIP Water Sports Experiences': 'VIP Water Sports Experience Ideas',
-    'Recommended Rental Packages': 'Recommended Experience Ideas'
+    'Recommended Rental Packages': 'Recommended Experience Ideas',
+    'Packages customers should not miss': 'Recommended Experience Ideas'
   };
 
   document.querySelectorAll('h2').forEach((heading) => {
@@ -116,6 +122,7 @@ function alignFleetGrid(headingText: string) {
 function addFleetCard(grid: HTMLElement) {
   if (grid.querySelector('[data-fleet-added="photo-jet-ski"]')) return;
 
+  const message = encodeURIComponent(buildExperienceInquiryMessage('Photo-Friendly Jet Ski'));
   const card = document.createElement('article');
   card.dataset.fleetAdded = 'photo-jet-ski';
   card.className = 'premium-surface premium-card-hover h-full overflow-hidden rounded-[1.75rem] p-3';
@@ -129,8 +136,8 @@ function addFleetCard(grid: HTMLElement) {
         <div><dt class="font-semibold text-foreground">Best for</dt><dd class="mt-1 text-muted-foreground">Skyline photos, beginner-friendly routes, and golden-hour Dubai water sports content.</dd></div>
       </dl>
       <div class="mt-5 flex flex-col gap-2 sm:flex-row">
-        <a href="/rentals#live-packages" class="inline-flex h-9 items-center justify-center gap-2 whitespace-nowrap rounded-full bg-primary-900 px-4 text-xs font-bold text-white shadow-[0_8px_18px_rgba(8,37,50,0.18)] transition hover:bg-primary-800">View Live Packages</a>
-        <a href="/rentals#jet-ski-packages" class="inline-flex h-9 items-center justify-center whitespace-nowrap rounded-full border border-border bg-white px-4 text-xs font-bold text-foreground transition hover:bg-primary-50">View Ride Ideas</a>
+        <a href="/booking" class="inline-flex h-9 items-center justify-center gap-2 whitespace-nowrap rounded-full bg-primary-900 px-4 text-xs font-bold text-white shadow-[0_8px_18px_rgba(8,37,50,0.18)] transition hover:bg-primary-800">Book Now</a>
+        <a href="${whatsappUrl}?text=${message}" target="_blank" rel="noopener noreferrer" class="inline-flex h-9 items-center justify-center whitespace-nowrap rounded-full border border-emerald-300 bg-emerald-500 px-4 text-xs font-bold text-white transition hover:bg-emerald-600">Ask on WhatsApp</a>
       </div>
     </div>
   `;
@@ -154,6 +161,39 @@ function refineFleetPage(pathname: string) {
   });
 }
 
+function replaceTextEverywhere(from: string, to: string) {
+  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  const nodes: Text[] = [];
+  while (walker.nextNode()) nodes.push(walker.currentNode as Text);
+  nodes.forEach((node) => {
+    if (node.nodeValue?.includes(from)) node.nodeValue = node.nodeValue.replace(from, to);
+  });
+}
+
+function refineHomePage(pathname: string) {
+  if (pathname !== '/') return;
+
+  replaceTextEverywhere('50 Static packages', '50 Experience ideas');
+  replaceTextEverywhere('Static packages', 'Experience ideas');
+  replaceTextEverywhere('Choose, book, confirm, ride.', '');
+
+  const processHeading = findHeading('From package card to confirmed water time');
+  const section = processHeading?.closest('section');
+  const image = section?.querySelector<HTMLImageElement>('img');
+  if (image) {
+    image.src = '/images/edrive/packages/jet-car/jet-car-package-19.webp';
+    image.removeAttribute('srcset');
+    image.style.objectPosition = 'center';
+  }
+
+  section?.querySelectorAll<HTMLElement>('[class*="gradient"], [class*="absolute"]').forEach((element) => {
+    const text = element.textContent?.trim() || '';
+    if (!text || text.includes('Choose') || text.includes('book') || text.includes('confirm')) {
+      element.style.display = 'none';
+    }
+  });
+}
+
 export function PublicShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const currentPath = normalizePath(pathname);
@@ -168,15 +208,16 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    const applyPublicPackageRules = () => {
+    const applyPublicPageRules = () => {
       moveLivePackagesNearTop(currentPath);
-      normalizeStaticExperienceCards();
+      normalizeBookingButtonsAndMessages();
       normalizeExperienceHeadings(currentPath);
       refineFleetPage(currentPath);
+      refineHomePage(currentPath);
     };
 
-    applyPublicPackageRules();
-    const timeout = window.setTimeout(applyPublicPackageRules, 650);
+    applyPublicPageRules();
+    const timeout = window.setTimeout(applyPublicPageRules, 650);
     return () => window.clearTimeout(timeout);
   }, [currentPath]);
 
