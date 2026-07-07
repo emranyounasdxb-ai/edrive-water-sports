@@ -44,6 +44,11 @@ function displayCapacity(category: string, fallback: number) {
   return fallback || 2;
 }
 
+function displayDescription(item: LivePackage) {
+  const text = item.short_description || 'Premium eDrive water sports package with team support and booking confirmation.';
+  return item.category === 'jet_car_rental' ? text.replace('2 seater', '4 seater') : text;
+}
+
 function imageForLivePackage(item: LivePackage, index = 0) {
   const seed = Number(item.display_order || index || 0);
   return getLivePackageImage(item.category, seed);
@@ -122,6 +127,7 @@ function LivePackageCard({ item, index }: { item: LivePackage; index: number }) 
   const bookingHref = '/booking';
   const displayTitle = cleanPackageTitle(item.title);
   const capacity = displayCapacity(item.category, item.capacity);
+  const description = displayDescription(item);
   const whatsappMessage = encodeURIComponent(`Hello eDrive, I am interested in this water sports experience: ${item.title}.
 
 Please suggest the best available package, price, duration, and timing for this experience.
@@ -164,7 +170,7 @@ Preferred location:`);
           <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground"><Clock className="size-3.5 text-primary" aria-hidden="true" />{item.duration_minutes} minutes</p>
           <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground"><Users className="size-3.5 text-primary" aria-hidden="true" />{capacity} seater</p>
         </div>
-        <p className="mt-3 text-[13px] leading-6 text-muted-foreground">{item.short_description || 'Premium eDrive water sports package with team support and booking confirmation.'}</p>
+        <p className="mt-3 text-[13px] leading-6 text-muted-foreground">{description}</p>
         <div className="mt-auto grid gap-2 pt-4">
           <Button asChild size="sm" className="h-9 w-full rounded-full text-[11px] font-bold shadow-[0_8px_18px_rgba(8,37,50,0.16)]"><Link href={bookingHref} className="justify-center">Book Now<ArrowRight className="ml-1 size-3.5 shrink-0" aria-hidden="true" /></Link></Button>
           <Button asChild size="sm" variant="outline" className="h-9 w-full rounded-full border-emerald-300 bg-emerald-500 text-[11px] font-bold text-white shadow-[0_8px_18px_rgba(16,185,129,0.18)] hover:bg-emerald-600 hover:text-white"><a href={`${whatsappUrl}?text=${whatsappMessage}`} target="_blank" rel="noopener noreferrer" className="justify-center"><MessageCircle className="size-3.5 shrink-0" aria-hidden="true" />Ask on WhatsApp</a></Button>
