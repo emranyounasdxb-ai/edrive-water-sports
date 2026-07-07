@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
-import { PublicShell } from '@/components/edrive/public-shell';
+import { PublicShellClean } from '@/components/edrive/public-shell-clean';
 
 export default function PublicLayout({ children }: { children: ReactNode }) {
-  return <PublicShell>{children}</PublicShell>;
+  return <PublicShellClean>{children}</PublicShellClean>;
 }
