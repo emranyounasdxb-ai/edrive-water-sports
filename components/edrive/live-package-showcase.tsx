@@ -1,8 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
-import { ArrowRight, Clock, MapPin, MessageCircle, TicketCheck, Users } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { ArrowRight, Clock, MessageCircle, TicketCheck, Users } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/supabase-client';
@@ -15,7 +15,6 @@ type LivePackage = {
   title: string;
   slug: string;
   category: string;
-  location: string;
   duration_minutes: number;
   base_price: number;
   b2b_price: number;
@@ -45,8 +44,7 @@ function displayCapacity(category: string, fallback: number) {
 }
 
 function displayDescription(item: LivePackage) {
-  const text = item.short_description || 'Premium eDrive water sports package with team support and booking confirmation.';
-  return item.category === 'jet_car_rental' ? text.replace('2 seater', '4 seater') : text;
+  return item.short_description || 'Premium eDrive water sports package with team support and booking confirmation.';
 }
 
 function imageForLivePackage(item: LivePackage, index = 0) {
@@ -55,27 +53,21 @@ function imageForLivePackage(item: LivePackage, index = 0) {
 }
 
 function cleanPackageTitle(title: string) {
-  return title
-    .replace(/\s+[–-]\s*\d+\s*(?:minute|minutes|min|mins)$/i, '')
-    .replace(/\s+\d+\s*seater\b/i, '')
-    .replace(/\s+/g, ' ')
-    .trim();
+  return title.replace(/\s+/g, ' ').trim();
 }
 
 export function LivePackageShowcase({ title = 'Live Booking Packages', text = '', limit, compact = false }: { title?: string; text?: string; limit?: number; compact?: boolean }) {
   const [items, setItems] = useState<LivePackage[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedLocation, setSelectedLocation] = useState('All');
 
   useEffect(() => {
     async function loadPackages() {
       setLoading(true);
       const { data } = await supabase
         .from('packages')
-        .select('id,title,slug,category,location,duration_minutes,base_price,b2b_price,capacity,image_url,short_description,status,is_featured,display_order')
+        .select('id,title,slug,category,duration_minutes,base_price,b2b_price,capacity,image_url,short_description,status,is_featured,display_order')
         .eq('status', 'active')
         .order('display_order', { ascending: true })
-        .order('location', { ascending: true })
         .order('capacity', { ascending: true })
         .order('duration_minutes', { ascending: true });
       setItems(((data || []) as LivePackage[]).filter((item) => Number(item.base_price) > 0));
@@ -84,11 +76,7 @@ export function LivePackageShowcase({ title = 'Live Booking Packages', text = ''
     loadPackages();
   }, []);
 
-  const locations = useMemo(() => ['All', ...Array.from(new Set(items.map((item) => item.location).filter(Boolean)))], [items]);
-  const visibleItems = useMemo(() => {
-    const filtered = selectedLocation === 'All' ? items : items.filter((item) => item.location === selectedLocation);
-    return typeof limit === 'number' ? filtered.slice(0, limit) : filtered;
-  }, [items, limit, selectedLocation]);
+  const visibleItems = typeof limit === 'number' ? items.slice(0, limit) : items;
 
   if (!loading && !items.length) return null;
 
@@ -103,14 +91,6 @@ export function LivePackageShowcase({ title = 'Live Booking Packages', text = ''
             <h2 className="section-title">{title}</h2>
             {text ? <p className="mt-3 max-w-2xl text-sm leading-7 text-muted-foreground sm:text-base">{text}</p> : null}
           </div>
-          {!limit ? (
-            <label className="grid gap-1.5 text-sm font-semibold text-foreground">
-              Location
-              <select value={selectedLocation} onChange={(event) => setSelectedLocation(event.target.value)} className="h-10 rounded-xl border border-border bg-white px-3 text-sm text-foreground outline-none focus:border-primary">
-                {locations.map((location) => <option key={location}>{location}</option>)}
-              </select>
-            </label>
-          ) : null}
         </div>
 
         <div className={cn('mt-7 grid gap-4 md:grid-cols-2', compact ? 'xl:grid-cols-5' : 'xl:grid-cols-3')}>
@@ -133,20 +113,13 @@ function LivePackageCard({ item, index }: { item: LivePackage; index: number }) 
 Please suggest the best available package, price, duration, and timing for this experience.
 
 My preferred date:
-Number of guests:
-Preferred location:`);
+Number of guests:`);
 
   return (
     <article className="premium-surface premium-card-hover flex h-full min-w-0 flex-col overflow-hidden rounded-[1.45rem] p-2.5">
       <div className="relative aspect-[16/9] w-full overflow-hidden rounded-[1.05rem] bg-primary-50">
         {imageSrc && !imageFailed ? (
-          <img
-            src={imageSrc}
-            alt={item.title}
-            onError={() => setImageFailed(true)}
-            className="h-full w-full object-cover object-center transition duration-700 hover:scale-105"
-            loading="lazy"
-          />
+          <img src={imageSrc} alt={item.title} onError={() => setImageFailed(true)} className="h-full w-full object-cover object-center transition duration-700 hover:scale-105" loading="lazy" />
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-primary-100 via-white to-accent-100 text-primary">
             <TicketCheck className="size-7" aria-hidden="true" />
@@ -160,11 +133,7 @@ Preferred location:`);
       </div>
 
       <div className="flex flex-1 flex-col px-3 pb-2.5 pt-3">
-        <div>
-          <h3 className="font-heading text-[0.95rem] font-semibold leading-[1.35] tracking-[-0.01em] text-foreground sm:text-[1rem]">{displayTitle}</h3>
-          <p className="mt-2 flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground"><MapPin className="size-3.5 text-primary" aria-hidden="true" />{item.location}</p>
-        </div>
-
+        <h3 className="font-heading text-[0.95rem] font-semibold leading-[1.35] tracking-[-0.01em] text-foreground sm:text-[1rem]">{displayTitle}</h3>
         <div className="mt-3 grid gap-1.5 rounded-[1rem] bg-primary-50 px-3.5 py-3 text-xs">
           <p className="font-semibold text-primary-900">From {formatAed(item.base_price)}</p>
           <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground"><Clock className="size-3.5 text-primary" aria-hidden="true" />{item.duration_minutes} minutes</p>
