@@ -27,7 +27,6 @@ export type BookingDraft = {
   selectedPackageName?: string;
   selectedPackageSlug?: string;
   selectedPackageCategory?: string;
-  selectedPackageLocation?: string;
   selectedPackagePrice?: number;
   selectedPackageB2BPrice?: number;
   selectedPackageCapacity?: number;
@@ -54,7 +53,6 @@ export type BookingRequest = {
   selectedPackageName?: string | null;
   selectedPackageSlug?: string | null;
   selectedPackageCategory?: string | null;
-  selectedPackageLocation?: string | null;
   selectedPackagePrice?: number | null;
   selectedPackageB2BPrice?: number | null;
   selectedPackageCapacity?: number | null;
