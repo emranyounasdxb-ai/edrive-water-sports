@@ -6,9 +6,9 @@ import { ArrowLeft, ArrowRight, CalendarDays, Check, ChevronDown, ChevronLeft, C
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { BookingDraft, BookingRequest, durationPackages, experienceOptions, formatAed, formatDuration, generateBookingCode, getBookingTotals, getExperience, initialBookingDraft, inquiryTypes, timeSlots } from '@/lib/booking-data';
+import { BookingDraft, BookingRateOption, BookingRequest, durationPackages, experienceOptions, formatAed, formatDuration, generateBookingCode, getBookingTotals, getCapacityPerVehicle, getExperience, getSelectedRateForDuration, initialBookingDraft, inquiryTypes, timeSlots } from '@/lib/booking-data';
 import { companyInfo } from '@/lib/company-info';
-import { getPublicPackageBySlug, packageCategoryLabels, type PublicPackage } from '@/lib/public-packages';
+import { supabase } from '@/lib/supabase-client';
 import { cn } from '@/lib/utils';
 import { BookingInfoAccordions } from './booking-info-accordions';
 import { BookingSuccess } from './booking-success';
@@ -18,37 +18,78 @@ const STORAGE_KEY = 'edrive-booking-requests';
 const steps = ['Select Experience', 'Select Duration', 'Vehicles & Guests', 'Date & Time', 'Contact Details', 'Review & Submit'];
 const fieldLabel = 'grid gap-1.5 text-sm font-semibold text-foreground';
 
-function durationFromPackage(packageItem: PublicPackage, fallback: number) {
-  const match = packageItem.duration.match(/^(\d+)/);
-  if (!match) return fallback;
-  const minutes = Number(match[1]);
-  return [30, 60, 90, 120].includes(minutes) ? minutes : fallback;
+const packageCategoryLabels: Record<string, string> = {
+  jet_car_rental: 'Jet Car Rental',
+  jet_ski_rental: 'Jet Ski Rental',
+  yacht_rental: 'Yacht Rental'
+};
+
+type SelectedRide = {
+  title: string;
+  detail: string;
+};
+
+type PackageRateRow = {
+  id: string;
+  title: string;
+  slug: string;
+  category: string;
+  duration_minutes: number;
+  base_price: number;
+  b2b_price: number | null;
+  capacity: number;
+};
+
+function experienceTypeFromCategory(category: string): BookingDraft['experienceType'] {
+  if (category === 'jet_car_rental') return 'jet-car-rental';
+  return 'jet-ski-rental';
 }
 
-function draftFromPackage(packageItem?: PublicPackage): BookingDraft {
-  if (!packageItem) return initialBookingDraft;
-  const experienceType: BookingDraft['experienceType'] = packageItem.category === 'jet-car' ? 'jet-car-rental' : 'jet-ski-rental';
-  const fallbackDuration = packageItem.category === 'vip' ? 90 : 60;
+function categoryLabel(category: string) {
+  return packageCategoryLabels[category] || 'Water Sports Rental';
+}
 
-  return {
-    ...initialBookingDraft,
-    selectedPackageName: packageItem.name,
-    selectedPackageSlug: packageItem.slug,
-    selectedPackageCategory: packageCategoryLabels[packageItem.category],
-    experienceType,
-    durationMinutes: durationFromPackage(packageItem, fallbackDuration),
-    customerNotes: `Best for: ${packageItem.bestFor}.`
-  };
+function rideTitle(category: string, capacity: number) {
+  if (category === 'jet_car_rental') return `Jet Car ${capacity} Seater`;
+  if (category === 'jet_ski_rental') return `Jet Ski ${capacity} Seater`;
+  return categoryLabel(category);
+}
+
+function rideSlug(category: string, capacity: number) {
+  if (category === 'jet_car_rental') return `jet-car-${capacity}-seater`;
+  if (category === 'jet_ski_rental') return `jet-ski-${capacity}-seater`;
+  return `package-${capacity}-seater`;
+}
+
+function mapRates(rows: PackageRateRow[]): BookingRateOption[] {
+  return rows
+    .map((row) => ({
+      id: row.id,
+      title: row.title,
+      slug: row.slug,
+      category: row.category,
+      minutes: Number(row.duration_minutes || 0),
+      price: Number(row.base_price || 0),
+      b2bPrice: Number(row.b2b_price || 0),
+      capacity: Number(row.capacity || 2)
+    }))
+    .filter((rate) => rate.minutes > 0 && rate.price > 0)
+    .sort((a, b) => a.minutes - b.minutes);
+}
+
+function durationDetail(rates: BookingRateOption[]) {
+  return rates.map((rate) => `${rate.minutes} min ${formatAed(rate.price)}`).join(' · ');
 }
 
 export function BookingWizard() {
   const [step, setStep] = useState(0);
   const [draft, setDraft] = useState<BookingDraft>(initialBookingDraft);
-  const [selectedPackage, setSelectedPackage] = useState<PublicPackage | null>(null);
+  const [selectedRide, setSelectedRide] = useState<SelectedRide | null>(null);
   const [submitted, setSubmitted] = useState<BookingRequest | null>(null);
   const experience = getExperience(draft.experienceType);
   const isSales = experience.serviceType === 'sales_inquiry';
-  const capacity = draft.vehicleQuantity * experience.capacity;
+  const capacityPerVehicle = getCapacityPerVehicle(draft);
+  const capacity = draft.vehicleQuantity * capacityPerVehicle;
   const capacityExceeded = draft.guestCount > capacity;
 
   function updateDraft(values: Partial<BookingDraft>) {
@@ -56,20 +97,72 @@ export function BookingWizard() {
   }
 
   useEffect(() => {
-    const slug = new URLSearchParams(window.location.search).get('package');
-    const packageItem = getPublicPackageBySlug(slug);
-    if (!packageItem) return;
+    const params = new URLSearchParams(window.location.search);
+    const category = params.get('category');
+    const selectedCapacity = Number(params.get('capacity') || 0);
 
-    setSelectedPackage(packageItem);
-    setDraft(draftFromPackage(packageItem));
+    if (!category || !selectedCapacity) return;
+
+    let active = true;
+
+    async function loadSelectedVehicleRates() {
+      const { data } = await supabase
+        .from('packages')
+        .select('id,title,slug,category,duration_minutes,base_price,b2b_price,capacity')
+        .eq('status', 'active')
+        .eq('category', category)
+        .eq('capacity', selectedCapacity)
+        .order('duration_minutes', { ascending: true });
+
+      if (!active) return;
+      const rates = mapRates((data || []) as PackageRateRow[]);
+      if (!rates.length) return;
+
+      const preferredRate = rates.find((rate) => rate.minutes === 60) || rates[0];
+      const title = rideTitle(category, selectedCapacity);
+      const experienceType = experienceTypeFromCategory(category);
+
+      setSelectedRide({ title, detail: `${selectedCapacity} seater · ${durationDetail(rates)}` });
+      setDraft({
+        ...initialBookingDraft,
+        selectedPackageName: title,
+        selectedPackageSlug: rideSlug(category, selectedCapacity),
+        selectedPackageCategory: categoryLabel(category),
+        selectedPackageCapacity: selectedCapacity,
+        selectedPackagePrice: preferredRate.price,
+        selectedPackageB2BPrice: preferredRate.b2bPrice,
+        selectedPackageRates: rates,
+        experienceType,
+        durationMinutes: preferredRate.minutes,
+        inquiryType: '',
+        vehicleQuantity: 1,
+        guestCount: selectedCapacity
+      });
+    }
+
+    void loadSelectedVehicleRates();
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   function selectExperience(experienceType: BookingDraft['experienceType']) {
     const nextExperience = getExperience(experienceType);
+    setSelectedRide(null);
     updateDraft({
+      selectedPackageName: undefined,
+      selectedPackageSlug: undefined,
+      selectedPackageCategory: undefined,
+      selectedPackagePrice: undefined,
+      selectedPackageB2BPrice: undefined,
+      selectedPackageCapacity: undefined,
+      selectedPackageRates: undefined,
       experienceType,
       durationMinutes: nextExperience.serviceType === 'rental' ? 60 : 0,
       inquiryType: nextExperience.serviceType === 'sales_inquiry' ? 'Price Quote' : '',
+      vehicleQuantity: 1,
+      guestCount: nextExperience.capacity
     });
   }
 
@@ -82,6 +175,7 @@ export function BookingWizard() {
 
   function submitRequest() {
     const totals = getBookingTotals(draft);
+    const selectedRate = getSelectedRateForDuration(draft);
     let existing: BookingRequest[] = [];
     try {
       const stored = window.localStorage.getItem(STORAGE_KEY);
@@ -100,6 +194,9 @@ export function BookingWizard() {
       selectedPackageName: draft.selectedPackageName ?? null,
       selectedPackageSlug: draft.selectedPackageSlug ?? null,
       selectedPackageCategory: draft.selectedPackageCategory ?? null,
+      selectedPackagePrice: isSales ? null : selectedRate?.price ?? draft.selectedPackagePrice ?? null,
+      selectedPackageB2BPrice: isSales ? null : selectedRate?.b2bPrice ?? draft.selectedPackageB2BPrice ?? null,
+      selectedPackageCapacity: isSales ? null : getCapacityPerVehicle(draft),
       experienceType: draft.experienceType,
       serviceType: experience.serviceType,
       durationMinutes: isSales ? 0 : draft.durationMinutes,
@@ -115,7 +212,7 @@ export function BookingWizard() {
       customerEmail: draft.customerEmail.trim() || null,
       customerHotelOrArea: draft.customerHotelOrArea.trim() || null,
       customerNotes: [
-        draft.selectedPackageName ? `Selected package: ${draft.selectedPackageName}${draft.selectedPackageCategory ? ` (${draft.selectedPackageCategory})` : ''}.` : '',
+        draft.selectedPackageName ? `Selected vehicle: ${draft.selectedPackageName}${draft.selectedPackageCategory ? ` (${draft.selectedPackageCategory})` : ''}. Duration: ${formatDuration(draft.durationMinutes)}.` : '',
         draft.customerNotes.trim()
       ].filter(Boolean).join(' ') || null,
       subtotal: totals.subtotal,
@@ -132,7 +229,20 @@ export function BookingWizard() {
   }
 
   function startAnother() {
-    setDraft(draftFromPackage(selectedPackage ?? undefined));
+    setDraft((current) => ({
+      ...initialBookingDraft,
+      selectedPackageName: current.selectedPackageName,
+      selectedPackageSlug: current.selectedPackageSlug,
+      selectedPackageCategory: current.selectedPackageCategory,
+      selectedPackagePrice: current.selectedPackagePrice,
+      selectedPackageB2BPrice: current.selectedPackageB2BPrice,
+      selectedPackageCapacity: current.selectedPackageCapacity,
+      selectedPackageRates: current.selectedPackageRates,
+      experienceType: current.experienceType,
+      durationMinutes: current.durationMinutes,
+      vehicleQuantity: 1,
+      guestCount: current.selectedPackageCapacity || getExperience(current.experienceType).capacity
+    }));
     setStep(0);
     setSubmitted(null);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -144,7 +254,7 @@ export function BookingWizard() {
     <section className="container-x pb-10 pt-3 sm:pb-12">
       <div className="mx-auto max-w-6xl">
         <WizardProgress currentStep={step} onStepSelect={setStep} />
-        {selectedPackage ? <SelectedPackageNotice packageItem={selectedPackage} /> : null}
+        {selectedRide ? <SelectedRideNotice ride={selectedRide} /> : null}
 
         <details className="group mt-3 lg:hidden">
           <summary className="flex cursor-pointer list-none items-center justify-between rounded-[1.25rem] border border-white/80 bg-white/80 px-4 py-2.5 text-sm font-semibold text-foreground shadow-sm">
@@ -164,7 +274,7 @@ export function BookingWizard() {
 
               {step === 0 ? <ExperienceStep selected={draft.experienceType} onSelect={selectExperience} /> : null}
               {step === 1 ? <DurationStep draft={draft} onUpdate={updateDraft} /> : null}
-              {step === 2 ? <PartyStep draft={draft} capacity={capacity} exceeded={capacityExceeded} onUpdate={updateDraft} /> : null}
+              {step === 2 ? <PartyStep draft={draft} capacity={capacity} capacityPerVehicle={capacityPerVehicle} exceeded={capacityExceeded} onUpdate={updateDraft} /> : null}
               {step === 3 ? <ScheduleStep draft={draft} onUpdate={updateDraft} /> : null}
               {step === 4 ? <ContactStep draft={draft} onUpdate={updateDraft} /> : null}
               {step === 5 ? <ReviewStep draft={draft} /> : null}
@@ -209,18 +319,18 @@ function WizardProgress({ currentStep, onStepSelect }: { currentStep: number; on
   );
 }
 
-function SelectedPackageNotice({ packageItem }: { packageItem: PublicPackage }) {
+function SelectedRideNotice({ ride }: { ride: SelectedRide }) {
   return (
     <div className="mt-5 rounded-[1.5rem] border border-primary/15 bg-primary-50 p-4 text-left sm:flex sm:items-center sm:justify-between sm:gap-5">
       <div className="flex items-start gap-3">
         <span className="mt-0.5 flex size-10 shrink-0 items-center justify-center rounded-full bg-white text-primary shadow-sm"><TicketCheck className="size-5" aria-hidden="true" /></span>
         <div>
-          <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary">Selected package</p>
-          <h2 className="mt-1 font-heading text-xl font-semibold text-foreground">{packageItem.name}</h2>
-          <p className="mt-1 text-sm leading-6 text-muted-foreground">{packageCategoryLabels[packageItem.category]} · {packageItem.duration} · {packageItem.priceLabel}</p>
+          <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary">Selected vehicle</p>
+          <h2 className="mt-1 font-heading text-xl font-semibold text-foreground">{ride.title}</h2>
+          <p className="mt-1 text-sm leading-6 text-muted-foreground">{ride.detail}</p>
         </div>
       </div>
-      <p className="mt-3 max-w-sm text-xs leading-5 text-primary-900 sm:mt-0">You can still edit the ride type, date, guests, and notes before submitting.</p>
+      <p className="mt-3 max-w-sm text-xs leading-5 text-primary-900 sm:mt-0">Choose the exact duration in the next step. The price will update automatically.</p>
     </div>
   );
 }
@@ -244,16 +354,16 @@ function ExperienceStep({ selected, onSelect }: { selected: BookingDraft['experi
 function DurationStep({ draft, onUpdate }: { draft: BookingDraft; onUpdate: (values: Partial<BookingDraft>) => void }) {
   const experience = getExperience(draft.experienceType);
   if (experience.serviceType === 'sales_inquiry') return <div><p className="mb-3 text-sm leading-6 text-muted-foreground">Tell us what kind of sales help you need.</p><div className="grid gap-3 sm:grid-cols-2">{inquiryTypes.map((type) => <ChoiceButton key={type} active={draft.inquiryType === type} onClick={() => onUpdate({ inquiryType: type })} title={type} detail="Direct follow-up" />)}</div></div>;
-  const packages = durationPackages[draft.experienceType as keyof typeof durationPackages];
-  return <div><p className="mb-3 text-sm leading-6 text-muted-foreground">Prices shown are per vehicle.</p><div className="grid gap-3 sm:grid-cols-2">{packages.map((item) => <ChoiceButton key={item.minutes} active={draft.durationMinutes === item.minutes} onClick={() => onUpdate({ durationMinutes: item.minutes })} title={formatDuration(item.minutes)} detail={formatAed(item.price)} />)}</div></div>;
+  const packages = draft.selectedPackageRates?.length ? draft.selectedPackageRates : durationPackages[draft.experienceType as keyof typeof durationPackages].map((item) => ({ category: draft.experienceType, minutes: item.minutes, price: item.price, capacity: getCapacityPerVehicle(draft) }));
+  return <div><p className="mb-3 text-sm leading-6 text-muted-foreground">Prices shown are per vehicle. Selected vehicle: {getCapacityPerVehicle(draft)} seater.</p><div className="grid gap-3 sm:grid-cols-2">{packages.map((item) => <ChoiceButton key={item.minutes} active={draft.durationMinutes === item.minutes} onClick={() => onUpdate({ durationMinutes: item.minutes, selectedPackagePrice: item.price, selectedPackageB2BPrice: item.b2bPrice, selectedPackageCapacity: item.capacity })} title={formatDuration(item.minutes)} detail={formatAed(item.price)} />)}</div></div>;
 }
 
 function ChoiceButton({ active, onClick, title, detail }: { active: boolean; onClick: () => void; title: string; detail: string }) {
   return <button type="button" onClick={onClick} className={cn('flex items-center justify-between gap-4 rounded-[1.15rem] border bg-white p-4 text-left transition', active ? 'border-primary bg-primary-50 shadow-sm' : 'border-border hover:border-primary/35')} aria-pressed={active}><span><span className="block font-semibold text-foreground">{title}</span><span className="mt-1 block text-xs text-muted-foreground">{detail}</span></span><span className={cn('flex size-5 shrink-0 items-center justify-center rounded-full border', active ? 'border-primary bg-primary text-white' : 'border-border')}>{active ? <Check className="size-3" aria-hidden="true" /> : null}</span></button>;
 }
 
-function PartyStep({ draft, capacity, exceeded, onUpdate }: { draft: BookingDraft; capacity: number; exceeded: boolean; onUpdate: (values: Partial<BookingDraft>) => void }) {
-  return <div><p className="mb-4 text-sm leading-6 text-muted-foreground">Each vehicle can carry up to 2 guests.</p><div className="grid gap-3 sm:grid-cols-2"><Counter label="Vehicles" helper="Up to 2 guests each" value={draft.vehicleQuantity} min={1} max={6} onChange={(vehicleQuantity) => onUpdate({ vehicleQuantity })} /><Counter label="Guests" helper={`Current capacity: ${capacity}`} value={draft.guestCount} min={1} max={12} onChange={(guestCount) => onUpdate({ guestCount })} /></div><div className={cn('mt-4 rounded-[1.15rem] border px-4 py-3 text-sm', exceeded ? 'border-red-200 bg-red-50 text-red-700' : 'border-primary/15 bg-primary-50 text-primary-900')} role="status">{exceeded ? `Please add ${Math.ceil(draft.guestCount / 2) - draft.vehicleQuantity} more vehicle${Math.ceil(draft.guestCount / 2) - draft.vehicleQuantity === 1 ? '' : 's'} for ${draft.guestCount} guests.` : `${draft.vehicleQuantity} ${draft.vehicleQuantity === 1 ? 'vehicle' : 'vehicles'} can accommodate your party of ${draft.guestCount}.`}</div></div>;
+function PartyStep({ draft, capacity, capacityPerVehicle, exceeded, onUpdate }: { draft: BookingDraft; capacity: number; capacityPerVehicle: number; exceeded: boolean; onUpdate: (values: Partial<BookingDraft>) => void }) {
+  return <div><p className="mb-4 text-sm leading-6 text-muted-foreground">Each selected vehicle can carry up to {capacityPerVehicle} guests.</p><div className="grid gap-3 sm:grid-cols-2"><Counter label="Vehicles" helper={`Up to ${capacityPerVehicle} guests each`} value={draft.vehicleQuantity} min={1} max={6} onChange={(vehicleQuantity) => onUpdate({ vehicleQuantity })} /><Counter label="Guests" helper={`Current capacity: ${capacity}`} value={draft.guestCount} min={1} max={12} onChange={(guestCount) => onUpdate({ guestCount })} /></div><div className={cn('mt-4 rounded-[1.15rem] border px-4 py-3 text-sm', exceeded ? 'border-red-200 bg-red-50 text-red-700' : 'border-primary/15 bg-primary-50 text-primary-900')} role="status">{exceeded ? `Please add ${Math.ceil(draft.guestCount / capacityPerVehicle) - draft.vehicleQuantity} more vehicle${Math.ceil(draft.guestCount / capacityPerVehicle) - draft.vehicleQuantity === 1 ? '' : 's'} for ${draft.guestCount} guests.` : `${draft.vehicleQuantity} ${draft.vehicleQuantity === 1 ? 'vehicle' : 'vehicles'} can accommodate your party of ${draft.guestCount}.`}</div></div>;
 }
 
 function Counter({ label, helper, value, min, max, onChange }: { label: string; helper: string; value: number; min: number; max: number; onChange: (value: number) => void }) {
@@ -281,7 +391,7 @@ function ReviewStep({ draft }: { draft: BookingDraft }) {
   const totals = getBookingTotals(draft);
   const isSales = experience.serviceType === 'sales_inquiry';
   const date = new Intl.DateTimeFormat('en-AE', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(`${draft.preferredDate}T12:00:00`));
-  return <div><div className="grid gap-3 sm:grid-cols-2"><ReviewGroup title="Experience" items={[[experience.title, isSales ? draft.inquiryType : formatDuration(draft.durationMinutes)], ...(draft.selectedPackageName ? [[draft.selectedPackageName, draft.selectedPackageCategory ?? 'Public package']] : []), [`${draft.vehicleQuantity} ${draft.vehicleQuantity === 1 ? 'vehicle' : 'vehicles'}`, `${draft.guestCount} ${draft.guestCount === 1 ? 'guest' : 'guests'}`]]} /><ReviewGroup title="Schedule" items={[[date, draft.preferredTime], [companyInfo.locationName, companyInfo.locationAddress]]} /><ReviewGroup title="Contact" items={[[draft.customerName, draft.customerPhone], [draft.customerEmail || 'Email not provided', draft.customerHotelOrArea || 'Area not provided']]} /><ReviewGroup title={isSales ? 'Pricing' : 'Estimate'} items={[[isSales ? 'Request quote' : formatAed(totals.totalAmount), isSales ? 'Our sales team will follow up' : 'Includes 5% VAT'], ['Payment status', 'Not Paid']]} /></div>{draft.customerNotes ? <div className="mt-3 rounded-[1.15rem] border border-border bg-white p-4"><p className="text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">Notes</p><p className="mt-2 text-sm leading-6 text-foreground">{draft.customerNotes}</p></div> : null}<div className="mt-4 rounded-[1.15rem] border border-primary/15 bg-primary-50 p-4 text-sm leading-6 text-primary-900">Submitting sends a request only. Your booking becomes final after our team confirms availability with you.</div></div>;
+  return <div><div className="grid gap-3 sm:grid-cols-2"><ReviewGroup title="Experience" items={[[draft.selectedPackageName || experience.title, isSales ? draft.inquiryType : formatDuration(draft.durationMinutes)], ...(draft.selectedPackageCapacity ? [[`${draft.selectedPackageCapacity} seater`, draft.selectedPackageCategory ?? 'Selected vehicle']] : []), [`${draft.vehicleQuantity} ${draft.vehicleQuantity === 1 ? 'vehicle' : 'vehicles'}`, `${draft.guestCount} ${draft.guestCount === 1 ? 'guest' : 'guests'}`]]} /><ReviewGroup title="Schedule" items={[[date, draft.preferredTime], [companyInfo.locationName, companyInfo.locationAddress]]} /><ReviewGroup title="Contact" items={[[draft.customerName, draft.customerPhone], [draft.customerEmail || 'Email not provided', draft.customerHotelOrArea || 'Area not provided']]} /><ReviewGroup title={isSales ? 'Pricing' : 'Estimate'} items={[[isSales ? 'Request quote' : formatAed(totals.totalAmount), isSales ? 'Our sales team will follow up' : 'Includes 5% VAT'], ['Payment status', 'Not Paid']]} /></div>{draft.customerNotes ? <div className="mt-3 rounded-[1.15rem] border border-border bg-white p-4"><p className="text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">Notes</p><p className="mt-2 text-sm leading-6 text-foreground">{draft.customerNotes}</p></div> : null}<div className="mt-4 rounded-[1.15rem] border border-primary/15 bg-primary-50 p-4 text-sm leading-6 text-primary-900">Submitting sends a request only. Your booking becomes final after our team confirms availability with you.</div></div>;
 }
 
 function ReviewGroup({ title, items }: { title: string; items: string[][] }) {
