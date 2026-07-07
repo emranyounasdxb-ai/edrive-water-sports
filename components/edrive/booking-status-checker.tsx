@@ -11,6 +11,7 @@ import { supabase } from '@/lib/supabase-client';
 import { cn } from '@/lib/utils';
 
 const STORAGE_KEY = 'edrive-booking-requests';
+const bookingStatusBaseUrl = 'https://edrivedubai.ae/booking-status';
 
 function cleanRef(value: string) {
   return value.trim().toUpperCase();
@@ -77,9 +78,9 @@ export function BookingStatusChecker() {
   const whatsappMessage = useMemo(() => encodeURIComponent(`Hello eDrive, I want to check my booking status. Reference: ${reference || 'ED-'}`), [reference]);
 
   return (
-    <section className="container-x py-7 sm:py-9">
+    <section className="container-x py-6 sm:py-8">
       <div className="mx-auto max-w-7xl">
-        <div className="grid gap-6 lg:grid-cols-[0.92fr_1.08fr] lg:items-center">
+        <div className="grid gap-5 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
           <div>
             <span className="inline-flex items-center gap-2 rounded-full bg-primary-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-primary"><FileSearch className="size-3.5" aria-hidden="true" />Booking Status</span>
             <h1 className="mt-4 max-w-3xl font-heading text-4xl font-semibold leading-[0.98] tracking-[-0.03em] text-foreground sm:text-5xl">Check Your Booking Status</h1>
@@ -102,7 +103,7 @@ export function BookingStatusChecker() {
           </form>
         </div>
 
-        <div className="mt-7">
+        <div className="mt-6 pb-10">
           {loading ? <LoadingCard /> : result ? <TicketResult request={result} /> : searched ? <NotFound reference={reference} whatsappMessage={whatsappMessage} /> : <EmptyPreview />}
         </div>
       </div>
@@ -115,36 +116,35 @@ function TicketResult({ request }: { request: BookingRequest }) {
   const isSales = request.serviceType === 'sales_inquiry';
   const totalLabel = isSales ? 'Request quote' : formatAed(request.totalAmount);
   const status = normalizeBookingStatus(request.status);
-  const barcodeBars = Array.from({ length: 30 }, (_, index) => index);
-  const perforationDots = Array.from({ length: 30 }, (_, index) => index);
-  const bookingLink = typeof window === 'undefined' ? `https://edrivedubai.ae/booking-status?ref=${encodeURIComponent(request.bookingCode)}` : `${window.location.origin}/booking-status?ref=${encodeURIComponent(request.bookingCode)}`;
+  const perforationDots = Array.from({ length: 28 }, (_, index) => index);
+  const bookingLink = `${bookingStatusBaseUrl}?ref=${encodeURIComponent(request.bookingCode)}`;
   const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&margin=8&data=${encodeURIComponent(bookingLink)}`;
 
   return (
-    <article className="relative mx-auto grid max-w-5xl overflow-hidden rounded-[1.85rem] border border-gold/45 bg-[#fffaf0] shadow-[0_20px_40px_rgba(8,37,50,0.14),inset_0_1px_0_rgba(255,255,255,0.82),inset_0_-8px_18px_rgba(120,82,18,0.05)] lg:grid-cols-[minmax(0,1fr)_13rem]">
+    <article className="relative mx-auto grid max-w-[58rem] overflow-hidden rounded-[1.7rem] border border-gold/45 bg-[#fffaf0] shadow-[0_18px_32px_rgba(8,37,50,0.13),inset_0_1px_0_rgba(255,255,255,0.9),inset_0_-9px_18px_rgba(120,82,18,0.045)] lg:grid-cols-[minmax(0,1fr)_11.75rem]">
       <div className="relative min-w-0">
-        <span className="pointer-events-none absolute -left-7 top-[12.1rem] z-20 size-14 rounded-full bg-background shadow-[inset_-4px_0_8px_rgba(8,37,50,0.05)]" aria-hidden="true" />
-        <div className="relative overflow-hidden rounded-br-[1.45rem] bg-primary-950 px-6 py-5 text-white sm:px-7" style={{ backgroundImage: "linear-gradient(90deg, rgba(5,30,42,0.97), rgba(5,30,42,0.78)), url('/images/edrive/packages/jet-car/jet-car-package-19.webp')", backgroundSize: 'cover', backgroundPosition: 'center' }}>
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_74%_16%,rgba(217,181,109,0.20),transparent_18rem)]" aria-hidden="true" />
-          <div className="relative flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <span className="pointer-events-none absolute -left-7 top-[10.7rem] z-20 size-14 rounded-full bg-[#f1f1f1]" aria-hidden="true" />
+        <div className="relative overflow-hidden rounded-br-[1.3rem] bg-primary-950 px-5 py-4 text-white sm:px-6" style={{ backgroundImage: "linear-gradient(90deg, rgba(5,30,42,0.98), rgba(5,30,42,0.76)), url('/images/edrive/packages/jet-car/jet-car-package-19.webp')", backgroundSize: 'cover', backgroundPosition: 'center 46%' }}>
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_72%_16%,rgba(217,181,109,0.18),transparent_16rem)]" aria-hidden="true" />
+          <div className="relative flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <div className="flex items-center gap-3">
-                <span className="flex size-9 items-center justify-center rounded-full border border-gold/45 bg-gold/10 text-gold shadow-[inset_0_1px_0_rgba(255,255,255,0.25),0_5px_12px_rgba(0,0,0,0.18)]"><TicketCheck className="size-4" aria-hidden="true" /></span>
+                <span className="flex size-8 items-center justify-center rounded-full border border-gold/45 bg-gold/10 text-gold shadow-[inset_0_1px_0_rgba(255,255,255,0.28),0_5px_12px_rgba(0,0,0,0.16)]"><TicketCheck className="size-4" aria-hidden="true" /></span>
                 <div>
                   <p className="font-heading text-2xl font-semibold leading-none text-gold">eDrive</p>
-                  <p className="mt-1 text-[9px] font-bold uppercase tracking-[0.32em] text-white">Water Sports</p>
+                  <p className="mt-1 text-[8px] font-bold uppercase tracking-[0.32em] text-white">Water Sports</p>
                 </div>
               </div>
-              <p className="mt-5 text-[10px] font-bold uppercase tracking-[0.26em] text-gold">Booking Reference</p>
-              <h2 className="mt-2 font-heading text-3xl font-semibold leading-none tracking-[-0.03em] sm:text-4xl lg:text-5xl">{request.bookingCode}</h2>
-              <p className="mt-3 text-xs text-white/82 sm:text-sm">Live booking status and request details</p>
+              <p className="mt-4 text-[9px] font-bold uppercase tracking-[0.25em] text-gold">Booking Reference</p>
+              <h2 className="mt-2 font-heading text-3xl font-semibold leading-none tracking-[-0.035em] sm:text-4xl lg:text-[2.6rem]">{request.bookingCode}</h2>
+              <p className="mt-2.5 text-xs text-white/84">Live booking status and request details</p>
             </div>
-            <span className={cn('relative z-10 w-fit rounded-full border px-4 py-2 text-[10px] font-bold uppercase tracking-[0.2em] shadow-[inset_0_1px_0_rgba(255,255,255,0.24),0_5px_14px_rgba(0,0,0,0.14)]', statusTone(status))}><span className="mr-2 inline-block size-1.5 rounded-full bg-current align-middle" />{status}</span>
+            <span className={cn('relative z-10 w-fit rounded-full border px-3.5 py-1.5 text-[9px] font-bold uppercase tracking-[0.2em] shadow-[inset_0_1px_0_rgba(255,255,255,0.24),0_5px_14px_rgba(0,0,0,0.14)]', statusTone(status))}><span className="mr-1.5 inline-block size-1.5 rounded-full bg-current align-middle" />{status}</span>
           </div>
         </div>
 
-        <div className="px-5 py-4 sm:px-7">
-          <div className="grid gap-3 border-b border-primary-900/10 pb-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="px-5 py-3.5 sm:px-6">
+          <div className="grid gap-2.5 border-b border-primary-900/10 pb-3.5 sm:grid-cols-2 lg:grid-cols-3">
             <TicketInfo icon={Waves} label="Service" value={experience.title} />
             <TicketInfo icon={CalendarDays} label="Date" value={displayDate(request.preferredDate)} />
             <TicketInfo icon={Clock3} label="Time" value={request.preferredTime || 'Not selected'} />
@@ -153,53 +153,52 @@ function TicketResult({ request }: { request: BookingRequest }) {
             <TicketInfo icon={CreditCard} label="Payment" value={request.paymentStatus} danger={request.paymentStatus !== 'Paid'} />
           </div>
 
-          <div className="border-b border-primary-900/10 py-3">
+          <div className="border-b border-primary-900/10 py-2.5">
             <TicketInfo icon={TicketCheck} label="Package" value={request.selectedPackageName || request.selectedPackageCategory || 'Custom booking'} />
           </div>
 
-          <div className="mt-4 grid gap-3 lg:grid-cols-[1fr_0.52fr]">
-            <div className="relative overflow-hidden rounded-[1.25rem] border border-primary/15 bg-primary-50 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.8),0_7px_16px_rgba(8,37,50,0.07)]" style={{ backgroundImage: "linear-gradient(90deg, rgba(221,244,246,0.94), rgba(221,244,246,0.72)), url('/images/edrive/packages/jet-car/jet-car-package-15.webp')", backgroundSize: 'cover', backgroundPosition: 'center' }}>
-              <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-primary">Meeting Point</p>
-              <p className="mt-1.5 font-heading text-xl font-semibold text-foreground">{companyInfo.locationName}</p>
-              <p className="mt-1 max-w-sm text-xs leading-5 text-muted-foreground sm:text-sm">{companyInfo.locationAddress}</p>
-              <a href={companyInfo.mapLink} target="_blank" rel="noopener noreferrer" className="mt-3 inline-flex items-center gap-2 rounded-full border border-primary/25 bg-white px-3 py-1.5 text-[11px] font-bold text-primary shadow-[inset_0_1px_0_rgba(255,255,255,0.95),0_4px_10px_rgba(8,37,50,0.07)] transition hover:-translate-y-0.5 hover:bg-primary-50"><MapPin className="size-3.5" aria-hidden="true" />Open in Google Maps</a>
+          <div className="mt-3 grid gap-3 lg:grid-cols-[1fr_0.48fr]">
+            <div className="relative overflow-hidden rounded-[1.15rem] border border-primary/15 bg-primary-50 p-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.88),inset_0_-8px_18px_rgba(14,124,134,0.045),0_8px_16px_rgba(8,37,50,0.075)]" style={{ backgroundImage: "linear-gradient(90deg, rgba(221,244,246,0.88), rgba(221,244,246,0.56)), url('/images/edrive/packages/jet-car/jet-car-package-15.webp')", backgroundSize: 'cover', backgroundPosition: 'center' }}>
+              <p className="text-[8px] font-bold uppercase tracking-[0.2em] text-primary">Meeting Point</p>
+              <p className="mt-1 font-heading text-lg font-semibold text-foreground">{companyInfo.locationName}</p>
+              <p className="mt-1 max-w-sm text-xs leading-5 text-muted-foreground">{companyInfo.locationAddress}</p>
+              <a href={companyInfo.mapLink} target="_blank" rel="noopener noreferrer" className="mt-2.5 inline-flex items-center gap-2 rounded-full border border-primary/25 bg-white px-3 py-1.5 text-[10px] font-bold text-primary shadow-[inset_0_1px_0_rgba(255,255,255,0.95),inset_0_-3px_7px_rgba(8,37,50,0.035),0_4px_10px_rgba(8,37,50,0.07)] transition hover:-translate-y-0.5 hover:bg-primary-50"><MapPin className="size-3" aria-hidden="true" />Open in Google Maps</a>
             </div>
-            <div className="rounded-[1.25rem] border border-gold/35 bg-primary-900 p-4 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.12),inset_0_-8px_18px_rgba(0,0,0,0.14),0_9px_18px_rgba(8,37,50,0.12)]">
-              <p className="text-[9px] font-bold uppercase tracking-[0.22em] text-gold">Estimated Total</p>
-              <p className="mt-3 font-heading text-3xl font-semibold text-gold">{totalLabel}</p>
-              <div className="mt-4 h-px w-9 bg-gold" />
-              <p className="mt-4 text-[11px] leading-5 text-white/75">Final availability and payment details are shared by the booking team.</p>
+            <div className="rounded-[1.15rem] border border-gold/40 bg-primary-900 p-3.5 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.14),inset_0_-8px_18px_rgba(0,0,0,0.15),0_9px_18px_rgba(8,37,50,0.13)]">
+              <p className="text-[8px] font-bold uppercase tracking-[0.22em] text-gold">Estimated Total</p>
+              <p className="mt-2.5 font-heading text-3xl font-semibold text-gold drop-shadow-sm">{totalLabel}</p>
+              <div className="mt-3 h-px w-9 bg-gold" />
+              <p className="mt-3 text-[10px] leading-5 text-white/78">Final availability and payment details are shared by the booking team.</p>
             </div>
           </div>
         </div>
       </div>
 
-      <aside className="relative border-t border-primary-900/10 bg-[#fff8ed] px-5 py-6 lg:border-l-0 lg:border-t-0">
-        <span className="pointer-events-none absolute -left-7 top-[12.1rem] hidden size-14 rounded-full bg-background shadow-[inset_4px_0_8px_rgba(8,37,50,0.05)] lg:block" aria-hidden="true" />
-        <div className="absolute inset-0 opacity-55" style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(217,181,109,0.22) 1px, transparent 0)', backgroundSize: '18px 18px' }} aria-hidden="true" />
-        <div className="absolute -left-[5px] top-5 bottom-5 hidden flex-col justify-between lg:flex" aria-hidden="true">
-          {perforationDots.map((item) => <span key={item} className="size-2 rounded-full bg-background shadow-[0_0_0_1px_rgba(8,37,50,0.08)]" />)}
+      <aside className="relative border-t border-primary-900/10 bg-[#fff8ed] px-4 py-5 lg:border-l-0 lg:border-t-0">
+        <span className="pointer-events-none absolute -left-7 top-[10.7rem] hidden size-14 rounded-full bg-[#f1f1f1] lg:block" aria-hidden="true" />
+        <div className="absolute inset-0 opacity-55" style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(217,181,109,0.20) 1px, transparent 0)', backgroundSize: '16px 16px' }} aria-hidden="true" />
+        <div className="absolute -left-[4px] top-4 bottom-4 hidden flex-col justify-between lg:flex" aria-hidden="true">
+          {perforationDots.map((item) => <span key={item} className="size-1.5 rounded-full bg-[#f1f1f1] shadow-[0_0_0_1px_rgba(8,37,50,0.08)]" />)}
         </div>
-        <div className="absolute left-0 top-5 bottom-5 hidden border-l border-dashed border-primary-900/25 lg:block" aria-hidden="true" />
-        <div className="relative flex h-full flex-col items-center justify-between gap-5 text-center">
+        <div className="absolute left-0 top-4 bottom-4 hidden border-l border-dashed border-primary-900/25 lg:block" aria-hidden="true" />
+        <div className="relative flex h-full flex-col items-center justify-between gap-4 text-center">
           <div>
-            <span className="mx-auto flex size-16 items-center justify-center rounded-full border border-gold/30 bg-white text-gold shadow-[inset_0_1px_0_rgba(255,255,255,0.95),0_8px_16px_rgba(8,37,50,0.08)]"><TicketCheck className="size-7" aria-hidden="true" /></span>
-            <div className="mx-auto mt-6 h-px w-24 bg-gold/45" />
+            <span className="mx-auto flex size-14 items-center justify-center rounded-full border border-gold/30 bg-white text-gold shadow-[inset_0_1px_0_rgba(255,255,255,0.96),inset_0_-4px_9px_rgba(120,82,18,0.055),0_8px_16px_rgba(8,37,50,0.08)]"><TicketCheck className="size-6" aria-hidden="true" /></span>
+            <div className="mx-auto mt-5 h-px w-20 bg-gold/45" />
           </div>
 
           <a href={bookingLink} target="_blank" rel="noopener noreferrer" className="group block">
-            <p className="text-[9px] font-bold uppercase tracking-[0.22em] text-primary-900/80">Scan to view<br />booking details</p>
-            <span className="mx-auto mt-3 block rounded-2xl border border-border bg-white p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.96),0_8px_18px_rgba(8,37,50,0.09)] transition group-hover:-translate-y-0.5">
-              <img src={qrSrc} alt={`QR code for booking ${request.bookingCode}`} className="size-24 rounded-xl" />
+            <p className="text-[8px] font-bold uppercase tracking-[0.22em] text-primary-900/80">Live Booking QR<br />Scan to open</p>
+            <span className="mx-auto mt-2.5 block rounded-2xl border border-border bg-white p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.96),inset_0_-4px_9px_rgba(8,37,50,0.03),0_8px_18px_rgba(8,37,50,0.09)] transition group-hover:-translate-y-0.5">
+              <img src={qrSrc} alt={`QR code for booking ${request.bookingCode}`} className="size-20 rounded-xl" />
             </span>
           </a>
 
           <div className="w-full">
-            <div className="mx-auto h-px w-24 bg-gold/45" />
-            <div className="mx-auto mt-6 flex h-11 w-36 items-end justify-center gap-1 bg-white px-2 py-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_5px_12px_rgba(8,37,50,0.07)]">
-              {barcodeBars.map((item) => <span key={item} className="block bg-primary-950" style={{ width: item % 5 === 0 ? 4 : item % 2 === 0 ? 2 : 1, height: item % 3 === 0 ? 32 : item % 4 === 0 ? 25 : 36 }} />)}
-            </div>
-            <p className="mt-6 font-heading text-base italic leading-6 text-gold">Thank you for choosing<br />eDrive Water Sports.</p>
+            <div className="mx-auto h-px w-20 bg-gold/45" />
+            <div className="mx-auto mt-4 h-10 w-32 rounded-md bg-white shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_5px_12px_rgba(8,37,50,0.07)]" style={{ backgroundImage: 'repeating-linear-gradient(90deg,#082532 0 2px,transparent 2px 5px,#082532 5px 6px,transparent 6px 10px)' }} aria-label={`Barcode for ${request.bookingCode}`} />
+            <p className="mt-1 text-[8px] font-bold uppercase tracking-[0.18em] text-primary-900/55">{request.bookingCode}</p>
+            <p className="mt-4 font-heading text-sm italic leading-5 text-gold">Thank you for choosing<br />eDrive Water Sports.</p>
           </div>
         </div>
       </aside>
@@ -208,7 +207,7 @@ function TicketResult({ request }: { request: BookingRequest }) {
 }
 
 function TicketInfo({ icon: Icon, label, value, danger = false }: { icon: ElementType; label: string; value: string; danger?: boolean }) {
-  return <div className="flex min-w-0 items-center gap-3 rounded-2xl bg-white/62 px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.96),inset_0_-5px_10px_rgba(8,37,50,0.025),0_5px_12px_rgba(8,37,50,0.045)]"><span className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-primary-50 text-primary shadow-[inset_0_1px_0_rgba(255,255,255,0.95)]"><Icon className="size-4" aria-hidden="true" /></span><div className="min-w-0"><p className="text-[9px] font-bold uppercase tracking-[0.17em] text-muted-foreground">{label}</p><p className={cn('mt-0.5 text-xs font-bold leading-5 text-foreground sm:text-sm', danger && 'text-red-600')}>{value}</p></div></div>;
+  return <div className="flex min-h-[3.8rem] min-w-0 items-center gap-2.5 rounded-2xl bg-white/66 px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.98),inset_0_-5px_10px_rgba(8,37,50,0.025),0_5px_12px_rgba(8,37,50,0.045)]"><span className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-primary-50 text-primary shadow-[inset_0_1px_0_rgba(255,255,255,0.95),0_3px_7px_rgba(8,37,50,0.04)]"><Icon className="size-4" aria-hidden="true" /></span><div className="min-w-0"><p className="text-[8px] font-bold uppercase tracking-[0.17em] text-muted-foreground">{label}</p><p className={cn('mt-0.5 text-xs font-bold leading-5 text-foreground sm:text-sm', danger && 'text-red-600')}>{value}</p></div></div>;
 }
 
 function LoadingCard() {
