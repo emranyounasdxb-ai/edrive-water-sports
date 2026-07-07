@@ -23,7 +23,9 @@ type StaffRecord = {
   notes: string;
 };
 
-type StaffFormValues = Omit<StaffRecord, 'id'>;
+type StaffFormValues = Omit<StaffRecord, 'id'> & {
+  temporaryPassword: string;
+};
 
 const roleMap: Record<string, string> = {
   'Super Admin': 'super_admin',
@@ -52,7 +54,8 @@ const emptyForm: StaffFormValues = {
   role: 'Booking Staff',
   department: 'Booking',
   status: 'Active',
-  notes: ''
+  notes: '',
+  temporaryPassword: ''
 };
 
 function toText(value: unknown) {
@@ -73,6 +76,20 @@ function mapStaff(row: Record<string, unknown>): StaffRecord {
     status: reverse(statusMap, toText(row.status)),
     notes: toText(row.notes)
   };
+}
+
+function makeTemporaryPassword() {
+  const suffix = Math.random().toString(36).slice(2, 8).toUpperCase();
+  return `eDrive@${new Date().getFullYear()}-${suffix}`;
+}
+
+async function readApiMessage(response: Response) {
+  try {
+    const body = await response.json();
+    return typeof body?.error === 'string' ? body.error : typeof body?.message === 'string' ? body.message : '';
+  } catch {
+    return '';
+  }
 }
 
 async function uploadAvatar(file?: File) {
@@ -102,6 +119,7 @@ export default function Page() {
   const [staff, setStaff] = useState<StaffRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<StaffRecord | null>(null);
@@ -139,6 +157,26 @@ export default function Page() {
     return { active, managers, inactive };
   }, [staff]);
 
+  async function syncLogin(email: string, password: string) {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData.session?.access_token;
+    if (!token) throw new Error('Admin login session is required. Please login again.');
+
+    const response = await fetch('/api/admin/staff-password', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({ email, mode: 'set-password', password })
+    });
+
+    if (!response.ok) {
+      const message = await readApiMessage(response);
+      throw new Error(message || 'Staff login sync failed.');
+    }
+  }
+
   async function handleSave(values: StaffFormValues, file?: File) {
     if (!isSuperAdmin) {
       setError('Only Super Admin can add or edit staff records.');
@@ -146,11 +184,22 @@ export default function Page() {
     }
 
     setError('');
+    setNotice('');
+
+    const cleanEmail = values.email.trim().toLowerCase();
+    const cleanPassword = values.temporaryPassword.trim();
+    const emailChanged = editing ? editing.email.trim().toLowerCase() !== cleanEmail : true;
+
+    if ((emailChanged || !editing) && cleanPassword.length < 8) {
+      setError('Temporary password is required when adding staff or changing staff email. Minimum 8 characters.');
+      return;
+    }
+
     const avatarUrl = (await uploadAvatar(file)) || values.avatarUrl || editing?.avatarUrl || '';
     const payload = {
       avatar_url: avatarUrl,
       full_name: values.fullName,
-      email: values.email.trim().toLowerCase(),
+      email: cleanEmail,
       phone: values.phone,
       passport_number: values.passportNumber,
       emirates_id: values.emiratesId,
@@ -167,6 +216,19 @@ export default function Page() {
     if (result.error) {
       setError(result.error.message);
       return;
+    }
+
+    if (cleanPassword) {
+      try {
+        await syncLogin(cleanEmail, cleanPassword);
+        setNotice('Staff profile and login access have been synced with Supabase Auth.');
+      } catch (syncError) {
+        setError(syncError instanceof Error ? syncError.message : 'Staff saved, but login sync failed.');
+        await loadData();
+        return;
+      }
+    } else {
+      setNotice('Staff profile saved. Login password was not changed.');
     }
 
     setOpen(false);
@@ -194,7 +256,7 @@ export default function Page() {
             {isSuperAdmin ? <Badge className="rounded-full bg-primary text-white">Super Admin controls</Badge> : <Badge variant="secondary" className="rounded-full">Read only</Badge>}
           </div>
           <h1 className="font-heading text-3xl font-semibold text-foreground">Staff and login access</h1>
-          <p className="mt-2 text-sm leading-6 text-muted-foreground">Create admins, booking staff, managers, operations staff, and finance users with role-based access.</p>
+          <p className="mt-2 text-sm leading-6 text-muted-foreground">Create staff records and sync the same email, name, and temporary password with Supabase Auth.</p>
         </div>
         {isSuperAdmin ? <Button type="button" onClick={openAdd}><Plus data-icon aria-hidden="true" />Add Staff</Button> : null}
       </div>
@@ -206,17 +268,18 @@ export default function Page() {
       </div>
 
       {error ? <p className="rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</p> : null}
+      {notice ? <p className="rounded-xl bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">{notice}</p> : null}
 
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Records</CardTitle>
-          <CardDescription>{isSuperAdmin ? 'Only Super Admin can edit staff or reset passwords.' : 'Staff records are visible, but edit and password reset are restricted to Super Admin.'}</CardDescription>
+          <CardDescription>{isSuperAdmin ? 'Only Super Admin can edit staff and sync login passwords.' : 'Staff records are visible, but edit and login sync are restricted to Super Admin.'}</CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-                {['Photo', 'Staff Name', 'Role', 'Passport No.', 'Emirates ID', 'Phone', 'Status', ...(isSuperAdmin ? ['Action'] : [])].map((column) => <TableHead key={column}>{column}</TableHead>)}
+                {['Photo', 'Staff Name', 'Email', 'Role', 'Phone', 'Status', ...(isSuperAdmin ? ['Action'] : [])].map((column) => <TableHead key={column}>{column}</TableHead>)}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -224,23 +287,22 @@ export default function Page() {
                 <TableRow key={row.id}>
                   <TableCell>{row.avatarUrl ? <img src={row.avatarUrl} alt={row.fullName || 'Staff'} className="size-11 rounded-2xl border border-border object-cover" /> : <span className="flex size-11 items-center justify-center rounded-2xl bg-primary-50 text-primary"><ImagePlus className="size-4" aria-hidden="true" /></span>}</TableCell>
                   <TableCell className="max-w-[14rem] truncate font-semibold">{row.fullName || '-'}</TableCell>
+                  <TableCell className="max-w-[14rem] truncate text-xs text-muted-foreground">{row.email || '-'}</TableCell>
                   <TableCell>{row.role || '-'}</TableCell>
-                  <TableCell>{row.passportNumber || '-'}</TableCell>
-                  <TableCell>{row.emiratesId || '-'}</TableCell>
                   <TableCell>{row.phone || '-'}</TableCell>
                   <TableCell>{row.status || '-'}</TableCell>
                   {isSuperAdmin ? (
                     <TableCell>
                       <div className="flex flex-wrap gap-2">
-                        <Button type="button" size="sm" variant="outline" onClick={() => openEdit(row)}><Pencil className="size-4" aria-hidden="true" />Edit</Button>
-                        <Button asChild size="sm" variant="subtle"><Link href={`/admin/staff-password?email=${encodeURIComponent(row.email)}`}><KeyRound className="size-4" aria-hidden="true" />Reset Password</Link></Button>
+                        <Button type="button" size="sm" variant="outline" onClick={() => openEdit(row)}><Pencil className="size-4" aria-hidden="true" />Edit / Sync</Button>
+                        <Button asChild size="sm" variant="subtle"><Link href={`/admin/staff-password?email=${encodeURIComponent(row.email)}`}><KeyRound className="size-4" aria-hidden="true" />Password Page</Link></Button>
                       </div>
                     </TableCell>
                   ) : null}
                 </TableRow>
               )) : (
                 <TableRow>
-                  <TableCell colSpan={isSuperAdmin ? 8 : 7} className="h-28 text-center text-sm text-muted-foreground">{loading ? 'Loading records...' : 'No staff users added yet.'}</TableCell>
+                  <TableCell colSpan={isSuperAdmin ? 7 : 6} className="h-28 text-center text-sm text-muted-foreground">{loading ? 'Loading records...' : 'No staff users added yet.'}</TableCell>
                 </TableRow>
               )}
             </TableBody>
@@ -254,7 +316,7 @@ export default function Page() {
 }
 
 function StaffModal({ initialValues, onClose, onSubmit }: { initialValues?: StaffRecord; onClose: () => void; onSubmit: (values: StaffFormValues, file?: File) => Promise<void> }) {
-  const [values, setValues] = useState<StaffFormValues>(initialValues ? { ...initialValues } : emptyForm);
+  const [values, setValues] = useState<StaffFormValues>(initialValues ? { ...initialValues, temporaryPassword: '' } : emptyForm);
   const [file, setFile] = useState<File | undefined>();
   const [saving, setSaving] = useState(false);
   const departments = ['Admin', 'Booking', 'Operations', 'Finance', 'Maintenance', 'Management'];
@@ -283,7 +345,7 @@ function StaffModal({ initialValues, onClose, onSubmit }: { initialValues?: Staf
         <div className="flex items-start justify-between gap-4 border-b border-border/70 bg-[#F7FAFA] px-5 py-4">
           <div>
             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Super Admin Form</p>
-            <h2 className="mt-1 font-heading text-xl font-semibold text-foreground">{initialValues ? 'Edit Staff' : 'Add Staff'}</h2>
+            <h2 className="mt-1 font-heading text-xl font-semibold text-foreground">{initialValues ? 'Edit Staff & Sync Login' : 'Add Staff & Create Login'}</h2>
           </div>
           <button type="button" onClick={onClose} className="flex size-9 items-center justify-center rounded-full border border-border bg-white text-muted-foreground transition hover:text-primary"><X className="size-4" aria-hidden="true" /></button>
         </div>
@@ -302,6 +364,13 @@ function StaffModal({ initialValues, onClose, onSubmit }: { initialValues?: Staf
             </label>
             <FormInput label="Full Name" value={values.fullName} required onChange={(value) => updateField('fullName', value)} />
             <FormInput label="Email" type="email" value={values.email} required onChange={(value) => updateField('email', value)} />
+            <label className="grid gap-1.5 text-sm font-semibold text-foreground sm:col-span-2">Temporary Password
+              <div className="flex gap-2">
+                <input type="text" value={values.temporaryPassword} onChange={(event) => updateField('temporaryPassword', event.target.value)} placeholder={initialValues ? 'Leave blank if password is not changing' : 'Required for new staff'} className="h-10 min-w-0 flex-1 rounded-xl border border-border bg-white px-3 text-sm text-foreground outline-none focus:border-primary" />
+                <Button type="button" variant="outline" onClick={() => updateField('temporaryPassword', makeTemporaryPassword())}>Generate</Button>
+              </div>
+              <span className="text-xs font-normal leading-5 text-muted-foreground">Used to create/update the Supabase Auth login for this staff email.</span>
+            </label>
             <FormInput label="Phone / WhatsApp" type="tel" value={values.phone} required onChange={(value) => updateField('phone', value)} />
             <FormInput label="Passport Number" value={values.passportNumber} onChange={(value) => updateField('passportNumber', value)} />
             <FormInput label="Emirates ID / EID Number" value={values.emiratesId} onChange={(value) => updateField('emiratesId', value)} />
@@ -310,7 +379,7 @@ function StaffModal({ initialValues, onClose, onSubmit }: { initialValues?: Staf
             <SelectInput label="Status" value={values.status} options={Object.keys(statusMap)} required onChange={(value) => updateField('status', value)} />
             <label className="grid gap-1.5 text-sm font-semibold text-foreground sm:col-span-2">Notes<textarea value={values.notes} onChange={(event) => updateField('notes', event.target.value)} className="min-h-20 rounded-xl border border-border bg-white px-3 py-3 text-sm text-foreground outline-none focus:border-primary" /></label>
           </div>
-          <div className="flex justify-end gap-3 border-t border-border/70 bg-white px-5 py-4"><Button type="button" variant="outline" onClick={onClose}>Cancel</Button><Button type="submit" disabled={saving}>{saving ? 'Saving...' : 'Save'}</Button></div>
+          <div className="flex justify-end gap-3 border-t border-border/70 bg-white px-5 py-4"><Button type="button" variant="outline" onClick={onClose}>Cancel</Button><Button type="submit" disabled={saving}>{saving ? 'Saving...' : 'Save & Sync Login'}</Button></div>
         </form>
       </div>
     </div>
