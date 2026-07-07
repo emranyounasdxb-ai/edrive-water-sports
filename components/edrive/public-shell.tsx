@@ -356,7 +356,7 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
         />
       ) : null}
 
-      <main>{children}</main>
+      <main className="pt-[86px]">{children}</main>
       <PublicFooter />
     </div>
   );
