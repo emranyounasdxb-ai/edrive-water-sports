@@ -52,6 +52,8 @@ export default function StaffPasswordPage() {
       setChecking(false);
     }
 
+    const searchEmail = new URLSearchParams(window.location.search).get('email');
+    if (searchEmail) setEmail(searchEmail.trim().toLowerCase());
     checkAccess();
   }, []);
 
@@ -60,23 +62,44 @@ export default function StaffPasswordPage() {
     setLoading(true);
     setStatus(null);
 
-    const body = {
-      email: email.trim().toLowerCase(),
-      mode,
-      password: mode === 'set-password' ? password : undefined,
-      redirectTo
-    };
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken = sessionData.session?.access_token;
 
-    const { data, error } = await supabase.functions.invoke('staff-password', { body });
-    setLoading(false);
-
-    if (error) {
-      setStatus({ tone: 'error', text: error.message || 'Unable to complete password action.' });
+    if (!accessToken) {
+      setLoading(false);
+      setStatus({ tone: 'error', text: 'Admin login session is required. Please login again.' });
       return;
     }
 
-    const message = typeof data?.message === 'string' ? data.message : 'Password action completed successfully.';
-    setStatus({ tone: 'success', text: message });
+    const response = await fetch('/api/admin/staff-password', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${accessToken}`
+      },
+      body: JSON.stringify({
+        email: email.trim().toLowerCase(),
+        mode,
+        password: mode === 'set-password' ? password : undefined,
+        redirectTo
+      })
+    });
+
+    let payload: { message?: string; error?: string } = {};
+    try {
+      payload = await response.json();
+    } catch {
+      payload = {};
+    }
+
+    setLoading(false);
+
+    if (!response.ok) {
+      setStatus({ tone: 'error', text: payload.error || 'Unable to complete password action.' });
+      return;
+    }
+
+    setStatus({ tone: 'success', text: payload.message || 'Password action completed successfully.' });
   }
 
   if (checking) {
@@ -110,7 +133,7 @@ export default function StaffPasswordPage() {
   return (
     <main className="min-h-screen bg-background px-4 py-8 sm:px-6 lg:px-8">
       <div className="mx-auto grid max-w-5xl gap-5">
-        <Link href="/admin/staff" className="inline-flex w-fit items-center gap-2 text-sm font-bold text-primary transition hover:text-primary-700">
+        <Link href="/admin/staff-management" className="inline-flex w-fit items-center gap-2 text-sm font-bold text-primary transition hover:text-primary-700">
           <ArrowLeft className="size-4" aria-hidden="true" />
           Back to Staff
         </Link>
@@ -201,11 +224,11 @@ export default function StaffPasswordPage() {
                 <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-white text-primary"><ShieldCheck className="size-5" aria-hidden="true" /></span>
                 <div>
                   <p className="text-sm font-bold text-primary-900">Best practice</p>
-                  <p className="mt-1 text-xs leading-5 text-muted-foreground">Send reset email when possible. Use temporary password only when staff needs immediate access and then ask them to change it.</p>
+                  <p className="mt-1 text-xs leading-5 text-muted-foreground">Use temporary access only when staff needs immediate login, then ask them to update it later.</p>
                 </div>
               </div>
               <div className="rounded-2xl bg-white p-4 text-xs leading-5 text-muted-foreground">
-                Reset emails require Supabase Auth email templates and redirect URL configuration. Temporary password works through the secure Edge Function with service role access.
+                This action uses the secure server route and links the Staff record with Supabase Auth.
               </div>
             </div>
           </CardContent>
