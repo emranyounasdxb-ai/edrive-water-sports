@@ -4,7 +4,6 @@ import { Inter, Poppins } from 'next/font/google';
 import './globals.css';
 import './contact-cta.css';
 import './hero-cta.css';
-import './header-global.css';
 
 const inter = Inter({
   subsets: ['latin'],
