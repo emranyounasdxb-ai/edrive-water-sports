@@ -1,0 +1,38 @@
+:global(header button:has(svg.lucide-ticket-check)) {
+  background: linear-gradient(135deg, #fff8e6 0%, #f6df9a 42%, #d7aa43 100%) !important;
+  border: 1px solid rgba(176, 126, 33, 0.35) !important;
+  color: #082532 !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    inset 0 -8px 14px rgba(139, 92, 18, 0.10),
+    0 8px 18px rgba(117, 79, 18, 0.16) !important;
+}
+
+:global(header button:has(svg.lucide-ticket-check)) {
+  font-size: 0 !important;
+}
+
+:global(header button:has(svg.lucide-ticket-check)::after) {
+  content: 'Track Booking';
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+:global(header a[href='/admin']) {
+  font-size: 0 !important;
+}
+
+:global(header a[href='/admin']::after) {
+  content: 'Staff Login';
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+@media (max-width: 639px) {
+  :global(header button:has(svg.lucide-ticket-check)::after),
+  :global(header a[href='/admin']::after) {
+    font-size: 14px;
+  }
+}
