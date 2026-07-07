@@ -25,17 +25,6 @@ function jsonError(message: string, status = 400) {
   return NextResponse.json({ error: message }, { status });
 }
 
-async function findAuthUserByEmail(adminClient: ReturnType<typeof createClient>, email: string) {
-  for (let page = 1; page <= 20; page += 1) {
-    const { data, error } = await adminClient.auth.admin.listUsers({ page, perPage: 1000 });
-    if (error) throw error;
-    const match = data.users.find((user) => user.email?.toLowerCase() === email);
-    if (match) return match;
-    if (data.users.length < 1000) return null;
-  }
-  return null;
-}
-
 export async function POST(request: NextRequest) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -96,9 +85,20 @@ export async function POST(request: NextRequest) {
 
   try {
     if (!authUserId) {
-      const existingUser = await findAuthUserByEmail(adminClient, email);
-      if (existingUser) {
-        authUserId = existingUser.id;
+      let existingAuthUserId = '';
+      for (let page = 1; page <= 20; page += 1) {
+        const { data: listData, error: listError } = await adminClient.auth.admin.listUsers({ page, perPage: 1000 });
+        if (listError) throw listError;
+        const match = listData.users.find((user) => user.email?.toLowerCase() === email);
+        if (match) {
+          existingAuthUserId = match.id;
+          break;
+        }
+        if (listData.users.length < 1000) break;
+      }
+
+      if (existingAuthUserId) {
+        authUserId = existingAuthUserId;
       } else if (mode === 'set-password') {
         const { data: createdUser, error: createError } = await adminClient.auth.admin.createUser({
           email,
