@@ -93,6 +93,67 @@ function normalizeExperienceHeadings(pathname: string) {
   });
 }
 
+function findHeading(text: string) {
+  return Array.from(document.querySelectorAll<HTMLHeadingElement>('h2')).find((heading) => heading.textContent?.trim() === text) || null;
+}
+
+function alignFleetGrid(headingText: string) {
+  const heading = findHeading(headingText);
+  const section = heading?.closest('section');
+  const grid = section?.querySelector<HTMLElement>('.mt-7.grid');
+  if (!section || !grid) return null;
+
+  grid.style.gridTemplateColumns = 'repeat(auto-fit, minmax(280px, 1fr))';
+  grid.style.alignItems = 'stretch';
+  grid.style.maxWidth = '100%';
+  grid.querySelectorAll<HTMLElement>('article').forEach((card) => {
+    card.style.height = '100%';
+  });
+
+  return grid;
+}
+
+function addFleetCard(grid: HTMLElement) {
+  if (grid.querySelector('[data-fleet-added="photo-jet-ski"]')) return;
+
+  const card = document.createElement('article');
+  card.dataset.fleetAdded = 'photo-jet-ski';
+  card.className = 'premium-surface premium-card-hover h-full overflow-hidden rounded-[1.75rem] p-3';
+  card.innerHTML = `
+    <div class="relative aspect-[16/10] overflow-hidden rounded-[1.35rem] bg-primary-50" style="background-image:url('/images/edrive/packages/jet-ski/jet-ski-package-41.webp');background-size:cover;background-position:center;"></div>
+    <div class="p-4">
+      <span class="flex size-7 items-center justify-center rounded-xl bg-primary-50 text-lg font-bold text-primary">≋</span>
+      <h3 class="mt-4 font-heading text-2xl font-semibold text-foreground">Photo-Friendly Jet Ski</h3>
+      <dl class="mt-4 grid gap-3 rounded-[1.2rem] bg-primary-50 p-4 text-sm">
+        <div><dt class="font-semibold text-foreground">Capacity</dt><dd class="mt-1 text-muted-foreground">1-2 guests</dd></div>
+        <div><dt class="font-semibold text-foreground">Best for</dt><dd class="mt-1 text-muted-foreground">Skyline photos, beginner-friendly routes, and golden-hour Dubai water sports content.</dd></div>
+      </dl>
+      <div class="mt-5 flex flex-col gap-2 sm:flex-row">
+        <a href="/rentals#live-packages" class="inline-flex h-9 items-center justify-center gap-2 whitespace-nowrap rounded-full bg-primary-900 px-4 text-xs font-bold text-white shadow-[0_8px_18px_rgba(8,37,50,0.18)] transition hover:bg-primary-800">View Live Packages</a>
+        <a href="/rentals#jet-ski-packages" class="inline-flex h-9 items-center justify-center whitespace-nowrap rounded-full border border-border bg-white px-4 text-xs font-bold text-foreground transition hover:bg-primary-50">View Ride Ideas</a>
+      </div>
+    </div>
+  `;
+  grid.appendChild(card);
+}
+
+function refineFleetPage(pathname: string) {
+  if (pathname !== '/fleet') return;
+
+  document.documentElement.dataset.publicPage = 'fleet';
+  const jetSkiGrid = alignFleetGrid('Jet Ski Fleet Cards');
+  alignFleetGrid('Jet Car Fleet Cards');
+  if (jetSkiGrid) addFleetCard(jetSkiGrid);
+
+  ['Fleet Features', 'Safety & Maintenance', 'Recommended Rental Packages'].forEach((title) => {
+    const heading = findHeading(title);
+    const section = heading?.closest<HTMLElement>('section');
+    if (!section) return;
+    section.style.paddingTop = '2.75rem';
+    section.style.paddingBottom = '2.75rem';
+  });
+}
+
 export function PublicShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const currentPath = normalizePath(pathname);
@@ -111,6 +172,7 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
       moveLivePackagesNearTop(currentPath);
       normalizeStaticExperienceCards();
       normalizeExperienceHeadings(currentPath);
+      refineFleetPage(currentPath);
     };
 
     applyPublicPackageRules();
