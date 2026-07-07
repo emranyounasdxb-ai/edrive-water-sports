@@ -32,9 +32,6 @@ export type TestimonialItem = {
 export const publicNavItems = [
   { href: '/', label: 'Home' },
   { href: '/fleet', label: 'Fleet' },
-  { href: '/sales', label: 'Sales' },
-  { href: '/rentals', label: 'Rentals' },
-  { href: '/booking-status', label: 'Status' },
   { href: '/membership', label: 'Membership' },
   { href: '/contact', label: 'Contact' }
 ];
