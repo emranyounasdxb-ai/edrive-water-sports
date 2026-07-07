@@ -2,10 +2,13 @@
 
 import type { LucideIcon } from 'lucide-react';
 import Link from 'next/link';
-import { CalendarDays, Check, Clock3, CreditCard, Home, MapPin, MessageCircle, RefreshCw, Ship, TicketCheck, Timer, UsersRound, Waves } from 'lucide-react';
+import { useEffect } from 'react';
+import { CalendarDays, Check, Clock3, CreditCard, Home, MessageCircle, RefreshCw, Ship, TicketCheck, Timer, UsersRound, Waves } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { BookingRequest, formatAed, getExperience } from '@/lib/booking-data';
+import { bookingRequestToRow, bookingRequestsTable } from '@/lib/booking-records';
 import { companyInfo, whatsappUrl } from '@/lib/company-info';
+import { supabase } from '@/lib/supabase-client';
 
 function displayDate(value: string) {
   return new Intl.DateTimeFormat('en-AE', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(`${value}T12:00:00`));
@@ -22,6 +25,13 @@ export function BookingSuccess({ request, onAnother }: { request: BookingRequest
   const durationLabel = isSales ? request.inquiryType ?? 'Sales inquiry' : shortDuration(request.durationMinutes);
   const totalLabel = isSales ? 'Request quote' : formatAed(request.totalAmount);
   const partyLabel = `${request.vehicleQuantity} ${request.vehicleQuantity === 1 ? 'vehicle' : 'vehicles'} · ${request.guestCount} guests`;
+
+  useEffect(() => {
+    async function saveBookingRequest() {
+      await supabase.from(bookingRequestsTable).upsert(bookingRequestToRow(request), { onConflict: 'booking_code' });
+    }
+    void saveBookingRequest();
+  }, [request]);
 
   return (
     <section className="container-x py-6 sm:py-8">
@@ -91,8 +101,11 @@ export function BookingSuccess({ request, onAnother }: { request: BookingRequest
         </div>
 
         <div className="mt-5 flex flex-col items-center justify-between gap-4 rounded-[1.35rem] border border-primary/15 bg-primary-50 p-4 sm:flex-row">
-          <div><p className="font-semibold text-foreground">Need to add something?</p><p className="mt-1 text-sm text-muted-foreground">Send the booking team your reference on WhatsApp.</p></div>
-          <Button asChild><a href={`${whatsappUrl}?text=${whatsappMessage}`} target="_blank" rel="noopener noreferrer"><MessageCircle data-icon aria-hidden="true" />WhatsApp us</a></Button>
+          <div><p className="font-semibold text-foreground">Need to add something?</p><p className="mt-1 text-sm text-muted-foreground">Send the booking team your reference on WhatsApp or check your booking status anytime.</p></div>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Button asChild variant="outline"><Link href={`/booking-status?ref=${request.bookingCode}`}><TicketCheck data-icon aria-hidden="true" />Check Status</Link></Button>
+            <Button asChild><a href={`${whatsappUrl}?text=${whatsappMessage}`} target="_blank" rel="noopener noreferrer"><MessageCircle data-icon aria-hidden="true" />WhatsApp us</a></Button>
+          </div>
         </div>
 
         <div className="mt-5 flex flex-col justify-center gap-3 sm:flex-row">
