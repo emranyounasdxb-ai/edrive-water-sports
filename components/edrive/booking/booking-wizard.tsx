@@ -6,7 +6,8 @@ import { ArrowLeft, ArrowRight, CalendarDays, Check, ChevronDown, ChevronLeft, C
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { BookingDraft, BookingRateOption, BookingRequest, durationPackages, experienceOptions, formatAed, formatDuration, generateBookingCode, getBookingTotals, getCapacityPerVehicle, getExperience, getSelectedRateForDuration, initialBookingDraft, inquiryTypes, timeSlots } from '@/lib/booking-data';
+import { durationPackages, experienceOptions, formatAed, formatDuration, generateBookingCode, getBookingTotals, getCapacityPerVehicle, getExperience, getSelectedRateForDuration, initialBookingDraft, inquiryTypes, timeSlots } from '@/lib/booking-data';
+import type { BookingDraft, BookingRateOption, BookingRequest } from '@/lib/booking-data';
 import { companyInfo } from '@/lib/company-info';
 import { supabase } from '@/lib/supabase-client';
 import { cn } from '@/lib/utils';
@@ -194,8 +195,8 @@ export function BookingWizard() {
       selectedPackageName: draft.selectedPackageName ?? null,
       selectedPackageSlug: draft.selectedPackageSlug ?? null,
       selectedPackageCategory: draft.selectedPackageCategory ?? null,
-      selectedPackagePrice: isSales ? null : selectedRate?.price ?? draft.selectedPackagePrice ?? null,
-      selectedPackageB2BPrice: isSales ? null : selectedRate?.b2bPrice ?? draft.selectedPackageB2BPrice ?? null,
+      selectedPackagePrice: isSales ? null : (selectedRate?.price ?? draft.selectedPackagePrice ?? null),
+      selectedPackageB2BPrice: isSales ? null : (selectedRate?.b2bPrice ?? draft.selectedPackageB2BPrice ?? null),
       selectedPackageCapacity: isSales ? null : getCapacityPerVehicle(draft),
       experienceType: draft.experienceType,
       serviceType: experience.serviceType,
@@ -354,7 +355,7 @@ function ExperienceStep({ selected, onSelect }: { selected: BookingDraft['experi
 function DurationStep({ draft, onUpdate }: { draft: BookingDraft; onUpdate: (values: Partial<BookingDraft>) => void }) {
   const experience = getExperience(draft.experienceType);
   if (experience.serviceType === 'sales_inquiry') return <div><p className="mb-3 text-sm leading-6 text-muted-foreground">Tell us what kind of sales help you need.</p><div className="grid gap-3 sm:grid-cols-2">{inquiryTypes.map((type) => <ChoiceButton key={type} active={draft.inquiryType === type} onClick={() => onUpdate({ inquiryType: type })} title={type} detail="Direct follow-up" />)}</div></div>;
-  const packages = draft.selectedPackageRates?.length ? draft.selectedPackageRates : durationPackages[draft.experienceType as keyof typeof durationPackages].map((item) => ({ category: draft.experienceType, minutes: item.minutes, price: item.price, capacity: getCapacityPerVehicle(draft) }));
+  const packages: BookingRateOption[] = draft.selectedPackageRates?.length ? draft.selectedPackageRates : durationPackages[draft.experienceType as keyof typeof durationPackages].map((item) => ({ category: draft.experienceType, minutes: item.minutes, price: item.price, b2bPrice: undefined, capacity: getCapacityPerVehicle(draft) }));
   return <div><p className="mb-3 text-sm leading-6 text-muted-foreground">Prices shown are per vehicle. Selected vehicle: {getCapacityPerVehicle(draft)} seater.</p><div className="grid gap-3 sm:grid-cols-2">{packages.map((item) => <ChoiceButton key={item.minutes} active={draft.durationMinutes === item.minutes} onClick={() => onUpdate({ durationMinutes: item.minutes, selectedPackagePrice: item.price, selectedPackageB2BPrice: item.b2bPrice, selectedPackageCapacity: item.capacity })} title={formatDuration(item.minutes)} detail={formatAed(item.price)} />)}</div></div>;
 }
 
