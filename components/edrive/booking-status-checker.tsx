@@ -1,8 +1,7 @@
 'use client';
 
-import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
-import { CalendarDays, CheckCircle2, Clock3, CreditCard, FileSearch, MapPin, MessageCircle, Search, TicketCheck, UserRound, Waves } from 'lucide-react';
+import { CalendarDays, CheckCircle2, Clock3, CreditCard, FileSearch, MessageCircle, Search, TicketCheck, UserRound, Waves } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { BookingRequest, formatAed, getExperience } from '@/lib/booking-data';
@@ -10,6 +9,8 @@ import { companyInfo, whatsappUrl } from '@/lib/company-info';
 import { cn } from '@/lib/utils';
 
 const STORAGE_KEY = 'edrive-booking-requests';
+
+type PublicBookingStatus = 'Pending' | 'Confirmed' | 'Completed' | 'Cancelled';
 
 function cleanRef(value: string) {
   return value.trim().toUpperCase();
@@ -25,7 +26,13 @@ function durationLabel(request: BookingRequest) {
   return request.durationMinutes < 60 ? `${request.durationMinutes} min` : request.durationMinutes === 60 ? '60 min' : `${request.durationMinutes / 60} hrs`;
 }
 
-function statusTone(status: string) {
+function bookingStatus(value: unknown): PublicBookingStatus {
+  const status = String(value || 'Pending');
+  if (status === 'Confirmed' || status === 'Completed' || status === 'Cancelled') return status;
+  return 'Pending';
+}
+
+function statusTone(status: PublicBookingStatus) {
   if (status === 'Confirmed') return 'border-emerald-200 bg-emerald-50 text-emerald-700';
   if (status === 'Completed') return 'border-primary/20 bg-primary-50 text-primary-900';
   if (status === 'Cancelled') return 'border-red-200 bg-red-50 text-red-700';
@@ -36,7 +43,7 @@ function readBookings() {
   try {
     const stored = window.localStorage.getItem(STORAGE_KEY);
     const parsed = stored ? JSON.parse(stored) : [];
-    return Array.isArray(parsed) ? parsed as BookingRequest[] : [];
+    return Array.isArray(parsed) ? (parsed as BookingRequest[]) : [];
   } catch {
     return [];
   }
@@ -81,7 +88,7 @@ export function BookingStatusChecker() {
             </label>
             <div className="mt-4 flex flex-col gap-2 sm:flex-row">
               <Button type="submit" className="rounded-full"><Search data-icon aria-hidden="true" />Search Booking</Button>
-              <Button asChild type="button" variant="outline" className="rounded-full"><a href={`${whatsappUrl}?text=${whatsappMessage}`} target="_blank" rel="noopener noreferrer"><MessageCircle data-icon aria-hidden="true" />Ask WhatsApp</a></Button>
+              <Button asChild variant="outline" className="rounded-full"><a href={`${whatsappUrl}?text=${whatsappMessage}`} target="_blank" rel="noopener noreferrer"><MessageCircle data-icon aria-hidden="true" />Ask WhatsApp</a></Button>
             </div>
             <p className="mt-3 text-xs leading-5 text-muted-foreground">Example: ED-20260707-007. Your reference is shown after submitting the booking form.</p>
           </form>
@@ -99,13 +106,13 @@ function StatusResult({ request }: { request: BookingRequest }) {
   const experience = getExperience(request.experienceType);
   const isSales = request.serviceType === 'sales_inquiry';
   const totalLabel = isSales ? 'Request quote' : formatAed(request.totalAmount);
-  const status = request.status || 'Pending';
-  const steps = [
+  const status = bookingStatus(request.status);
+  const steps: Array<[string, boolean]> = [
     ['Request Sent', true],
     ['Team Review', status !== 'Cancelled'],
     ['Confirmed', status === 'Confirmed' || status === 'Completed'],
     ['Completed', status === 'Completed']
-  ] as const;
+  ];
 
   return (
     <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_19rem]">
