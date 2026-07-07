@@ -6,8 +6,7 @@ import { ArrowLeft, ArrowRight, CalendarDays, Check, ChevronDown, ChevronLeft, C
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { durationPackages, experienceOptions, formatAed, formatDuration, generateBookingCode, getBookingTotals, getCapacityPerVehicle, getExperience, getSelectedRateForDuration, initialBookingDraft, inquiryTypes, timeSlots } from '@/lib/booking-data';
-import type { BookingDraft, BookingRateOption, BookingRequest } from '@/lib/booking-data';
+import { BookingDraft, BookingRateOption, BookingRequest, durationPackages, experienceOptions, formatAed, formatDuration, generateBookingCode, getBookingTotals, getCapacityPerVehicle, getExperience, getSelectedRateForDuration, initialBookingDraft, inquiryTypes, timeSlots } from '@/lib/booking-data';
 import { companyInfo } from '@/lib/company-info';
 import { supabase } from '@/lib/supabase-client';
 import { cn } from '@/lib/utils';
@@ -99,10 +98,11 @@ export function BookingWizard() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const category = params.get('category');
+    const categoryParam = params.get('category');
     const selectedCapacity = Number(params.get('capacity') || 0);
 
-    if (!category || !selectedCapacity) return;
+    if (!categoryParam || !selectedCapacity) return;
+    const selectedCategory = categoryParam;
 
     let active = true;
 
@@ -111,7 +111,7 @@ export function BookingWizard() {
         .from('packages')
         .select('id,title,slug,category,duration_minutes,base_price,b2b_price,capacity')
         .eq('status', 'active')
-        .eq('category', category)
+        .eq('category', selectedCategory)
         .eq('capacity', selectedCapacity)
         .order('duration_minutes', { ascending: true });
 
@@ -120,15 +120,15 @@ export function BookingWizard() {
       if (!rates.length) return;
 
       const preferredRate = rates.find((rate) => rate.minutes === 60) || rates[0];
-      const title = rideTitle(category, selectedCapacity);
-      const experienceType = experienceTypeFromCategory(category);
+      const title = rideTitle(selectedCategory, selectedCapacity);
+      const experienceType = experienceTypeFromCategory(selectedCategory);
 
       setSelectedRide({ title, detail: `${selectedCapacity} seater · ${durationDetail(rates)}` });
       setDraft({
         ...initialBookingDraft,
         selectedPackageName: title,
-        selectedPackageSlug: rideSlug(category, selectedCapacity),
-        selectedPackageCategory: categoryLabel(category),
+        selectedPackageSlug: rideSlug(selectedCategory, selectedCapacity),
+        selectedPackageCategory: categoryLabel(selectedCategory),
         selectedPackageCapacity: selectedCapacity,
         selectedPackagePrice: preferredRate.price,
         selectedPackageB2BPrice: preferredRate.b2bPrice,
