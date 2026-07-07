@@ -148,8 +148,8 @@ Preferred location:`);
 
       <div className="flex flex-1 flex-col px-3 pb-2.5 pt-3">
         <div>
-          <h3 className="mx-auto max-w-[10.5rem] text-center font-heading text-[0.95rem] font-semibold leading-[1.2] tracking-[-0.01em] text-foreground sm:text-base">{displayTitle}</h3>
-          <p className="mt-2 flex items-center justify-center gap-1.5 text-[11px] font-semibold text-muted-foreground"><MapPin className="size-3.5 text-primary" aria-hidden="true" />{item.location}</p>
+          <h3 className="font-heading text-[0.95rem] font-semibold leading-[1.35] tracking-[-0.01em] text-foreground sm:text-[1rem]">{displayTitle}</h3>
+          <p className="mt-2 flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground"><MapPin className="size-3.5 text-primary" aria-hidden="true" />{item.location}</p>
         </div>
 
         <div className="mt-3 grid gap-1.5 rounded-[1rem] bg-primary-50 px-3.5 py-3 text-xs">
