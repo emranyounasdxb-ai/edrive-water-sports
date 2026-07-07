@@ -38,6 +38,12 @@ function categoryLabel(value: string) {
   return 'Package';
 }
 
+function displayCapacity(category: string, fallback: number) {
+  if (category === 'jet_car_rental') return 4;
+  if (category === 'jet_ski_rental') return 2;
+  return fallback || 2;
+}
+
 function imageForLivePackage(item: LivePackage, index = 0) {
   const seed = Number(item.display_order || index || 0);
   return getLivePackageImage(item.category, seed);
@@ -115,6 +121,7 @@ function LivePackageCard({ item, index }: { item: LivePackage; index: number }) 
   const imageSrc = imageForLivePackage(item, index);
   const bookingHref = '/booking';
   const displayTitle = cleanPackageTitle(item.title);
+  const capacity = displayCapacity(item.category, item.capacity);
   const whatsappMessage = encodeURIComponent(`Hello eDrive, I am interested in this water sports experience: ${item.title}.
 
 Please suggest the best available package, price, duration, and timing for this experience.
@@ -155,7 +162,7 @@ Preferred location:`);
         <div className="mt-3 grid gap-1.5 rounded-[1rem] bg-primary-50 px-3.5 py-3 text-xs">
           <p className="font-semibold text-primary-900">From {formatAed(item.base_price)}</p>
           <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground"><Clock className="size-3.5 text-primary" aria-hidden="true" />{item.duration_minutes} minutes</p>
-          <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground"><Users className="size-3.5 text-primary" aria-hidden="true" />{item.capacity} seater</p>
+          <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground"><Users className="size-3.5 text-primary" aria-hidden="true" />{capacity} seater</p>
         </div>
         <p className="mt-3 text-[13px] leading-6 text-muted-foreground">{item.short_description || 'Premium eDrive water sports package with team support and booking confirmation.'}</p>
         <div className="mt-auto grid gap-2 pt-4">
