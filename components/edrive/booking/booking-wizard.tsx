@@ -2,11 +2,12 @@
 
 import Image from 'next/image';
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, ArrowRight, CalendarDays, Check, ChevronDown, ChevronLeft, ChevronRight, Clock3, Mail, MapPin, Minus, Phone, Plus, Send, TicketCheck, UserRound } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, ChevronDown, ChevronLeft, ChevronRight, Clock3, Mail, MapPin, Minus, Phone, Plus, Send, UserRound } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { BookingDraft, BookingRateOption, BookingRequest, durationPackages, experienceOptions, formatAed, formatDuration, generateBookingCode, getBookingTotals, getCapacityPerVehicle, getExperience, getSelectedRateForDuration, initialBookingDraft, inquiryTypes, timeSlots } from '@/lib/booking-data';
+import { durationPackages, experienceOptions, formatAed, formatDuration, generateBookingCode, getBookingTotals, getCapacityPerVehicle, getExperience, getSelectedRateForDuration, initialBookingDraft, inquiryTypes, timeSlots } from '@/lib/booking-data';
+import type { BookingDraft, BookingRateOption, BookingRequest } from '@/lib/booking-data';
 import { companyInfo } from '@/lib/company-info';
 import { supabase } from '@/lib/supabase-client';
 import { cn } from '@/lib/utils';
@@ -24,11 +25,6 @@ const packageCategoryLabels: Record<string, string> = {
   yacht_rental: 'Yacht Rental'
 };
 
-type SelectedRide = {
-  title: string;
-  detail: string;
-};
-
 type PackageRateRow = {
   id: string;
   title: string;
@@ -41,8 +37,7 @@ type PackageRateRow = {
 };
 
 function experienceTypeFromCategory(category: string): BookingDraft['experienceType'] {
-  if (category === 'jet_car_rental') return 'jet-car-rental';
-  return 'jet-ski-rental';
+  return category === 'jet_car_rental' ? 'jet-car-rental' : 'jet-ski-rental';
 }
 
 function categoryLabel(category: string) {
@@ -77,15 +72,11 @@ function mapRates(rows: PackageRateRow[]): BookingRateOption[] {
     .sort((a, b) => a.minutes - b.minutes);
 }
 
-function durationDetail(rates: BookingRateOption[]) {
-  return rates.map((rate) => `${rate.minutes} min ${formatAed(rate.price)}`).join(' · ');
-}
-
 export function BookingWizard() {
   const [step, setStep] = useState(0);
   const [draft, setDraft] = useState<BookingDraft>(initialBookingDraft);
-  const [selectedRide, setSelectedRide] = useState<SelectedRide | null>(null);
   const [submitted, setSubmitted] = useState<BookingRequest | null>(null);
+
   const experience = getExperience(draft.experienceType);
   const isSales = experience.serviceType === 'sales_inquiry';
   const capacityPerVehicle = getCapacityPerVehicle(draft);
@@ -97,6 +88,10 @@ export function BookingWizard() {
     setDraft((current) => ({ ...current, ...values }));
   }
 
+  function goToStep(nextStep: number) {
+    setStep(lockedPackage && nextStep === 0 ? 1 : nextStep);
+  }
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const categoryParam = params.get('category');
@@ -104,7 +99,6 @@ export function BookingWizard() {
 
     if (!categoryParam || !selectedCapacity) return;
     const selectedCategory = categoryParam;
-
     let active = true;
 
     async function loadSelectedVehicleRates() {
@@ -124,7 +118,6 @@ export function BookingWizard() {
       const title = rideTitle(selectedCategory, selectedCapacity);
       const experienceType = experienceTypeFromCategory(selectedCategory);
 
-      setSelectedRide({ title, detail: `${selectedCapacity} seater · ${durationDetail(rates)}` });
       setDraft({
         ...initialBookingDraft,
         selectedPackageName: title,
@@ -140,19 +133,17 @@ export function BookingWizard() {
         vehicleQuantity: 1,
         guestCount: selectedCapacity
       });
+      setStep(1);
     }
 
     void loadSelectedVehicleRates();
 
-    return () => {
-      active = false;
-    };
+    return () => { active = false; };
   }, []);
 
   function selectExperience(experienceType: BookingDraft['experienceType']) {
     if (lockedPackage) return;
     const nextExperience = getExperience(experienceType);
-    setSelectedRide(null);
     updateDraft({
       selectedPackageName: undefined,
       selectedPackageSlug: undefined,
@@ -180,6 +171,7 @@ export function BookingWizard() {
     const totals = getBookingTotals(draft);
     const selectedRate = getSelectedRateForDuration(draft);
     let existing: BookingRequest[] = [];
+
     try {
       const stored = window.localStorage.getItem(STORAGE_KEY);
       existing = stored ? JSON.parse(stored) : [];
@@ -223,7 +215,7 @@ export function BookingWizard() {
       totalAmount: totals.totalAmount,
       paymentStatus: 'Not Paid',
       paymentMethod: null,
-      createdAt: new Date().toISOString(),
+      createdAt: new Date().toISOString()
     };
 
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify([...existing, request]));
@@ -246,7 +238,7 @@ export function BookingWizard() {
       vehicleQuantity: 1,
       guestCount: current.selectedPackageCapacity || getExperience(current.experienceType).capacity
     }));
-    setStep(0);
+    setStep(lockedPackage ? 1 : 0);
     setSubmitted(null);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
@@ -256,8 +248,7 @@ export function BookingWizard() {
   return (
     <section className="container-x pb-10 pt-3 sm:pb-12">
       <div className="mx-auto max-w-6xl">
-        <WizardProgress currentStep={step} onStepSelect={setStep} />
-        {selectedRide ? <SelectedRideNotice ride={selectedRide} /> : null}
+        <WizardProgress currentStep={step} lockedPackage={lockedPackage} onStepSelect={goToStep} />
 
         <details className="group mt-3 lg:hidden">
           <summary className="flex cursor-pointer list-none items-center justify-between rounded-[1.25rem] border border-white/80 bg-white/80 px-4 py-2.5 text-sm font-semibold text-foreground shadow-sm">
@@ -271,11 +262,14 @@ export function BookingWizard() {
           <div className="min-w-0">
             <div className="premium-surface rounded-[1.65rem] p-4 sm:p-5 lg:p-5">
               <div className="mb-4 flex items-start justify-between gap-4 border-b border-border/70 pb-4">
-                <div><p className="text-[10px] font-bold uppercase tracking-[0.16em] text-primary">Step {step + 1} of {steps.length}</p><h2 className="mt-1 font-heading text-xl font-semibold text-foreground sm:text-2xl">{steps[step]}</h2></div>
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-primary">Step {step + 1} of {steps.length}</p>
+                  <h2 className="mt-1 font-heading text-xl font-semibold text-foreground sm:text-2xl">{steps[step]}</h2>
+                </div>
                 <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary-50 text-xs font-bold text-primary">{step + 1}</span>
               </div>
 
-              {step === 0 ? (lockedPackage ? <LockedVehicleStep draft={draft} /> : <ExperienceStep selected={draft.experienceType} onSelect={selectExperience} />) : null}
+              {step === 0 && !lockedPackage ? <ExperienceStep selected={draft.experienceType} onSelect={selectExperience} /> : null}
               {step === 1 ? <DurationStep draft={draft} onUpdate={updateDraft} /> : null}
               {step === 2 ? <PartyStep draft={draft} capacity={capacity} capacityPerVehicle={capacityPerVehicle} exceeded={capacityExceeded} onUpdate={updateDraft} /> : null}
               {step === 3 ? <ScheduleStep draft={draft} onUpdate={updateDraft} /> : null}
@@ -283,7 +277,7 @@ export function BookingWizard() {
               {step === 5 ? <ReviewStep draft={draft} /> : null}
 
               <div className="mt-5 flex flex-col-reverse justify-between gap-3 border-t border-border/70 pt-4 sm:flex-row">
-                <Button type="button" variant="outline" disabled={step === 0} onClick={() => setStep((current) => Math.max(0, current - 1))}><ArrowLeft data-icon aria-hidden="true" />Back</Button>
+                <Button type="button" variant="outline" disabled={step === 0 || (lockedPackage && step === 1)} onClick={() => setStep((current) => Math.max(lockedPackage ? 1 : 0, current - 1))}><ArrowLeft data-icon aria-hidden="true" />Back</Button>
                 {step < 5 ? (
                   <Button type="button" disabled={!canContinue} onClick={() => setStep((current) => Math.min(5, current + 1))}>{step === 4 ? 'Review Booking' : 'Continue'}<ArrowRight data-icon aria-hidden="true" /></Button>
                 ) : (
@@ -302,57 +296,25 @@ export function BookingWizard() {
   );
 }
 
-function WizardProgress({ currentStep, onStepSelect }: { currentStep: number; onStepSelect: (step: number) => void }) {
+function WizardProgress({ currentStep, lockedPackage, onStepSelect }: { currentStep: number; lockedPackage: boolean; onStepSelect: (step: number) => void }) {
   return (
     <div className="overflow-x-auto pb-1">
       <ol className="flex min-w-[660px] items-start">
         {steps.map((label, index) => {
           const complete = index < currentStep;
           const active = index === currentStep;
+          const disabled = index > currentStep || (lockedPackage && index === 0);
           return (
             <li key={label} className="relative flex flex-1 flex-col items-center px-1 text-center">
               {index ? <span className={cn('absolute right-1/2 top-3.5 h-px w-full bg-border', index <= currentStep && 'bg-primary')} /> : null}
-              <button type="button" disabled={index > currentStep} onClick={() => onStepSelect(index)} className={cn('relative z-10 flex size-7 items-center justify-center rounded-full border bg-background text-[11px] font-bold transition', active ? 'border-primary bg-primary text-white shadow-sm' : complete ? 'border-primary bg-primary-50 text-primary' : 'border-border text-muted-foreground')} aria-current={active ? 'step' : undefined} aria-label={`Step ${index + 1}: ${label}`}>{complete ? <Check className="size-3.5" aria-hidden="true" /> : index + 1}</button>
+              <button type="button" disabled={disabled} onClick={() => onStepSelect(index)} className={cn('relative z-10 flex size-7 items-center justify-center rounded-full border bg-background text-[11px] font-bold transition', active ? 'border-primary bg-primary text-white shadow-sm' : complete ? 'border-primary bg-primary-50 text-primary' : 'border-border text-muted-foreground', disabled && 'cursor-not-allowed opacity-55')} aria-current={active ? 'step' : undefined} aria-label={`Step ${index + 1}: ${label}`}>
+                {complete ? <Check className="size-3.5" aria-hidden="true" /> : index + 1}
+              </button>
               <span className={cn('relative z-10 mt-1.5 max-w-[105px] text-[10px] font-semibold leading-4', active || complete ? 'text-foreground' : 'text-muted-foreground')}>{label}</span>
             </li>
           );
         })}
       </ol>
-    </div>
-  );
-}
-
-function SelectedRideNotice({ ride }: { ride: SelectedRide }) {
-  return (
-    <div className="mt-5 rounded-[1.5rem] border border-primary/15 bg-primary-50 p-4 text-left sm:flex sm:items-center sm:justify-between sm:gap-5">
-      <div className="flex items-start gap-3">
-        <span className="mt-0.5 flex size-10 shrink-0 items-center justify-center rounded-full bg-white text-primary shadow-sm"><TicketCheck className="size-5" aria-hidden="true" /></span>
-        <div>
-          <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary">Selected vehicle</p>
-          <h2 className="mt-1 font-heading text-xl font-semibold text-foreground">{ride.title}</h2>
-          <p className="mt-1 text-sm leading-6 text-muted-foreground">{ride.detail}</p>
-        </div>
-      </div>
-      <p className="mt-3 max-w-sm text-xs leading-5 text-primary-900 sm:mt-0">Choose the exact duration in the next step. The price will update automatically.</p>
-    </div>
-  );
-}
-
-function LockedVehicleStep({ draft }: { draft: BookingDraft }) {
-  return (
-    <div className="rounded-[1.25rem] border border-primary bg-primary-50 p-5 shadow-sm ring-2 ring-primary/10">
-      <div className="flex items-start gap-4">
-        <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-white text-primary shadow-sm"><TicketCheck className="size-5" aria-hidden="true" /></span>
-        <div className="min-w-0 flex-1">
-          <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-primary">Selected package</p>
-          <h3 className="mt-1 font-heading text-2xl font-semibold text-foreground">{draft.selectedPackageName}</h3>
-          <p className="mt-2 text-sm leading-6 text-muted-foreground">This booking is locked to the selected vehicle. Continue to choose duration and timing.</p>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {draft.selectedPackageCapacity ? <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-primary-900">{draft.selectedPackageCapacity} seater</span> : null}
-            {draft.selectedPackageRates?.map((rate) => <span key={rate.minutes} className="rounded-full bg-white px-3 py-1 text-xs font-bold text-primary-900">{rate.minutes} min · {formatAed(rate.price)}</span>)}
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
@@ -365,7 +327,14 @@ function ExperienceStep({ selected, onSelect }: { selected: BookingDraft['experi
         return (
           <button key={item.id} type="button" onClick={() => onSelect(item.id)} className={cn('group grid overflow-hidden rounded-[1.25rem] border bg-white text-left transition sm:grid-cols-[125px_1fr]', active ? 'border-primary shadow-sm ring-2 ring-primary/10' : 'border-border/80 hover:border-primary/35')} aria-pressed={active}>
             <div className="relative min-h-[95px] overflow-hidden bg-primary-50 sm:min-h-full"><Image src={item.image} alt="" fill className="object-cover transition duration-500 group-hover:scale-105" sizes="125px" /></div>
-            <div className="flex items-start justify-between gap-3 p-4"><div><div className="flex flex-wrap items-center gap-2"><h3 className="font-heading text-lg font-semibold text-foreground">{item.title}</h3>{item.recommended ? <span className="rounded-full bg-accent-200 px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.1em] text-primary-900">Popular</span> : null}</div><p className="mt-1.5 max-w-xl text-xs leading-5 text-muted-foreground">{item.shortDescription}</p><p className="mt-2 text-xs font-medium text-muted-foreground">Duration and pricing will show in the next step.</p></div><span className={cn('mt-1 flex size-5 shrink-0 items-center justify-center rounded-full border', active ? 'border-primary bg-primary text-white' : 'border-border bg-background')}>{active ? <Check className="size-3" aria-hidden="true" /> : null}</span></div>
+            <div className="flex items-start justify-between gap-3 p-4">
+              <div>
+                <div className="flex flex-wrap items-center gap-2"><h3 className="font-heading text-lg font-semibold text-foreground">{item.title}</h3>{item.recommended ? <span className="rounded-full bg-accent-200 px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.1em] text-primary-900">Popular</span> : null}</div>
+                <p className="mt-1.5 max-w-xl text-xs leading-5 text-muted-foreground">{item.shortDescription}</p>
+                <p className="mt-2 text-xs font-medium text-muted-foreground">Duration and pricing will show in the next step.</p>
+              </div>
+              <span className={cn('mt-1 flex size-5 shrink-0 items-center justify-center rounded-full border', active ? 'border-primary bg-primary text-white' : 'border-border bg-background')}>{active ? <Check className="size-3" aria-hidden="true" /> : null}</span>
+            </div>
           </button>
         );
       })}
@@ -377,7 +346,7 @@ function DurationStep({ draft, onUpdate }: { draft: BookingDraft; onUpdate: (val
   const experience = getExperience(draft.experienceType);
   if (experience.serviceType === 'sales_inquiry') return <div><p className="mb-3 text-sm leading-6 text-muted-foreground">Tell us what kind of sales help you need.</p><div className="grid gap-3 sm:grid-cols-2">{inquiryTypes.map((type) => <ChoiceButton key={type} active={draft.inquiryType === type} onClick={() => onUpdate({ inquiryType: type })} title={type} detail="Direct follow-up" />)}</div></div>;
   const packages: BookingRateOption[] = draft.selectedPackageRates?.length ? draft.selectedPackageRates : durationPackages[draft.experienceType as keyof typeof durationPackages].map((item) => ({ category: draft.experienceType, minutes: item.minutes, price: item.price, b2bPrice: undefined, capacity: getCapacityPerVehicle(draft) }));
-  return <div><p className="mb-3 text-sm leading-6 text-muted-foreground">Prices shown are per vehicle. Selected vehicle: {getCapacityPerVehicle(draft)} seater.</p><div className="grid gap-3 sm:grid-cols-2">{packages.map((item) => <ChoiceButton key={item.minutes} active={draft.durationMinutes === item.minutes} onClick={() => onUpdate({ durationMinutes: item.minutes, selectedPackagePrice: item.price, selectedPackageB2BPrice: item.b2bPrice, selectedPackageCapacity: item.capacity })} title={formatDuration(item.minutes)} detail={formatAed(item.price)} />)}</div></div>;
+  return <div><p className="mb-3 text-sm leading-6 text-muted-foreground">Choose duration for {draft.selectedPackageName || experience.title}. Prices shown are per vehicle.</p><div className="grid gap-3 sm:grid-cols-2">{packages.map((item) => <ChoiceButton key={item.minutes} active={draft.durationMinutes === item.minutes} onClick={() => onUpdate({ durationMinutes: item.minutes, selectedPackagePrice: item.price, selectedPackageB2BPrice: item.b2bPrice, selectedPackageCapacity: item.capacity })} title={formatDuration(item.minutes)} detail={formatAed(item.price)} />)}</div></div>;
 }
 
 function ChoiceButton({ active, onClick, title, detail }: { active: boolean; onClick: () => void; title: string; detail: string }) {
