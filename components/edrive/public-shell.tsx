@@ -3,9 +3,9 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState, type FormEvent } from 'react';
-import { ArrowRight, CalendarCheck, Instagram, Loader2, LockKeyhole, Mail, MapPin, Menu, Phone, Search, TicketCheck, X } from 'lucide-react';
+import { CalendarCheck, Instagram, Loader2, LockKeyhole, Mail, MapPin, Menu, Phone, Search, TicketCheck, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { companyInfo, whatsappUrl } from '@/lib/company-info';
+import { companyInfo } from '@/lib/company-info';
 import { bookingRequestsTable } from '@/lib/booking-records';
 import { publicNavItems } from '@/lib/mock-data';
 import { supabase } from '@/lib/supabase-client';
@@ -26,176 +26,6 @@ function normalizePath(pathname: string) {
   return pathname.replace(/\/$/, '');
 }
 
-function updateLinkText(anchor: HTMLAnchorElement, text: string) {
-  const svg = anchor.querySelector('svg');
-  anchor.textContent = text;
-  if (svg) anchor.appendChild(svg);
-}
-
-function buildExperienceInquiryMessage(title: string) {
-  return [
-    `Hello eDrive, I am interested in this water sports experience: ${title}.`,
-    '',
-    'Please suggest the best available package, price, duration, and timing for this experience.',
-    '',
-    'My preferred date:',
-    'Number of guests:',
-    'Preferred location:'
-  ].join('\n');
-}
-
-function normalizeBookingButtonsAndMessages() {
-  const bookingLinks = Array.from(document.querySelectorAll<HTMLAnchorElement>('a[href^="/booking"], a[href*="/booking?"]'));
-
-  bookingLinks.forEach((anchor) => {
-    const currentText = anchor.textContent?.trim().toLowerCase() || '';
-    anchor.href = '/booking';
-    if (currentText.includes('book') || currentText.includes('open booking')) {
-      updateLinkText(anchor, 'Book Now');
-    }
-  });
-
-  const staticBookingLinks = bookingLinks.filter((anchor) => anchor.closest('article'));
-  staticBookingLinks.forEach((anchor) => {
-    const card = anchor.closest('article');
-    const title = card?.querySelector('h3')?.textContent?.trim() || 'eDrive water sports experience';
-    const whatsappAnchor = card?.querySelector<HTMLAnchorElement>('a[href*="wa.me"]');
-    if (!whatsappAnchor) return;
-
-    const url = new URL(whatsappAnchor.href);
-    url.searchParams.set('text', buildExperienceInquiryMessage(title));
-    whatsappAnchor.href = url.toString();
-    updateLinkText(whatsappAnchor, 'Ask on WhatsApp');
-  });
-}
-
-function moveLivePackagesNearTop(pathname: string) {
-  if (pathname !== '/' && pathname !== '/rentals') return;
-  const main = document.querySelector('main');
-  const livePackages = document.getElementById('live-packages');
-  const firstSection = main?.querySelector(':scope > section');
-  if (!main || !livePackages || !firstSection) return;
-  if (firstSection.nextElementSibling === livePackages) return;
-  main.insertBefore(livePackages, firstSection.nextElementSibling);
-}
-
-function normalizeExperienceHeadings(pathname: string) {
-  if (pathname !== '/' && pathname !== '/rentals') return;
-
-  const headingMap: Record<string, string> = {
-    'Popular Packages': 'Popular Experience Ideas',
-    'Most Popular Packages': 'Popular Ride Ideas',
-    'Choose a Package Category': 'Explore Experience Categories',
-    'Jet Ski Rental Packages in Dubai': 'Jet Ski Experience Ideas in Dubai',
-    'Jet Car Rental Packages in Dubai': 'Jet Car Experience Ideas in Dubai',
-    'Jet Ski and Jet Car Packages Dubai': 'Jet Ski and Jet Car Experience Ideas',
-    'Family Water Sports Packages': 'Family Water Sports Experience Ideas',
-    'VIP Water Sports Experiences': 'VIP Water Sports Experience Ideas',
-    'Recommended Rental Packages': 'Recommended Experience Ideas',
-    'Packages customers should not miss': 'Recommended Experience Ideas'
-  };
-
-  document.querySelectorAll('h2').forEach((heading) => {
-    const current = heading.textContent?.trim() || '';
-    if (headingMap[current]) heading.textContent = headingMap[current];
-  });
-}
-
-function findHeading(text: string) {
-  return Array.from(document.querySelectorAll<HTMLHeadingElement>('h2')).find((heading) => heading.textContent?.trim() === text) || null;
-}
-
-function alignFleetGrid(headingText: string) {
-  const heading = findHeading(headingText);
-  const section = heading?.closest('section');
-  const grid = section?.querySelector<HTMLElement>('.mt-7.grid');
-  if (!section || !grid) return null;
-
-  grid.style.gridTemplateColumns = 'repeat(auto-fit, minmax(280px, 1fr))';
-  grid.style.alignItems = 'stretch';
-  grid.style.maxWidth = '100%';
-  grid.querySelectorAll<HTMLElement>('article').forEach((card) => {
-    card.style.height = '100%';
-  });
-
-  return grid;
-}
-
-function addFleetCard(grid: HTMLElement) {
-  if (grid.querySelector('[data-fleet-added="photo-jet-ski"]')) return;
-
-  const message = encodeURIComponent(buildExperienceInquiryMessage('Photo-Friendly Jet Ski'));
-  const card = document.createElement('article');
-  card.dataset.fleetAdded = 'photo-jet-ski';
-  card.className = 'premium-surface premium-card-hover h-full overflow-hidden rounded-[1.75rem] p-3';
-  card.innerHTML = `
-    <div class="relative aspect-[16/10] overflow-hidden rounded-[1.35rem] bg-primary-50" style="background-image:url('/images/edrive/packages/jet-ski/jet-ski-package-41.webp');background-size:cover;background-position:center;"></div>
-    <div class="p-4">
-      <span class="flex size-7 items-center justify-center rounded-xl bg-primary-50 text-lg font-bold text-primary">≋</span>
-      <h3 class="mt-4 font-heading text-2xl font-semibold text-foreground">Photo-Friendly Jet Ski</h3>
-      <dl class="mt-4 grid gap-3 rounded-[1.2rem] bg-primary-50 p-4 text-sm">
-        <div><dt class="font-semibold text-foreground">Capacity</dt><dd class="mt-1 text-muted-foreground">1-2 guests</dd></div>
-        <div><dt class="font-semibold text-foreground">Best for</dt><dd class="mt-1 text-muted-foreground">Skyline photos, beginner-friendly routes, and golden-hour Dubai water sports content.</dd></div>
-      </dl>
-      <div class="mt-5 flex flex-col gap-2 sm:flex-row">
-        <a href="/booking" class="inline-flex h-9 items-center justify-center gap-2 whitespace-nowrap rounded-full bg-primary-900 px-4 text-xs font-bold text-white shadow-[0_8px_18px_rgba(8,37,50,0.18)] transition hover:bg-primary-800">Book Now</a>
-        <a href="${whatsappUrl}?text=${message}" target="_blank" rel="noopener noreferrer" class="inline-flex h-9 items-center justify-center whitespace-nowrap rounded-full border border-emerald-300 bg-emerald-500 px-4 text-xs font-bold text-white transition hover:bg-emerald-600">Ask on WhatsApp</a>
-      </div>
-    </div>
-  `;
-  grid.appendChild(card);
-}
-
-function refineFleetPage(pathname: string) {
-  if (pathname !== '/fleet') return;
-
-  document.documentElement.dataset.publicPage = 'fleet';
-  const jetSkiGrid = alignFleetGrid('Jet Ski Fleet Cards');
-  alignFleetGrid('Jet Car Fleet Cards');
-  if (jetSkiGrid) addFleetCard(jetSkiGrid);
-
-  ['Fleet Features', 'Safety & Maintenance', 'Recommended Rental Packages'].forEach((title) => {
-    const heading = findHeading(title);
-    const section = heading?.closest<HTMLElement>('section');
-    if (!section) return;
-    section.style.paddingTop = '2.75rem';
-    section.style.paddingBottom = '2.75rem';
-  });
-}
-
-function replaceTextEverywhere(from: string, to: string) {
-  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
-  const nodes: Text[] = [];
-  while (walker.nextNode()) nodes.push(walker.currentNode as Text);
-  nodes.forEach((node) => {
-    if (node.nodeValue?.includes(from)) node.nodeValue = node.nodeValue.replace(from, to);
-  });
-}
-
-function refineHomePage(pathname: string) {
-  if (pathname !== '/') return;
-
-  replaceTextEverywhere('50 Static packages', '50 Experience ideas');
-  replaceTextEverywhere('Static packages', 'Experience ideas');
-  replaceTextEverywhere('Choose, book, confirm, ride.', '');
-
-  const processHeading = findHeading('From package card to confirmed water time');
-  const section = processHeading?.closest('section');
-  const image = section?.querySelector<HTMLImageElement>('img');
-  if (image) {
-    image.src = '/images/edrive/packages/jet-car/jet-car-package-19.webp';
-    image.removeAttribute('srcset');
-    image.style.objectPosition = 'center';
-  }
-
-  section?.querySelectorAll<HTMLElement>('[class*="gradient"], [class*="absolute"]').forEach((element) => {
-    const text = element.textContent?.trim() || '';
-    if (!text || text.includes('Choose') || text.includes('book') || text.includes('confirm')) {
-      element.style.display = 'none';
-    }
-  });
-}
-
 export function PublicShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const currentPath = normalizePath(pathname);
@@ -212,20 +42,6 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
     window.addEventListener('scroll', updateHeader, { passive: true });
     return () => window.removeEventListener('scroll', updateHeader);
   }, []);
-
-  useEffect(() => {
-    const applyPublicPageRules = () => {
-      moveLivePackagesNearTop(currentPath);
-      normalizeBookingButtonsAndMessages();
-      normalizeExperienceHeadings(currentPath);
-      refineFleetPage(currentPath);
-      refineHomePage(currentPath);
-    };
-
-    applyPublicPageRules();
-    const timeout = window.setTimeout(applyPublicPageRules, 650);
-    return () => window.clearTimeout(timeout);
-  }, [currentPath]);
 
   async function handleStatusSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -294,7 +110,7 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
             </div>
 
             <div className="hidden shrink-0 items-center gap-2 md:flex">
-              <button type="button" onClick={openStatusModal} className={cn('hidden items-center gap-2 whitespace-nowrap rounded-full px-3 py-2 text-[11px] font-bold leading-none text-primary-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_5px_14px_rgba(8,37,50,0.055)] transition hover:bg-primary-100 hover:text-primary lg:inline-flex', scrolled ? 'bg-primary-50/90 backdrop-blur-sm' : 'bg-primary-50')}>
+              <button type="button" onClick={openStatusModal} className={cn('hidden items-center gap-2 whitespace-nowrap rounded-full px-3 py-2 text-[11px] font-bold leading-none text-primary-950 shadow-[inset_0_1px_0_rgba(255,255,255,0.55),0_8px_18px_rgba(159,118,44,0.16)] transition hover:bg-accent-300 lg:inline-flex', scrolled ? 'bg-accent-200/90 backdrop-blur-sm' : 'bg-accent-200')}>
                 <TicketCheck className="size-3.5" aria-hidden="true" />
                 Check Status
               </button>
@@ -330,7 +146,7 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
                 );
               })}
               <div className="mt-3 grid gap-2 sm:grid-cols-3">
-                <Button type="button" variant="outline" className="rounded-full" onClick={openStatusModal}>
+                <Button type="button" variant="gold" className="rounded-full" onClick={openStatusModal}>
                   <TicketCheck data-icon aria-hidden="true" />Check Status
                 </Button>
                 <Button asChild variant="outline" className="rounded-full">
@@ -397,7 +213,7 @@ function BookingStatusModal({ reference, error, loading, onReferenceChange, onCl
 function PublicFooter() {
   return (
     <footer className="border-t border-border bg-white">
-      <div className="container-x grid gap-10 py-12 md:grid-cols-[1.2fr_0.7fr_0.8fr_1fr]">
+      <div className="container-x grid gap-10 py-12 md:grid-cols-[1.2fr_0.7fr_1fr]">
         <div className="flex flex-col gap-5">
           <BrandMark />
           <p className="max-w-sm text-sm leading-7 text-muted-foreground">
@@ -409,16 +225,10 @@ function PublicFooter() {
         </div>
         <div className="flex flex-col gap-3">
           <h3 className="text-sm font-semibold text-foreground">Explore</h3>
-          {publicNavItems.slice(1, 6).map((item) => (
+          {publicNavItems.map((item) => (
             <Link key={item.href} href={item.href} className="text-sm text-muted-foreground transition hover:text-primary">{item.label}</Link>
           ))}
-        </div>
-        <div className="flex flex-col gap-3">
-          <h3 className="text-sm font-semibold text-foreground">Packages</h3>
-          <Link href="/rentals#live-packages" className="text-sm text-muted-foreground transition hover:text-primary">Live Bookable Packages</Link>
-          <Link href="/rentals#jet-ski-packages" className="text-sm text-muted-foreground transition hover:text-primary">Jet Ski Experience Ideas</Link>
-          <Link href="/rentals#jet-car-packages" className="text-sm text-muted-foreground transition hover:text-primary">Jet Car Experience Ideas</Link>
-          <Link href="/rentals#combo-packages" className="text-sm text-muted-foreground transition hover:text-primary">Combo Experience Ideas</Link>
+          <Link href="/booking" className="text-sm text-muted-foreground transition hover:text-primary">Book Now</Link>
         </div>
         <div className="flex flex-col gap-4">
           <h3 className="text-sm font-semibold text-foreground">Contact</h3>
@@ -438,7 +248,7 @@ function PublicFooter() {
               </span>
             ))}
           </div>
-          <Link href="/rentals#live-packages" className="inline-flex items-center gap-2 font-semibold text-primary">Explore live packages <ArrowRight data-icon aria-hidden="true" /></Link>
+          <Link href="/booking" className="inline-flex items-center gap-2 font-semibold text-primary">Book your ride</Link>
         </div>
       </div>
     </footer>
