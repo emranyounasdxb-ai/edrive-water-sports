@@ -1,6 +1,6 @@
 import type { LucideIcon } from 'lucide-react';
 import { CalendarDays, Clock3, MapPin, TicketCheck, UsersRound } from 'lucide-react';
-import { BookingDraft, durationPackages, formatAed, formatDuration, getBookingTotals, getExperience } from '@/lib/booking-data';
+import { BookingDraft, formatAed, formatDuration, getBookingTotals, getExperience, getPackageUnitPrice } from '@/lib/booking-data';
 import { companyInfo } from '@/lib/company-info';
 import { cn } from '@/lib/utils';
 
@@ -9,18 +9,13 @@ function displayDate(value: string) {
   return new Intl.DateTimeFormat('en-AE', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(`${value}T12:00:00`));
 }
 
-function getPackagePrice(draft: BookingDraft) {
-  const experience = getExperience(draft.experienceType);
-  if (experience.serviceType === 'sales_inquiry') return 0;
-  return durationPackages[draft.experienceType as 'jet-ski-rental' | 'jet-car-rental'].find((item) => item.minutes === draft.durationMinutes)?.price ?? 0;
-}
-
 export function BookingSummaryTicket({ draft, compact = false }: { draft: BookingDraft; compact?: boolean }) {
   const experience = getExperience(draft.experienceType);
   const totals = getBookingTotals(draft);
   const isSales = experience.serviceType === 'sales_inquiry';
-  const packagePrice = getPackagePrice(draft);
+  const packagePrice = getPackageUnitPrice(draft);
   const totalLabel = isSales ? 'Request quote' : formatAed(totals.totalAmount);
+  const selectedTitle = draft.selectedPackageName || experience.title;
   const party = `${draft.vehicleQuantity} ${draft.vehicleQuantity === 1 ? 'vehicle' : 'vehicles'} · ${draft.guestCount} ${draft.guestCount === 1 ? 'guest' : 'guests'}`;
 
   return (
@@ -37,7 +32,8 @@ export function BookingSummaryTicket({ draft, compact = false }: { draft: Bookin
         </div>
         <div className="relative mt-4 rounded-2xl border border-white/10 bg-white/10 p-3 backdrop-blur">
           <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-gold">Selected experience</p>
-          <h3 className="mt-1 font-heading text-xl font-semibold leading-tight text-white">{experience.title}</h3>
+          <h3 className="mt-1 font-heading text-xl font-semibold leading-tight text-white">{selectedTitle}</h3>
+          {draft.selectedPackageCapacity ? <p className="mt-1 text-xs font-semibold text-white/72">{draft.selectedPackageCapacity} seater</p> : null}
           <p className="mt-2 text-xs leading-5 text-white/72">No payment now. Final details are confirmed by our team.</p>
         </div>
       </div>
@@ -45,7 +41,7 @@ export function BookingSummaryTicket({ draft, compact = false }: { draft: Bookin
       <div className="bg-white p-3.5">
         <div className="grid gap-2">
           <SummaryRow icon={Clock3} label={isSales ? 'Inquiry' : 'Duration'} value={isSales ? draft.inquiryType : formatDuration(draft.durationMinutes)} />
-          {draft.selectedPackageName ? <SummaryRow icon={TicketCheck} label="Selected package" value={draft.selectedPackageName} /> : null}
+          {draft.selectedPackageName ? <SummaryRow icon={TicketCheck} label="Selected vehicle" value={draft.selectedPackageName} /> : null}
           <SummaryRow icon={UsersRound} label="Party" value={party} />
           <SummaryRow icon={CalendarDays} label="Date" value={displayDate(draft.preferredDate)} />
           <SummaryRow icon={Clock3} label="Time" value={draft.preferredTime || 'Not selected'} />
@@ -60,7 +56,7 @@ export function BookingSummaryTicket({ draft, compact = false }: { draft: Bookin
               <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-muted-foreground">Cost Breakdown</p>
               <span className="h-px flex-1 bg-border" />
             </div>
-            <BreakdownLine label={`${experience.title} · ${formatDuration(draft.durationMinutes)}`} value={formatAed(packagePrice)} />
+            <BreakdownLine label={`${selectedTitle} · ${formatDuration(draft.durationMinutes)}`} value={formatAed(packagePrice)} />
             <BreakdownLine label={`Vehicles × ${draft.vehicleQuantity}`} value={formatAed(totals.subtotal)} />
             <BreakdownLine label="Sub Total" value={formatAed(totals.subtotal)} strong />
             <BreakdownLine label="VAT (5%)" value={formatAed(totals.vatAmount)} />
