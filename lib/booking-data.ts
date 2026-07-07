@@ -23,17 +23,6 @@ export type ExperienceOption = {
   recommended?: boolean;
 };
 
-export type BookingRateOption = {
-  id?: string;
-  title?: string;
-  slug?: string;
-  category: string;
-  minutes: number;
-  price: number;
-  b2bPrice?: number;
-  capacity: number;
-};
-
 export type BookingDraft = {
   selectedPackageName?: string;
   selectedPackageSlug?: string;
@@ -41,7 +30,6 @@ export type BookingDraft = {
   selectedPackagePrice?: number;
   selectedPackageB2BPrice?: number;
   selectedPackageCapacity?: number;
-  selectedPackageRates?: BookingRateOption[];
   experienceType: ExperienceId;
   durationMinutes: number;
   inquiryType: string;
@@ -124,10 +112,6 @@ export function getExperience(id: ExperienceId) {
   return experienceOptions.find((experience) => experience.id === id) ?? experienceOptions[0];
 }
 
-export function getSelectedRateForDuration(draft: BookingDraft) {
-  return draft.selectedPackageRates?.find((item) => item.minutes === draft.durationMinutes) ?? null;
-}
-
 export function getCapacityPerVehicle(draft: BookingDraft) {
   const experience = getExperience(draft.experienceType);
   return Number(draft.selectedPackageCapacity || experience.capacity || 2);
@@ -136,8 +120,6 @@ export function getCapacityPerVehicle(draft: BookingDraft) {
 export function getPackageUnitPrice(draft: BookingDraft) {
   const experience = getExperience(draft.experienceType);
   if (experience.serviceType === 'sales_inquiry') return 0;
-  const selectedRate = getSelectedRateForDuration(draft);
-  if (selectedRate) return selectedRate.price;
   if (typeof draft.selectedPackagePrice === 'number') return draft.selectedPackagePrice;
   return durationPackages[draft.experienceType as 'jet-ski-rental' | 'jet-car-rental'].find((item) => item.minutes === draft.durationMinutes)?.price ?? 0;
 }
