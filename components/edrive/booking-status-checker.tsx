@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import { CalendarDays, CheckCircle2, Clock3, CreditCard, FileSearch, Loader2, MessageCircle, Search, TicketCheck, UserRound, Waves } from 'lucide-react';
+import { useEffect, useMemo, useState, type ElementType } from 'react';
+import { CalendarDays, Clock3, CreditCard, FileSearch, Hourglass, Loader2, MapPin, MessageCircle, QrCode, Search, TicketCheck, UserRound, Waves } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { BookingRequest, BookingStatus, bookingStatusOptions, formatAed, getExperience, normalizeBookingStatus } from '@/lib/booking-data';
+import { BookingRequest, BookingStatus, formatAed, getExperience, normalizeBookingStatus } from '@/lib/booking-data';
 import { bookingRequestsTable, bookingRowToRequest } from '@/lib/booking-records';
 import { companyInfo, whatsappUrl } from '@/lib/company-info';
 import { supabase } from '@/lib/supabase-client';
@@ -27,11 +27,11 @@ function durationLabel(request: BookingRequest) {
 }
 
 function statusTone(status: BookingStatus) {
-  if (status === 'Confirmed') return 'border-emerald-200 bg-emerald-50 text-emerald-700';
-  if (status === 'Completed') return 'border-primary/20 bg-primary-50 text-primary-900';
-  if (status === 'Cancelled') return 'border-red-200 bg-red-50 text-red-700';
-  if (status === 'No Show') return 'border-orange-200 bg-orange-50 text-orange-700';
-  return 'border-gold/45 bg-gold/10 text-primary-900';
+  if (status === 'Confirmed') return 'border-emerald-300/60 bg-emerald-50 text-emerald-700';
+  if (status === 'Completed') return 'border-primary/25 bg-primary-50 text-primary-900';
+  if (status === 'Cancelled') return 'border-red-300/60 bg-red-50 text-red-700';
+  if (status === 'No Show') return 'border-orange-300/60 bg-orange-50 text-orange-700';
+  return 'border-gold/70 bg-gold/10 text-gold';
 }
 
 function readLocalBookings() {
@@ -77,115 +77,132 @@ export function BookingStatusChecker() {
   const whatsappMessage = useMemo(() => encodeURIComponent(`Hello eDrive, I want to check my booking status. Reference: ${reference || 'ED-'}`), [reference]);
 
   return (
-    <section className="container-x py-9 sm:py-12">
-      <div className="mx-auto max-w-6xl">
-        <div className="grid gap-5 lg:grid-cols-[0.95fr_1.05fr] lg:items-center">
+    <section className="container-x py-10 sm:py-14">
+      <div className="mx-auto max-w-7xl">
+        <div className="grid gap-7 lg:grid-cols-[0.92fr_1.08fr] lg:items-center">
           <div>
-            <span className="inline-flex items-center gap-2 rounded-full bg-primary-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-primary"><FileSearch className="size-3.5" aria-hidden="true" />Booking Status</span>
-            <h1 className="mt-4 font-heading text-4xl font-semibold leading-tight text-foreground sm:text-5xl">Check Your Booking Status</h1>
-            <p className="mt-4 max-w-xl text-sm leading-7 text-muted-foreground">Enter your booking reference number to view the live booking status from the booking system.</p>
+            <span className="inline-flex items-center gap-2 rounded-full bg-primary-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-primary"><FileSearch className="size-3.5" aria-hidden="true" />Booking Status</span>
+            <h1 className="mt-5 max-w-3xl font-heading text-4xl font-semibold leading-[0.98] tracking-[-0.03em] text-foreground sm:text-5xl lg:text-6xl">Check Your Booking Status</h1>
+            <p className="mt-5 max-w-xl text-sm leading-7 text-muted-foreground sm:text-base">Enter your booking reference number to view the live booking status from the booking system.</p>
           </div>
-          <form onSubmit={(event) => { event.preventDefault(); void searchBooking(); }} className="premium-surface rounded-[1.75rem] p-4 sm:p-5">
+
+          <form onSubmit={(event) => { event.preventDefault(); void searchBooking(); }} className="premium-surface rounded-[1.75rem] p-5 sm:p-6">
             <label className="grid gap-2 text-sm font-semibold text-foreground">
               Booking reference number
               <div className="relative">
                 <Search className="pointer-events-none absolute left-4 top-3.5 size-4 text-muted-foreground" aria-hidden="true" />
-                <Input value={reference} onChange={(event) => setReference(event.target.value)} placeholder="ED-20260707-007" className="h-12 rounded-2xl pl-11 font-semibold uppercase" />
+                <Input value={reference} onChange={(event) => setReference(event.target.value.toUpperCase())} placeholder="ED-20260707-007" className="h-12 rounded-2xl pl-11 font-semibold uppercase" />
               </div>
             </label>
             <div className="mt-4 flex flex-col gap-2 sm:flex-row">
-              <Button type="submit" className="rounded-full" disabled={loading}>{loading ? <Loader2 data-icon className="animate-spin" aria-hidden="true" /> : <Search data-icon aria-hidden="true" />}{loading ? 'Searching...' : 'Search Booking'}</Button>
-              <Button asChild variant="outline" className="rounded-full"><a href={`${whatsappUrl}?text=${whatsappMessage}`} target="_blank" rel="noopener noreferrer"><MessageCircle data-icon aria-hidden="true" />Ask WhatsApp</a></Button>
+              <Button type="submit" className="rounded-full bg-primary-900 shadow-[0_10px_24px_rgba(8,37,50,0.18)] hover:bg-primary-800" disabled={loading}>{loading ? <Loader2 data-icon className="animate-spin" aria-hidden="true" /> : <Search data-icon aria-hidden="true" />}{loading ? 'Searching...' : 'Search Booking'}</Button>
+              <Button asChild className="rounded-full bg-emerald-500 shadow-[0_10px_22px_rgba(16,185,129,0.25)] hover:bg-emerald-600"><a href={`${whatsappUrl}?text=${whatsappMessage}`} target="_blank" rel="noopener noreferrer"><MessageCircle data-icon aria-hidden="true" />Ask WhatsApp</a></Button>
             </div>
             <p className="mt-3 text-xs leading-5 text-muted-foreground">Example: ED-20260707-007. Your reference is shown after submitting the booking form.</p>
           </form>
         </div>
 
-        <div className="mt-7">
-          {loading ? <LoadingCard /> : result ? <StatusResult request={result} /> : searched ? <NotFound reference={reference} whatsappMessage={whatsappMessage} /> : <EmptyPreview />}
+        <div className="mt-8 sm:mt-10">
+          {loading ? <LoadingCard /> : result ? <TicketResult request={result} /> : searched ? <NotFound reference={reference} whatsappMessage={whatsappMessage} /> : <EmptyPreview />}
         </div>
       </div>
     </section>
   );
 }
 
-function StatusResult({ request }: { request: BookingRequest }) {
+function TicketResult({ request }: { request: BookingRequest }) {
   const experience = getExperience(request.experienceType);
   const isSales = request.serviceType === 'sales_inquiry';
   const totalLabel = isSales ? 'Request quote' : formatAed(request.totalAmount);
   const status = normalizeBookingStatus(request.status);
+  const qrBlocks = Array.from({ length: 49 }, (_, index) => index);
+  const barcodeBars = Array.from({ length: 32 }, (_, index) => index);
 
   return (
-    <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_19rem]">
-      <article className="overflow-hidden rounded-[1.75rem] border border-primary-900/10 bg-white shadow-[0_18px_45px_rgba(8,37,50,0.10)]">
-        <div className="bg-primary-900 px-5 py-5 text-white sm:px-6">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <article className="relative mx-auto grid max-w-6xl overflow-hidden rounded-[2rem] border border-gold/45 bg-[#fffaf0] shadow-[0_28px_80px_rgba(8,37,50,0.16)] lg:grid-cols-[minmax(0,1fr)_15.5rem]">
+      <div className="relative min-w-0">
+        <span className="absolute -left-8 top-[15.2rem] z-10 size-16 rounded-full border border-gold/30 bg-background" aria-hidden="true" />
+        <div className="relative overflow-hidden rounded-br-[1.65rem] bg-primary-950 px-6 py-7 text-white sm:px-8 lg:px-10" style={{ backgroundImage: "linear-gradient(90deg, rgba(5,30,42,0.96), rgba(5,30,42,0.78)), url('/images/edrive/packages/jet-car/jet-car-package-19.webp')", backgroundSize: 'cover', backgroundPosition: 'center' }}>
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_72%_20%,rgba(217,181,109,0.22),transparent_22rem)]" aria-hidden="true" />
+          <div className="relative flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
             <div>
-              <p className="font-heading text-2xl font-semibold leading-none">eDrive</p>
-              <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.32em] text-primary-100">Water Sports</p>
+              <div className="flex items-center gap-3">
+                <span className="flex size-11 items-center justify-center rounded-full border border-gold/45 bg-gold/10 text-gold"><TicketCheck className="size-5" aria-hidden="true" /></span>
+                <div>
+                  <p className="font-heading text-3xl font-semibold leading-none text-gold">eDrive</p>
+                  <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.38em] text-white">Water Sports</p>
+                </div>
+              </div>
+              <p className="mt-7 text-xs font-bold uppercase tracking-[0.28em] text-gold">Booking Reference</p>
+              <h2 className="mt-3 font-heading text-4xl font-semibold leading-none tracking-[-0.03em] sm:text-5xl lg:text-6xl">{request.bookingCode}</h2>
+              <p className="mt-4 text-sm text-white/82">Live booking status and request details</p>
             </div>
-            <span className={cn('w-fit rounded-full border px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.16em]', statusTone(status))}>{status}</span>
-          </div>
-          <h2 className="mt-4 font-heading text-2xl font-semibold leading-tight sm:text-3xl">{request.bookingCode}</h2>
-          <p className="mt-2 text-sm text-white/70">Live booking status and request details</p>
-        </div>
-
-        <div className="p-4 sm:p-5">
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            <InfoBox icon={TicketCheck} label="Service" value={experience.title} />
-            <InfoBox icon={CalendarDays} label="Date" value={displayDate(request.preferredDate)} />
-            <InfoBox icon={Clock3} label="Time" value={request.preferredTime || 'Not selected'} nowrap />
-            <InfoBox icon={Waves} label="Duration" value={durationLabel(request)} nowrap />
-            <InfoBox icon={UserRound} label="Customer" value={request.customerName} />
-            <InfoBox icon={CreditCard} label="Payment" value={request.paymentStatus} nowrap />
-            <InfoBox icon={TicketCheck} label="Package" value={request.selectedPackageName || request.selectedPackageCategory || 'Custom booking'} wide />
-          </div>
-
-          <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_0.78fr]">
-            <div className="rounded-[1.25rem] border border-primary/12 bg-primary-50 p-4">
-              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary">Meeting Point</p>
-              <p className="mt-2 font-heading text-lg font-semibold text-foreground">{companyInfo.locationName}</p>
-              <p className="mt-1 text-sm leading-6 text-muted-foreground">{companyInfo.locationAddress}</p>
-              <a href={companyInfo.mapLink} target="_blank" rel="noopener noreferrer" className="mt-3 inline-flex rounded-full border border-primary/20 bg-white px-3 py-1.5 text-xs font-bold text-primary transition hover:bg-primary-50">Open in Google Maps</a>
-            </div>
-            <div className="rounded-[1.25rem] border border-gold/45 bg-primary-900 p-4 text-white">
-              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-gold">Estimated Total</p>
-              <p className="mt-2 font-heading text-3xl font-semibold text-gold">{totalLabel}</p>
-              <p className="mt-3 text-xs leading-5 text-white/70">Final availability and payment details are shared by the booking team.</p>
-            </div>
-          </div>
-
-          <div className="mt-5 rounded-[1.25rem] border border-border bg-white p-4">
-            <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary">Status Flow</p>
-            <div className="mt-4 grid gap-3 sm:grid-cols-5">
-              {bookingStatusOptions.map((item, index) => <ProgressStep key={item} label={item} active={status === item} index={index + 1} />)}
-            </div>
+            <span className={cn('relative z-10 w-fit rounded-full border px-5 py-2 text-xs font-bold uppercase tracking-[0.22em]', statusTone(status))}><span className="mr-2 inline-block size-1.5 rounded-full bg-current align-middle" />{status}</span>
           </div>
         </div>
-      </article>
 
-      <aside className="grid gap-4">
-        <article className="premium-surface rounded-[1.45rem] p-4">
-          <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-primary">Current Status</p>
-          <h3 className="mt-2 font-heading text-xl font-semibold text-foreground">{status}</h3>
-          <p className="mt-2 text-xs leading-6 text-muted-foreground">This status is pulled from the eDrive booking system using your booking reference.</p>
-        </article>
-        <article className="premium-surface rounded-[1.45rem] p-4">
-          <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-primary">Need Help?</p>
-          <p className="mt-2 text-xs leading-6 text-muted-foreground">Share your reference number with our team on WhatsApp for quick support.</p>
-          <Button asChild className="mt-4 w-full rounded-full"><a href={`${whatsappUrl}?text=${encodeURIComponent(`Hello eDrive, I want to check my booking status. Reference: ${request.bookingCode}`)}`} target="_blank" rel="noopener noreferrer"><MessageCircle data-icon aria-hidden="true" />WhatsApp Team</a></Button>
-        </article>
+        <div className="px-6 py-6 sm:px-8 lg:px-10">
+          <div className="grid gap-x-8 gap-y-5 border-b border-primary-900/10 pb-5 sm:grid-cols-2 lg:grid-cols-3">
+            <TicketInfo icon={Waves} label="Service" value={experience.title} />
+            <TicketInfo icon={CalendarDays} label="Date" value={displayDate(request.preferredDate)} />
+            <TicketInfo icon={Clock3} label="Time" value={request.preferredTime || 'Not selected'} />
+            <TicketInfo icon={Hourglass} label="Duration" value={durationLabel(request)} />
+            <TicketInfo icon={UserRound} label="Customer" value={request.customerName} />
+            <TicketInfo icon={CreditCard} label="Payment" value={request.paymentStatus} danger={request.paymentStatus !== 'Paid'} />
+          </div>
+
+          <div className="border-b border-primary-900/10 py-5">
+            <TicketInfo icon={TicketCheck} label="Package" value={request.selectedPackageName || request.selectedPackageCategory || 'Custom booking'} />
+          </div>
+
+          <div className="mt-6 grid gap-4 lg:grid-cols-[1fr_0.55fr]">
+            <div className="relative overflow-hidden rounded-[1.35rem] border border-primary/15 bg-primary-50 p-5" style={{ backgroundImage: "linear-gradient(90deg, rgba(221,244,246,0.96), rgba(221,244,246,0.78)), url('/images/edrive/packages/jet-car/jet-car-package-15.webp')", backgroundSize: 'cover', backgroundPosition: 'center' }}>
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Meeting Point</p>
+              <p className="mt-2 font-heading text-2xl font-semibold text-foreground">{companyInfo.locationName}</p>
+              <p className="mt-2 max-w-sm text-sm leading-6 text-muted-foreground">{companyInfo.locationAddress}</p>
+              <a href={companyInfo.mapLink} target="_blank" rel="noopener noreferrer" className="mt-4 inline-flex items-center gap-2 rounded-full border border-primary/25 bg-white px-4 py-2 text-xs font-bold text-primary shadow-sm transition hover:-translate-y-0.5 hover:bg-primary-50"><MapPin className="size-3.5" aria-hidden="true" />Open in Google Maps</a>
+            </div>
+            <div className="rounded-[1.35rem] border border-gold/35 bg-primary-900 p-5 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.10)]">
+              <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-gold">Estimated Total</p>
+              <p className="mt-4 font-heading text-4xl font-semibold text-gold">{totalLabel}</p>
+              <div className="mt-5 h-px w-10 bg-gold" />
+              <p className="mt-5 text-xs leading-6 text-white/75">Final availability and payment details are shared by the booking team.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <aside className="relative border-t border-dashed border-primary-900/18 bg-[#fff8ed] px-7 py-8 lg:border-l lg:border-t-0">
+        <span className="absolute -left-8 top-[15.2rem] hidden size-16 rounded-full border border-gold/30 bg-background lg:block" aria-hidden="true" />
+        <div className="absolute inset-0 opacity-50" style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(217,181,109,0.22) 1px, transparent 0)', backgroundSize: '22px 22px' }} aria-hidden="true" />
+        <div className="relative flex h-full flex-col items-center justify-between gap-8 text-center">
+          <div>
+            <span className="mx-auto flex size-20 items-center justify-center rounded-full border border-gold/30 bg-white text-gold shadow-sm"><TicketCheck className="size-9" aria-hidden="true" /></span>
+            <div className="mx-auto mt-10 h-px w-28 bg-gold/45" />
+          </div>
+
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-primary-900/80">Scan to view<br />booking details</p>
+            <div className="mx-auto mt-4 grid size-28 grid-cols-7 gap-1 rounded-2xl border border-border bg-white p-3 shadow-sm">
+              {qrBlocks.map((item) => <span key={item} className={cn('rounded-[2px]', item % 2 === 0 || item % 5 === 0 || item === 8 || item === 40 ? 'bg-primary-900' : 'bg-transparent')} />)}
+            </div>
+          </div>
+
+          <div className="w-full">
+            <div className="mx-auto h-px w-28 bg-gold/45" />
+            <div className="mx-auto mt-8 flex h-14 w-40 items-end justify-center gap-1 bg-white px-2 py-2">
+              {barcodeBars.map((item) => <span key={item} className="block bg-primary-950" style={{ width: item % 5 === 0 ? 4 : item % 2 === 0 ? 2 : 1, height: item % 3 === 0 ? 42 : item % 4 === 0 ? 34 : 48 }} />)}
+            </div>
+            <p className="mt-8 font-heading text-lg italic leading-7 text-gold">Thank you for choosing<br />eDrive Water Sports.</p>
+          </div>
+        </div>
       </aside>
-    </div>
+    </article>
   );
 }
 
-function InfoBox({ icon: Icon, label, value, wide = false, nowrap = false }: { icon: React.ElementType; label: string; value: string; wide?: boolean; nowrap?: boolean }) {
-  return <div className={cn('flex min-h-[5.25rem] items-center gap-3 rounded-2xl border border-border bg-white p-3', wide && 'sm:col-span-2 lg:col-span-3')}><span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary-50 text-primary"><Icon className="size-4" aria-hidden="true" /></span><div className="min-w-0"><p className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">{label}</p><p className={cn('mt-1 text-sm font-semibold leading-5 text-foreground', nowrap && 'whitespace-nowrap')}>{value}</p></div></div>;
-}
-
-function ProgressStep({ label, active, index }: { label: string; active: boolean; index: number }) {
-  return <div className={cn('rounded-2xl border p-3', active ? 'border-primary/20 bg-primary-50' : 'border-border bg-white')}><span className={cn('flex size-8 items-center justify-center rounded-full text-xs font-bold', active ? 'bg-primary text-white' : 'bg-muted text-muted-foreground')}>{active ? <CheckCircle2 className="size-4" aria-hidden="true" /> : index}</span><p className="mt-3 text-xs font-bold text-foreground">{label}</p></div>;
+function TicketInfo({ icon: Icon, label, value, danger = false }: { icon: ElementType; label: string; value: string; danger?: boolean }) {
+  return <div className="flex min-w-0 items-center gap-4"><span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary-50 text-primary"><Icon className="size-5" aria-hidden="true" /></span><div className="min-w-0"><p className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">{label}</p><p className={cn('mt-1 text-sm font-bold leading-5 text-foreground sm:text-base', danger && 'text-red-600')}>{value}</p></div></div>;
 }
 
 function LoadingCard() {
@@ -197,5 +214,5 @@ function NotFound({ reference, whatsappMessage }: { reference: string; whatsappM
 }
 
 function EmptyPreview() {
-  return <div className="rounded-[1.75rem] border border-dashed border-primary/25 bg-primary-50/55 p-6 text-center"><TicketCheck className="mx-auto size-10 text-primary" aria-hidden="true" /><h2 className="mt-4 font-heading text-2xl font-semibold text-foreground">Enter your reference to begin</h2><p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-muted-foreground">Your booking status, schedule, payment note, and meeting point will appear here after search.</p></div>;
+  return <div className="premium-surface mx-auto max-w-3xl rounded-[1.75rem] p-6 text-center"><QrCode className="mx-auto size-10 text-primary" aria-hidden="true" /><h2 className="mt-4 font-heading text-2xl font-semibold text-foreground">Enter a booking reference</h2><p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-muted-foreground">Your digital ticket will appear here after your booking reference is found in the eDrive booking system.</p></div>;
 }
