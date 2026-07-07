@@ -72,7 +72,7 @@ export type BookingRequest = {
 
 export const experienceOptions: ExperienceOption[] = [
   { id: 'jet-ski-rental', title: 'Jet Ski Rental', shortDescription: 'A guided premium ride with safety equipment and marina support.', serviceType: 'rental', image: jetSkiLightImage, startingPrice: 300, capacity: 2, recommended: true },
-  { id: 'jet-car-rental', title: 'Jet Car Rental', shortDescription: 'A private supercar-on-water experience with captain support.', serviceType: 'rental', image: jetCarLightImage, startingPrice: 500, capacity: 2 }
+  { id: 'jet-car-rental', title: 'Jet Car Rental', shortDescription: 'A private supercar-on-water experience with captain support.', serviceType: 'rental', image: jetCarLightImage, startingPrice: 500, capacity: 4 }
 ];
 
 export const durationPackages: Record<'jet-ski-rental' | 'jet-car-rental', Array<{ minutes: number; price: number }>> = {
