@@ -2,6 +2,15 @@ import { jetCarLightImage, jetSkiLightImage } from '@/lib/mock-data';
 
 export type ExperienceId = 'jet-ski-rental' | 'jet-car-rental' | 'jet-ski-sales' | 'jet-car-sales';
 export type ServiceType = 'rental' | 'sales_inquiry';
+export type BookingStatus = 'Pending' | 'Confirmed' | 'Cancelled' | 'No Show' | 'Completed';
+export type PaymentStatus = 'Not Paid' | 'Partial' | 'Paid' | 'Refunded';
+
+export const bookingStatusOptions: BookingStatus[] = ['Pending', 'Confirmed', 'Cancelled', 'No Show', 'Completed'];
+
+export function normalizeBookingStatus(value: unknown): BookingStatus {
+  const status = String(value || 'Pending');
+  return bookingStatusOptions.includes(status as BookingStatus) ? (status as BookingStatus) : 'Pending';
+}
 
 export type ExperienceOption = {
   id: ExperienceId;
@@ -39,14 +48,16 @@ export type BookingDraft = {
 export type BookingRequest = {
   bookingCode: string;
   source: 'website';
-  status: 'Pending';
-  adminStatus: 'New';
-  managerStatus: null;
+  status: BookingStatus;
+  adminStatus: 'New' | 'Reviewed' | 'Contacted' | 'Closed';
+  managerStatus: BookingStatus | null;
   selectedPackageName?: string | null;
   selectedPackageSlug?: string | null;
   selectedPackageCategory?: string | null;
   selectedPackageLocation?: string | null;
   selectedPackagePrice?: number | null;
+  selectedPackageB2BPrice?: number | null;
+  selectedPackageCapacity?: number | null;
   experienceType: ExperienceId;
   serviceType: ServiceType;
   durationMinutes: number;
@@ -65,9 +76,10 @@ export type BookingRequest = {
   subtotal: number;
   vatAmount: number;
   totalAmount: number;
-  paymentStatus: 'Not Paid';
-  paymentMethod: null;
+  paymentStatus: PaymentStatus;
+  paymentMethod: string | null;
   createdAt: string;
+  updatedAt?: string | null;
 };
 
 export const experienceOptions: ExperienceOption[] = [
