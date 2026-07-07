@@ -103,7 +103,7 @@ export async function POST(request: NextRequest) {
         email,
         password: accessValue,
         email_confirm: true,
-        user_metadata: { full_name: String(staffRecord.full_name || '') }
+        user_metadata: { full_name: String(staffRecord.full_name || ''), name: String(staffRecord.full_name || '') }
       });
       if (createError || !createdUser.user) return jsonError(createError?.message || 'Unable to create staff login user.', 500);
       authUserId = createdUser.user.id;
@@ -129,7 +129,8 @@ export async function POST(request: NextRequest) {
     if (mode === 'set-password') {
       const { error: updateError } = await adminClient.auth.admin.updateUserById(authUserId, {
         password: accessValue,
-        email_confirm: true
+        email_confirm: true,
+        user_metadata: { full_name: String(staffRecord.full_name || ''), name: String(staffRecord.full_name || '') }
       });
       if (updateError) return jsonError(updateError.message, 500);
 
