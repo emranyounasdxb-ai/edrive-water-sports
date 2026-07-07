@@ -15,15 +15,18 @@ type BookingRow = {
   booking_code: string;
   status: string | null;
   admin_status: string | null;
-  selected_package_name: string | null;
-  selected_package_category: string | null;
+  selected_package_name?: string | null;
+  selected_package_category?: string | null;
+  selected_package_capacity?: number | null;
   experience_type: string | null;
   service_type: string | null;
+  duration_minutes?: number | null;
   preferred_date: string | null;
   preferred_time: string | null;
   customer_name: string | null;
   customer_phone: string | null;
   customer_email: string | null;
+  customer_notes?: string | null;
   total_amount: number | null;
   payment_status: string | null;
   created_at: string | null;
@@ -61,6 +64,29 @@ function statusClass(status: string | null) {
   if (status === 'Cancelled') return 'bg-red-50 text-red-700 border-red-200';
   if (status === 'Completed') return 'bg-primary-50 text-primary-900 border-primary/20';
   return 'bg-gold/10 text-gold border-gold/35';
+}
+
+function packageFromNotes(notes?: string | null) {
+  const value = String(notes || '');
+  const marker = 'Selected vehicle:';
+  const start = value.indexOf(marker);
+  if (start < 0) return '';
+  const after = value.slice(start + marker.length).trim();
+  const bracket = after.indexOf('(');
+  const dot = after.indexOf('.');
+  const end = bracket >= 0 ? bracket : dot >= 0 ? dot : after.length;
+  return after.slice(0, end).trim();
+}
+
+function packageLabel(booking: BookingRow) {
+  return booking.selected_package_name || packageFromNotes(booking.customer_notes) || booking.selected_package_category || booking.experience_type || '-';
+}
+
+function serviceDetail(booking: BookingRow) {
+  const parts = [booking.service_type || 'website'];
+  if (booking.selected_package_capacity) parts.push(`${booking.selected_package_capacity} seater`);
+  if (booking.duration_minutes) parts.push(`${booking.duration_minutes} min`);
+  return parts.join(' · ');
 }
 
 export function AdminBookingsLivePage() {
@@ -116,7 +142,7 @@ export function AdminBookingsLivePage() {
   const filtered = useMemo(() => {
     const term = query.trim().toLowerCase();
     if (!term) return bookings;
-    return bookings.filter((booking) => [booking.booking_code, booking.customer_name, booking.customer_phone, booking.customer_email, booking.selected_package_name, booking.status].some((value) => String(value || '').toLowerCase().includes(term)));
+    return bookings.filter((booking) => [booking.booking_code, booking.customer_name, booking.customer_phone, booking.customer_email, packageLabel(booking), booking.status].some((value) => String(value || '').toLowerCase().includes(term)));
   }, [bookings, query]);
 
   const newCount = bookings.filter((booking) => (booking.admin_status || 'New') === 'New').length;
@@ -186,8 +212,8 @@ export function AdminBookingsLivePage() {
                         <div className="text-xs text-muted-foreground">{booking.customer_phone || booking.customer_email || '-'}</div>
                       </TableCell>
                       <TableCell>
-                        <div className="font-semibold text-foreground">{booking.selected_package_name || booking.selected_package_category || booking.experience_type || '-'}</div>
-                        <div className="text-xs text-muted-foreground">{booking.service_type || 'website'}</div>
+                        <div className="font-semibold text-foreground">{packageLabel(booking)}</div>
+                        <div className="text-xs text-muted-foreground">{serviceDetail(booking)}</div>
                       </TableCell>
                       <TableCell>{niceDate(booking.preferred_date)}<div className="text-xs text-muted-foreground">{booking.preferred_time || '-'}</div></TableCell>
                       <TableCell>{formatAed(Number(booking.total_amount || 0))}<div className="text-xs text-muted-foreground">{booking.payment_status || 'Not Paid'}</div></TableCell>
