@@ -24,6 +24,75 @@ function normalizePath(pathname: string) {
   return pathname.replace(/\/$/, '');
 }
 
+function updateLinkText(anchor: HTMLAnchorElement, text: string) {
+  const svg = anchor.querySelector('svg');
+  anchor.textContent = text;
+  if (svg) anchor.appendChild(svg);
+}
+
+function buildExperienceInquiryMessage(title: string) {
+  return [
+    `Hello eDrive, I am interested in this water sports experience: ${title}.`,
+    '',
+    'Please suggest the best available live package, price, duration, and timing for this experience.',
+    '',
+    'My preferred date:',
+    'Number of guests:',
+    'Preferred location:'
+  ].join('\n');
+}
+
+function normalizeStaticExperienceCards() {
+  const staticBookingLinks = Array.from(document.querySelectorAll<HTMLAnchorElement>('a[href*="/booking?package="]'))
+    .filter((anchor) => anchor.textContent?.toLowerCase().includes('book this package'));
+
+  staticBookingLinks.forEach((anchor) => {
+    const card = anchor.closest('article');
+    const title = card?.querySelector('h3')?.textContent?.trim() || 'eDrive water sports experience';
+    anchor.href = '/booking';
+    updateLinkText(anchor, 'Open Booking System');
+
+    const whatsappAnchor = card?.querySelector<HTMLAnchorElement>('a[href*="wa.me"]');
+    if (!whatsappAnchor) return;
+
+    const url = new URL(whatsappAnchor.href);
+    url.searchParams.set('text', buildExperienceInquiryMessage(title));
+    whatsappAnchor.href = url.toString();
+    updateLinkText(whatsappAnchor, 'Ask on WhatsApp');
+  });
+}
+
+function moveLivePackagesNearTop(pathname: string) {
+  if (pathname !== '/' && pathname !== '/rentals') return;
+  const main = document.querySelector('main');
+  const livePackages = document.getElementById('live-packages');
+  const firstSection = main?.querySelector(':scope > section');
+  if (!main || !livePackages || !firstSection) return;
+  if (firstSection.nextElementSibling === livePackages) return;
+  main.insertBefore(livePackages, firstSection.nextElementSibling);
+}
+
+function normalizeExperienceHeadings(pathname: string) {
+  if (pathname !== '/' && pathname !== '/rentals') return;
+
+  const headingMap: Record<string, string> = {
+    'Popular Packages': 'Popular Experience Ideas',
+    'Most Popular Packages': 'Popular Ride Ideas',
+    'Choose a Package Category': 'Explore Experience Categories',
+    'Jet Ski Rental Packages in Dubai': 'Jet Ski Experience Ideas in Dubai',
+    'Jet Car Rental Packages in Dubai': 'Jet Car Experience Ideas in Dubai',
+    'Jet Ski and Jet Car Packages Dubai': 'Jet Ski and Jet Car Experience Ideas',
+    'Family Water Sports Packages': 'Family Water Sports Experience Ideas',
+    'VIP Water Sports Experiences': 'VIP Water Sports Experience Ideas',
+    'Recommended Rental Packages': 'Recommended Experience Ideas'
+  };
+
+  document.querySelectorAll('h2').forEach((heading) => {
+    const current = heading.textContent?.trim() || '';
+    if (headingMap[current]) heading.textContent = headingMap[current];
+  });
+}
+
 export function PublicShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const currentPath = normalizePath(pathname);
@@ -36,6 +105,18 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
     window.addEventListener('scroll', updateHeader, { passive: true });
     return () => window.removeEventListener('scroll', updateHeader);
   }, []);
+
+  useEffect(() => {
+    const applyPublicPackageRules = () => {
+      moveLivePackagesNearTop(currentPath);
+      normalizeStaticExperienceCards();
+      normalizeExperienceHeadings(currentPath);
+    };
+
+    applyPublicPackageRules();
+    const timeout = window.setTimeout(applyPublicPackageRules, 650);
+    return () => window.clearTimeout(timeout);
+  }, [currentPath]);
 
   return (
     <div className="min-h-screen overflow-hidden bg-background">
@@ -152,10 +233,10 @@ function PublicFooter() {
         </div>
         <div className="flex flex-col gap-3">
           <h3 className="text-sm font-semibold text-foreground">Packages</h3>
-          <Link href="/rentals#jet-ski-packages" className="text-sm text-muted-foreground transition hover:text-primary">Jet Ski Packages</Link>
-          <Link href="/rentals#jet-car-packages" className="text-sm text-muted-foreground transition hover:text-primary">Jet Car Packages</Link>
-          <Link href="/rentals#combo-packages" className="text-sm text-muted-foreground transition hover:text-primary">Combo Packages</Link>
-          <Link href="/rentals#vip-packages" className="text-sm text-muted-foreground transition hover:text-primary">VIP Packages</Link>
+          <Link href="/rentals#live-packages" className="text-sm text-muted-foreground transition hover:text-primary">Live Bookable Packages</Link>
+          <Link href="/rentals#jet-ski-packages" className="text-sm text-muted-foreground transition hover:text-primary">Jet Ski Experience Ideas</Link>
+          <Link href="/rentals#jet-car-packages" className="text-sm text-muted-foreground transition hover:text-primary">Jet Car Experience Ideas</Link>
+          <Link href="/rentals#combo-packages" className="text-sm text-muted-foreground transition hover:text-primary">Combo Experience Ideas</Link>
         </div>
         <div className="flex flex-col gap-4">
           <h3 className="text-sm font-semibold text-foreground">Contact</h3>
@@ -175,7 +256,7 @@ function PublicFooter() {
               </span>
             ))}
           </div>
-          <Link href="/rentals" className="inline-flex items-center gap-2 font-semibold text-primary">Explore packages <ArrowRight data-icon aria-hidden="true" /></Link>
+          <Link href="/rentals#live-packages" className="inline-flex items-center gap-2 font-semibold text-primary">Explore live packages <ArrowRight data-icon aria-hidden="true" /></Link>
         </div>
       </div>
     </footer>
