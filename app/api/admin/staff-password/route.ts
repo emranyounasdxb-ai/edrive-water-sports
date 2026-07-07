@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!supabaseUrl || !serviceRoleKey) {
-    return jsonError('Missing server Supabase service role configuration.', 500);
+    return jsonError('Missing server Supabase configuration.', 500);
   }
 
   const token = request.headers.get('authorization')?.replace('Bearer ', '').trim();
@@ -59,8 +59,8 @@ export async function POST(request: NextRequest) {
     .maybeSingle();
 
   if (profileError) return jsonError(profileError.message, 500);
-  if (!callerProfile || callerProfile.status !== 'active' || !isAllowedAdmin(callerProfile.role)) {
-    return jsonError('You do not have permission to manage staff passwords.', 403);
+  if (!callerProfile || callerProfile.status !== 'active' || !isAllowedAdmin(String(callerProfile.role || ''))) {
+    return jsonError('You do not have permission to manage staff access.', 403);
   }
 
   let payload: StaffPasswordPayload;
@@ -72,11 +72,12 @@ export async function POST(request: NextRequest) {
 
   const email = cleanEmail(payload.email);
   const mode = payload.mode || 'send-reset';
+  const accessValue = String(payload.password || '');
 
   if (!email || !email.includes('@')) return jsonError('Valid staff email is required.', 400);
-  if (!['send-reset', 'set-password'].includes(mode)) return jsonError('Invalid password action.', 400);
-  if (mode === 'set-password' && (!payload.password || payload.password.length < 8)) {
-    return jsonError('Temporary password must be at least 8 characters.', 400);
+  if (!['send-reset', 'set-password'].includes(mode)) return jsonError('Invalid access action.', 400);
+  if (mode === 'set-password' && accessValue.length < 8) {
+    return jsonError('Temporary value must be at least 8 characters.', 400);
   }
 
   const { data: staffRecord, error: staffError } = await adminClient
@@ -88,7 +89,7 @@ export async function POST(request: NextRequest) {
   if (staffError) return jsonError(staffError.message, 500);
   if (!staffRecord) return jsonError('No staff record found with this email.', 404);
 
-  let authUserId = staffRecord.auth_user_id as string | null;
+  let authUserId = typeof staffRecord.auth_user_id === 'string' ? staffRecord.auth_user_id : '';
 
   try {
     if (!authUserId) {
@@ -98,9 +99,9 @@ export async function POST(request: NextRequest) {
       } else if (mode === 'set-password') {
         const { data: createdUser, error: createError } = await adminClient.auth.admin.createUser({
           email,
-          password: payload.password,
+          password: accessValue,
           email_confirm: true,
-          user_metadata: { full_name: staffRecord.full_name || '' }
+          user_metadata: { full_name: String(staffRecord.full_name || '') }
         });
         if (createError || !createdUser.user) return jsonError(createError?.message || 'Unable to create staff login user.', 500);
         authUserId = createdUser.user.id;
@@ -120,15 +121,17 @@ export async function POST(request: NextRequest) {
       if (linkError) return jsonError(linkError.message, 500);
     }
 
+    if (!authUserId) return jsonError('Unable to link staff login user.', 500);
+
     if (mode === 'set-password') {
       const { error: updateError } = await adminClient.auth.admin.updateUserById(authUserId, {
-        password: payload.password,
+        password: accessValue,
         email_confirm: true
       });
       if (updateError) return jsonError(updateError.message, 500);
 
       return NextResponse.json({
-        message: 'Temporary password has been saved in Supabase Auth. Staff can now login with this email and password.',
+        message: 'Temporary login access has been set successfully.',
         authUserId
       });
     }
@@ -140,6 +143,6 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ message: 'Password reset email has been sent successfully.', authUserId });
   } catch (error) {
-    return jsonError(error instanceof Error ? error.message : 'Unable to complete staff password action.', 500);
+    return jsonError(error instanceof Error ? error.message : 'Unable to complete staff access action.', 500);
   }
 }
