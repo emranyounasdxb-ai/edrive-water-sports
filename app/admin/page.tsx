@@ -1,5 +1,5 @@
-import { AdminDashboardPage } from '@/components/edrive/admin-pages';
+import { AdminDashboardLivePage } from '@/components/edrive/admin-dashboard-live-page';
 
 export default function Page() {
-  return <AdminDashboardPage />;
+  return <AdminDashboardLivePage />;
 }
