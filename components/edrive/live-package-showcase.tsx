@@ -43,21 +43,12 @@ function imageForLivePackage(item: LivePackage, index = 0) {
   return getLivePackageImage(item.category, seed);
 }
 
-function splitPackageTitle(title: string, durationMinutes: number) {
-  const normalizedTitle = title.replace(/\s+/g, ' ').trim();
-  const explicitDuration = normalizedTitle.match(/\s+[–-]\s*(\d+\s*(?:minute|minutes|min|mins))$/i);
-
-  if (explicitDuration?.index) {
-    return {
-      name: normalizedTitle.slice(0, explicitDuration.index).trim(),
-      timing: explicitDuration[1].replace(/\bmins?\b/i, 'Minutes').replace(/\bminute(s)?\b/i, 'Minutes')
-    };
-  }
-
-  return {
-    name: normalizedTitle,
-    timing: `${durationMinutes} Minutes`
-  };
+function cleanPackageTitle(title: string) {
+  return title
+    .replace(/\s+[–-]\s*\d+\s*(?:minute|minutes|min|mins)$/i, '')
+    .replace(/\s+\d+\s*seater\b/i, '')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 export function LivePackageShowcase({ title = 'Live Booking Packages', text = '', limit, compact = false }: { title?: string; text?: string; limit?: number; compact?: boolean }) {
@@ -123,7 +114,7 @@ function LivePackageCard({ item, index }: { item: LivePackage; index: number }) 
   const [imageFailed, setImageFailed] = useState(false);
   const imageSrc = imageForLivePackage(item, index);
   const bookingHref = '/booking';
-  const titleParts = splitPackageTitle(item.title, item.duration_minutes);
+  const displayTitle = cleanPackageTitle(item.title);
   const whatsappMessage = encodeURIComponent(`Hello eDrive, I am interested in this water sports experience: ${item.title}.
 
 Please suggest the best available package, price, duration, and timing for this experience.
@@ -157,10 +148,7 @@ Preferred location:`);
 
       <div className="flex flex-1 flex-col px-3 pb-2.5 pt-3">
         <div>
-          <h3 className="mx-auto max-w-[10.5rem] text-center font-heading text-[0.88rem] font-semibold leading-[1.22] tracking-[-0.01em] text-foreground sm:text-[0.94rem]">
-            <span className="block break-words">{titleParts.name}</span>
-            <span className="mt-1 block whitespace-nowrap text-[0.88rem] font-semibold sm:text-[0.94rem]">{titleParts.timing}</span>
-          </h3>
+          <h3 className="mx-auto max-w-[10.5rem] text-center font-heading text-[0.95rem] font-semibold leading-[1.2] tracking-[-0.01em] text-foreground sm:text-base">{displayTitle}</h3>
           <p className="mt-2 flex items-center justify-center gap-1.5 text-[11px] font-semibold text-muted-foreground"><MapPin className="size-3.5 text-primary" aria-hidden="true" />{item.location}</p>
         </div>
 
