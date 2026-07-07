@@ -94,8 +94,8 @@ export function LivePackageShowcase({ title = 'Live Booking Packages', text = ''
           ) : null}
         </div>
 
-        <div className={cn('mt-7 grid gap-5 md:grid-cols-2', compact ? 'xl:grid-cols-5' : 'xl:grid-cols-3')}>
-          {loading ? Array.from({ length: limit || 6 }).map((_, index) => <div key={index} className="h-72 animate-pulse rounded-[1.75rem] bg-white/80" />) : visibleItems.map((item, index) => <LivePackageCard key={item.id} item={item} index={index} />)}
+        <div className={cn('mt-7 grid gap-4 md:grid-cols-2', compact ? 'xl:grid-cols-5' : 'xl:grid-cols-3')}>
+          {loading ? Array.from({ length: limit || 6 }).map((_, index) => <div key={index} className="h-72 animate-pulse rounded-[1.5rem] bg-white/80" />) : visibleItems.map((item, index) => <LivePackageCard key={item.id} item={item} index={index} />)}
         </div>
       </div>
     </section>
@@ -105,21 +105,18 @@ export function LivePackageShowcase({ title = 'Live Booking Packages', text = ''
 function LivePackageCard({ item, index }: { item: LivePackage; index: number }) {
   const [imageFailed, setImageFailed] = useState(false);
   const imageSrc = imageForLivePackage(item, index);
-  const params = new URLSearchParams({
-    package: item.slug,
-    packageName: item.title,
-    location: item.location,
-    duration: String(item.duration_minutes),
-    price: String(item.base_price),
-    capacity: String(item.capacity),
-    category: item.category
-  });
-  const bookingHref = `/booking?${params.toString()}`;
-  const whatsappMessage = encodeURIComponent(`Hello eDrive, I am interested in ${item.title} from ${item.location}.`);
+  const bookingHref = '/booking';
+  const whatsappMessage = encodeURIComponent(`Hello eDrive, I am interested in this water sports experience: ${item.title}.
+
+Please suggest the best available package, price, duration, and timing for this experience.
+
+My preferred date:
+Number of guests:
+Preferred location:`);
 
   return (
-    <article className="premium-surface premium-card-hover flex h-full min-w-0 flex-col overflow-hidden rounded-[1.75rem] p-4">
-      <div className="relative aspect-[16/10] w-full overflow-hidden rounded-[1.35rem] bg-primary-50">
+    <article className="premium-surface premium-card-hover flex h-full min-w-0 flex-col overflow-hidden rounded-[1.45rem] p-2.5">
+      <div className="relative aspect-[16/9] w-full overflow-hidden rounded-[1.05rem] bg-primary-50">
         {imageSrc && !imageFailed ? (
           <img
             src={imageSrc}
@@ -130,31 +127,31 @@ function LivePackageCard({ item, index }: { item: LivePackage; index: number }) 
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-primary-100 via-white to-accent-100 text-primary">
-            <TicketCheck className="size-8" aria-hidden="true" />
+            <TicketCheck className="size-7" aria-hidden="true" />
           </div>
         )}
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-primary-950/34 to-transparent" aria-hidden="true" />
-        <div className="absolute left-3 top-3 flex size-10 items-center justify-center rounded-2xl bg-white/75 text-primary shadow-sm backdrop-blur-sm">
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-primary-950/22 to-transparent" aria-hidden="true" />
+        <div className="absolute left-2.5 top-2.5 flex size-10 items-center justify-center rounded-2xl bg-white/82 text-primary shadow-sm backdrop-blur-sm">
           <TicketCheck className="size-5" aria-hidden="true" />
         </div>
-        <Badge className="absolute right-3 top-3 bg-white/92 text-primary-900 shadow-sm" variant="secondary">{categoryLabel(item.category)}</Badge>
+        <Badge className="absolute right-2.5 top-2.5 bg-white/92 px-2.5 py-1 text-[10px] font-bold text-primary-900 shadow-sm" variant="secondary">{categoryLabel(item.category)}</Badge>
       </div>
 
-      <div className="flex flex-1 flex-col p-2 pt-4">
+      <div className="flex flex-1 flex-col px-2.5 pb-2.5 pt-3">
         <div>
-          <h3 className="font-heading text-xl font-semibold leading-tight text-foreground">{item.title}</h3>
-          <p className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-muted-foreground"><MapPin className="size-3.5 text-primary" aria-hidden="true" />{item.location}</p>
+          <h3 className="font-heading text-[1.05rem] font-semibold leading-[1.18] tracking-[-0.01em] text-foreground sm:text-lg">{item.title}</h3>
+          <p className="mt-2 flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground"><MapPin className="size-3.5 text-primary" aria-hidden="true" />{item.location}</p>
         </div>
 
-        <div className="mt-4 grid gap-2 rounded-[1.1rem] bg-primary-50 px-4 py-3 text-sm">
+        <div className="mt-3 grid gap-1.5 rounded-[1rem] bg-primary-50 px-3.5 py-3 text-xs">
           <p className="font-semibold text-primary-900">From {formatAed(item.base_price)}</p>
-          <p className="flex items-center gap-1.5 text-xs text-muted-foreground"><Clock className="size-3.5 text-primary" aria-hidden="true" />{item.duration_minutes} minutes</p>
-          <p className="flex items-center gap-1.5 text-xs text-muted-foreground"><Users className="size-3.5 text-primary" aria-hidden="true" />{item.capacity} seater</p>
+          <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground"><Clock className="size-3.5 text-primary" aria-hidden="true" />{item.duration_minutes} minutes</p>
+          <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground"><Users className="size-3.5 text-primary" aria-hidden="true" />{item.capacity} seater</p>
         </div>
-        <p className="mt-3 text-sm leading-6 text-muted-foreground">{item.short_description || 'Premium eDrive water sports package with team support and booking confirmation.'}</p>
-        <div className="mt-auto grid gap-2 pt-5">
-          <Button asChild size="sm" className="h-10 w-full rounded-full text-xs font-bold shadow-[0_8px_18px_rgba(8,37,50,0.18)]"><Link href={bookingHref} className="justify-center">Book Now<ArrowRight className="ml-1 size-3.5 shrink-0" aria-hidden="true" /></Link></Button>
-          <Button asChild size="sm" variant="outline" className="h-10 w-full rounded-full border-emerald-300 bg-emerald-500 text-xs font-bold text-white shadow-[0_8px_18px_rgba(16,185,129,0.2)] hover:bg-emerald-600 hover:text-white"><a href={`${whatsappUrl}?text=${whatsappMessage}`} target="_blank" rel="noopener noreferrer" className="justify-center"><MessageCircle className="size-3.5 shrink-0" aria-hidden="true" />Ask on WhatsApp</a></Button>
+        <p className="mt-3 text-[13px] leading-6 text-muted-foreground">{item.short_description || 'Premium eDrive water sports package with team support and booking confirmation.'}</p>
+        <div className="mt-auto grid gap-2 pt-4">
+          <Button asChild size="sm" className="h-9 w-full rounded-full text-[11px] font-bold shadow-[0_8px_18px_rgba(8,37,50,0.16)]"><Link href={bookingHref} className="justify-center">Book Now<ArrowRight className="ml-1 size-3.5 shrink-0" aria-hidden="true" /></Link></Button>
+          <Button asChild size="sm" variant="outline" className="h-9 w-full rounded-full border-emerald-300 bg-emerald-500 text-[11px] font-bold text-white shadow-[0_8px_18px_rgba(16,185,129,0.18)] hover:bg-emerald-600 hover:text-white"><a href={`${whatsappUrl}?text=${whatsappMessage}`} target="_blank" rel="noopener noreferrer" className="justify-center"><MessageCircle className="size-3.5 shrink-0" aria-hidden="true" />Ask on WhatsApp</a></Button>
         </div>
       </div>
     </article>
