@@ -137,8 +137,10 @@ export function formatDuration(minutes: number) {
   return minutes < 60 ? `${minutes} minutes` : minutes === 60 ? '60 minutes' : `${minutes / 60} hours`;
 }
 
-export function generateBookingCode(existingCount: number) {
+export function generateBookingCode() {
   const now = new Date();
   const date = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
-  return `ED-${date}-${String(existingCount + 1).padStart(3, '0')}`;
+  const time = `${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}`;
+  const random = Math.floor(Math.random() * 900 + 100);
+  return `ED-${date}-${time}-${random}`;
 }
