@@ -74,7 +74,7 @@ export function LivePackageShowcase({ title = 'Live Booking Packages', text = ''
   if (!loading && !items.length) return null;
 
   return (
-    <section className={cn('border-y border-border bg-white/70', compact ? 'py-7' : 'py-10 sm:py-12 lg:py-14')}>
+    <section id="live-packages" className={cn('border-y border-border bg-white/70', compact ? 'py-7' : 'py-10 sm:py-12 lg:py-14')}>
       <div className="container-x">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
