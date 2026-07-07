@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react';
 import { CalendarDays, Check, Clock3, CreditCard, Home, MessageCircle, RefreshCw, Ship, TicketCheck, Timer, UsersRound, Waves } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { BookingRequest, formatAed, getExperience } from '@/lib/booking-data';
-import { bookingRequestToRow, bookingRequestsTable } from '@/lib/booking-records';
+import { bookingRequestToLegacyRow, bookingRequestToRow, bookingRequestsTable, isPackageColumnInsertError } from '@/lib/booking-records';
 import { companyInfo, whatsappUrl } from '@/lib/company-info';
 import { supabase } from '@/lib/supabase-client';
 
@@ -26,14 +26,37 @@ export function BookingSuccess({ request, onAnother }: { request: BookingRequest
   const totalLabel = isSales ? 'Request quote' : formatAed(request.totalAmount);
   const partyLabel = `${request.vehicleQuantity} ${request.vehicleQuantity === 1 ? 'vehicle' : 'vehicles'} · ${request.guestCount} guests`;
   const [saveStatus, setSaveStatus] = useState<'saving' | 'saved' | 'failed'>('saving');
+  const [saveMessage, setSaveMessage] = useState('');
 
   useEffect(() => {
     let active = true;
 
     async function saveBookingRequest() {
-      const { error } = await supabase.from(bookingRequestsTable).insert(bookingRequestToRow(request));
+      const fullResult = await supabase.from(bookingRequestsTable).insert(bookingRequestToRow(request));
       if (!active) return;
-      setSaveStatus(error ? 'failed' : 'saved');
+
+      if (!fullResult.error) {
+        setSaveStatus('saved');
+        setSaveMessage('Saved to booking dashboard');
+        return;
+      }
+
+      const firstError = fullResult.error.message || '';
+      if (isPackageColumnInsertError(firstError)) {
+        const fallbackResult = await supabase.from(bookingRequestsTable).insert(bookingRequestToLegacyRow(request));
+        if (!active) return;
+        if (!fallbackResult.error) {
+          setSaveStatus('saved');
+          setSaveMessage('Saved to booking dashboard');
+          return;
+        }
+        setSaveMessage(fallbackResult.error.message || firstError);
+        setSaveStatus('failed');
+        return;
+      }
+
+      setSaveMessage(firstError);
+      setSaveStatus('failed');
     }
 
     void saveBookingRequest();
@@ -50,8 +73,9 @@ export function BookingSuccess({ request, onAnother }: { request: BookingRequest
           <p className="mt-3 text-[10px] font-bold uppercase tracking-[0.24em] text-primary">Pending Confirmation</p>
           <h1 className="mt-1 font-heading text-3xl font-semibold leading-tight text-foreground sm:text-4xl">Booking Request Sent</h1>
           <p className="mx-auto mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">Thank you, {request.customerName}. Our booking team will check availability and contact you shortly.</p>
-          {saveStatus === 'saved' ? <p className="mx-auto mt-3 w-fit rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">Saved to booking dashboard</p> : null}
-          {saveStatus === 'failed' ? <p className="mx-auto mt-3 w-fit rounded-full bg-red-50 px-3 py-1 text-xs font-bold text-red-700">Booking shown here, but database save failed. Please contact the team with this reference.</p> : null}
+          {saveStatus === 'saving' ? <p className="mx-auto mt-3 w-fit rounded-full bg-primary-50 px-3 py-1 text-xs font-bold text-primary-900">Saving to booking dashboard...</p> : null}
+          {saveStatus === 'saved' ? <p className="mx-auto mt-3 w-fit rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">{saveMessage || 'Saved to booking dashboard'}</p> : null}
+          {saveStatus === 'failed' ? <p className="mx-auto mt-3 w-fit rounded-full bg-red-50 px-3 py-1 text-xs font-bold text-red-700">Database save failed: {saveMessage || 'Please contact the team with this reference.'}</p> : null}
         </div>
 
         <div className="mt-6 grid gap-5 xl:grid-cols-[minmax(0,1fr)_18.5rem]">
