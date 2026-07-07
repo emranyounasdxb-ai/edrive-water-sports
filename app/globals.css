@@ -130,6 +130,10 @@ body::selection {
   transform: translateX(120%);
 }
 
+.shine-hover [class*="bottom-4"][class*="grid-cols-3"] {
+  display: none !important;
+}
+
 .soft-label {
   display: inline-flex;
   align-items: center;
