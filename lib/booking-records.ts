@@ -47,6 +47,22 @@ export function bookingRequestToRow(request: BookingRequest) {
   };
 }
 
+export function bookingRequestToLegacyRow(request: BookingRequest) {
+  const row = bookingRequestToRow(request) as Record<string, unknown>;
+  delete row.selected_package_name;
+  delete row.selected_package_slug;
+  delete row.selected_package_category;
+  delete row.selected_package_price;
+  delete row.selected_package_b2b_price;
+  delete row.selected_package_capacity;
+  return row;
+}
+
+export function isPackageColumnInsertError(message: string) {
+  const value = message.toLowerCase();
+  return value.includes('selected_package') || value.includes('schema cache') || value.includes('could not find') || value.includes('column');
+}
+
 export function bookingRowToRequest(row: Record<string, unknown>): BookingRequest {
   return {
     bookingCode: toText(row.booking_code),
