@@ -134,6 +134,31 @@ body::selection {
   display: none !important;
 }
 
+.premium-surface:has(img[alt="Beginner Friendly Ride"]) > div:first-child,
+.premium-surface:has(img[alt="VIP Experience Ride"]) > div:first-child,
+.premium-surface:has(img[alt="Family / Group Friendly Option"]) > div:first-child {
+  background-size: cover;
+  background-position: center;
+}
+
+.premium-surface:has(img[alt="Beginner Friendly Ride"]) > div:first-child {
+  background-image: url("/images/edrive/packages/jet-ski/jet-ski-package-33.webp");
+}
+
+.premium-surface:has(img[alt="VIP Experience Ride"]) > div:first-child {
+  background-image: url("/images/edrive/packages/jet-car/jet-car-package-13.webp");
+}
+
+.premium-surface:has(img[alt="Family / Group Friendly Option"]) > div:first-child {
+  background-image: url("/images/edrive/packages/jet-car/jet-car-package-15.webp");
+}
+
+.premium-surface img[alt="Beginner Friendly Ride"],
+.premium-surface img[alt="VIP Experience Ride"],
+.premium-surface img[alt="Family / Group Friendly Option"] {
+  opacity: 0 !important;
+}
+
 .soft-label {
   display: inline-flex;
   align-items: center;
