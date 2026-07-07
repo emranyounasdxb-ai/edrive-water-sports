@@ -155,13 +155,13 @@ Preferred location:`);
         <Badge className="absolute right-2.5 top-2.5 bg-white/92 px-2.5 py-1 text-[10px] font-bold text-primary-900 shadow-sm" variant="secondary">{categoryLabel(item.category)}</Badge>
       </div>
 
-      <div className="flex flex-1 flex-col px-2.5 pb-2.5 pt-3">
+      <div className="flex flex-1 flex-col px-3 pb-2.5 pt-3">
         <div>
-          <h3 className="font-heading text-[0.94rem] font-semibold leading-[1.16] tracking-[-0.01em] text-foreground sm:text-base">
-            <span className="block whitespace-nowrap">{titleParts.name}</span>
-            <span className="mt-0.5 block whitespace-nowrap text-[0.94rem] font-semibold sm:text-base">{titleParts.timing}</span>
+          <h3 className="mx-auto max-w-[10.5rem] text-center font-heading text-[0.88rem] font-semibold leading-[1.22] tracking-[-0.01em] text-foreground sm:text-[0.94rem]">
+            <span className="block break-words">{titleParts.name}</span>
+            <span className="mt-1 block whitespace-nowrap text-[0.88rem] font-semibold sm:text-[0.94rem]">{titleParts.timing}</span>
           </h3>
-          <p className="mt-2 flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground"><MapPin className="size-3.5 text-primary" aria-hidden="true" />{item.location}</p>
+          <p className="mt-2 flex items-center justify-center gap-1.5 text-[11px] font-semibold text-muted-foreground"><MapPin className="size-3.5 text-primary" aria-hidden="true" />{item.location}</p>
         </div>
 
         <div className="mt-3 grid gap-1.5 rounded-[1rem] bg-primary-50 px-3.5 py-3 text-xs">
