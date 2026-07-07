@@ -81,41 +81,43 @@ export async function POST(request: NextRequest) {
   if (staffError) return jsonError(staffError.message, 500);
   if (!staffRecord) return jsonError('No staff record found with this email.', 404);
 
-  let authUserId = typeof staffRecord.auth_user_id === 'string' ? staffRecord.auth_user_id : '';
+  let authUserId = '';
 
   try {
-    if (!authUserId) {
-      let existingAuthUserId = '';
-      for (let page = 1; page <= 20; page += 1) {
-        const { data: listData, error: listError } = await adminClient.auth.admin.listUsers({ page, perPage: 1000 });
-        if (listError) throw listError;
-        const match = listData.users.find((user) => user.email?.toLowerCase() === email);
-        if (match) {
-          existingAuthUserId = match.id;
-          break;
-        }
-        if (listData.users.length < 1000) break;
+    let existingAuthUserId = '';
+    for (let page = 1; page <= 20; page += 1) {
+      const { data: listData, error: listError } = await adminClient.auth.admin.listUsers({ page, perPage: 1000 });
+      if (listError) throw listError;
+      const match = listData.users.find((user) => user.email?.toLowerCase() === email);
+      if (match) {
+        existingAuthUserId = match.id;
+        break;
       }
+      if (listData.users.length < 1000) break;
+    }
 
-      if (existingAuthUserId) {
-        authUserId = existingAuthUserId;
-      } else if (mode === 'set-password') {
-        const { data: createdUser, error: createError } = await adminClient.auth.admin.createUser({
-          email,
-          password: accessValue,
-          email_confirm: true,
-          user_metadata: { full_name: String(staffRecord.full_name || '') }
-        });
-        if (createError || !createdUser.user) return jsonError(createError?.message || 'Unable to create staff login user.', 500);
-        authUserId = createdUser.user.id;
-      } else {
-        const { data: invitedUser, error: inviteError } = await adminClient.auth.admin.inviteUserByEmail(email, {
-          redirectTo: payload.redirectTo
-        });
-        if (inviteError || !invitedUser.user) return jsonError(inviteError?.message || 'Unable to invite staff user.', 500);
-        authUserId = invitedUser.user.id;
-      }
+    if (existingAuthUserId) {
+      authUserId = existingAuthUserId;
+    } else if (mode === 'set-password') {
+      const { data: createdUser, error: createError } = await adminClient.auth.admin.createUser({
+        email,
+        password: accessValue,
+        email_confirm: true,
+        user_metadata: { full_name: String(staffRecord.full_name || '') }
+      });
+      if (createError || !createdUser.user) return jsonError(createError?.message || 'Unable to create staff login user.', 500);
+      authUserId = createdUser.user.id;
+    } else {
+      const { data: invitedUser, error: inviteError } = await adminClient.auth.admin.inviteUserByEmail(email, {
+        redirectTo: payload.redirectTo
+      });
+      if (inviteError || !invitedUser.user) return jsonError(inviteError?.message || 'Unable to invite staff user.', 500);
+      authUserId = invitedUser.user.id;
+    }
 
+    if (!authUserId) return jsonError('Unable to link staff login user.', 500);
+
+    if (staffRecord.auth_user_id !== authUserId) {
       const { error: linkError } = await adminClient
         .from('admin_users')
         .update({ auth_user_id: authUserId })
@@ -123,8 +125,6 @@ export async function POST(request: NextRequest) {
 
       if (linkError) return jsonError(linkError.message, 500);
     }
-
-    if (!authUserId) return jsonError('Unable to link staff login user.', 500);
 
     if (mode === 'set-password') {
       const { error: updateError } = await adminClient.auth.admin.updateUserById(authUserId, {
@@ -134,7 +134,7 @@ export async function POST(request: NextRequest) {
       if (updateError) return jsonError(updateError.message, 500);
 
       return NextResponse.json({
-        message: 'Temporary login access has been set successfully.',
+        message: 'Staff login has been linked to the current email successfully.',
         authUserId
       });
     }
@@ -144,7 +144,7 @@ export async function POST(request: NextRequest) {
     });
     if (resetError) return jsonError(resetError.message, 500);
 
-    return NextResponse.json({ message: 'Password reset email has been sent successfully.', authUserId });
+    return NextResponse.json({ message: 'Staff login has been linked to the current email and reset email has been sent.', authUserId });
   } catch (error) {
     return jsonError(error instanceof Error ? error.message : 'Unable to complete staff access action.', 500);
   }
