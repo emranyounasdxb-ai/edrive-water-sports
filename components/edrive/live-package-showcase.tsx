@@ -103,6 +103,7 @@ export function LivePackageShowcase({ title = 'Live Booking Packages', text = ''
 }
 
 function LivePackageCard({ item, index }: { item: LivePackage; index: number }) {
+  const [imageFailed, setImageFailed] = useState(false);
   const imageSrc = imageForLivePackage(item, index);
   const params = new URLSearchParams({
     package: item.slug,
@@ -115,22 +116,37 @@ function LivePackageCard({ item, index }: { item: LivePackage; index: number }) 
   });
   const bookingHref = `/booking?${params.toString()}`;
   const whatsappMessage = encodeURIComponent(`Hello eDrive, I am interested in ${item.title} from ${item.location}.`);
+
   return (
     <article className="premium-surface premium-card-hover flex h-full min-w-0 flex-col overflow-hidden rounded-[1.75rem] p-4">
-      <div className="relative aspect-[16/10] w-full overflow-hidden rounded-[1.35rem] bg-cover bg-center p-5 text-white" style={{ backgroundImage: `linear-gradient(to top, rgba(3, 31, 42, 0.86), rgba(3, 31, 42, 0.32), rgba(3, 31, 42, 0.06)), url(${imageSrc})` }}>
-        <div className="relative flex h-full flex-col justify-between">
-          <div className="flex items-start justify-between gap-4">
-            <span className="flex size-11 items-center justify-center rounded-2xl bg-white/15 backdrop-blur-sm"><TicketCheck className="size-5" aria-hidden="true" /></span>
-            <Badge variant="gold">{categoryLabel(item.category)}</Badge>
+      <div className="relative aspect-[16/10] w-full overflow-hidden rounded-[1.35rem] bg-primary-50">
+        {imageSrc && !imageFailed ? (
+          <img
+            src={imageSrc}
+            alt={item.title}
+            onError={() => setImageFailed(true)}
+            className="h-full w-full object-cover object-center transition duration-700 hover:scale-105"
+            loading="lazy"
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-primary-100 via-white to-accent-100 text-primary">
+            <TicketCheck className="size-8" aria-hidden="true" />
           </div>
-          <div>
-            <h3 className="font-heading text-2xl font-semibold leading-tight text-white drop-shadow-sm">{item.title}</h3>
-            <p className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-white/82"><MapPin className="size-3.5" aria-hidden="true" />{item.location}</p>
-          </div>
+        )}
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-primary-950/34 to-transparent" aria-hidden="true" />
+        <div className="absolute left-3 top-3 flex size-10 items-center justify-center rounded-2xl bg-white/75 text-primary shadow-sm backdrop-blur-sm">
+          <TicketCheck className="size-5" aria-hidden="true" />
         </div>
+        <Badge className="absolute right-3 top-3 bg-white/92 text-primary-900 shadow-sm" variant="secondary">{categoryLabel(item.category)}</Badge>
       </div>
+
       <div className="flex flex-1 flex-col p-2 pt-4">
-        <div className="grid gap-2 rounded-[1.1rem] bg-primary-50 px-4 py-3 text-sm">
+        <div>
+          <h3 className="font-heading text-xl font-semibold leading-tight text-foreground">{item.title}</h3>
+          <p className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-muted-foreground"><MapPin className="size-3.5 text-primary" aria-hidden="true" />{item.location}</p>
+        </div>
+
+        <div className="mt-4 grid gap-2 rounded-[1.1rem] bg-primary-50 px-4 py-3 text-sm">
           <p className="font-semibold text-primary-900">From {formatAed(item.base_price)}</p>
           <p className="flex items-center gap-1.5 text-xs text-muted-foreground"><Clock className="size-3.5 text-primary" aria-hidden="true" />{item.duration_minutes} minutes</p>
           <p className="flex items-center gap-1.5 text-xs text-muted-foreground"><Users className="size-3.5 text-primary" aria-hidden="true" />{item.capacity} seater</p>
