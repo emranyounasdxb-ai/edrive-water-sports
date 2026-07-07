@@ -91,6 +91,7 @@ export function BookingWizard() {
   const capacityPerVehicle = getCapacityPerVehicle(draft);
   const capacity = draft.vehicleQuantity * capacityPerVehicle;
   const capacityExceeded = draft.guestCount > capacity;
+  const lockedPackage = Boolean(draft.selectedPackageName && draft.selectedPackageCapacity);
 
   function updateDraft(values: Partial<BookingDraft>) {
     setDraft((current) => ({ ...current, ...values }));
@@ -149,6 +150,7 @@ export function BookingWizard() {
   }, []);
 
   function selectExperience(experienceType: BookingDraft['experienceType']) {
+    if (lockedPackage) return;
     const nextExperience = getExperience(experienceType);
     setSelectedRide(null);
     updateDraft({
@@ -273,7 +275,7 @@ export function BookingWizard() {
                 <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary-50 text-xs font-bold text-primary">{step + 1}</span>
               </div>
 
-              {step === 0 ? <ExperienceStep selected={draft.experienceType} onSelect={selectExperience} /> : null}
+              {step === 0 ? (lockedPackage ? <LockedVehicleStep draft={draft} /> : <ExperienceStep selected={draft.experienceType} onSelect={selectExperience} />) : null}
               {step === 1 ? <DurationStep draft={draft} onUpdate={updateDraft} /> : null}
               {step === 2 ? <PartyStep draft={draft} capacity={capacity} capacityPerVehicle={capacityPerVehicle} exceeded={capacityExceeded} onUpdate={updateDraft} /> : null}
               {step === 3 ? <ScheduleStep draft={draft} onUpdate={updateDraft} /> : null}
@@ -332,6 +334,25 @@ function SelectedRideNotice({ ride }: { ride: SelectedRide }) {
         </div>
       </div>
       <p className="mt-3 max-w-sm text-xs leading-5 text-primary-900 sm:mt-0">Choose the exact duration in the next step. The price will update automatically.</p>
+    </div>
+  );
+}
+
+function LockedVehicleStep({ draft }: { draft: BookingDraft }) {
+  return (
+    <div className="rounded-[1.25rem] border border-primary bg-primary-50 p-5 shadow-sm ring-2 ring-primary/10">
+      <div className="flex items-start gap-4">
+        <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-white text-primary shadow-sm"><TicketCheck className="size-5" aria-hidden="true" /></span>
+        <div className="min-w-0 flex-1">
+          <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-primary">Selected package</p>
+          <h3 className="mt-1 font-heading text-2xl font-semibold text-foreground">{draft.selectedPackageName}</h3>
+          <p className="mt-2 text-sm leading-6 text-muted-foreground">This booking is locked to the selected vehicle. Continue to choose duration and timing.</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {draft.selectedPackageCapacity ? <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-primary-900">{draft.selectedPackageCapacity} seater</span> : null}
+            {draft.selectedPackageRates?.map((rate) => <span key={rate.minutes} className="rounded-full bg-white px-3 py-1 text-xs font-bold text-primary-900">{rate.minutes} min · {formatAed(rate.price)}</span>)}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
