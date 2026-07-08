@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import type { LucideIcon } from 'lucide-react';
-import { BadgePercent, BarChart3, Bell, CalendarDays, ChevronDown, ClipboardCheck, CreditCard, Home, LayoutDashboard, LogOut, Menu, MessageSquare, Package, Search, Settings, Ship, User, UserCog, UsersRound, X } from 'lucide-react';
+import { BadgePercent, BarChart3, Bell, CalendarDays, ChevronDown, ChevronLeft, ChevronRight, ClipboardCheck, CreditCard, Home, LayoutDashboard, LogOut, Menu, MessageSquare, Package, Search, Settings, Ship, User, UserCog, UsersRound, X } from 'lucide-react';
 import { useEffect, useState, type ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -47,6 +47,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
   const router = useRouter();
   const currentPath = normalizePath(pathname);
   const [open, setOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
   const [user, setUser] = useState<PortalUser | null>(null);
   const [ready, setReady] = useState(false);
   const [accessIssue, setAccessIssue] = useState('');
@@ -141,20 +142,33 @@ export function AdminShell({ children }: { children: ReactNode }) {
   return (
     <OperationsProvider>
       <div className="min-h-screen bg-[#F4F7F8] text-foreground">
-        <div className="flex min-h-screen">
-          <aside className="hidden w-[17rem] shrink-0 bg-white/82 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.95),inset_-10px_0_24px_rgba(8,37,50,0.025),12px_0_35px_rgba(8,37,50,0.055)] ring-1 ring-white/80 backdrop-blur-xl lg:block">
-            <div className="flex h-full flex-col">
-              <Link href={isManagerRole(user.role) ? '/admin/manager' : '/admin'} className="mb-7 block px-3 pt-2"><BrandMark /></Link>
-              <AdminNav currentPath={currentPath} navItems={navItems} />
-              <div className="premium-surface mt-auto overflow-hidden rounded-[1.5rem] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.95),0_12px_30px_rgba(8,37,50,0.08)]">
-                <div className="mb-4 h-24 rounded-[1.15rem] bg-[linear-gradient(135deg,#EAF8FA,#FFFFFF_48%,#F4E7C7)] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]">
-                  <div className="flex h-full items-end justify-between gap-3">
-                    <div><p className="text-xs font-bold text-foreground">{user.roleLabel}</p><p className="text-xs text-muted-foreground">{user.email}</p></div>
-                    <ProfileAvatar src={user.avatarUrl} />
-                  </div>
-                </div>
-                <p className="font-heading text-lg italic text-gold-deep">Drive the Extraordinary</p>
+        <div className="flex min-h-screen items-start">
+          <aside className={cn('sticky top-0 hidden h-screen shrink-0 overflow-y-auto bg-white/82 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.95),inset_-10px_0_24px_rgba(8,37,50,0.025),12px_0_35px_rgba(8,37,50,0.055)] ring-1 ring-white/80 backdrop-blur-xl transition-all duration-300 lg:block', collapsed ? 'w-[5.6rem]' : 'w-[16rem]')}>
+            <div className="flex min-h-full flex-col">
+              <div className={cn('mb-4 flex items-center gap-2 pt-1', collapsed ? 'justify-center' : 'justify-between px-2')}>
+                <Link href={isManagerRole(user.role) ? '/admin/manager' : '/admin'} className={cn('block transition', collapsed ? 'flex size-12 items-center justify-center rounded-2xl bg-primary-50 text-sm font-black text-primary shadow-sm' : 'min-w-0')}>
+                  {collapsed ? 'eD' : <BrandMark />}
+                </Link>
+                <button type="button" onClick={() => setCollapsed((value) => !value)} className="hidden size-9 shrink-0 items-center justify-center rounded-full border border-border bg-white text-muted-foreground shadow-sm transition hover:border-primary/35 hover:text-primary lg:flex" aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}>
+                  {collapsed ? <ChevronRight className="size-4" aria-hidden="true" /> : <ChevronLeft className="size-4" aria-hidden="true" />}
+                </button>
               </div>
+
+              <AdminNav currentPath={currentPath} navItems={navItems} collapsed={collapsed} />
+
+              {!collapsed ? (
+                <div className="premium-surface mt-auto overflow-hidden rounded-[1.35rem] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.95),0_12px_30px_rgba(8,37,50,0.08)]">
+                  <div className="mb-3 h-20 rounded-[1rem] bg-[linear-gradient(135deg,#EAF8FA,#FFFFFF_48%,#F4E7C7)] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]">
+                    <div className="flex h-full items-end justify-between gap-3">
+                      <div className="min-w-0"><p className="text-xs font-bold text-foreground">{user.roleLabel}</p><p className="truncate text-[11px] text-muted-foreground">{user.email}</p></div>
+                      <ProfileAvatar src={user.avatarUrl} size="sm" />
+                    </div>
+                  </div>
+                  <p className="font-heading text-base italic text-gold-deep">Drive the Extraordinary</p>
+                </div>
+              ) : (
+                <div className="mt-auto flex justify-center pb-2"><ProfileAvatar src={user.avatarUrl} size="sm" /></div>
+              )}
             </div>
           </aside>
 
@@ -199,6 +213,6 @@ function IconButtonWithBadge({ icon: Icon, count }: { icon: LucideIcon; count: s
   return <button className="relative flex size-10 items-center justify-center rounded-full bg-white text-muted-foreground shadow-[0_8px_18px_rgba(8,37,50,0.06),inset_0_1px_0_rgba(255,255,255,0.9)] transition hover:text-primary" type="button"><Icon className="size-4" aria-hidden="true" /><span className="absolute -right-0.5 -top-0.5 flex size-4 items-center justify-center rounded-full bg-primary text-[9px] font-bold text-white">{count}</span></button>;
 }
 
-function AdminNav({ currentPath, navItems, onNavigate }: { currentPath: string; navItems: typeof adminNavItems; onNavigate?: () => void }) {
-  return <nav className="flex flex-col gap-1.5">{navItems.map((item) => { const Icon = iconMap[item.icon as keyof typeof iconMap] ?? LayoutDashboard; const active = currentPath === normalizePath(item.href.split('?')[0]); return <Link key={item.href} href={item.href} onClick={onNavigate} className={cn('flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold text-muted-foreground transition hover:bg-primary-50 hover:text-primary-900', active && 'bg-primary-100 text-primary-900 shadow-[0px_-3px_0px_0px_rgba(14,124,134,0.08)_inset,0px_2px_0px_0px_rgba(255,255,255,0.65)_inset,0px_8px_18px_rgba(8,37,50,0.07)]')}><span className={cn('flex size-8 items-center justify-center rounded-xl bg-white text-muted-foreground shadow-sm', active && 'bg-[#DDF4F6] text-primary')}><Icon className="size-4" aria-hidden="true" /></span>{item.label}</Link>; })}</nav>;
+function AdminNav({ currentPath, navItems, onNavigate, collapsed = false }: { currentPath: string; navItems: typeof adminNavItems; onNavigate?: () => void; collapsed?: boolean }) {
+  return <nav className={cn('flex flex-col', collapsed ? 'gap-1' : 'gap-1')}>{navItems.map((item) => { const Icon = iconMap[item.icon as keyof typeof iconMap] ?? LayoutDashboard; const active = currentPath === normalizePath(item.href.split('?')[0]); return <Link key={item.href} href={item.href} onClick={onNavigate} title={collapsed ? item.label : undefined} className={cn('flex items-center rounded-2xl text-sm font-semibold text-muted-foreground transition hover:bg-primary-50 hover:text-primary-900', collapsed ? 'justify-center px-2 py-2' : 'gap-3 px-3 py-2.5', active && 'bg-primary-100 text-primary-900 shadow-[0px_-3px_0px_0px_rgba(14,124,134,0.08)_inset,0px_2px_0px_0px_rgba(255,255,255,0.65)_inset,0px_8px_18px_rgba(8,37,50,0.07)]')}><span className={cn('flex size-8 shrink-0 items-center justify-center rounded-xl bg-white text-muted-foreground shadow-sm', active && 'bg-[#DDF4F6] text-primary')}><Icon className="size-4" aria-hidden="true" /></span>{!collapsed ? <span className="truncate">{item.label}</span> : null}</Link>; })}</nav>;
 }
