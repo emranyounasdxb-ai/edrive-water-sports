@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from 'react';
-import { FileClock, ImagePlus, KeyRound, Pencil, Plus, ShieldCheck, UploadCloud, UserCog, UsersRound, X } from 'lucide-react';
+import { FileClock, ImagePlus, KeyRound, Pencil, Plus, UploadCloud, UserCog, UsersRound, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,8 +15,13 @@ type StaffRecord = {
   fullName: string;
   email: string;
   phone: string;
+  nationality: string;
+  gender: string;
+  dateOfBirth: string;
   passportNumber: string;
+  passportExpiryDate: string;
   emiratesId: string;
+  emiratesIdExpiryDate: string;
   role: string;
   department: string;
   status: string;
@@ -42,6 +47,31 @@ const statusMap: Record<string, string> = {
   Suspended: 'suspended'
 };
 
+const nationalityOptions = ['UAE', 'Pakistan', 'India', 'Philippines', 'Nepal', 'Sri Lanka', 'Bangladesh', 'Indonesia', 'Egypt', 'Jordan', 'Syria', 'Lebanon', 'Morocco', 'Kenya', 'Uganda', 'Ghana', 'Nigeria', 'Ethiopia', 'Other'];
+const genderOptions = ['Male', 'Female', 'Other'];
+
+const nationalityFlags: Record<string, string> = {
+  UAE: '🇦🇪',
+  Pakistan: '🇵🇰',
+  India: '🇮🇳',
+  Philippines: '🇵🇭',
+  Nepal: '🇳🇵',
+  'Sri Lanka': '🇱🇰',
+  Bangladesh: '🇧🇩',
+  Indonesia: '🇮🇩',
+  Egypt: '🇪🇬',
+  Jordan: '🇯🇴',
+  Syria: '🇸🇾',
+  Lebanon: '🇱🇧',
+  Morocco: '🇲🇦',
+  Kenya: '🇰🇪',
+  Uganda: '🇺🇬',
+  Ghana: '🇬🇭',
+  Nigeria: '🇳🇬',
+  Ethiopia: '🇪🇹',
+  Other: '🌍'
+};
+
 const reverse = (map: Record<string, string>, value?: string) => Object.keys(map).find((key) => map[key] === value) || value || '';
 
 const emptyForm: StaffFormValues = {
@@ -49,8 +79,13 @@ const emptyForm: StaffFormValues = {
   fullName: '',
   email: '',
   phone: '',
+  nationality: '',
+  gender: '',
+  dateOfBirth: '',
   passportNumber: '',
+  passportExpiryDate: '',
   emiratesId: '',
+  emiratesIdExpiryDate: '',
   role: 'Booking Staff',
   department: 'Booking',
   status: 'Active',
@@ -69,8 +104,13 @@ function mapStaff(row: Record<string, unknown>): StaffRecord {
     fullName: toText(row.full_name),
     email: toText(row.email),
     phone: toText(row.phone),
+    nationality: toText(row.nationality),
+    gender: toText(row.gender),
+    dateOfBirth: toText(row.date_of_birth),
     passportNumber: toText(row.passport_number),
+    passportExpiryDate: toText(row.passport_expiry_date),
     emiratesId: toText(row.emirates_id),
+    emiratesIdExpiryDate: toText(row.emirates_id_expiry_date),
     role: reverse(roleMap, toText(row.role)),
     department: toText(row.department),
     status: reverse(statusMap, toText(row.status)),
@@ -81,6 +121,15 @@ function mapStaff(row: Record<string, unknown>): StaffRecord {
 function makeTemporaryPassword() {
   const suffix = Math.random().toString(36).slice(2, 8).toUpperCase();
   return `eDrive@${new Date().getFullYear()}-${suffix}`;
+}
+
+function formatDate(value: string) {
+  if (!value) return '';
+  try {
+    return new Intl.DateTimeFormat('en-AE', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(`${value}T12:00:00`));
+  } catch {
+    return value;
+  }
 }
 
 async function readApiMessage(response: Response) {
@@ -113,6 +162,11 @@ function MetricCard({ label, value, icon: Icon }: { label: string; value: string
       </CardContent>
     </Card>
   );
+}
+
+function NationalityBadge({ value }: { value: string }) {
+  const label = value || 'Not set';
+  return <span className="inline-flex items-center gap-2 rounded-full bg-primary-50 px-3 py-1 text-xs font-semibold text-primary-900"><span className="text-base leading-none">{nationalityFlags[value] || '🌍'}</span>{label}</span>;
 }
 
 export default function Page() {
@@ -201,8 +255,13 @@ export default function Page() {
       full_name: values.fullName,
       email: cleanEmail,
       phone: values.phone,
+      nationality: values.nationality,
+      gender: values.gender,
+      date_of_birth: values.dateOfBirth || null,
       passport_number: values.passportNumber,
+      passport_expiry_date: values.passportExpiryDate || null,
       emirates_id: values.emiratesId,
+      emirates_id_expiry_date: values.emiratesIdExpiryDate || null,
       role: roleMap[values.role] || 'booking_staff',
       department: values.department,
       status: statusMap[values.status] || 'active',
@@ -246,6 +305,8 @@ export default function Page() {
     setOpen(true);
   }
 
+  const tableColumns = isSuperAdmin ? 10 : 9;
+
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-col gap-4 rounded-[1.75rem] border border-white/80 bg-white/85 p-5 shadow-[0_18px_45px_rgba(8,37,50,0.06)] lg:flex-row lg:items-end lg:justify-between">
@@ -256,7 +317,7 @@ export default function Page() {
             {isSuperAdmin ? <Badge className="rounded-full bg-primary text-white">Super Admin controls</Badge> : <Badge variant="secondary" className="rounded-full">Read only</Badge>}
           </div>
           <h1 className="font-heading text-3xl font-semibold text-foreground">Staff and login access</h1>
-          <p className="mt-2 text-sm leading-6 text-muted-foreground">Create staff records and sync the same email, name, and temporary password with Supabase Auth.</p>
+          <p className="mt-2 text-sm leading-6 text-muted-foreground">Create staff records, identity details, and sync the same email, name, and temporary password with Supabase Auth.</p>
         </div>
         {isSuperAdmin ? <Button type="button" onClick={openAdd}><Plus data-icon aria-hidden="true" />Add Staff</Button> : null}
       </div>
@@ -273,40 +334,50 @@ export default function Page() {
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Records</CardTitle>
-          <CardDescription>{isSuperAdmin ? 'Only Super Admin can edit staff and sync login passwords.' : 'Staff records are visible, but edit and login sync are restricted to Super Admin.'}</CardDescription>
+          <CardDescription>{isSuperAdmin ? 'Only Super Admin can edit staff identity details and sync login passwords.' : 'Staff records are visible, but edit and login sync are restricted to Super Admin.'}</CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                {['Photo', 'Staff Name', 'Email', 'Role', 'Phone', 'Status', ...(isSuperAdmin ? ['Action'] : [])].map((column) => <TableHead key={column}>{column}</TableHead>)}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {staff.length ? staff.map((row) => (
-                <TableRow key={row.id}>
-                  <TableCell>{row.avatarUrl ? <img src={row.avatarUrl} alt={row.fullName || 'Staff'} className="size-11 rounded-2xl border border-border object-cover" /> : <span className="flex size-11 items-center justify-center rounded-2xl bg-primary-50 text-primary"><ImagePlus className="size-4" aria-hidden="true" /></span>}</TableCell>
-                  <TableCell className="max-w-[14rem] truncate font-semibold">{row.fullName || '-'}</TableCell>
-                  <TableCell className="max-w-[14rem] truncate text-xs text-muted-foreground">{row.email || '-'}</TableCell>
-                  <TableCell>{row.role || '-'}</TableCell>
-                  <TableCell>{row.phone || '-'}</TableCell>
-                  <TableCell>{row.status || '-'}</TableCell>
-                  {isSuperAdmin ? (
-                    <TableCell>
-                      <div className="flex flex-wrap gap-2">
-                        <Button type="button" size="sm" variant="outline" onClick={() => openEdit(row)}><Pencil className="size-4" aria-hidden="true" />Edit / Sync</Button>
-                        <Button asChild size="sm" variant="subtle"><Link href={`/admin/staff-password?email=${encodeURIComponent(row.email)}`}><KeyRound className="size-4" aria-hidden="true" />Password Page</Link></Button>
-                      </div>
-                    </TableCell>
-                  ) : null}
-                </TableRow>
-              )) : (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={isSuperAdmin ? 7 : 6} className="h-28 text-center text-sm text-muted-foreground">{loading ? 'Loading records...' : 'No staff users added yet.'}</TableCell>
+                  {['Photo', 'Staff Name', 'Email', 'Nationality', 'Gender', 'Role', 'Phone', 'Passport / EID', 'Status', ...(isSuperAdmin ? ['Action'] : [])].map((column) => <TableHead key={column}>{column}</TableHead>)}
                 </TableRow>
-              )}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {staff.length ? staff.map((row) => (
+                  <TableRow key={row.id}>
+                    <TableCell>{row.avatarUrl ? <img src={row.avatarUrl} alt={row.fullName || 'Staff'} className="size-11 rounded-2xl border border-border object-cover" /> : <span className="flex size-11 items-center justify-center rounded-2xl bg-primary-50 text-primary"><ImagePlus className="size-4" aria-hidden="true" /></span>}</TableCell>
+                    <TableCell className="min-w-[10rem] font-semibold"><div>{row.fullName || '-'}</div>{row.dateOfBirth ? <div className="mt-1 text-xs font-normal text-muted-foreground">DOB: {formatDate(row.dateOfBirth)}</div> : null}</TableCell>
+                    <TableCell className="min-w-[12rem] text-xs text-muted-foreground">{row.email || '-'}</TableCell>
+                    <TableCell className="min-w-[9rem]"><NationalityBadge value={row.nationality} /></TableCell>
+                    <TableCell>{row.gender || '-'}</TableCell>
+                    <TableCell className="min-w-[9rem]">{row.role || '-'}</TableCell>
+                    <TableCell className="min-w-[9rem]">{row.phone || '-'}</TableCell>
+                    <TableCell className="min-w-[13rem] text-xs leading-5 text-muted-foreground">
+                      <div><span className="font-bold text-foreground">Passport:</span> {row.passportNumber || '-'}</div>
+                      {row.passportExpiryDate ? <div>Exp: {formatDate(row.passportExpiryDate)}</div> : null}
+                      <div className="mt-1"><span className="font-bold text-foreground">EID:</span> {row.emiratesId || '-'}</div>
+                      {row.emiratesIdExpiryDate ? <div>Exp: {formatDate(row.emiratesIdExpiryDate)}</div> : null}
+                    </TableCell>
+                    <TableCell>{row.status || '-'}</TableCell>
+                    {isSuperAdmin ? (
+                      <TableCell>
+                        <div className="flex min-w-[15rem] flex-wrap gap-2">
+                          <Button type="button" size="sm" variant="outline" onClick={() => openEdit(row)}><Pencil className="size-4" aria-hidden="true" />Edit / Sync</Button>
+                          <Button asChild size="sm" variant="subtle"><Link href={`/admin/staff-password?email=${encodeURIComponent(row.email)}`}><KeyRound className="size-4" aria-hidden="true" />Password Page</Link></Button>
+                        </div>
+                      </TableCell>
+                    ) : null}
+                  </TableRow>
+                )) : (
+                  <TableRow>
+                    <TableCell colSpan={tableColumns} className="h-28 text-center text-sm text-muted-foreground">{loading ? 'Loading records...' : 'No staff users added yet.'}</TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
 
@@ -316,7 +387,7 @@ export default function Page() {
 }
 
 function StaffModal({ initialValues, onClose, onSubmit }: { initialValues?: StaffRecord; onClose: () => void; onSubmit: (values: StaffFormValues, file?: File) => Promise<void> }) {
-  const [values, setValues] = useState<StaffFormValues>(initialValues ? { ...initialValues, temporaryPassword: '' } : emptyForm);
+  const [values, setValues] = useState<StaffFormValues>({ ...emptyForm, ...initialValues, temporaryPassword: '' });
   const [file, setFile] = useState<File | undefined>();
   const [saving, setSaving] = useState(false);
   const departments = ['Admin', 'Booking', 'Operations', 'Finance', 'Maintenance', 'Management'];
@@ -341,7 +412,7 @@ function StaffModal({ initialValues, onClose, onSubmit }: { initialValues?: Staf
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-primary-900/35 p-4 backdrop-blur-sm">
-      <div className="flex max-h-[92vh] w-full max-w-[34rem] flex-col overflow-hidden rounded-[1.6rem] border border-white/80 bg-white shadow-[0_28px_80px_rgba(8,37,50,0.28)]">
+      <div className="flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-[1.6rem] border border-white/80 bg-white shadow-[0_28px_80px_rgba(8,37,50,0.28)]">
         <div className="flex items-start justify-between gap-4 border-b border-border/70 bg-[#F7FAFA] px-5 py-4">
           <div>
             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Super Admin Form</p>
@@ -350,8 +421,8 @@ function StaffModal({ initialValues, onClose, onSubmit }: { initialValues?: Staf
           <button type="button" onClick={onClose} className="flex size-9 items-center justify-center rounded-full border border-border bg-white text-muted-foreground transition hover:text-primary"><X className="size-4" aria-hidden="true" /></button>
         </div>
         <form onSubmit={submit} className="flex min-h-0 flex-1 flex-col">
-          <div className="grid gap-3 overflow-y-auto px-5 py-4 sm:grid-cols-2">
-            <label className="grid gap-2 text-sm font-semibold text-foreground sm:col-span-2">Profile Photo
+          <div className="grid gap-3 overflow-y-auto px-5 py-4 sm:grid-cols-2 lg:grid-cols-3">
+            <label className="grid gap-2 text-sm font-semibold text-foreground sm:col-span-2 lg:col-span-3">Profile Photo
               <div className="rounded-[1.15rem] border border-dashed border-primary/35 bg-primary-50/65 p-4">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex items-center gap-3">
@@ -364,20 +435,25 @@ function StaffModal({ initialValues, onClose, onSubmit }: { initialValues?: Staf
             </label>
             <FormInput label="Full Name" value={values.fullName} required onChange={(value) => updateField('fullName', value)} />
             <FormInput label="Email" type="email" value={values.email} required onChange={(value) => updateField('email', value)} />
-            <label className="grid gap-1.5 text-sm font-semibold text-foreground sm:col-span-2">Temporary Password
+            <FormInput label="Phone / WhatsApp" type="tel" value={values.phone} required onChange={(value) => updateField('phone', value)} />
+            <label className="grid gap-1.5 text-sm font-semibold text-foreground sm:col-span-2 lg:col-span-3">Temporary Password
               <div className="flex gap-2">
                 <input type="text" value={values.temporaryPassword} onChange={(event) => updateField('temporaryPassword', event.target.value)} placeholder={initialValues ? 'Leave blank if password is not changing' : 'Required for new staff'} className="h-10 min-w-0 flex-1 rounded-xl border border-border bg-white px-3 text-sm text-foreground outline-none focus:border-primary" />
                 <Button type="button" variant="outline" onClick={() => updateField('temporaryPassword', makeTemporaryPassword())}>Generate</Button>
               </div>
               <span className="text-xs font-normal leading-5 text-muted-foreground">Used to create/update the Supabase Auth login for this staff email.</span>
             </label>
-            <FormInput label="Phone / WhatsApp" type="tel" value={values.phone} required onChange={(value) => updateField('phone', value)} />
+            <SelectInput label="Nationality" value={values.nationality} options={nationalityOptions} required onChange={(value) => updateField('nationality', value)} />
+            <SelectInput label="Gender" value={values.gender} options={genderOptions} required onChange={(value) => updateField('gender', value)} />
+            <FormInput label="Date of Birth" type="date" value={values.dateOfBirth} onChange={(value) => updateField('dateOfBirth', value)} />
             <FormInput label="Passport Number" value={values.passportNumber} onChange={(value) => updateField('passportNumber', value)} />
+            <FormInput label="Passport Expiry" type="date" value={values.passportExpiryDate} onChange={(value) => updateField('passportExpiryDate', value)} />
             <FormInput label="Emirates ID / EID Number" value={values.emiratesId} onChange={(value) => updateField('emiratesId', value)} />
+            <FormInput label="EID Expiry" type="date" value={values.emiratesIdExpiryDate} onChange={(value) => updateField('emiratesIdExpiryDate', value)} />
             <SelectInput label="Role" value={values.role} options={Object.keys(roleMap)} required onChange={(value) => updateField('role', value)} />
             <SelectInput label="Department" value={values.department} options={departments} onChange={(value) => updateField('department', value)} />
             <SelectInput label="Status" value={values.status} options={Object.keys(statusMap)} required onChange={(value) => updateField('status', value)} />
-            <label className="grid gap-1.5 text-sm font-semibold text-foreground sm:col-span-2">Notes<textarea value={values.notes} onChange={(event) => updateField('notes', event.target.value)} className="min-h-20 rounded-xl border border-border bg-white px-3 py-3 text-sm text-foreground outline-none focus:border-primary" /></label>
+            <label className="grid gap-1.5 text-sm font-semibold text-foreground sm:col-span-2 lg:col-span-3">Notes<textarea value={values.notes} onChange={(event) => updateField('notes', event.target.value)} className="min-h-20 rounded-xl border border-border bg-white px-3 py-3 text-sm text-foreground outline-none focus:border-primary" /></label>
           </div>
           <div className="flex justify-end gap-3 border-t border-border/70 bg-white px-5 py-4"><Button type="button" variant="outline" onClick={onClose}>Cancel</Button><Button type="submit" disabled={saving}>{saving ? 'Saving...' : 'Save & Sync Login'}</Button></div>
         </form>
@@ -391,5 +467,5 @@ function FormInput({ label, value, onChange, type = 'text', required = false }: 
 }
 
 function SelectInput({ label, value, options, onChange, required = false }: { label: string; value: string; options: string[]; onChange: (value: string) => void; required?: boolean }) {
-  return <label className="grid gap-1.5 text-sm font-semibold text-foreground">{label}<select required={required} value={value} onChange={(event) => onChange(event.target.value)} className="h-10 rounded-xl border border-border bg-white px-3 text-sm text-foreground outline-none focus:border-primary">{options.map((option) => <option key={option}>{option}</option>)}</select></label>;
+  return <label className="grid gap-1.5 text-sm font-semibold text-foreground">{label}<select required={required} value={value} onChange={(event) => onChange(event.target.value)} className="h-10 rounded-xl border border-border bg-white px-3 text-sm text-foreground outline-none focus:border-primary"><option value="">Select {label}</option>{options.map((option) => <option key={option} value={option}>{option}</option>)}</select></label>;
 }
