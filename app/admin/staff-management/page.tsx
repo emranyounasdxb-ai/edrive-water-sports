@@ -47,7 +47,7 @@ const statusMap: Record<string, string> = {
   Suspended: 'suspended'
 };
 
-const nationalityOptions = ['UAE', 'Pakistan', 'India', 'Philippines', 'Nepal', 'Sri Lanka', 'Bangladesh', 'Indonesia', 'Egypt', 'Jordan', 'Syria', 'Lebanon', 'Morocco', 'Kenya', 'Uganda', 'Ghana', 'Nigeria', 'Ethiopia', 'Other'];
+const nationalityOptions = ['UAE', 'Pakistan', 'India', 'Philippines', 'Nepal', 'Sri Lanka', 'Bangladesh', 'Indonesia', 'Egypt', 'Algeria', 'Jordan', 'Syria', 'Lebanon', 'Morocco', 'Kenya', 'Uganda', 'Ghana', 'Nigeria', 'Ethiopia', 'Other'];
 const genderOptions = ['Male', 'Female', 'Other'];
 
 const nationalityFlags: Record<string, string> = {
@@ -60,6 +60,7 @@ const nationalityFlags: Record<string, string> = {
   Bangladesh: '🇧🇩',
   Indonesia: '🇮🇩',
   Egypt: '🇪🇬',
+  Algeria: '🇩🇿',
   Jordan: '🇯🇴',
   Syria: '🇸🇾',
   Lebanon: '🇱🇧',
