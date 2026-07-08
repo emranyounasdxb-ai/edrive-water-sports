@@ -38,8 +38,8 @@ function roleLabel(role: string) {
 }
 
 function ProfileAvatar({ src, size = 'md' }: { src?: string; size?: 'sm' | 'md' | 'lg' }) {
-  const className = size === 'lg' ? 'size-16' : size === 'sm' ? 'size-9' : 'size-10';
-  const iconSize = size === 'lg' ? 'size-7' : 'size-5';
+  const className = size === 'lg' ? 'size-14' : size === 'sm' ? 'size-8' : 'size-10';
+  const iconSize = size === 'lg' ? 'size-6' : 'size-5';
   return src ? <img src={src} alt="Profile" className={`${className} rounded-full border-2 border-white object-cover shadow-sm`} /> : <div className={`flex ${className} items-center justify-center rounded-full bg-[#F0E6D7] text-primary shadow-sm`}><User className={iconSize} aria-hidden="true" /></div>;
 }
 
@@ -144,13 +144,13 @@ export function AdminShell({ children }: { children: ReactNode }) {
     <OperationsProvider>
       <div className="min-h-screen bg-[#F4F7F8] text-foreground">
         <div className="flex min-h-screen items-start">
-          <aside className={cn('sticky top-0 hidden h-screen shrink-0 overflow-y-auto bg-white/82 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.95),inset_-10px_0_24px_rgba(8,37,50,0.025),12px_0_35px_rgba(8,37,50,0.055)] ring-1 ring-white/80 backdrop-blur-xl transition-all duration-300 lg:block', collapsed ? 'w-[5.6rem]' : 'w-[16rem]')}>
-            <div className="flex min-h-full flex-col">
-              <div className={cn('mb-4 flex items-center gap-2 pt-1', collapsed ? 'justify-center' : 'justify-between px-2')}>
-                <Link href={isManagerRole(user.role) ? '/admin/manager' : '/admin'} className={cn('block transition', collapsed ? 'flex size-12 items-center justify-center rounded-2xl bg-primary-50 text-sm font-black text-primary shadow-sm' : 'min-w-0')}>
+          <aside className={cn('sticky top-0 hidden h-screen shrink-0 overflow-hidden bg-white/82 p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.95),inset_-10px_0_24px_rgba(8,37,50,0.025),12px_0_35px_rgba(8,37,50,0.055)] ring-1 ring-white/80 backdrop-blur-xl transition-all duration-300 lg:block', collapsed ? 'w-[5.4rem]' : 'w-[15.25rem]')}>
+            <div className="flex h-full flex-col">
+              <div className={cn('mb-2 flex items-center gap-2', collapsed ? 'justify-center' : 'justify-between px-2')}>
+                <Link href={isManagerRole(user.role) ? '/admin/manager' : '/admin'} className={cn('block transition', collapsed ? 'flex size-11 items-center justify-center rounded-2xl bg-primary-50 text-sm font-black text-primary shadow-sm' : 'min-w-0 scale-[0.88] origin-left')}>
                   {collapsed ? 'eD' : <BrandMark />}
                 </Link>
-                <button type="button" onClick={() => setCollapsed((value) => !value)} className="hidden size-9 shrink-0 items-center justify-center rounded-full border border-border bg-white text-muted-foreground shadow-sm transition hover:border-primary/35 hover:text-primary lg:flex" aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}>
+                <button type="button" onClick={() => setCollapsed((value) => !value)} className="hidden size-8 shrink-0 items-center justify-center rounded-full border border-border bg-white text-muted-foreground shadow-sm transition hover:border-primary/35 hover:text-primary lg:flex" aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}>
                   {collapsed ? <ChevronRight className="size-4" aria-hidden="true" /> : <ChevronLeft className="size-4" aria-hidden="true" />}
                 </button>
               </div>
@@ -158,45 +158,43 @@ export function AdminShell({ children }: { children: ReactNode }) {
               <AdminNav currentPath={currentPath} navItems={navItems} collapsed={collapsed} />
 
               {!collapsed ? (
-                <div className="premium-surface mt-auto overflow-hidden rounded-[1.35rem] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.95),0_12px_30px_rgba(8,37,50,0.08)]">
-                  <div className="rounded-[1.15rem] bg-[linear-gradient(135deg,#EAF8FA,#FFFFFF_50%,#F4E7C7)] p-4 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]">
+                <div className="premium-surface mt-auto overflow-hidden rounded-[1.2rem] p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.95),0_10px_24px_rgba(8,37,50,0.07)]">
+                  <div className="rounded-[1rem] bg-[linear-gradient(135deg,#EAF8FA,#FFFFFF_50%,#F4E7C7)] p-3 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]">
                     <div className="mx-auto w-fit"><ProfileAvatar src={user.avatarUrl} size="lg" /></div>
-                    <p className="mt-3 truncate text-sm font-bold text-foreground">{user.name}</p>
+                    <p className="mt-2 truncate text-sm font-bold text-foreground">{user.name}</p>
                     <p className="mt-0.5 text-xs font-semibold text-primary">{user.roleLabel}</p>
-                    <p className="mt-1 truncate text-[11px] text-muted-foreground">{user.email}</p>
+                    <p className="mt-0.5 truncate text-[11px] text-muted-foreground">{user.email}</p>
                   </div>
-                  <div className="mt-3 grid grid-cols-2 gap-2">
-                    <Button type="button" size="sm" variant="outline" onClick={handleLogout} className="rounded-full bg-white text-xs"><LogOut className="size-3.5" aria-hidden="true" />Logout</Button>
-                    <Button asChild size="sm" className="rounded-full text-xs"><Link href="/">View Site</Link></Button>
-                  </div>
+                  <Button type="button" size="sm" variant="outline" onClick={handleLogout} className="mt-2 w-full rounded-full bg-white text-xs"><LogOut className="size-3.5" aria-hidden="true" />Logout</Button>
                 </div>
               ) : (
-                <div className="mt-auto flex flex-col items-center gap-2 pb-2">
+                <div className="mt-auto flex flex-col items-center gap-2 pb-1">
                   <ProfileAvatar src={user.avatarUrl} size="sm" />
-                  <button type="button" onClick={handleLogout} className="flex size-9 items-center justify-center rounded-full border border-border bg-white text-muted-foreground shadow-sm hover:text-primary" aria-label="Logout"><LogOut className="size-4" aria-hidden="true" /></button>
+                  <button type="button" onClick={handleLogout} className="flex size-8 items-center justify-center rounded-full border border-border bg-white text-muted-foreground shadow-sm hover:text-primary" aria-label="Logout"><LogOut className="size-4" aria-hidden="true" /></button>
                 </div>
               )}
             </div>
           </aside>
 
           <div className="min-w-0 flex-1">
-            <header className="sticky top-3 z-40 mx-4 rounded-[1.25rem] bg-white/88 shadow-[inset_0_1px_0_rgba(255,255,255,0.95),inset_0_-10px_24px_rgba(8,37,50,0.025),0_12px_28px_rgba(8,37,50,0.07)] ring-1 ring-white/80 backdrop-blur-xl">
-              <div className="flex h-[58px] items-center justify-between gap-3 px-3 sm:px-5 lg:px-6">
+            <header className="sticky top-3 z-40 mx-4 rounded-[1.2rem] bg-white/88 shadow-[inset_0_1px_0_rgba(255,255,255,0.95),inset_0_-10px_24px_rgba(8,37,50,0.025),0_12px_28px_rgba(8,37,50,0.07)] ring-1 ring-white/80 backdrop-blur-xl">
+              <div className="flex h-[56px] items-center gap-3 px-3 sm:px-5 lg:px-6">
                 <div className="flex min-w-0 items-center gap-2">
                   <Button variant="outline" size="icon" className="lg:hidden" onClick={() => setOpen((value) => !value)} aria-label="Toggle admin navigation">{open ? <X data-icon aria-hidden="true" /> : <Menu data-icon aria-hidden="true" />}</Button>
                   <div className="hidden items-center gap-2 rounded-full bg-[#F4F7F8] px-3 py-1.5 text-xs font-semibold text-muted-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_6px_16px_rgba(8,37,50,0.045)] sm:flex"><Home className="size-4 text-primary" aria-hidden="true" />{isManagerRole(user.role) ? 'Manager Operations' : 'Admin Operations'}</div>
                 </div>
 
-                <div className="hidden h-10 w-full max-w-[34rem] items-center gap-2 rounded-2xl border border-white/80 bg-white/92 px-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.95),0_8px_20px_rgba(8,37,50,0.045)] md:flex">
+                <div className="hidden h-9 w-full max-w-[32rem] items-center gap-2 rounded-2xl border border-white/80 bg-white/92 px-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.95),0_8px_20px_rgba(8,37,50,0.045)] md:flex">
                   <Search className="size-4 text-muted-foreground" aria-hidden="true" />
-                  <Input className="h-9 border-0 bg-transparent px-0 text-sm shadow-none focus-visible:ring-0" placeholder="Search bookings, staff, packages, vehicles..." />
+                  <Input className="h-8 border-0 bg-transparent px-0 text-sm shadow-none focus-visible:ring-0" placeholder="Search bookings, staff, packages, vehicles..." />
                   <span className="rounded-lg border border-border px-2 py-0.5 text-xs text-muted-foreground">/</span>
                 </div>
 
-                <div className="flex shrink-0 items-center gap-2">
+                <div className="ml-auto flex shrink-0 items-center gap-2">
+                  <LiveWeatherPill />
                   <IconButtonWithBadge icon={Bell} count="0" />
                   <IconButtonWithBadge icon={MessageSquare} count="0" />
-                  <LiveWeatherPill />
+                  <Button asChild size="sm" className="rounded-full px-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_8px_18px_rgba(8,37,50,0.18)]"><Link href="/">View Site</Link></Button>
                 </div>
               </div>
               {open ? <div className="rounded-b-[1.5rem] bg-white p-4 lg:hidden"><AdminNav currentPath={currentPath} navItems={navItems} onNavigate={() => setOpen(false)} /><Button type="button" variant="outline" className="mt-4 w-full" onClick={handleLogout}><LogOut className="size-4" aria-hidden="true" />Logout</Button></div> : null}
@@ -214,5 +212,5 @@ function IconButtonWithBadge({ icon: Icon, count }: { icon: LucideIcon; count: s
 }
 
 function AdminNav({ currentPath, navItems, onNavigate, collapsed = false }: { currentPath: string; navItems: typeof adminNavItems; onNavigate?: () => void; collapsed?: boolean }) {
-  return <nav className={cn('flex flex-col', collapsed ? 'gap-1' : 'gap-1')}>{navItems.map((item) => { const Icon = iconMap[item.icon as keyof typeof iconMap] ?? LayoutDashboard; const active = currentPath === normalizePath(item.href.split('?')[0]); return <Link key={item.href} href={item.href} onClick={onNavigate} title={collapsed ? item.label : undefined} className={cn('flex items-center rounded-2xl text-sm font-semibold text-muted-foreground transition hover:bg-primary-50 hover:text-primary-900', collapsed ? 'justify-center px-2 py-2' : 'gap-3 px-3 py-2.5', active && 'bg-primary-100 text-primary-900 shadow-[0px_-3px_0px_0px_rgba(14,124,134,0.08)_inset,0px_2px_0px_0px_rgba(255,255,255,0.65)_inset,0px_8px_18px_rgba(8,37,50,0.07)]')}><span className={cn('flex size-8 shrink-0 items-center justify-center rounded-xl bg-white text-muted-foreground shadow-sm', active && 'bg-[#DDF4F6] text-primary')}><Icon className="size-4" aria-hidden="true" /></span>{!collapsed ? <span className="truncate">{item.label}</span> : null}</Link>; })}</nav>;
+  return <nav className={cn('flex flex-col', collapsed ? 'gap-0.5' : 'gap-0.5')}>{navItems.map((item) => { const Icon = iconMap[item.icon as keyof typeof iconMap] ?? LayoutDashboard; const active = currentPath === normalizePath(item.href.split('?')[0]); return <Link key={item.href} href={item.href} onClick={onNavigate} title={collapsed ? item.label : undefined} className={cn('flex items-center rounded-xl text-sm font-semibold text-muted-foreground transition hover:bg-primary-50 hover:text-primary-900', collapsed ? 'justify-center px-2 py-1.5' : 'gap-2.5 px-2.5 py-1.5', active && 'bg-primary-100 text-primary-900 shadow-[0px_-3px_0px_0px_rgba(14,124,134,0.08)_inset,0px_2px_0px_0px_rgba(255,255,255,0.65)_inset,0px_8px_18px_rgba(8,37,50,0.07)]')}><span className={cn('flex size-7 shrink-0 items-center justify-center rounded-lg bg-white text-muted-foreground shadow-sm', active && 'bg-[#DDF4F6] text-primary')}><Icon className="size-3.5" aria-hidden="true" /></span>{!collapsed ? <span className="truncate">{item.label}</span> : null}</Link>; })}</nav>;
 }
