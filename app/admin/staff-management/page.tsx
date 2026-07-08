@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { supabase } from '@/lib/supabase-client';
+import { cn } from '@/lib/utils';
 
 type StaffRecord = {
   id: string;
@@ -75,11 +76,6 @@ const priorityCountryCodes = ['AE', 'PK', 'IN', 'PH', 'NP', 'LK', 'BD', 'ID', 'D
 const genderOptions = ['Male', 'Female', 'Other'];
 const regionNames = new Intl.DisplayNames(['en'], { type: 'region' });
 
-function flagFromCode(code: string) {
-  if (!code || code.length !== 2) return '🌍';
-  return code.toUpperCase().replace(/./g, (letter) => String.fromCodePoint(127397 + letter.charCodeAt(0)));
-}
-
 function countryName(code: string) {
   const names: Record<string, string> = {
     AE: 'UAE',
@@ -103,7 +99,7 @@ function countryName(code: string) {
 
 function toNationalityOption(code: string): SelectOption {
   const value = countryName(code);
-  return { value, label: `${flagFromCode(code)} ${value}` };
+  return { value, label: value };
 }
 
 const nationalityOptions: SelectOption[] = [
@@ -112,13 +108,14 @@ const nationalityOptions: SelectOption[] = [
     .filter((code) => !priorityCountryCodes.includes(code))
     .map(toNationalityOption)
     .sort((a, b) => a.value.localeCompare(b.value)),
-  { value: 'Other', label: '🌍 Other' }
+  { value: 'Other', label: 'Other' }
 ];
 
-const nationalityFlags = nationalityOptions.reduce<Record<string, string>>((flags, option) => {
-  flags[option.value] = option.label.split(' ')[0] || '🌍';
-  return flags;
-}, { UAE: '🇦🇪', 'United Arab Emirates': '🇦🇪' });
+const countryCodeByNationality = nationalityOptions.reduce<Record<string, string>>((codes, option) => {
+  const code = countryCodes.find((item) => countryName(item) === option.value);
+  if (code) codes[option.value] = code;
+  return codes;
+}, { UAE: 'AE', 'United Arab Emirates': 'AE' });
 
 const reverse = (map: Record<string, string>, value?: string) => Object.keys(map).find((key) => map[key] === value) || value || '';
 
@@ -180,6 +177,28 @@ function formatDate(value: string) {
   }
 }
 
+function calculateAge(dateOfBirth: string) {
+  if (!dateOfBirth) return '';
+  const birthDate = new Date(`${dateOfBirth}T12:00:00`);
+  if (Number.isNaN(birthDate.getTime())) return '';
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const monthDiff = today.getMonth() - birthDate.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) age -= 1;
+  return age > 0 ? `${age} years` : '';
+}
+
+function expiryTone(expiryDate: string) {
+  if (!expiryDate) return 'muted';
+  const today = new Date();
+  const expiry = new Date(`${expiryDate}T23:59:59`);
+  if (Number.isNaN(expiry.getTime())) return 'muted';
+  const days = Math.ceil((expiry.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+  if (days < 0) return 'expired';
+  if (days <= 90) return 'soon';
+  return 'valid';
+}
+
 async function readApiMessage(response: Response) {
   try {
     const body = await response.json();
@@ -212,9 +231,48 @@ function MetricCard({ label, value, icon: Icon }: { label: string; value: string
   );
 }
 
-function NationalityBadge({ value }: { value: string }) {
+function CountryFlag({ nationality }: { nationality: string }) {
+  const code = countryCodeByNationality[nationality];
+  if (!code) return <span className="flex size-6 items-center justify-center rounded-full bg-primary-50 text-[10px] font-bold text-primary">--</span>;
+  return <img src={`https://flagcdn.com/w40/${code.toLowerCase()}.png`} alt={`${nationality} flag`} className="h-4 w-6 rounded-[0.25rem] border border-white object-cover shadow-sm" loading="lazy" />;
+}
+
+function NationalityPill({ value }: { value: string }) {
   const label = value || 'Not set';
-  return <span className="inline-flex items-center gap-2 rounded-full bg-primary-50 px-3 py-1 text-xs font-semibold text-primary-900"><span className="text-base leading-none">{nationalityFlags[value] || '🌍'}</span>{label}</span>;
+  return <span className="inline-flex items-center gap-2 rounded-full border border-primary/10 bg-primary-50 px-3 py-1.5 text-xs font-semibold text-primary-900"><CountryFlag nationality={value} />{label}</span>;
+}
+
+function RolePill({ value }: { value: string }) {
+  const tones: Record<string, string> = {
+    'Super Admin': 'bg-primary-900 text-white border-primary-900',
+    Admin: 'bg-primary-50 text-primary-900 border-primary/15',
+    'Manager / Operations': 'bg-sky-50 text-sky-800 border-sky-100',
+    Finance: 'bg-amber-50 text-amber-800 border-amber-100',
+    'Maintenance Staff': 'bg-orange-50 text-orange-800 border-orange-100',
+    'Booking Staff': 'bg-slate-50 text-slate-700 border-slate-100'
+  };
+  return <span className={cn('inline-flex rounded-full border px-3 py-1 text-xs font-bold', tones[value] || 'bg-slate-50 text-slate-700 border-slate-100')}>{value || '-'}</span>;
+}
+
+function StatusPill({ value }: { value: string }) {
+  const tones: Record<string, string> = {
+    Active: 'bg-emerald-50 text-emerald-700 border-emerald-100',
+    Inactive: 'bg-slate-50 text-slate-600 border-slate-100',
+    Suspended: 'bg-red-50 text-red-700 border-red-100'
+  };
+  return <span className={cn('inline-flex rounded-full border px-3 py-1 text-xs font-bold', tones[value] || 'bg-slate-50 text-slate-600 border-slate-100')}>{value || '-'}</span>;
+}
+
+function DocumentCell({ label, number, expiry }: { label: string; number: string; expiry: string }) {
+  const tone = expiryTone(expiry);
+  return (
+    <div className="min-w-[9.5rem] leading-5">
+      <p className="text-sm font-bold text-foreground">{number || '-'}</p>
+      <p className={cn('mt-0.5 text-xs font-semibold', tone === 'expired' && 'text-red-600', tone === 'soon' && 'text-amber-700', tone === 'valid' && 'text-muted-foreground', tone === 'muted' && 'text-muted-foreground')}>
+        {expiry ? `Exp: ${formatDate(expiry)}` : `${label} expiry not set`}
+      </p>
+    </div>
+  );
 }
 
 export default function Page() {
@@ -353,7 +411,7 @@ export default function Page() {
     setOpen(true);
   }
 
-  const tableColumns = isSuperAdmin ? 10 : 9;
+  const tableColumns = isSuperAdmin ? 9 : 8;
 
   return (
     <div className="flex flex-col gap-5">
@@ -380,7 +438,7 @@ export default function Page() {
       {notice ? <p className="rounded-xl bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">{notice}</p> : null}
 
       <Card>
-        <CardHeader>
+        <CardHeader className="pb-3">
           <CardTitle className="text-base">Records</CardTitle>
           <CardDescription>{isSuperAdmin ? 'Only Super Admin can edit staff identity details and sync login passwords.' : 'Staff records are visible, but edit and login sync are restricted to Super Admin.'}</CardDescription>
         </CardHeader>
@@ -389,36 +447,39 @@ export default function Page() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  {['Photo', 'Staff Name', 'Email', 'Nationality', 'Gender', 'Role', 'Phone', 'Passport / EID', 'Status', ...(isSuperAdmin ? ['Action'] : [])].map((column) => <TableHead key={column}>{column}</TableHead>)}
+                  {['Photo', 'Staff', 'Contact', 'Nationality', 'Role', 'Passport', 'EID', 'Status', ...(isSuperAdmin ? ['Action'] : [])].map((column) => <TableHead key={column}>{column}</TableHead>)}
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {staff.length ? staff.map((row) => (
-                  <TableRow key={row.id}>
-                    <TableCell>{row.avatarUrl ? <img src={row.avatarUrl} alt={row.fullName || 'Staff'} className="size-11 rounded-2xl border border-border object-cover" /> : <span className="flex size-11 items-center justify-center rounded-2xl bg-primary-50 text-primary"><ImagePlus className="size-4" aria-hidden="true" /></span>}</TableCell>
-                    <TableCell className="min-w-[10rem] font-semibold"><div>{row.fullName || '-'}</div>{row.dateOfBirth ? <div className="mt-1 text-xs font-normal text-muted-foreground">DOB: {formatDate(row.dateOfBirth)}</div> : null}</TableCell>
-                    <TableCell className="min-w-[12rem] text-xs text-muted-foreground">{row.email || '-'}</TableCell>
-                    <TableCell className="min-w-[9rem]"><NationalityBadge value={row.nationality} /></TableCell>
-                    <TableCell>{row.gender || '-'}</TableCell>
-                    <TableCell className="min-w-[9rem]">{row.role || '-'}</TableCell>
-                    <TableCell className="min-w-[9rem]">{row.phone || '-'}</TableCell>
-                    <TableCell className="min-w-[13rem] text-xs leading-5 text-muted-foreground">
-                      <div><span className="font-bold text-foreground">Passport:</span> {row.passportNumber || '-'}</div>
-                      {row.passportExpiryDate ? <div>Exp: {formatDate(row.passportExpiryDate)}</div> : null}
-                      <div className="mt-1"><span className="font-bold text-foreground">EID:</span> {row.emiratesId || '-'}</div>
-                      {row.emiratesIdExpiryDate ? <div>Exp: {formatDate(row.emiratesIdExpiryDate)}</div> : null}
-                    </TableCell>
-                    <TableCell>{row.status || '-'}</TableCell>
-                    {isSuperAdmin ? (
-                      <TableCell>
-                        <div className="flex min-w-[15rem] flex-wrap gap-2">
-                          <Button type="button" size="sm" variant="outline" onClick={() => openEdit(row)}><Pencil className="size-4" aria-hidden="true" />Edit / Sync</Button>
-                          <Button asChild size="sm" variant="subtle"><Link href={`/admin/staff-password?email=${encodeURIComponent(row.email)}`}><KeyRound className="size-4" aria-hidden="true" />Password Page</Link></Button>
-                        </div>
+                {staff.length ? staff.map((row) => {
+                  const age = calculateAge(row.dateOfBirth);
+                  return (
+                    <TableRow key={row.id} className="align-middle">
+                      <TableCell className="py-3">{row.avatarUrl ? <img src={row.avatarUrl} alt={row.fullName || 'Staff'} className="size-10 rounded-2xl border border-border object-cover" /> : <span className="flex size-10 items-center justify-center rounded-2xl bg-primary-50 text-primary"><ImagePlus className="size-4" aria-hidden="true" /></span>}</TableCell>
+                      <TableCell className="min-w-[11rem] py-3">
+                        <p className="font-semibold text-foreground">{row.fullName || '-'}</p>
+                        <p className="mt-1 text-xs text-muted-foreground">{[row.gender, age].filter(Boolean).join(' • ') || 'Gender / age not set'}</p>
                       </TableCell>
-                    ) : null}
-                  </TableRow>
-                )) : (
+                      <TableCell className="min-w-[12rem] py-3">
+                        <p className="text-sm text-foreground">{row.email || '-'}</p>
+                        <p className="mt-1 text-xs text-muted-foreground">{row.phone || '-'}</p>
+                      </TableCell>
+                      <TableCell className="min-w-[10rem] py-3"><NationalityPill value={row.nationality} /></TableCell>
+                      <TableCell className="min-w-[9rem] py-3"><RolePill value={row.role} /></TableCell>
+                      <TableCell className="py-3"><DocumentCell label="Passport" number={row.passportNumber} expiry={row.passportExpiryDate} /></TableCell>
+                      <TableCell className="py-3"><DocumentCell label="EID" number={row.emiratesId} expiry={row.emiratesIdExpiryDate} /></TableCell>
+                      <TableCell className="py-3"><StatusPill value={row.status} /></TableCell>
+                      {isSuperAdmin ? (
+                        <TableCell className="py-3">
+                          <div className="flex min-w-[13rem] flex-wrap gap-2">
+                            <Button type="button" size="sm" variant="outline" onClick={() => openEdit(row)}><Pencil className="size-4" aria-hidden="true" />Edit / Sync</Button>
+                            <Button asChild size="sm" variant="subtle"><Link href={`/admin/staff-password?email=${encodeURIComponent(row.email)}`}><KeyRound className="size-4" aria-hidden="true" />Password</Link></Button>
+                          </div>
+                        </TableCell>
+                      ) : null}
+                    </TableRow>
+                  );
+                }) : (
                   <TableRow>
                     <TableCell colSpan={tableColumns} className="h-28 text-center text-sm text-muted-foreground">{loading ? 'Loading records...' : 'No staff users added yet.'}</TableCell>
                   </TableRow>
