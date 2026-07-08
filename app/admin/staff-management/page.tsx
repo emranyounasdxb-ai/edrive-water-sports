@@ -32,6 +32,11 @@ type StaffFormValues = Omit<StaffRecord, 'id'> & {
   temporaryPassword: string;
 };
 
+type SelectOption = {
+  value: string;
+  label: string;
+};
+
 const roleMap: Record<string, string> = {
   'Super Admin': 'super_admin',
   Admin: 'admin',
@@ -47,31 +52,73 @@ const statusMap: Record<string, string> = {
   Suspended: 'suspended'
 };
 
-const nationalityOptions = ['UAE', 'Pakistan', 'India', 'Philippines', 'Nepal', 'Sri Lanka', 'Bangladesh', 'Indonesia', 'Egypt', 'Algeria', 'Jordan', 'Syria', 'Lebanon', 'Morocco', 'Kenya', 'Uganda', 'Ghana', 'Nigeria', 'Ethiopia', 'Other'];
-const genderOptions = ['Male', 'Female', 'Other'];
+const countryCodes = [
+  'AF', 'AX', 'AL', 'DZ', 'AS', 'AD', 'AO', 'AI', 'AQ', 'AG', 'AR', 'AM', 'AW', 'AU', 'AT', 'AZ',
+  'BS', 'BH', 'BD', 'BB', 'BY', 'BE', 'BZ', 'BJ', 'BM', 'BT', 'BO', 'BQ', 'BA', 'BW', 'BV', 'BR',
+  'IO', 'BN', 'BG', 'BF', 'BI', 'CV', 'KH', 'CM', 'CA', 'KY', 'CF', 'TD', 'CL', 'CN', 'CX', 'CC',
+  'CO', 'KM', 'CG', 'CD', 'CK', 'CR', 'CI', 'HR', 'CU', 'CW', 'CY', 'CZ', 'DK', 'DJ', 'DM', 'DO',
+  'EC', 'EG', 'SV', 'GQ', 'ER', 'EE', 'SZ', 'ET', 'FK', 'FO', 'FJ', 'FI', 'FR', 'GF', 'PF', 'TF',
+  'GA', 'GM', 'GE', 'DE', 'GH', 'GI', 'GR', 'GL', 'GD', 'GP', 'GU', 'GT', 'GG', 'GN', 'GW', 'GY',
+  'HT', 'HM', 'VA', 'HN', 'HK', 'HU', 'IS', 'IN', 'ID', 'IR', 'IQ', 'IE', 'IM', 'IL', 'IT', 'JM',
+  'JP', 'JE', 'JO', 'KZ', 'KE', 'KI', 'KP', 'KR', 'KW', 'KG', 'LA', 'LV', 'LB', 'LS', 'LR', 'LY',
+  'LI', 'LT', 'LU', 'MO', 'MG', 'MW', 'MY', 'MV', 'ML', 'MT', 'MH', 'MQ', 'MR', 'MU', 'YT', 'MX',
+  'FM', 'MD', 'MC', 'MN', 'ME', 'MS', 'MA', 'MZ', 'MM', 'NA', 'NR', 'NP', 'NL', 'NC', 'NZ', 'NI',
+  'NE', 'NG', 'NU', 'NF', 'MK', 'MP', 'NO', 'OM', 'PK', 'PW', 'PS', 'PA', 'PG', 'PY', 'PE', 'PH',
+  'PN', 'PL', 'PT', 'PR', 'QA', 'RE', 'RO', 'RU', 'RW', 'BL', 'SH', 'KN', 'LC', 'MF', 'PM', 'VC',
+  'WS', 'SM', 'ST', 'SA', 'SN', 'RS', 'SC', 'SL', 'SG', 'SX', 'SK', 'SI', 'SB', 'SO', 'ZA', 'GS',
+  'SS', 'ES', 'LK', 'SD', 'SR', 'SJ', 'SE', 'CH', 'SY', 'TW', 'TJ', 'TZ', 'TH', 'TL', 'TG', 'TK',
+  'TO', 'TT', 'TN', 'TR', 'TM', 'TC', 'TV', 'UG', 'UA', 'AE', 'GB', 'US', 'UM', 'UY', 'UZ', 'VU',
+  'VE', 'VN', 'VG', 'VI', 'WF', 'EH', 'YE', 'ZM', 'ZW', 'XK'
+];
 
-const nationalityFlags: Record<string, string> = {
-  UAE: '🇦🇪',
-  Pakistan: '🇵🇰',
-  India: '🇮🇳',
-  Philippines: '🇵🇭',
-  Nepal: '🇳🇵',
-  'Sri Lanka': '🇱🇰',
-  Bangladesh: '🇧🇩',
-  Indonesia: '🇮🇩',
-  Egypt: '🇪🇬',
-  Algeria: '🇩🇿',
-  Jordan: '🇯🇴',
-  Syria: '🇸🇾',
-  Lebanon: '🇱🇧',
-  Morocco: '🇲🇦',
-  Kenya: '🇰🇪',
-  Uganda: '🇺🇬',
-  Ghana: '🇬🇭',
-  Nigeria: '🇳🇬',
-  Ethiopia: '🇪🇹',
-  Other: '🌍'
-};
+const priorityCountryCodes = ['AE', 'PK', 'IN', 'PH', 'NP', 'LK', 'BD', 'ID', 'DZ', 'EG', 'JO', 'SY', 'LB', 'MA', 'KE', 'UG', 'GH', 'NG', 'ET'];
+const genderOptions = ['Male', 'Female', 'Other'];
+const regionNames = new Intl.DisplayNames(['en'], { type: 'region' });
+
+function flagFromCode(code: string) {
+  if (!code || code.length !== 2) return '🌍';
+  return code.toUpperCase().replace(/./g, (letter) => String.fromCodePoint(127397 + letter.charCodeAt(0)));
+}
+
+function countryName(code: string) {
+  const names: Record<string, string> = {
+    AE: 'UAE',
+    PS: 'Palestine',
+    CD: 'Congo (DRC)',
+    CG: 'Congo',
+    CI: 'Ivory Coast',
+    KR: 'South Korea',
+    KP: 'North Korea',
+    LA: 'Laos',
+    RU: 'Russia',
+    SY: 'Syria',
+    TZ: 'Tanzania',
+    US: 'United States',
+    GB: 'United Kingdom',
+    VN: 'Vietnam',
+    XK: 'Kosovo'
+  };
+  return names[code] || regionNames.of(code) || code;
+}
+
+function toNationalityOption(code: string): SelectOption {
+  const value = countryName(code);
+  return { value, label: `${flagFromCode(code)} ${value}` };
+}
+
+const nationalityOptions: SelectOption[] = [
+  ...priorityCountryCodes.map(toNationalityOption),
+  ...countryCodes
+    .filter((code) => !priorityCountryCodes.includes(code))
+    .map(toNationalityOption)
+    .sort((a, b) => a.value.localeCompare(b.value)),
+  { value: 'Other', label: '🌍 Other' }
+];
+
+const nationalityFlags = nationalityOptions.reduce<Record<string, string>>((flags, option) => {
+  flags[option.value] = option.label.split(' ')[0] || '🌍';
+  return flags;
+}, { UAE: '🇦🇪', 'United Arab Emirates': '🇦🇪' });
 
 const reverse = (map: Record<string, string>, value?: string) => Object.keys(map).find((key) => map[key] === value) || value || '';
 
@@ -467,6 +514,6 @@ function FormInput({ label, value, onChange, type = 'text', required = false }: 
   return <label className="grid gap-1.5 text-sm font-semibold text-foreground">{label}<input required={required} type={type} value={value} onChange={(event) => onChange(event.target.value)} className="h-10 rounded-xl border border-border bg-white px-3 text-sm text-foreground outline-none focus:border-primary" /></label>;
 }
 
-function SelectInput({ label, value, options, onChange, required = false }: { label: string; value: string; options: string[]; onChange: (value: string) => void; required?: boolean }) {
-  return <label className="grid gap-1.5 text-sm font-semibold text-foreground">{label}<select required={required} value={value} onChange={(event) => onChange(event.target.value)} className="h-10 rounded-xl border border-border bg-white px-3 text-sm text-foreground outline-none focus:border-primary"><option value="">Select {label}</option>{options.map((option) => <option key={option} value={option}>{option}</option>)}</select></label>;
+function SelectInput({ label, value, options, onChange, required = false }: { label: string; value: string; options: Array<string | SelectOption>; onChange: (value: string) => void; required?: boolean }) {
+  return <label className="grid gap-1.5 text-sm font-semibold text-foreground">{label}<select required={required} value={value} onChange={(event) => onChange(event.target.value)} className="h-10 rounded-xl border border-border bg-white px-3 text-sm text-foreground outline-none focus:border-primary"><option value="">Select {label}</option>{options.map((option) => { const optionValue = typeof option === 'string' ? option : option.value; const optionLabel = typeof option === 'string' ? option : option.label; return <option key={optionValue} value={optionValue}>{optionLabel}</option>; })}</select></label>;
 }
