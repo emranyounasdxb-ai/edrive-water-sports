@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from 'react';
-import { FileClock, ImagePlus, KeyRound, MoreHorizontal, Pencil, Plus, Search, SlidersHorizontal, UploadCloud, UserCog, UsersRound, X } from 'lucide-react';
+import { FileClock, ImagePlus, KeyRound, MoreHorizontal, Pencil, PhoneCall, Plus, Search, SlidersHorizontal, UploadCloud, UserCog, UsersRound, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -199,6 +199,13 @@ function expiryTone(expiryDate: string) {
   return 'valid';
 }
 
+function normalizePhoneForWhatsapp(phone: string) {
+  const digits = phone.replace(/\D/g, '');
+  if (!digits) return '';
+  if (digits.startsWith('0')) return `971${digits.slice(1)}`;
+  return digits;
+}
+
 async function readApiMessage(response: Response) {
   try {
     const body = await response.json();
@@ -237,6 +244,32 @@ function CountryFlag({ nationality }: { nationality: string }) {
   return <img src={`https://flagcdn.com/w40/${code.toLowerCase()}.png`} alt={`${nationality} flag`} className="h-4 w-6 rounded-[0.25rem] border border-white object-cover shadow-sm" loading="lazy" />;
 }
 
+function WhatsAppIcon() {
+  return (
+    <svg viewBox="0 0 32 32" className="size-3.5" aria-hidden="true">
+      <path fill="currentColor" d="M16.04 3C9.39 3 4 8.32 4 14.88c0 2.1.56 4.15 1.62 5.95L4 29l8.36-1.58a12.3 12.3 0 0 0 3.68.55C22.68 27.97 28 22.65 28 16.1S22.68 3 16.04 3Zm.01 22.9c-1.18 0-2.34-.18-3.44-.54l-.49-.16-4.95.94.96-4.8-.26-.5a9.71 9.71 0 0 1-1.47-5.1c0-5.38 4.43-9.75 9.87-9.75 5.43 0 9.72 4.47 9.72 9.85 0 5.37-4.42 10.06-9.94 10.06Zm5.5-7.28c-.3-.15-1.8-.88-2.08-.98-.28-.1-.48-.15-.68.15-.2.3-.78.98-.96 1.18-.18.2-.36.23-.66.08-.3-.15-1.27-.46-2.42-1.47-.9-.78-1.5-1.75-1.67-2.04-.18-.3-.02-.46.13-.61.13-.13.3-.35.45-.53.15-.18.2-.3.3-.5.1-.2.05-.38-.03-.53-.08-.15-.68-1.62-.93-2.22-.25-.58-.5-.5-.68-.51h-.58c-.2 0-.53.08-.8.38-.28.3-1.05 1.02-1.05 2.48s1.08 2.88 1.23 3.08c.15.2 2.13 3.22 5.16 4.52.72.31 1.28.5 1.72.64.72.23 1.38.2 1.9.12.58-.09 1.8-.73 2.05-1.43.25-.7.25-1.3.18-1.43-.08-.13-.28-.2-.58-.35Z" />
+    </svg>
+  );
+}
+
+function DetailPill({ children }: { children: string }) {
+  return <span className="inline-flex rounded-full border border-primary/10 bg-primary-50 px-2.5 py-1 text-[11px] font-bold text-primary-900">{children}</span>;
+}
+
+function ContactCell({ email, phone }: { email: string; phone: string }) {
+  const whatsappPhone = normalizePhoneForWhatsapp(phone);
+  return (
+    <div className="min-w-[12rem]">
+      <p className="text-sm text-foreground">{email || '-'}</p>
+      <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
+        <span>{phone || '-'}</span>
+        {phone ? <a href={`tel:${phone}`} className="inline-flex size-6 items-center justify-center rounded-full bg-sky-50 text-sky-600 transition hover:bg-sky-100" aria-label={`Call ${phone}`}><PhoneCall className="size-3.5" aria-hidden="true" /></a> : null}
+        {whatsappPhone ? <a href={`https://wa.me/${whatsappPhone}`} target="_blank" rel="noreferrer" className="inline-flex size-6 items-center justify-center rounded-full bg-emerald-50 text-[#25D366] transition hover:bg-emerald-100" aria-label={`WhatsApp ${phone}`}><WhatsAppIcon /></a> : null}
+      </div>
+    </div>
+  );
+}
+
 function NationalityPill({ value }: { value: string }) {
   const label = value || 'Not set';
   return <span className="inline-flex items-center gap-2 rounded-full border border-primary/10 bg-primary-50 px-3 py-1.5 text-xs font-semibold text-primary-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]"><CountryFlag nationality={value} />{label}</span>;
@@ -264,12 +297,11 @@ function StatusPill({ value }: { value: string }) {
   return <span className={cn('inline-flex rounded-full border px-3 py-1 text-xs font-bold shadow-[inset_0_1px_0_rgba(255,255,255,0.75)]', tones[value] || 'bg-slate-50 text-slate-600 border-slate-100')}>{value || '-'}</span>;
 }
 
-function DocumentCell({ label, number, expiry }: { label: string; number: string; expiry: string }) {
+function DocumentCell({ number, expiry }: { label: string; number: string; expiry: string }) {
   const tone = expiryTone(expiry);
   return (
     <div className="min-w-[9.75rem] rounded-2xl border border-white/80 bg-white/70 px-3 py-2 leading-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_6px_16px_rgba(8,37,50,0.035)]">
-      <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">{label}</p>
-      <p className="mt-0.5 truncate text-sm font-bold text-foreground">{number || '-'}</p>
+      <p className="truncate text-sm font-bold text-foreground">{number || '-'}</p>
       <p className={cn('mt-0.5 flex items-center gap-1.5 text-xs font-semibold', tone === 'expired' && 'text-red-600', tone === 'soon' && 'text-amber-700', tone === 'valid' && 'text-muted-foreground', tone === 'muted' && 'text-muted-foreground')}>
         <span className={cn('size-1.5 rounded-full', tone === 'expired' && 'bg-red-500', tone === 'soon' && 'bg-amber-500', tone === 'valid' && 'bg-emerald-500', tone === 'muted' && 'bg-slate-300')} />
         {expiry ? `Exp: ${formatDate(expiry)}` : 'Expiry not set'}
@@ -506,12 +538,9 @@ export default function Page() {
                       <TableCell className="py-3"><div className="flex items-center gap-2"><span className="h-10 w-1 rounded-full bg-transparent transition group-hover:bg-primary" />{row.avatarUrl ? <img src={row.avatarUrl} alt={row.fullName || 'Staff'} className="size-10 rounded-2xl border-2 border-white object-cover shadow-[0_8px_18px_rgba(8,37,50,0.12)]" /> : <span className="flex size-10 items-center justify-center rounded-2xl bg-primary-50 text-primary"><ImagePlus className="size-4" aria-hidden="true" /></span>}</div></TableCell>
                       <TableCell className="min-w-[11rem] py-3">
                         <p className="font-semibold text-foreground">{row.fullName || '-'}</p>
-                        <p className="mt-1 text-xs text-muted-foreground">{[row.gender, age].filter(Boolean).join(' • ') || 'Gender / age not set'}</p>
+                        <div className="mt-2 flex flex-wrap gap-1.5">{row.gender ? <DetailPill>{row.gender}</DetailPill> : null}{age ? <DetailPill>{age}</DetailPill> : null}{!row.gender && !age ? <span className="text-xs text-muted-foreground">Gender / age not set</span> : null}</div>
                       </TableCell>
-                      <TableCell className="min-w-[12rem] py-3">
-                        <p className="text-sm text-foreground">{row.email || '-'}</p>
-                        <p className="mt-1 text-xs text-muted-foreground">{row.phone || '-'}</p>
-                      </TableCell>
+                      <TableCell className="py-3"><ContactCell email={row.email} phone={row.phone} /></TableCell>
                       <TableCell className="min-w-[10rem] py-3"><NationalityPill value={row.nationality} /></TableCell>
                       <TableCell className="min-w-[8rem] py-3"><RolePill value={row.role} /></TableCell>
                       <TableCell className="py-3"><DocumentCell label="Passport" number={row.passportNumber} expiry={row.passportExpiryDate} /></TableCell>
