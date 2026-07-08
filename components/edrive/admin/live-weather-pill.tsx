@@ -98,35 +98,32 @@ export function LiveWeatherPill() {
   }, []);
 
   const subtitle = useMemo(() => {
-    if (loading) return 'Loading weather';
+    if (loading) return 'Loading live weather';
     if (issue) return issue;
-    if (!weather) return 'Dubai weather';
-    return `${weather.condition} · Feels ${round(weather.feelsLike)}°C`;
+    if (!weather) return 'Dubai live weather';
+    return `${weather.condition} · Feels ${round(weather.feelsLike)}°C · ${round(weather.windSpeed * 3.6)} km/h · ${round(weather.humidity)}%`;
   }, [issue, loading, weather]);
 
   return (
     <button
       type="button"
       onClick={() => loadWeather(true)}
-      className="hidden items-center gap-2 rounded-2xl border border-white/80 bg-white/92 px-3 py-2 text-left text-xs text-muted-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.95),0_10px_24px_rgba(8,37,50,0.055)] transition hover:-translate-y-0.5 hover:text-primary-900 xl:flex"
+      className="hidden min-w-[15rem] items-center gap-2 rounded-2xl border border-white/80 bg-white/92 px-3 py-1.5 text-left text-xs text-muted-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.95),0_8px_20px_rgba(8,37,50,0.05)] transition hover:-translate-y-0.5 hover:text-primary-900 xl:flex"
       title="Refresh Dubai weather"
     >
       <span className="flex size-9 items-center justify-center rounded-full bg-[#FFF6DF] text-gold-deep shadow-[inset_0_1px_0_rgba(255,255,255,0.75),0_6px_14px_rgba(194,139,42,0.16)]">
         {loading ? <RefreshCw className="size-4 animate-spin" aria-hidden="true" /> : weather ? <ThermometerSun className="size-4" aria-hidden="true" /> : <CloudSun className="size-4" aria-hidden="true" />}
       </span>
-      <div className="min-w-[8.4rem]">
+      <div className="min-w-0 flex-1">
         <p className="flex items-center gap-1 font-bold text-foreground">
           Dubai
           {weather ? <span className="text-gold-deep">{round(weather.temp)}°C</span> : <Sun className="size-3.5 text-gold" aria-hidden="true" />}
+          <span className="ml-auto text-[10px] font-semibold text-muted-foreground">{weather ? formatTime(weather.updatedAt) : 'Live'}</span>
         </p>
-        <p className="mt-0.5 truncate">{subtitle}</p>
-        {weather ? (
-          <p className="mt-0.5 flex items-center gap-2 text-[10px] font-semibold text-muted-foreground">
-            <span className="inline-flex items-center gap-1"><Wind className="size-3" aria-hidden="true" />{round(weather.windSpeed * 3.6)} km/h</span>
-            <span className="inline-flex items-center gap-1"><Droplets className="size-3" aria-hidden="true" />{round(weather.humidity)}%</span>
-            <span>{formatTime(weather.updatedAt)}</span>
-          </p>
-        ) : null}
+        <p className="mt-0.5 flex items-center gap-1 truncate">
+          {weather ? <><Wind className="size-3" aria-hidden="true" /><Droplets className="ml-1 size-3" aria-hidden="true" /></> : null}
+          <span className="truncate">{subtitle}</span>
+        </p>
       </div>
     </button>
   );
