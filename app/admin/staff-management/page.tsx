@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from 'react';
-import { FileClock, ImagePlus, KeyRound, Pencil, Plus, UploadCloud, UserCog, UsersRound, X } from 'lucide-react';
+import { FileClock, ImagePlus, KeyRound, MoreHorizontal, Pencil, Plus, Search, SlidersHorizontal, UploadCloud, UserCog, UsersRound, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -239,7 +239,7 @@ function CountryFlag({ nationality }: { nationality: string }) {
 
 function NationalityPill({ value }: { value: string }) {
   const label = value || 'Not set';
-  return <span className="inline-flex items-center gap-2 rounded-full border border-primary/10 bg-primary-50 px-3 py-1.5 text-xs font-semibold text-primary-900"><CountryFlag nationality={value} />{label}</span>;
+  return <span className="inline-flex items-center gap-2 rounded-full border border-primary/10 bg-primary-50 px-3 py-1.5 text-xs font-semibold text-primary-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]"><CountryFlag nationality={value} />{label}</span>;
 }
 
 function RolePill({ value }: { value: string }) {
@@ -251,7 +251,8 @@ function RolePill({ value }: { value: string }) {
     'Maintenance Staff': 'bg-orange-50 text-orange-800 border-orange-100',
     'Booking Staff': 'bg-slate-50 text-slate-700 border-slate-100'
   };
-  return <span className={cn('inline-flex rounded-full border px-3 py-1 text-xs font-bold', tones[value] || 'bg-slate-50 text-slate-700 border-slate-100')}>{value || '-'}</span>;
+  const display = value === 'Manager / Operations' ? 'Manager' : value;
+  return <span title={value} className={cn('inline-flex rounded-full border px-3 py-1 text-xs font-bold shadow-[inset_0_1px_0_rgba(255,255,255,0.75)]', tones[value] || 'bg-slate-50 text-slate-700 border-slate-100')}>{display || '-'}</span>;
 }
 
 function StatusPill({ value }: { value: string }) {
@@ -260,18 +261,34 @@ function StatusPill({ value }: { value: string }) {
     Inactive: 'bg-slate-50 text-slate-600 border-slate-100',
     Suspended: 'bg-red-50 text-red-700 border-red-100'
   };
-  return <span className={cn('inline-flex rounded-full border px-3 py-1 text-xs font-bold', tones[value] || 'bg-slate-50 text-slate-600 border-slate-100')}>{value || '-'}</span>;
+  return <span className={cn('inline-flex rounded-full border px-3 py-1 text-xs font-bold shadow-[inset_0_1px_0_rgba(255,255,255,0.75)]', tones[value] || 'bg-slate-50 text-slate-600 border-slate-100')}>{value || '-'}</span>;
 }
 
 function DocumentCell({ label, number, expiry }: { label: string; number: string; expiry: string }) {
   const tone = expiryTone(expiry);
   return (
-    <div className="min-w-[9.5rem] leading-5">
-      <p className="text-sm font-bold text-foreground">{number || '-'}</p>
-      <p className={cn('mt-0.5 text-xs font-semibold', tone === 'expired' && 'text-red-600', tone === 'soon' && 'text-amber-700', tone === 'valid' && 'text-muted-foreground', tone === 'muted' && 'text-muted-foreground')}>
-        {expiry ? `Exp: ${formatDate(expiry)}` : `${label} expiry not set`}
+    <div className="min-w-[9.75rem] rounded-2xl border border-white/80 bg-white/70 px-3 py-2 leading-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_6px_16px_rgba(8,37,50,0.035)]">
+      <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">{label}</p>
+      <p className="mt-0.5 truncate text-sm font-bold text-foreground">{number || '-'}</p>
+      <p className={cn('mt-0.5 flex items-center gap-1.5 text-xs font-semibold', tone === 'expired' && 'text-red-600', tone === 'soon' && 'text-amber-700', tone === 'valid' && 'text-muted-foreground', tone === 'muted' && 'text-muted-foreground')}>
+        <span className={cn('size-1.5 rounded-full', tone === 'expired' && 'bg-red-500', tone === 'soon' && 'bg-amber-500', tone === 'valid' && 'bg-emerald-500', tone === 'muted' && 'bg-slate-300')} />
+        {expiry ? `Exp: ${formatDate(expiry)}` : 'Expiry not set'}
       </p>
     </div>
+  );
+}
+
+function ActionMenu({ row, onEdit }: { row: StaffRecord; onEdit: (record: StaffRecord) => void }) {
+  return (
+    <details className="group relative inline-block text-left">
+      <summary className="flex h-9 cursor-pointer list-none items-center gap-2 rounded-full border border-border bg-white px-3 text-xs font-bold text-foreground shadow-sm transition hover:border-primary/30 hover:text-primary group-open:border-primary/40">
+        <MoreHorizontal className="size-4" aria-hidden="true" /> Actions
+      </summary>
+      <div className="absolute right-0 z-20 mt-2 w-44 overflow-hidden rounded-2xl border border-border bg-white p-1.5 shadow-[0_18px_45px_rgba(8,37,50,0.16)]">
+        <button type="button" onClick={() => onEdit(row)} className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-xs font-bold text-foreground transition hover:bg-primary-50 hover:text-primary"><Pencil className="size-4" aria-hidden="true" />Edit / Sync</button>
+        <Link href={`/admin/staff-password?email=${encodeURIComponent(row.email)}`} className="flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-bold text-foreground transition hover:bg-primary-50 hover:text-primary"><KeyRound className="size-4" aria-hidden="true" />Password Page</Link>
+      </div>
+    </details>
   );
 }
 
@@ -283,6 +300,10 @@ export default function Page() {
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<StaffRecord | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [roleFilter, setRoleFilter] = useState('');
+  const [nationalityFilter, setNationalityFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
 
   async function loadData() {
     setLoading(true);
@@ -316,6 +337,19 @@ export default function Page() {
     const inactive = staff.filter((item) => item.status !== 'Active').length;
     return { active, managers, inactive };
   }, [staff]);
+
+  const availableNationalities = useMemo(() => [...new Set(staff.map((item) => item.nationality).filter(Boolean))].sort(), [staff]);
+
+  const filteredStaff = useMemo(() => {
+    const query = searchTerm.trim().toLowerCase();
+    return staff.filter((item) => {
+      const searchable = [item.fullName, item.email, item.phone, item.nationality, item.gender, item.role, item.passportNumber, item.emiratesId].join(' ').toLowerCase();
+      return (!query || searchable.includes(query))
+        && (!roleFilter || item.role === roleFilter)
+        && (!nationalityFilter || item.nationality === nationalityFilter)
+        && (!statusFilter || item.status === statusFilter);
+    });
+  }, [nationalityFilter, roleFilter, searchTerm, staff, statusFilter]);
 
   async function syncLogin(email: string, password: string) {
     const { data: sessionData } = await supabase.auth.getSession();
@@ -439,23 +473,37 @@ export default function Page() {
 
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">Records</CardTitle>
-          <CardDescription>{isSuperAdmin ? 'Only Super Admin can edit staff identity details and sync login passwords.' : 'Staff records are visible, but edit and login sync are restricted to Super Admin.'}</CardDescription>
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+            <div>
+              <CardTitle className="text-base">Records</CardTitle>
+              <CardDescription>{isSuperAdmin ? 'Only Super Admin can edit staff identity details and sync login passwords.' : 'Staff records are visible, but edit and login sync are restricted to Super Admin.'}</CardDescription>
+            </div>
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-[minmax(220px,1fr)_150px_170px_140px] xl:w-[780px]">
+              <label className="relative">
+                <Search className="pointer-events-none absolute left-3 top-2.5 size-4 text-muted-foreground" aria-hidden="true" />
+                <input value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} placeholder="Search staff, passport, EID..." className="h-10 w-full rounded-2xl border border-border bg-white pl-9 pr-3 text-sm outline-none transition focus:border-primary" />
+              </label>
+              <FilterSelect label="Role" value={roleFilter} options={Object.keys(roleMap)} onChange={setRoleFilter} />
+              <FilterSelect label="Nationality" value={nationalityFilter} options={availableNationalities} onChange={setNationalityFilter} />
+              <FilterSelect label="Status" value={statusFilter} options={Object.keys(statusMap)} onChange={setStatusFilter} />
+            </div>
+          </div>
+          <div className="mt-3 flex items-center gap-2 text-xs font-semibold text-muted-foreground"><SlidersHorizontal className="size-4 text-primary" aria-hidden="true" />Showing {filteredStaff.length} of {staff.length} staff records</div>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
             <Table>
-              <TableHeader>
+              <TableHeader className="sticky top-0 z-10 bg-white/95 backdrop-blur">
                 <TableRow>
-                  {['Photo', 'Staff', 'Contact', 'Nationality', 'Role', 'Passport', 'EID', 'Status', ...(isSuperAdmin ? ['Action'] : [])].map((column) => <TableHead key={column}>{column}</TableHead>)}
+                  {['Photo', 'Staff', 'Contact', 'Nationality', 'Role', 'Passport', 'EID', 'Status', ...(isSuperAdmin ? ['Action'] : [])].map((column) => <TableHead key={column} className="text-[11px]">{column}</TableHead>)}
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {staff.length ? staff.map((row) => {
+                {filteredStaff.length ? filteredStaff.map((row) => {
                   const age = calculateAge(row.dateOfBirth);
                   return (
-                    <TableRow key={row.id} className="align-middle">
-                      <TableCell className="py-3">{row.avatarUrl ? <img src={row.avatarUrl} alt={row.fullName || 'Staff'} className="size-10 rounded-2xl border border-border object-cover" /> : <span className="flex size-10 items-center justify-center rounded-2xl bg-primary-50 text-primary"><ImagePlus className="size-4" aria-hidden="true" /></span>}</TableCell>
+                    <TableRow key={row.id} className="group align-middle transition hover:bg-primary-50/35">
+                      <TableCell className="py-3"><div className="flex items-center gap-2"><span className="h-10 w-1 rounded-full bg-transparent transition group-hover:bg-primary" />{row.avatarUrl ? <img src={row.avatarUrl} alt={row.fullName || 'Staff'} className="size-10 rounded-2xl border-2 border-white object-cover shadow-[0_8px_18px_rgba(8,37,50,0.12)]" /> : <span className="flex size-10 items-center justify-center rounded-2xl bg-primary-50 text-primary"><ImagePlus className="size-4" aria-hidden="true" /></span>}</div></TableCell>
                       <TableCell className="min-w-[11rem] py-3">
                         <p className="font-semibold text-foreground">{row.fullName || '-'}</p>
                         <p className="mt-1 text-xs text-muted-foreground">{[row.gender, age].filter(Boolean).join(' • ') || 'Gender / age not set'}</p>
@@ -465,23 +513,18 @@ export default function Page() {
                         <p className="mt-1 text-xs text-muted-foreground">{row.phone || '-'}</p>
                       </TableCell>
                       <TableCell className="min-w-[10rem] py-3"><NationalityPill value={row.nationality} /></TableCell>
-                      <TableCell className="min-w-[9rem] py-3"><RolePill value={row.role} /></TableCell>
+                      <TableCell className="min-w-[8rem] py-3"><RolePill value={row.role} /></TableCell>
                       <TableCell className="py-3"><DocumentCell label="Passport" number={row.passportNumber} expiry={row.passportExpiryDate} /></TableCell>
                       <TableCell className="py-3"><DocumentCell label="EID" number={row.emiratesId} expiry={row.emiratesIdExpiryDate} /></TableCell>
                       <TableCell className="py-3"><StatusPill value={row.status} /></TableCell>
                       {isSuperAdmin ? (
-                        <TableCell className="py-3">
-                          <div className="flex min-w-[13rem] flex-wrap gap-2">
-                            <Button type="button" size="sm" variant="outline" onClick={() => openEdit(row)}><Pencil className="size-4" aria-hidden="true" />Edit / Sync</Button>
-                            <Button asChild size="sm" variant="subtle"><Link href={`/admin/staff-password?email=${encodeURIComponent(row.email)}`}><KeyRound className="size-4" aria-hidden="true" />Password</Link></Button>
-                          </div>
-                        </TableCell>
+                        <TableCell className="py-3"><ActionMenu row={row} onEdit={openEdit} /></TableCell>
                       ) : null}
                     </TableRow>
                   );
                 }) : (
                   <TableRow>
-                    <TableCell colSpan={tableColumns} className="h-28 text-center text-sm text-muted-foreground">{loading ? 'Loading records...' : 'No staff users added yet.'}</TableCell>
+                    <TableCell colSpan={tableColumns} className="h-28 text-center text-sm text-muted-foreground">{loading ? 'Loading records...' : 'No staff records match the current filters.'}</TableCell>
                   </TableRow>
                 )}
               </TableBody>
@@ -577,4 +620,8 @@ function FormInput({ label, value, onChange, type = 'text', required = false }: 
 
 function SelectInput({ label, value, options, onChange, required = false }: { label: string; value: string; options: Array<string | SelectOption>; onChange: (value: string) => void; required?: boolean }) {
   return <label className="grid gap-1.5 text-sm font-semibold text-foreground">{label}<select required={required} value={value} onChange={(event) => onChange(event.target.value)} className="h-10 rounded-xl border border-border bg-white px-3 text-sm text-foreground outline-none focus:border-primary"><option value="">Select {label}</option>{options.map((option) => { const optionValue = typeof option === 'string' ? option : option.value; const optionLabel = typeof option === 'string' ? option : option.label; return <option key={optionValue} value={optionValue}>{optionLabel}</option>; })}</select></label>;
+}
+
+function FilterSelect({ label, value, options, onChange }: { label: string; value: string; options: string[]; onChange: (value: string) => void }) {
+  return <select aria-label={label} value={value} onChange={(event) => onChange(event.target.value)} className="h-10 rounded-2xl border border-border bg-white px-3 text-sm text-foreground outline-none transition focus:border-primary"><option value="">All {label}</option>{options.map((option) => <option key={option} value={option}>{option}</option>)}</select>;
 }
