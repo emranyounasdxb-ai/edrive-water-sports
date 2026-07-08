@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
-import { ManagerOperationsPage } from '@/components/edrive/admin-pages';
+import { ManagerBookingsPage } from '@/components/edrive/manager-bookings-page';
 
 export const metadata: Metadata = { title: 'Manager / Operations' };
 
 export default function Page() {
-  return <ManagerOperationsPage />;
+  return <ManagerBookingsPage />;
 }
