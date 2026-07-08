@@ -63,7 +63,6 @@ export function AdminShell({ children }: { children: ReactNode }) {
         return;
       }
 
-      setReady(false);
       setAccessIssue('');
       const { data: sessionData } = await supabase.auth.getSession();
       const authUser = sessionData.session?.user;
@@ -104,18 +103,20 @@ export function AdminShell({ children }: { children: ReactNode }) {
         avatarUrl: profile.avatar_url || ''
       };
 
-      if (isManagerRole(nextUser.role) && !isManagerPathAllowed(currentPath)) {
-        router.replace('/admin/manager');
-        return;
-      }
-
       setUser(nextUser);
       setReady(true);
     }
 
-    loadUser();
+    void loadUser();
     return () => { active = false; };
-  }, [currentPath, isLoginPage, router]);
+  }, [isLoginPage, router]);
+
+  useEffect(() => {
+    if (!ready || !user || isLoginPage) return;
+    if (isManagerRole(user.role) && !isManagerPathAllowed(currentPath)) {
+      router.replace('/admin/manager');
+    }
+  }, [currentPath, isLoginPage, ready, router, user]);
 
   if (isLoginPage) return <>{children}</>;
   if (!ready) return <div className="flex min-h-screen items-center justify-center bg-[#F4F7F8] text-sm font-semibold text-muted-foreground">Loading portal...</div>;
@@ -147,7 +148,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
           <aside className={cn('sticky top-0 hidden h-screen shrink-0 overflow-hidden bg-white/82 p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.95),inset_-10px_0_24px_rgba(8,37,50,0.025),12px_0_35px_rgba(8,37,50,0.055)] ring-1 ring-white/80 backdrop-blur-xl transition-all duration-300 lg:block', collapsed ? 'w-[5.4rem]' : 'w-[15.25rem]')}>
             <div className="flex h-full flex-col">
               <div className={cn('mb-2 flex items-center gap-2', collapsed ? 'justify-center' : 'justify-between px-2')}>
-                <Link href={isManagerRole(user.role) ? '/admin/manager' : '/admin'} className={cn('block transition', collapsed ? 'flex size-11 items-center justify-center rounded-2xl bg-primary-50 text-sm font-black text-primary shadow-sm' : 'min-w-0 scale-[0.88] origin-left')}>
+                <Link href={isManagerRole(user.role) ? '/admin/manager' : '/admin'} prefetch className={cn('block transition', collapsed ? 'flex size-11 items-center justify-center rounded-2xl bg-primary-50 text-sm font-black text-primary shadow-sm' : 'min-w-0 scale-[0.88] origin-left')}>
                   {collapsed ? 'eD' : <BrandMark />}
                 </Link>
                 <button type="button" onClick={() => setCollapsed((value) => !value)} className="hidden size-8 shrink-0 items-center justify-center rounded-full border border-border bg-white text-muted-foreground shadow-sm transition hover:border-primary/35 hover:text-primary lg:flex" aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}>
@@ -194,7 +195,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
                   <LiveWeatherPill />
                   <IconButtonWithBadge icon={Bell} count="0" />
                   <IconButtonWithBadge icon={MessageSquare} count="0" />
-                  <Button asChild size="sm" className="rounded-full px-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_8px_18px_rgba(8,37,50,0.18)]"><Link href="/">View Site</Link></Button>
+                  <Button asChild size="sm" className="rounded-full px-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_8px_18px_rgba(8,37,50,0.18)]"><Link href="/" prefetch>View Site</Link></Button>
                 </div>
               </div>
               {open ? <div className="rounded-b-[1.5rem] bg-white p-4 lg:hidden"><AdminNav currentPath={currentPath} navItems={navItems} onNavigate={() => setOpen(false)} /><Button type="button" variant="outline" className="mt-4 w-full" onClick={handleLogout}><LogOut className="size-4" aria-hidden="true" />Logout</Button></div> : null}
@@ -212,5 +213,5 @@ function IconButtonWithBadge({ icon: Icon, count }: { icon: LucideIcon; count: s
 }
 
 function AdminNav({ currentPath, navItems, onNavigate, collapsed = false }: { currentPath: string; navItems: typeof adminNavItems; onNavigate?: () => void; collapsed?: boolean }) {
-  return <nav className={cn('flex flex-col', collapsed ? 'gap-0.5' : 'gap-0.5')}>{navItems.map((item) => { const Icon = iconMap[item.icon as keyof typeof iconMap] ?? LayoutDashboard; const active = currentPath === normalizePath(item.href.split('?')[0]); return <Link key={item.href} href={item.href} onClick={onNavigate} title={collapsed ? item.label : undefined} className={cn('flex items-center rounded-xl text-sm font-semibold text-muted-foreground transition hover:bg-primary-50 hover:text-primary-900', collapsed ? 'justify-center px-2 py-1.5' : 'gap-2.5 px-2.5 py-1.5', active && 'bg-primary-100 text-primary-900 shadow-[0px_-3px_0px_0px_rgba(14,124,134,0.08)_inset,0px_2px_0px_0px_rgba(255,255,255,0.65)_inset,0px_8px_18px_rgba(8,37,50,0.07)]')}><span className={cn('flex size-7 shrink-0 items-center justify-center rounded-lg bg-white text-muted-foreground shadow-sm', active && 'bg-[#DDF4F6] text-primary')}><Icon className="size-3.5" aria-hidden="true" /></span>{!collapsed ? <span className="truncate">{item.label}</span> : null}</Link>; })}</nav>;
+  return <nav className={cn('flex flex-col', collapsed ? 'gap-0.5' : 'gap-0.5')}>{navItems.map((item) => { const Icon = iconMap[item.icon as keyof typeof iconMap] ?? LayoutDashboard; const active = currentPath === normalizePath(item.href.split('?')[0]); return <Link key={item.href} href={item.href} prefetch onClick={onNavigate} title={collapsed ? item.label : undefined} className={cn('flex items-center rounded-xl text-sm font-semibold text-muted-foreground transition hover:bg-primary-50 hover:text-primary-900', collapsed ? 'justify-center px-2 py-1.5' : 'gap-2.5 px-2.5 py-1.5', active && 'bg-primary-100 text-primary-900 shadow-[0px_-3px_0px_0px_rgba(14,124,134,0.08)_inset,0px_2px_0px_0px_rgba(255,255,255,0.65)_inset,0px_8px_18px_rgba(8,37,50,0.07)]')}><span className={cn('flex size-7 shrink-0 items-center justify-center rounded-lg bg-white text-muted-foreground shadow-sm', active && 'bg-[#DDF4F6] text-primary')}><Icon className="size-3.5" aria-hidden="true" /></span>{!collapsed ? <span className="truncate">{item.label}</span> : null}</Link>; })}</nav>;
 }
