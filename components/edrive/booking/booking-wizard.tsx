@@ -83,6 +83,9 @@ export function BookingWizard() {
   const capacity = draft.vehicleQuantity * capacityPerVehicle;
   const capacityExceeded = draft.guestCount > capacity;
   const lockedPackage = Boolean(draft.selectedPackageName && draft.selectedPackageCapacity);
+  const visibleSteps = lockedPackage ? steps.slice(1) : steps;
+  const visibleStepIndex = lockedPackage ? Math.max(0, step - 1) : step;
+  const visibleStepLabel = visibleSteps[visibleStepIndex] || steps[step];
 
   function updateDraft(values: Partial<BookingDraft>) {
     setDraft((current) => ({ ...current, ...values }));
@@ -263,10 +266,10 @@ export function BookingWizard() {
             <div className="premium-surface rounded-[1.65rem] p-4 sm:p-5 lg:p-5">
               <div className="mb-4 flex items-start justify-between gap-4 border-b border-border/70 pb-4">
                 <div>
-                  <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-primary">Step {step + 1} of {steps.length}</p>
-                  <h2 className="mt-1 font-heading text-xl font-semibold text-foreground sm:text-2xl">{steps[step]}</h2>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-primary">Step {visibleStepIndex + 1} of {visibleSteps.length}</p>
+                  <h2 className="mt-1 font-heading text-xl font-semibold text-foreground sm:text-2xl">{visibleStepLabel}</h2>
                 </div>
-                <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary-50 text-xs font-bold text-primary">{step + 1}</span>
+                <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary-50 text-xs font-bold text-primary">{visibleStepIndex + 1}</span>
               </div>
 
               {step === 0 && !lockedPackage ? <ExperienceStep selected={draft.experienceType} onSelect={selectExperience} /> : null}
@@ -297,18 +300,21 @@ export function BookingWizard() {
 }
 
 function WizardProgress({ currentStep, lockedPackage, onStepSelect }: { currentStep: number; lockedPackage: boolean; onStepSelect: (step: number) => void }) {
+  const progressSteps = lockedPackage ? steps.slice(1) : steps;
+  const displayStep = lockedPackage ? Math.max(0, currentStep - 1) : currentStep;
   return (
     <div className="overflow-x-auto pb-1">
-      <ol className="flex min-w-[660px] items-start">
-        {steps.map((label, index) => {
-          const complete = index < currentStep;
-          const active = index === currentStep;
-          const disabled = index > currentStep || (lockedPackage && index === 0);
+      <ol className={cn('flex items-start', lockedPackage ? 'min-w-[560px]' : 'min-w-[660px]')}>
+        {progressSteps.map((label, displayIndex) => {
+          const realIndex = lockedPackage ? displayIndex + 1 : displayIndex;
+          const complete = displayIndex < displayStep;
+          const active = displayIndex === displayStep;
+          const disabled = realIndex > currentStep;
           return (
             <li key={label} className="relative flex flex-1 flex-col items-center px-1 text-center">
-              {index ? <span className={cn('absolute right-1/2 top-3.5 h-px w-full bg-border', index <= currentStep && 'bg-primary')} /> : null}
-              <button type="button" disabled={disabled} onClick={() => onStepSelect(index)} className={cn('relative z-10 flex size-7 items-center justify-center rounded-full border bg-background text-[11px] font-bold transition', active ? 'border-primary bg-primary text-white shadow-sm' : complete ? 'border-primary bg-primary-50 text-primary' : 'border-border text-muted-foreground', disabled && 'cursor-not-allowed opacity-55')} aria-current={active ? 'step' : undefined} aria-label={`Step ${index + 1}: ${label}`}>
-                {complete ? <Check className="size-3.5" aria-hidden="true" /> : index + 1}
+              {displayIndex ? <span className={cn('absolute right-1/2 top-3.5 h-px w-full bg-border', displayIndex <= displayStep && 'bg-primary')} /> : null}
+              <button type="button" disabled={disabled} onClick={() => onStepSelect(realIndex)} className={cn('relative z-10 flex size-7 items-center justify-center rounded-full border bg-background text-[11px] font-bold transition', active ? 'border-primary bg-primary text-white shadow-sm' : complete ? 'border-primary bg-primary-50 text-primary' : 'border-border text-muted-foreground', disabled && 'cursor-not-allowed opacity-55')} aria-current={active ? 'step' : undefined} aria-label={`Step ${displayIndex + 1}: ${label}`}>
+                {complete ? <Check className="size-3.5" aria-hidden="true" /> : displayIndex + 1}
               </button>
               <span className={cn('relative z-10 mt-1.5 max-w-[105px] text-[10px] font-semibold leading-4', active || complete ? 'text-foreground' : 'text-muted-foreground')}>{label}</span>
             </li>
