@@ -284,6 +284,18 @@ table[class*="min-w-[1220px]"] tbody td {
   padding-bottom: 0.5rem !important;
 }
 
+table[class*="min-w-[1220px]"] tbody td:nth-child(2) p:first-child {
+  font-size: 0.9rem !important;
+  line-height: 1.08rem !important;
+  font-weight: 700 !important;
+}
+
+table[class*="min-w-[1220px]"] tbody td:nth-child(2) p:nth-child(2) {
+  margin-top: 0.12rem !important;
+  font-size: 0.75rem !important;
+  line-height: 1rem !important;
+}
+
 table[class*="min-w-[1220px]"] tbody td:nth-child(3) p:first-child,
 table[class*="min-w-[1220px]"] tbody td:nth-child(3) span,
 table[class*="min-w-[1220px]"] tbody td:nth-child(4) span,
