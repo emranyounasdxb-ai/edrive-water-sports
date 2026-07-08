@@ -252,40 +252,27 @@ function WhatsAppIcon() {
   );
 }
 
-function DetailPill({ children }: { children: string }) {
-  return <span className="inline-flex rounded-full border border-primary/10 bg-primary-50 px-2.5 py-1 text-[11px] font-bold text-primary-900">{children}</span>;
-}
-
 function ContactCell({ email, phone }: { email: string; phone: string }) {
   const whatsappPhone = normalizePhoneForWhatsapp(phone);
   return (
     <div className="min-w-[12rem]">
       <p className="text-sm text-foreground">{email || '-'}</p>
       <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
-        <span>{phone || '-'}</span>
         {phone ? <a href={`tel:${phone}`} className="inline-flex size-6 items-center justify-center rounded-full bg-sky-50 text-sky-600 transition hover:bg-sky-100" aria-label={`Call ${phone}`}><PhoneCall className="size-3.5" aria-hidden="true" /></a> : null}
         {whatsappPhone ? <a href={`https://wa.me/${whatsappPhone}`} target="_blank" rel="noreferrer" className="inline-flex size-6 items-center justify-center rounded-full bg-emerald-50 text-[#25D366] transition hover:bg-emerald-100" aria-label={`WhatsApp ${phone}`}><WhatsAppIcon /></a> : null}
+        <span>{phone || '-'}</span>
       </div>
     </div>
   );
 }
 
-function NationalityPill({ value }: { value: string }) {
-  const label = value || 'Not set';
-  return <span className="inline-flex items-center gap-2 rounded-full border border-primary/10 bg-primary-50 px-3 py-1.5 text-xs font-semibold text-primary-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]"><CountryFlag nationality={value} />{label}</span>;
+function NationalityText({ value }: { value: string }) {
+  return <span className="inline-flex items-center gap-2 text-sm font-semibold text-foreground"><CountryFlag nationality={value} />{value || '-'}</span>;
 }
 
-function RolePill({ value }: { value: string }) {
-  const tones: Record<string, string> = {
-    'Super Admin': 'bg-primary-900 text-white border-primary-900',
-    Admin: 'bg-primary-50 text-primary-900 border-primary/15',
-    'Manager / Operations': 'bg-sky-50 text-sky-800 border-sky-100',
-    Finance: 'bg-amber-50 text-amber-800 border-amber-100',
-    'Maintenance Staff': 'bg-orange-50 text-orange-800 border-orange-100',
-    'Booking Staff': 'bg-slate-50 text-slate-700 border-slate-100'
-  };
+function RoleText({ value }: { value: string }) {
   const display = value === 'Manager / Operations' ? 'Manager' : value;
-  return <span title={value} className={cn('inline-flex rounded-full border px-3 py-1 text-xs font-bold shadow-[inset_0_1px_0_rgba(255,255,255,0.75)]', tones[value] || 'bg-slate-50 text-slate-700 border-slate-100')}>{display || '-'}</span>;
+  return <span title={value} className="text-sm font-semibold text-foreground">{display || '-'}</span>;
 }
 
 function StatusPill({ value }: { value: string }) {
@@ -300,7 +287,7 @@ function StatusPill({ value }: { value: string }) {
 function DocumentCell({ number, expiry }: { label: string; number: string; expiry: string }) {
   const tone = expiryTone(expiry);
   return (
-    <div className="min-w-[9.75rem] rounded-2xl border border-white/80 bg-white/70 px-3 py-2 leading-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_6px_16px_rgba(8,37,50,0.035)]">
+    <div className="min-w-[9rem] leading-5">
       <p className="truncate text-sm font-bold text-foreground">{number || '-'}</p>
       <p className={cn('mt-0.5 flex items-center gap-1.5 text-xs font-semibold', tone === 'expired' && 'text-red-600', tone === 'soon' && 'text-amber-700', tone === 'valid' && 'text-muted-foreground', tone === 'muted' && 'text-muted-foreground')}>
         <span className={cn('size-1.5 rounded-full', tone === 'expired' && 'bg-red-500', tone === 'soon' && 'bg-amber-500', tone === 'valid' && 'bg-emerald-500', tone === 'muted' && 'bg-slate-300')} />
@@ -535,14 +522,14 @@ export default function Page() {
                   const age = calculateAge(row.dateOfBirth);
                   return (
                     <TableRow key={row.id} className="group align-middle transition hover:bg-primary-50/35">
-                      <TableCell className="py-3"><div className="flex items-center gap-2"><span className="h-10 w-1 rounded-full bg-transparent transition group-hover:bg-primary" />{row.avatarUrl ? <img src={row.avatarUrl} alt={row.fullName || 'Staff'} className="size-10 rounded-2xl border-2 border-white object-cover shadow-[0_8px_18px_rgba(8,37,50,0.12)]" /> : <span className="flex size-10 items-center justify-center rounded-2xl bg-primary-50 text-primary"><ImagePlus className="size-4" aria-hidden="true" /></span>}</div></TableCell>
+                      <TableCell className="py-3"><div className="flex items-center gap-2"><span className="h-11 w-1 rounded-full bg-transparent transition group-hover:bg-primary" />{row.avatarUrl ? <img src={row.avatarUrl} alt={row.fullName || 'Staff'} className="size-12 rounded-2xl border-2 border-white object-cover shadow-[0_8px_18px_rgba(8,37,50,0.12)]" /> : <span className="flex size-12 items-center justify-center rounded-2xl bg-primary-50 text-primary"><ImagePlus className="size-4" aria-hidden="true" /></span>}</div></TableCell>
                       <TableCell className="min-w-[11rem] py-3">
                         <p className="font-semibold text-foreground">{row.fullName || '-'}</p>
-                        <div className="mt-2 flex flex-wrap gap-1.5">{row.gender ? <DetailPill>{row.gender}</DetailPill> : null}{age ? <DetailPill>{age}</DetailPill> : null}{!row.gender && !age ? <span className="text-xs text-muted-foreground">Gender / age not set</span> : null}</div>
+                        <p className="mt-1 text-xs text-muted-foreground">{[row.gender, age].filter(Boolean).join(' • ') || 'Gender / age not set'}</p>
                       </TableCell>
                       <TableCell className="py-3"><ContactCell email={row.email} phone={row.phone} /></TableCell>
-                      <TableCell className="min-w-[10rem] py-3"><NationalityPill value={row.nationality} /></TableCell>
-                      <TableCell className="min-w-[8rem] py-3"><RolePill value={row.role} /></TableCell>
+                      <TableCell className="min-w-[10rem] py-3"><NationalityText value={row.nationality} /></TableCell>
+                      <TableCell className="min-w-[8rem] py-3"><RoleText value={row.role} /></TableCell>
                       <TableCell className="py-3"><DocumentCell label="Passport" number={row.passportNumber} expiry={row.passportExpiryDate} /></TableCell>
                       <TableCell className="py-3"><DocumentCell label="EID" number={row.emiratesId} expiry={row.emiratesIdExpiryDate} /></TableCell>
                       <TableCell className="py-3"><StatusPill value={row.status} /></TableCell>
