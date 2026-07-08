@@ -36,6 +36,12 @@ type PackageRateRow = {
   capacity: number;
 };
 
+function hasPackageParams() {
+  if (typeof window === 'undefined') return false;
+  const params = new URLSearchParams(window.location.search);
+  return Boolean(params.get('category') && Number(params.get('capacity') || 0));
+}
+
 function experienceTypeFromCategory(category: string): BookingDraft['experienceType'] {
   return category === 'jet_car_rental' ? 'jet-car-rental' : 'jet-ski-rental';
 }
@@ -73,9 +79,11 @@ function mapRates(rows: PackageRateRow[]): BookingRateOption[] {
 }
 
 export function BookingWizard() {
-  const [step, setStep] = useState(0);
+  const [step, setStep] = useState(() => (hasPackageParams() ? 1 : 0));
   const [draft, setDraft] = useState<BookingDraft>(initialBookingDraft);
   const [submitted, setSubmitted] = useState<BookingRequest | null>(null);
+  const [ready, setReady] = useState(false);
+  const [packageQueryMode, setPackageQueryMode] = useState(() => hasPackageParams());
 
   const experience = getExperience(draft.experienceType);
   const isSales = experience.serviceType === 'sales_inquiry';
@@ -83,8 +91,9 @@ export function BookingWizard() {
   const capacity = draft.vehicleQuantity * capacityPerVehicle;
   const capacityExceeded = draft.guestCount > capacity;
   const lockedPackage = Boolean(draft.selectedPackageName && draft.selectedPackageCapacity);
-  const visibleSteps = lockedPackage ? steps.slice(1) : steps;
-  const visibleStepIndex = lockedPackage ? Math.max(0, step - 1) : step;
+  const packageFlow = packageQueryMode || lockedPackage;
+  const visibleSteps = packageFlow ? steps.slice(1) : steps;
+  const visibleStepIndex = packageFlow ? Math.max(0, step - 1) : step;
   const visibleStepLabel = visibleSteps[visibleStepIndex] || steps[step];
 
   function updateDraft(values: Partial<BookingDraft>) {
@@ -92,7 +101,7 @@ export function BookingWizard() {
   }
 
   function goToStep(nextStep: number) {
-    setStep(lockedPackage && nextStep === 0 ? 1 : nextStep);
+    setStep(packageFlow && nextStep === 0 ? 1 : nextStep);
   }
 
   useEffect(() => {
@@ -100,7 +109,14 @@ export function BookingWizard() {
     const categoryParam = params.get('category');
     const selectedCapacity = Number(params.get('capacity') || 0);
 
-    if (!categoryParam || !selectedCapacity) return;
+    if (!categoryParam || !selectedCapacity) {
+      setPackageQueryMode(false);
+      setReady(true);
+      return;
+    }
+
+    setPackageQueryMode(true);
+    setStep(1);
     const selectedCategory = categoryParam;
     let active = true;
 
@@ -115,7 +131,12 @@ export function BookingWizard() {
 
       if (!active) return;
       const rates = mapRates((data || []) as PackageRateRow[]);
-      if (!rates.length) return;
+      if (!rates.length) {
+        setPackageQueryMode(false);
+        setStep(0);
+        setReady(true);
+        return;
+      }
 
       const preferredRate = rates.find((rate) => rate.minutes === 60) || rates[0];
       const title = rideTitle(selectedCategory, selectedCapacity);
@@ -137,6 +158,7 @@ export function BookingWizard() {
         guestCount: selectedCapacity
       });
       setStep(1);
+      setReady(true);
     }
 
     void loadSelectedVehicleRates();
@@ -145,7 +167,7 @@ export function BookingWizard() {
   }, []);
 
   function selectExperience(experienceType: BookingDraft['experienceType']) {
-    if (lockedPackage) return;
+    if (packageFlow) return;
     const nextExperience = getExperience(experienceType);
     updateDraft({
       selectedPackageName: undefined,
@@ -241,17 +263,30 @@ export function BookingWizard() {
       vehicleQuantity: 1,
       guestCount: current.selectedPackageCapacity || getExperience(current.experienceType).capacity
     }));
-    setStep(lockedPackage ? 1 : 0);
+    setStep(packageFlow ? 1 : 0);
     setSubmitted(null);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   if (submitted) return <BookingSuccess request={submitted} onAnother={startAnother} />;
 
+  if (!ready) {
+    return (
+      <section className="container-x pb-10 pt-3 sm:pb-12">
+        <div className="mx-auto max-w-6xl">
+          <div className="premium-surface rounded-[1.65rem] p-5 text-center">
+            <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-primary">Preparing Booking</p>
+            <h2 className="mt-2 font-heading text-xl font-semibold text-foreground">Loading selected package...</h2>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className="container-x pb-10 pt-3 sm:pb-12">
       <div className="mx-auto max-w-6xl">
-        <WizardProgress currentStep={step} lockedPackage={lockedPackage} onStepSelect={goToStep} />
+        <WizardProgress currentStep={step} packageFlow={packageFlow} onStepSelect={goToStep} />
 
         <details className="group mt-3 lg:hidden">
           <summary className="flex cursor-pointer list-none items-center justify-between rounded-[1.25rem] border border-white/80 bg-white/80 px-4 py-2.5 text-sm font-semibold text-foreground shadow-sm">
@@ -272,7 +307,7 @@ export function BookingWizard() {
                 <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary-50 text-xs font-bold text-primary">{visibleStepIndex + 1}</span>
               </div>
 
-              {step === 0 && !lockedPackage ? <ExperienceStep selected={draft.experienceType} onSelect={selectExperience} /> : null}
+              {step === 0 && !packageFlow ? <ExperienceStep selected={draft.experienceType} onSelect={selectExperience} /> : null}
               {step === 1 ? <DurationStep draft={draft} onUpdate={updateDraft} /> : null}
               {step === 2 ? <PartyStep draft={draft} capacity={capacity} capacityPerVehicle={capacityPerVehicle} exceeded={capacityExceeded} onUpdate={updateDraft} /> : null}
               {step === 3 ? <ScheduleStep draft={draft} onUpdate={updateDraft} /> : null}
@@ -280,7 +315,7 @@ export function BookingWizard() {
               {step === 5 ? <ReviewStep draft={draft} /> : null}
 
               <div className="mt-5 flex flex-col-reverse justify-between gap-3 border-t border-border/70 pt-4 sm:flex-row">
-                <Button type="button" variant="outline" disabled={step === 0 || (lockedPackage && step === 1)} onClick={() => setStep((current) => Math.max(lockedPackage ? 1 : 0, current - 1))}><ArrowLeft data-icon aria-hidden="true" />Back</Button>
+                <Button type="button" variant="outline" disabled={step === 0 || (packageFlow && step === 1)} onClick={() => setStep((current) => Math.max(packageFlow ? 1 : 0, current - 1))}><ArrowLeft data-icon aria-hidden="true" />Back</Button>
                 {step < 5 ? (
                   <Button type="button" disabled={!canContinue} onClick={() => setStep((current) => Math.min(5, current + 1))}>{step === 4 ? 'Review Booking' : 'Continue'}<ArrowRight data-icon aria-hidden="true" /></Button>
                 ) : (
@@ -299,14 +334,14 @@ export function BookingWizard() {
   );
 }
 
-function WizardProgress({ currentStep, lockedPackage, onStepSelect }: { currentStep: number; lockedPackage: boolean; onStepSelect: (step: number) => void }) {
-  const progressSteps = lockedPackage ? steps.slice(1) : steps;
-  const displayStep = lockedPackage ? Math.max(0, currentStep - 1) : currentStep;
+function WizardProgress({ currentStep, packageFlow, onStepSelect }: { currentStep: number; packageFlow: boolean; onStepSelect: (step: number) => void }) {
+  const progressSteps = packageFlow ? steps.slice(1) : steps;
+  const displayStep = packageFlow ? Math.max(0, currentStep - 1) : currentStep;
   return (
     <div className="overflow-x-auto pb-1">
-      <ol className={cn('flex items-start', lockedPackage ? 'min-w-[560px]' : 'min-w-[660px]')}>
+      <ol className={cn('flex items-start', packageFlow ? 'min-w-[560px]' : 'min-w-[660px]')}>
         {progressSteps.map((label, displayIndex) => {
-          const realIndex = lockedPackage ? displayIndex + 1 : displayIndex;
+          const realIndex = packageFlow ? displayIndex + 1 : displayIndex;
           const complete = displayIndex < displayStep;
           const active = displayIndex === displayStep;
           const disabled = realIndex > currentStep;
