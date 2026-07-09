@@ -27,15 +27,11 @@ type BookingRow = {
   guest_count?: number | null;
   preferred_date: string | null;
   preferred_time: string | null;
-  meeting_point_name?: string | null;
-  meeting_point_address?: string | null;
   customer_name: string | null;
   customer_phone: string | null;
   customer_email: string | null;
   customer_hotel_or_area?: string | null;
   customer_notes?: string | null;
-  subtotal?: number | string | null;
-  vat_amount?: number | string | null;
   total_amount: number | string | null;
   payment_status: string | null;
   payment_method?: string | null;
@@ -47,11 +43,7 @@ type BookingRow = {
   assigned_manager_name?: string | null;
   assigned_vehicle_name?: string | null;
   b2b_agent_name?: string | null;
-  customer_arrived?: boolean | null;
   confirmed_at?: string | null;
-  completed_at?: string | null;
-  admin_payment_received_at?: string | null;
-  manager_note?: string | null;
   internal_note?: string | null;
   created_at: string | null;
   updated_at?: string | null;
@@ -66,26 +58,11 @@ type DebugState = {
   lastLoadedAt: string;
 };
 
-type ManagerOption = {
-  name: string;
-  email: string;
-};
+type ManagerOption = { name: string; email: string };
 
 type ManageValues = {
   status: string;
-  adminStatus: string;
-  managerStatus: string;
-  paymentStatus: string;
-  paymentMethod: string;
-  paymentSource: string;
-  paymentWorkflowStatus: string;
-  collectionStatus: string;
-  amountReceivedAed: string;
   assignedManagerName: string;
-  assignedVehicleName: string;
-  b2bAgentName: string;
-  customerArrived: boolean;
-  managerNote: string;
   internalNote: string;
 };
 
@@ -162,6 +139,10 @@ function bookingPending(booking: BookingRow) {
   return Math.max(total - received, 0);
 }
 
+function paymentTypeLabel(booking: BookingRow) {
+  return booking.payment_source === 'b2b' || booking.b2b_agent_name ? 'B2B' : 'Direct Sale';
+}
+
 function whatsappPhone(value: string | null) {
   let digits = String(value || '').replace(/\D/g, '');
   if (!digits || digits.length < 7) return '';
@@ -182,21 +163,16 @@ function whatsAppHref(booking: BookingRow) {
   return `https://web.whatsapp.com/send?phone=${phone}&text=${message}&app_absent=0`;
 }
 
-function defaultWorkflowStatus(values: ManageValues) {
-  const received = asNumber(values.amountReceivedAed);
-  if (values.paymentStatus === 'Refunded') return 'refunded';
-  if (values.paymentSource === 'b2b') return 'pending_from_b2b_agent';
-  if (values.collectionStatus === 'settled') return 'settled';
-  if (values.collectionStatus === 'with_admin') return 'received_by_admin';
-  if (values.paymentStatus === 'Paid') return 'paid_to_manager';
-  if (received > 0) return 'partial_paid';
-  return 'unpaid';
-}
-
-function adminStatusForBookingStatus(status: string, fallback: string) {
+function adminStatusForBookingStatus(status: string, fallback: string | null | undefined) {
   if (status === 'Confirmed') return 'Confirmed';
   if (status === 'Cancelled') return 'Closed';
   return fallback || 'New';
+}
+
+function managerStatusForBookingStatus(status: string, managerName: string, fallback: string | null | undefined) {
+  if (status === 'Cancelled') return 'Cancelled';
+  if (status === 'Confirmed' && managerName) return 'Assigned';
+  return fallback || 'Pending';
 }
 
 export function AdminBookingsLivePage() {
@@ -206,59 +182,30 @@ export function AdminBookingsLivePage() {
   const [error, setError] = useState('');
   const [query, setQuery] = useState('');
   const [selectedBooking, setSelectedBooking] = useState<BookingRow | null>(null);
-  const [debug, setDebug] = useState<DebugState>({
-    projectHost: supabaseProjectHost,
-    table: bookingRequestsTable,
-    count: null,
-    receivedRows: 0,
-    lastError: '',
-    lastLoadedAt: '-'
-  });
+  const [debug, setDebug] = useState<DebugState>({ projectHost: supabaseProjectHost, table: bookingRequestsTable, count: null, receivedRows: 0, lastError: '', lastLoadedAt: '-' });
 
   async function loadManagers() {
-    const { data } = await supabase
-      .from('admin_users')
-      .select('full_name,email,role,status')
-      .order('full_name', { ascending: true })
-      .limit(100);
-
+    const { data } = await supabase.from('admin_users').select('full_name,email,role,status').order('full_name', { ascending: true }).limit(100);
     const rows = ((data || []) as Array<{ full_name: string | null; email: string | null; role: string | null; status: string | null }>);
     const activeManagers = rows
       .filter((item) => String(item.role || '').trim().toLowerCase() === 'manager' && isActiveStatus(item.status))
       .map((item) => ({ name: item.full_name || item.email || 'Manager', email: item.email || '' }));
-
     setManagers(activeManagers);
   }
 
   async function loadBookings() {
     setLoading(true);
     setError('');
-
-    const { data, error: queryError, count } = await supabase
-      .from(bookingRequestsTable)
-      .select('*', { count: 'exact' })
-      .order('created_at', { ascending: false })
-      .limit(100);
-
+    const { data, error: queryError, count } = await supabase.from(bookingRequestsTable).select('*', { count: 'exact' }).order('created_at', { ascending: false }).limit(100);
     const rows = (data || []) as BookingRow[];
     const message = queryError?.message || '';
-
-    setDebug({
-      projectHost: supabaseProjectHost,
-      table: bookingRequestsTable,
-      count: typeof count === 'number' ? count : null,
-      receivedRows: rows.length,
-      lastError: message,
-      lastLoadedAt: new Date().toLocaleString('en-AE')
-    });
-
+    setDebug({ projectHost: supabaseProjectHost, table: bookingRequestsTable, count: typeof count === 'number' ? count : null, receivedRows: rows.length, lastError: message, lastLoadedAt: new Date().toLocaleString('en-AE') });
     if (queryError) {
       setError(message);
       setBookings([]);
     } else {
       setBookings(rows);
     }
-
     setLoading(false);
   }
 
@@ -267,36 +214,17 @@ export function AdminBookingsLivePage() {
   }
 
   async function saveBookingStatus(booking: BookingRow, values: ManageValues) {
-    const total = bookingTotal(booking);
-    const amountReceived = Math.max(asNumber(values.amountReceivedAed), 0);
-    const amountPending = Math.max(total - amountReceived, 0);
     const assignedManagerName = values.assignedManagerName.trim();
-    const workflowStatus = values.paymentWorkflowStatus || defaultWorkflowStatus(values);
     const now = new Date().toISOString();
-
     const payload: Record<string, unknown> = {
       status: values.status,
-      admin_status: adminStatusForBookingStatus(values.status, values.adminStatus),
-      manager_status: assignedManagerName ? 'Assigned' : values.managerStatus,
-      payment_status: values.paymentStatus,
-      payment_method: values.paymentMethod || null,
-      payment_source: values.paymentSource,
-      payment_workflow_status: workflowStatus,
-      collection_status: values.collectionStatus,
-      amount_received_aed: amountReceived,
-      amount_pending_aed: amountPending,
+      admin_status: adminStatusForBookingStatus(values.status, booking.admin_status),
+      manager_status: managerStatusForBookingStatus(values.status, assignedManagerName, booking.manager_status),
       assigned_manager_name: assignedManagerName || null,
-      assigned_vehicle_name: values.assignedVehicleName.trim() || null,
-      b2b_agent_name: values.paymentSource === 'b2b' ? values.b2bAgentName.trim() || null : null,
-      customer_arrived: values.customerArrived,
-      manager_note: values.managerNote.trim() || null,
       internal_note: values.internalNote.trim() || null,
       updated_at: now
     };
-
     if (values.status === 'Confirmed' && !booking.confirmed_at) payload.confirmed_at = now;
-    if ((values.collectionStatus === 'with_admin' || values.collectionStatus === 'settled') && !booking.admin_payment_received_at) payload.admin_payment_received_at = now;
-
     const queryBuilder = supabase.from(bookingRequestsTable).update(payload);
     const result = booking.id ? await queryBuilder.eq('id', booking.id) : await queryBuilder.eq('booking_code', booking.booking_code);
     if (result.error) throw new Error(result.error.message);
@@ -304,14 +232,12 @@ export function AdminBookingsLivePage() {
     setSelectedBooking(null);
   }
 
-  useEffect(() => {
-    void refreshAll();
-  }, []);
+  useEffect(() => { void refreshAll(); }, []);
 
   const filtered = useMemo(() => {
     const term = query.trim().toLowerCase();
     if (!term) return bookings;
-    return bookings.filter((booking) => [booking.booking_code, booking.booking_number, booking.customer_name, booking.customer_phone, booking.customer_email, packageLabel(booking), booking.status, booking.manager_status, booking.payment_workflow_status, booking.collection_status, booking.assigned_manager_name].some((value) => String(value || '').toLowerCase().includes(term)));
+    return bookings.filter((booking) => [booking.booking_code, booking.booking_number, booking.customer_name, booking.customer_phone, booking.customer_email, packageLabel(booking), booking.status, booking.manager_status, booking.assigned_manager_name].some((value) => String(value || '').toLowerCase().includes(term)));
   }, [bookings, query]);
 
   const newCount = bookings.filter((booking) => (booking.admin_status || 'New') === 'New').length;
@@ -350,48 +276,26 @@ export function AdminBookingsLivePage() {
         <Card className="mt-6 overflow-hidden rounded-[1.5rem] border-border/80 bg-white">
           <CardHeader className="gap-4 border-b border-border/70 bg-[#F7FAFA] sm:flex-row sm:items-center sm:justify-between">
             <CardTitle className="font-heading text-xl font-semibold">Booking list</CardTitle>
-            <div className="relative w-full sm:max-w-xs">
-              <Search className="pointer-events-none absolute left-3 top-3 size-4 text-muted-foreground" aria-hidden="true" />
-              <Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search bookings..." className="h-10 rounded-full pl-9" />
-            </div>
+            <div className="relative w-full sm:max-w-xs"><Search className="pointer-events-none absolute left-3 top-3 size-4 text-muted-foreground" aria-hidden="true" /><Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search bookings..." className="h-10 rounded-full pl-9" /></div>
           </CardHeader>
           <CardContent className="p-0">
             {error ? <p className="m-4 rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</p> : null}
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
-                  <TableRow>
-                    <TableHead>Booking</TableHead>
-                    <TableHead>Customer</TableHead>
-                    <TableHead>Package / Service</TableHead>
-                    <TableHead>Date / Time</TableHead>
-                    <TableHead>Total</TableHead>
-                    <TableHead>Payment</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Operations</TableHead>
-                    <TableHead>Action</TableHead>
-                  </TableRow>
+                  <TableRow><TableHead>Booking</TableHead><TableHead>Customer</TableHead><TableHead>Package / Service</TableHead><TableHead>Date / Time</TableHead><TableHead>Total</TableHead><TableHead>Type</TableHead><TableHead>Status</TableHead><TableHead>Operations</TableHead><TableHead>Action</TableHead></TableRow>
                 </TableHeader>
                 <TableBody>
                   {loading ? <TableRow><TableCell colSpan={9} className="py-8 text-center text-sm text-muted-foreground">Loading bookings...</TableCell></TableRow> : null}
                   {!loading && filtered.length === 0 ? <TableRow><TableCell colSpan={9} className="py-8 text-center text-sm text-muted-foreground">No booking requests found.</TableCell></TableRow> : null}
                   {filtered.map((booking, index) => (
                     <TableRow key={booking.id || `${booking.booking_code}-${index}`}>
-                      <TableCell>
-                        <div className="font-bold text-primary-900">{booking.booking_code}</div>
-                        {booking.booking_number && booking.booking_number !== booking.booking_code ? <div className="text-xs text-muted-foreground">{booking.booking_number}</div> : null}
-                      </TableCell>
-                      <TableCell>
-                        <div className="font-semibold text-foreground">{booking.customer_name || '-'}</div>
-                        <div className="text-xs text-muted-foreground">{booking.customer_phone || booking.customer_email || '-'}</div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="font-semibold text-foreground">{packageLabel(booking)}</div>
-                        <div className="text-xs text-muted-foreground">{serviceDetail(booking)}</div>
-                      </TableCell>
+                      <TableCell><div className="font-bold text-primary-900">{booking.booking_code}</div>{booking.booking_number && booking.booking_number !== booking.booking_code ? <div className="text-xs text-muted-foreground">{booking.booking_number}</div> : null}</TableCell>
+                      <TableCell><div className="font-semibold text-foreground">{booking.customer_name || '-'}</div><div className="text-xs text-muted-foreground">{booking.customer_phone || booking.customer_email || '-'}</div></TableCell>
+                      <TableCell><div className="font-semibold text-foreground">{packageLabel(booking)}</div><div className="text-xs text-muted-foreground">{serviceDetail(booking)}</div></TableCell>
                       <TableCell>{niceDate(booking.preferred_date)}<div className="text-xs text-muted-foreground">{booking.preferred_time || '-'}</div></TableCell>
                       <TableCell>{formatAed(bookingTotal(booking))}<div className="text-xs text-muted-foreground">Pending {formatAed(bookingPending(booking))}</div></TableCell>
-                      <TableCell><div className="font-semibold text-foreground">{booking.payment_status || 'Not Paid'}</div><div className="text-xs text-muted-foreground">{prettyKey(booking.collection_status || 'pending_collection')}</div></TableCell>
+                      <TableCell><div className="font-semibold text-foreground">{paymentTypeLabel(booking)}</div><div className="text-xs text-muted-foreground">{booking.b2b_agent_name || prettyKey(booking.payment_source || 'direct')}</div></TableCell>
                       <TableCell><span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-bold ${statusClass(booking.status)}`}>{booking.status || 'Pending'}</span></TableCell>
                       <TableCell><div className="font-semibold text-foreground">{booking.manager_status || 'Pending'}</div><div className="text-xs text-muted-foreground">{booking.assigned_manager_name || 'No manager assigned'}</div></TableCell>
                       <TableCell><Button type="button" size="sm" variant="outline" onClick={() => setSelectedBooking(booking)}>Manage</Button></TableCell>
@@ -403,9 +307,7 @@ export function AdminBookingsLivePage() {
           </CardContent>
         </Card>
 
-        <div className="mt-4 rounded-[1.25rem] border border-primary/15 bg-primary-50 px-4 py-3 text-sm leading-6 text-primary-900">
-          <FileClock className="mr-2 inline size-4" aria-hidden="true" /> Confirm booking and assign a manager to send it to the manager dashboard.
-        </div>
+        <div className="mt-4 rounded-[1.25rem] border border-primary/15 bg-primary-50 px-4 py-3 text-sm leading-6 text-primary-900"><FileClock className="mr-2 inline size-4" aria-hidden="true" /> Confirm booking and assign a manager to send it to the manager dashboard.</div>
       </div>
       {selectedBooking ? <ManageBookingModal booking={selectedBooking} managers={managers} onClose={() => setSelectedBooking(null)} onSave={saveBookingStatus} /> : null}
     </section>
@@ -418,29 +320,11 @@ function Metric({ title, value, icon: Icon }: { title: string; value: string; ic
 
 function ManageBookingModal({ booking, managers, onClose, onSave }: { booking: BookingRow; managers: ManagerOption[]; onClose: () => void; onSave: (booking: BookingRow, values: ManageValues) => Promise<void> }) {
   const total = bookingTotal(booking);
-  const [values, setValues] = useState<ManageValues>({
-    status: booking.status || 'Pending',
-    adminStatus: booking.admin_status || 'New',
-    managerStatus: booking.manager_status || 'Pending',
-    paymentStatus: booking.payment_status || 'Not Paid',
-    paymentMethod: booking.payment_method || '',
-    paymentSource: booking.payment_source || 'direct',
-    paymentWorkflowStatus: booking.payment_workflow_status || 'unpaid',
-    collectionStatus: booking.collection_status || 'pending_collection',
-    amountReceivedAed: String(booking.amount_received_aed ?? 0),
-    assignedManagerName: booking.assigned_manager_name || '',
-    assignedVehicleName: booking.assigned_vehicle_name || '',
-    b2bAgentName: booking.b2b_agent_name || '',
-    customerArrived: Boolean(booking.customer_arrived),
-    managerNote: booking.manager_note || '',
-    internalNote: booking.internal_note || ''
-  });
+  const [values, setValues] = useState<ManageValues>({ status: booking.status || 'Pending', assignedManagerName: booking.assigned_manager_name || '', internalNote: booking.internal_note || '' });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const whatsapp = whatsAppHref(booking);
-  const amountReceived = Math.max(asNumber(values.amountReceivedAed), 0);
-  const amountPending = Math.max(total - amountReceived, 0);
-  const sourceLabel = values.paymentSource === 'b2b' ? 'B2B Booking' : 'Direct Booking';
+  const sourceLabel = paymentTypeLabel(booking);
   const managerOptions = Array.from(new Set([values.assignedManagerName, ...managers.map((manager) => manager.name)].filter(Boolean)));
 
   async function submit() {
@@ -459,14 +343,7 @@ function ManageBookingModal({ booking, managers, onClose, onSave }: { booking: B
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-primary-900/35 p-3 backdrop-blur-sm">
       <div className="max-h-[85vh] w-full max-w-4xl overflow-hidden rounded-[1.35rem] border border-white/80 bg-white shadow-[0_28px_80px_rgba(8,37,50,0.28)]">
         <div className="flex items-start justify-between gap-4 border-b border-border/70 bg-[#F7FAFA] px-4 py-3">
-          <div className="min-w-0">
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Manage Booking</p>
-            <div className="mt-1 flex flex-wrap items-center gap-2">
-              <h2 className="font-heading text-lg font-semibold text-foreground">{booking.booking_code}</h2>
-              <span className="rounded-full border border-primary/20 bg-primary-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-primary">{sourceLabel}</span>
-              {values.b2bAgentName ? <span className="rounded-full border border-gold/30 bg-gold/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-gold">{values.b2bAgentName}</span> : null}
-            </div>
-          </div>
+          <div className="min-w-0"><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Manage Booking</p><div className="mt-1 flex flex-wrap items-center gap-2"><h2 className="font-heading text-lg font-semibold text-foreground">{booking.booking_code}</h2><span className="rounded-full border border-primary/20 bg-primary-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-primary">{sourceLabel}</span>{booking.b2b_agent_name ? <span className="rounded-full border border-gold/30 bg-gold/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-gold">{booking.b2b_agent_name}</span> : null}</div></div>
           <button type="button" onClick={onClose} className="flex size-9 shrink-0 items-center justify-center rounded-full border border-border bg-white text-muted-foreground transition hover:text-primary"><X className="size-4" aria-hidden="true" /></button>
         </div>
 
@@ -474,10 +351,7 @@ function ManageBookingModal({ booking, managers, onClose, onSave }: { booking: B
           {error ? <p className="mb-3 rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</p> : null}
           <div className="grid gap-4 lg:grid-cols-[0.95fr_1.05fr]">
             <div className="rounded-[1.15rem] border border-border bg-white p-4">
-              <div className="mb-3 flex items-center justify-between gap-3">
-                <h3 className="font-heading text-base font-semibold text-foreground">Booking Summary</h3>
-                <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-bold ${statusClass(values.status)}`}>{values.status}</span>
-              </div>
+              <div className="mb-3 flex items-center justify-between gap-3"><h3 className="font-heading text-base font-semibold text-foreground">Booking Summary</h3><span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-bold ${statusClass(values.status)}`}>{values.status}</span></div>
               <div className="grid gap-1.5">
                 <InfoLine label="Customer" value={booking.customer_name || '-'} />
                 <InfoLine label="Phone" value={booking.customer_phone || '-'} />
@@ -487,23 +361,16 @@ function ManageBookingModal({ booking, managers, onClose, onSave }: { booking: B
                 <InfoLine label="Party" value={`${booking.vehicle_quantity || 1} vehicle · ${booking.guest_count || '-'} guests`} />
                 <InfoLine label="Assigned Manager" value={values.assignedManagerName || 'Not assigned'} />
                 <InfoLine label="Assigned Vehicle" value={booking.assigned_vehicle_name || 'Not assigned'} />
-                {booking.customer_notes ? <InfoLine label="Customer Note" value={booking.customer_notes} /> : null}
               </div>
+              <ReadOnlyNote label="Customer / Agent Note" value={booking.customer_notes || ''} />
             </div>
 
             <div className="grid gap-3 rounded-[1.15rem] border border-border bg-[#F7FAFA] p-4">
               <div className="grid gap-3 md:grid-cols-2">
                 <SelectField label="Booking Status" value={values.status} options={bookingStatusOptions} onChange={(status) => setValues((current) => ({ ...current, status }))} />
                 <ManagerSelectField value={values.assignedManagerName} options={managerOptions} onChange={(assignedManagerName) => setValues((current) => ({ ...current, assignedManagerName }))} />
-                <NumberField label="Amount Received" value={values.amountReceivedAed} onChange={(amountReceivedAed) => setValues((current) => ({ ...current, amountReceivedAed }))} />
-                <ReadOnlyField label="Payment Type" value={sourceLabel} />
+                <ReadOnlyField label="Booking Type" value={sourceLabel} />
               </div>
-
-              <label className="flex items-center gap-2 rounded-xl border border-border bg-white px-3 py-2 text-sm font-semibold text-foreground">
-                <input type="checkbox" checked={values.customerArrived} onChange={(event) => setValues((current) => ({ ...current, customerArrived: event.target.checked }))} className="size-4 rounded border-border" />
-                Customer arrived / received by manager
-              </label>
-
               <TextAreaField label="Internal Note" value={values.internalNote} onChange={(internalNote) => setValues((current) => ({ ...current, internalNote }))} />
               {values.status === 'Confirmed' && !values.assignedManagerName ? <p className="rounded-xl bg-amber-50 px-3 py-2 text-xs font-semibold leading-5 text-amber-700">Confirmed booking manager dashboard par tab jayegi jab manager select hoga.</p> : null}
             </div>
@@ -511,15 +378,8 @@ function ManageBookingModal({ booking, managers, onClose, onSave }: { booking: B
         </div>
 
         <div className="flex flex-col gap-3 border-t border-border/70 bg-white px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
-          <div className="grid gap-2 rounded-xl border border-primary/15 bg-primary-50/80 px-3 py-2 text-xs text-primary-900 sm:grid-cols-3 lg:min-w-[25rem]">
-            <div><span className="font-bold">Total:</span> {formatAed(total)}</div>
-            <div><span className="font-bold">Received:</span> {formatAed(amountReceived)}</div>
-            <div><span className="font-bold">Pending:</span> {formatAed(amountPending)}</div>
-          </div>
-          <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-            {whatsapp ? <Button asChild variant="outline" className="rounded-full"><a href={whatsapp} target="_blank" rel="noopener noreferrer"><MessageCircle data-icon aria-hidden="true" />WhatsApp Customer</a></Button> : null}
-            <Button type="button" onClick={submit} disabled={saving} className="rounded-full"><Save data-icon aria-hidden="true" />{saving ? 'Saving...' : 'Save Changes'}</Button>
-          </div>
+          <div className="rounded-xl border border-primary/15 bg-primary-50/80 px-3 py-2 text-xs text-primary-900"><span className="font-bold">Total:</span> {formatAed(total)} <span className="mx-2 text-muted-foreground">·</span> <span className="font-bold">Type:</span> {sourceLabel}</div>
+          <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">{whatsapp ? <Button asChild variant="outline" className="rounded-full"><a href={whatsapp} target="_blank" rel="noopener noreferrer"><MessageCircle data-icon aria-hidden="true" />WhatsApp Customer</a></Button> : null}<Button type="button" onClick={submit} disabled={saving} className="rounded-full"><Save data-icon aria-hidden="true" />{saving ? 'Saving...' : 'Save Changes'}</Button></div>
         </div>
       </div>
     </div>
@@ -528,6 +388,10 @@ function ManageBookingModal({ booking, managers, onClose, onSave }: { booking: B
 
 function InfoLine({ label, value }: { label: string; value: string }) {
   return <div className="grid gap-1 rounded-xl border border-border/60 bg-[#F7FAFA] px-3 py-2 sm:grid-cols-[7rem_1fr]"><p className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">{label}</p><p className="text-sm font-semibold leading-5 text-foreground sm:text-right">{value}</p></div>;
+}
+
+function ReadOnlyNote({ label, value }: { label: string; value: string }) {
+  return <div className="mt-3 rounded-xl border border-border/70 bg-[#F7FAFA] px-3 py-2"><p className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">{label}</p><p className="mt-1 whitespace-pre-wrap text-sm font-semibold leading-5 text-foreground">{value || 'No note added.'}</p></div>;
 }
 
 function SelectField({ label, value, options, onChange }: { label: string; value: string; options: string[]; onChange: (value: string) => void }) {
@@ -542,10 +406,6 @@ function ReadOnlyField({ label, value }: { label: string; value: string }) {
   return <div className="grid gap-1.5 text-sm font-semibold text-foreground"><span>{label}</span><div className="flex h-10 items-center rounded-xl border border-border bg-white px-3 text-sm text-muted-foreground">{value}</div></div>;
 }
 
-function NumberField({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
-  return <label className="grid gap-1.5 text-sm font-semibold text-foreground">{label}<Input type="number" min="0" step="0.01" value={value} onChange={(event) => onChange(event.target.value)} className="h-10 rounded-xl" /></label>;
-}
-
 function TextAreaField({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
-  return <label className="grid gap-1.5 text-sm font-semibold text-foreground">{label}<textarea value={value} onChange={(event) => onChange(event.target.value)} rows={3} className="rounded-xl border border-border bg-white px-3 py-2 text-sm text-foreground outline-none focus:border-primary" /></label>;
+  return <label className="grid gap-1.5 text-sm font-semibold text-foreground">{label}<textarea value={value} onChange={(event) => onChange(event.target.value)} rows={5} className="rounded-xl border border-border bg-white px-3 py-2 text-sm text-foreground outline-none focus:border-primary" /></label>;
 }
