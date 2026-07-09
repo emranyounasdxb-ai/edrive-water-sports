@@ -82,3 +82,7 @@ Before changing deployment, database, or booking workflow files:
 3. Avoid random repair SQL.
 4. Do not suggest destructive SQL unless approved.
 5. Keep the current cPanel FTP static deploy architecture intact.
+
+## Deployment marker
+
+Last FTP deploy trigger: 2026-07-09 12:57 GST from main.
