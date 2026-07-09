@@ -44,6 +44,19 @@ public/
 database/
 ```
 
+## Booking operations workflow
+
+1. Customer creates the booking from the website.
+2. Booking is saved as Pending and appears in Admin New/Pending Bookings.
+3. Admin checks customer details, coupon, date, time, and confirms availability.
+4. Confirmed booking moves to Manager/Operations queue.
+5. Manager receives the guest and checks the booking in.
+6. Manager selects the actual available vehicle at handover time.
+7. Manager completes the ride and must enter payment details.
+8. Direct cash/card payments stay under manager collection until Admin receives them.
+9. B2B payments create an invoice for the selected B2B agent and show in the agent portal.
+10. Payments tab shows manager-held collections and B2B receivables until Admin/Finance settles them.
+
 ## Supabase setup
 
 1. Create a Supabase project.
@@ -52,10 +65,11 @@ database/
 4. Run `database/002_schema.sql`.
 5. Run `database/003_rls.sql`.
 6. Run `database/004_functions.sql`.
-7. Create a staff user in Supabase Auth.
-8. Copy the Auth user UUID.
-9. Insert the staff profile in `public.users` with an Admin role.
-10. Create a public Storage bucket named `vehicle-images` for vehicle gallery assets.
+7. Run `database/005_booking_b2b_payment_workflow.sql`.
+8. Create a staff user in Supabase Auth.
+9. Copy the Auth user UUID.
+10. Insert the staff profile in `public.users` with an Admin role.
+11. Create a public Storage bucket named `vehicle-images` for vehicle gallery assets.
 
 Example staff seed:
 
@@ -104,6 +118,8 @@ Upload the generated `out/` folder contents to cPanel `public_html`.
 - Supabase handles database, auth, storage, and row-level authorization.
 - All public booking writes are done through a database RPC function.
 - Double booking is prevented by a PostgreSQL exclusion constraint.
+- Manager completion creates direct payment collection records or B2B agent invoices.
+- Admin/Finance settlement closes manager collections and B2B receivables.
 
 ## Production modules
 
@@ -111,8 +127,11 @@ Upload the generated `out/` folder contents to cPanel `public_html`.
 - Booking system
 - Staff authentication
 - Admin dashboard
+- Manager operations workflow
+- B2B agent portal invoices
 - Vehicle inventory
 - Coupons
+- Payments and collections
 - Reports
 - Notification abstraction
 - Audit logs
