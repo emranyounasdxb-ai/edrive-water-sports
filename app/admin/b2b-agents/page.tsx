@@ -1,10 +1,10 @@
 import type { Metadata } from 'next';
-import { AdminB2BAgentsPage } from '@/components/edrive/admin-pages';
+import { AdminB2BAgentsCleanPage } from '@/components/edrive/admin-b2b-agents-page';
 
 export const metadata: Metadata = {
   title: 'B2B Agents'
 };
 
 export default function Page() {
-  return <AdminB2BAgentsPage />;
+  return <AdminB2BAgentsCleanPage />;
 }
