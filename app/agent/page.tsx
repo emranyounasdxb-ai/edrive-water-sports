@@ -19,10 +19,10 @@ type AgentProfile = {
 };
 
 const quickCards = [
-  { title: 'New Booking', description: 'Create a request for your customer.', icon: CalendarPlus },
-  { title: 'My Bookings', description: 'Track submitted booking requests.', icon: LayoutDashboard },
-  { title: 'Commission', description: 'View earned and pending commission.', icon: BadgeDollarSign },
-  { title: 'Support', description: 'Contact eDrive operations team.', icon: Headphones }
+  { title: 'New Booking', description: 'Create a request for your customer with B2B package price.', icon: CalendarPlus, href: '/agent/new-booking', action: 'Create Booking' },
+  { title: 'My Bookings', description: 'Track your submitted booking requests and payment status.', icon: LayoutDashboard, href: '/agent/bookings', action: 'View Bookings' },
+  { title: 'Invoices', description: 'View payable, paid and pending balances.', icon: BadgeDollarSign, href: '', action: 'Coming Soon' },
+  { title: 'Support', description: 'Contact eDrive operations team.', icon: Headphones, href: '', action: 'Coming Soon' }
 ];
 
 function isActiveStatus(value: string | null | undefined) {
@@ -152,12 +152,16 @@ export default function AgentPortalPage() {
         </section>
 
         <section className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {quickCards.map(({ title, description, icon: Icon }) => (
+          {quickCards.map(({ title, description, icon: Icon, href, action }) => (
             <div key={title} className="rounded-[1.5rem] border border-white/85 bg-white/84 p-5 shadow-[0_18px_45px_rgba(8,37,50,0.08)] backdrop-blur-xl">
               <div className="mb-5 flex size-12 items-center justify-center rounded-2xl bg-primary-50 text-primary"><Icon className="size-5" aria-hidden="true" /></div>
               <h2 className="font-heading text-xl font-semibold text-primary-900">{title}</h2>
               <p className="mt-2 text-sm leading-6 text-muted-foreground">{description}</p>
-              <Button variant="outline" className="mt-5 rounded-full bg-white/90">Coming Soon <ArrowUpRight className="size-4" aria-hidden="true" /></Button>
+              {href ? (
+                <Button asChild variant="outline" className="mt-5 rounded-full bg-white/90"><Link href={href}>{action} <ArrowUpRight className="size-4" aria-hidden="true" /></Link></Button>
+              ) : (
+                <Button variant="outline" className="mt-5 rounded-full bg-white/90" disabled>{action} <ArrowUpRight className="size-4" aria-hidden="true" /></Button>
+              )}
             </div>
           ))}
         </section>
