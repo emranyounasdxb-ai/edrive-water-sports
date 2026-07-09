@@ -12,10 +12,12 @@ const toNullableText = (value: unknown) => {
 export function bookingRequestToRow(request: BookingRequest) {
   return {
     booking_code: request.bookingCode,
+    booking_number: request.bookingCode,
     source: request.source,
+    booking_source: request.source,
     status: request.status,
     admin_status: request.adminStatus,
-    manager_status: request.managerStatus,
+    manager_status: request.managerStatus ?? 'Pending',
     selected_package_name: request.selectedPackageName,
     selected_package_slug: request.selectedPackageSlug,
     selected_package_category: request.selectedPackageCategory,
@@ -42,6 +44,12 @@ export function bookingRequestToRow(request: BookingRequest) {
     total_amount: request.totalAmount,
     payment_status: request.paymentStatus,
     payment_method: request.paymentMethod,
+    payment_source: 'direct',
+    payment_workflow_status: 'unpaid',
+    collection_status: 'pending_collection',
+    amount_received_aed: 0,
+    amount_pending_aed: request.totalAmount,
+    customer_arrived: false,
     created_at: request.createdAt,
     updated_at: new Date().toISOString()
   };
@@ -49,6 +57,15 @@ export function bookingRequestToRow(request: BookingRequest) {
 
 export function bookingRequestToLegacyRow(request: BookingRequest) {
   const row = bookingRequestToRow(request) as Record<string, unknown>;
+  delete row.booking_number;
+  delete row.booking_source;
+  delete row.manager_status;
+  delete row.payment_source;
+  delete row.payment_workflow_status;
+  delete row.collection_status;
+  delete row.amount_received_aed;
+  delete row.amount_pending_aed;
+  delete row.customer_arrived;
   delete row.selected_package_name;
   delete row.selected_package_slug;
   delete row.selected_package_category;
@@ -60,7 +77,7 @@ export function bookingRequestToLegacyRow(request: BookingRequest) {
 
 export function isPackageColumnInsertError(message: string) {
   const value = message.toLowerCase();
-  return value.includes('selected_package') || value.includes('schema cache') || value.includes('could not find') || value.includes('column');
+  return value.includes('selected_package') || value.includes('booking_number') || value.includes('booking_source') || value.includes('manager_status') || value.includes('payment_workflow_status') || value.includes('collection_status') || value.includes('amount_received_aed') || value.includes('amount_pending_aed') || value.includes('customer_arrived') || value.includes('schema cache') || value.includes('could not find') || value.includes('column');
 }
 
 export function bookingRowToRequest(row: Record<string, unknown>): BookingRequest {
