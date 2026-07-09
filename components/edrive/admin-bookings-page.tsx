@@ -84,14 +84,9 @@ type ManageValues = {
   internalNote: string;
 };
 
-const bookingStatusOptions = ['Pending', 'Confirmed', 'Cancelled', 'No Show', 'Completed'];
+const bookingStatusOptions = ['Pending', 'Confirmed', 'Checked-In', 'In Progress', 'Completed', 'Cancelled', 'No Show'];
 const adminStatusOptions = ['New', 'Reviewed', 'Contacted', 'Confirmed', 'Closed'];
-const managerStatusOptions = ['Pending', 'Assigned', 'Guest Received', 'In Progress', 'Completed'];
 const paymentStatusOptions = ['Not Paid', 'Partial', 'Paid', 'Refunded'];
-const paymentMethodOptions = ['', 'Cash', 'Card', 'Bank Transfer', 'Online Link', 'B2B Invoice'];
-const paymentSourceOptions = ['direct', 'b2b'];
-const paymentWorkflowOptions = ['unpaid', 'partial_paid', 'paid_to_manager', 'pending_from_b2b_agent', 'received_by_admin', 'settled', 'refunded'];
-const collectionStatusOptions = ['pending_collection', 'with_manager', 'with_b2b_agent', 'with_admin', 'settled'];
 
 const supabaseProjectHost = (() => {
   try {
@@ -125,9 +120,9 @@ function prettyKey(value: string | null | undefined) {
 
 function statusClass(status: string | null) {
   if (status === 'Confirmed') return 'bg-emerald-50 text-emerald-700 border-emerald-200';
-  if (status === 'Cancelled') return 'bg-red-50 text-red-700 border-red-200';
+  if (status === 'Checked-In' || status === 'In Progress') return 'bg-primary-50 text-primary-900 border-primary/20';
+  if (status === 'Cancelled' || status === 'No Show') return 'bg-red-50 text-red-700 border-red-200';
   if (status === 'Completed') return 'bg-primary-50 text-primary-900 border-primary/20';
-  if (status === 'No Show') return 'bg-red-50 text-red-700 border-red-200';
   return 'bg-gold/10 text-gold border-gold/35';
 }
 
@@ -405,6 +400,7 @@ function ManageBookingModal({ booking, onClose, onSave }: { booking: BookingRow;
   const whatsapp = whatsAppHref(booking);
   const amountReceived = Math.max(asNumber(values.amountReceivedAed), 0);
   const amountPending = Math.max(total - amountReceived, 0);
+  const sourceLabel = values.paymentSource === 'b2b' ? 'B2B Booking' : 'Direct Booking';
 
   async function submit() {
     setSaving(true);
@@ -419,70 +415,69 @@ function ManageBookingModal({ booking, onClose, onSave }: { booking: BookingRow;
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-primary-900/35 p-4 backdrop-blur-sm">
-      <div className="max-h-[92vh] w-full max-w-5xl overflow-hidden rounded-[1.6rem] border border-white/80 bg-white shadow-[0_28px_80px_rgba(8,37,50,0.28)]">
-        <div className="flex items-start justify-between gap-4 border-b border-border/70 bg-[#F7FAFA] px-5 py-4">
-          <div>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-primary-900/35 p-3 backdrop-blur-sm">
+      <div className="max-h-[85vh] w-full max-w-4xl overflow-hidden rounded-[1.35rem] border border-white/80 bg-white shadow-[0_28px_80px_rgba(8,37,50,0.28)]">
+        <div className="flex items-start justify-between gap-4 border-b border-border/70 bg-[#F7FAFA] px-4 py-3">
+          <div className="min-w-0">
             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Manage Booking</p>
-            <h2 className="mt-1 font-heading text-xl font-semibold text-foreground">{booking.booking_code}</h2>
+            <div className="mt-1 flex flex-wrap items-center gap-2">
+              <h2 className="font-heading text-lg font-semibold text-foreground">{booking.booking_code}</h2>
+              <span className="rounded-full border border-primary/20 bg-primary-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-primary">{sourceLabel}</span>
+              {values.b2bAgentName ? <span className="rounded-full border border-gold/30 bg-gold/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-gold">{values.b2bAgentName}</span> : null}
+            </div>
           </div>
-          <button type="button" onClick={onClose} className="flex size-9 items-center justify-center rounded-full border border-border bg-white text-muted-foreground transition hover:text-primary"><X className="size-4" aria-hidden="true" /></button>
+          <button type="button" onClick={onClose} className="flex size-9 shrink-0 items-center justify-center rounded-full border border-border bg-white text-muted-foreground transition hover:text-primary"><X className="size-4" aria-hidden="true" /></button>
         </div>
 
-        <div className="max-h-[calc(92vh-5rem)] overflow-y-auto p-5">
-          {error ? <p className="mb-4 rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</p> : null}
-          <div className="grid gap-4 lg:grid-cols-[1fr_1.1fr]">
-            <div className="grid gap-3 rounded-[1.25rem] border border-border bg-white p-4">
-              <InfoLine label="Customer" value={booking.customer_name || '-'} />
-              <InfoLine label="Phone" value={booking.customer_phone || '-'} />
-              <InfoLine label="Email" value={booking.customer_email || '-'} />
-              <InfoLine label="Package" value={packageLabel(booking)} />
-              <InfoLine label="Service" value={serviceDetail(booking)} />
-              <InfoLine label="Date / Time" value={`${niceDate(booking.preferred_date)} · ${booking.preferred_time || '-'}`} />
-              <InfoLine label="Party" value={`${booking.vehicle_quantity || 1} vehicle · ${booking.guest_count || '-'} guests`} />
-              <InfoLine label="Total" value={formatAed(total)} />
-              <InfoLine label="Pending" value={formatAed(amountPending)} />
-              {booking.customer_notes ? <InfoLine label="Notes" value={booking.customer_notes} /> : null}
+        <div className="max-h-[calc(85vh-8.7rem)] overflow-y-auto p-4">
+          {error ? <p className="mb-3 rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</p> : null}
+          <div className="grid gap-4 lg:grid-cols-[0.95fr_1.05fr]">
+            <div className="rounded-[1.15rem] border border-border bg-white p-4">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <h3 className="font-heading text-base font-semibold text-foreground">Booking Summary</h3>
+                <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-bold ${statusClass(values.status)}`}>{values.status}</span>
+              </div>
+              <div className="grid gap-1.5">
+                <InfoLine label="Customer" value={booking.customer_name || '-'} />
+                <InfoLine label="Phone" value={booking.customer_phone || '-'} />
+                <InfoLine label="Email" value={booking.customer_email || '-'} />
+                <InfoLine label="Package" value={packageLabel(booking)} />
+                <InfoLine label="Date / Time" value={`${niceDate(booking.preferred_date)} · ${booking.preferred_time || '-'}`} />
+                <InfoLine label="Party" value={`${booking.vehicle_quantity || 1} vehicle · ${booking.guest_count || '-'} guests`} />
+                <InfoLine label="Assigned Vehicle" value={booking.assigned_vehicle_name || 'Not assigned'} />
+                {booking.customer_notes ? <InfoLine label="Customer Note" value={booking.customer_notes} /> : null}
+              </div>
             </div>
 
-            <div className="grid gap-4 rounded-[1.25rem] border border-border bg-[#F7FAFA] p-4">
+            <div className="grid gap-3 rounded-[1.15rem] border border-border bg-[#F7FAFA] p-4">
               <div className="grid gap-3 md:grid-cols-2">
                 <SelectField label="Booking Status" value={values.status} options={bookingStatusOptions} onChange={(status) => setValues((current) => ({ ...current, status }))} />
                 <SelectField label="Admin Status" value={values.adminStatus} options={adminStatusOptions} onChange={(adminStatus) => setValues((current) => ({ ...current, adminStatus }))} />
-                <SelectField label="Manager Status" value={values.managerStatus} options={managerStatusOptions} onChange={(managerStatus) => setValues((current) => ({ ...current, managerStatus }))} />
                 <SelectField label="Payment Status" value={values.paymentStatus} options={paymentStatusOptions} onChange={(paymentStatus) => setValues((current) => ({ ...current, paymentStatus }))} />
-                <SelectField label="Payment Method" value={values.paymentMethod} options={paymentMethodOptions} onChange={(paymentMethod) => setValues((current) => ({ ...current, paymentMethod }))} />
-                <SelectField label="Payment Source" value={values.paymentSource} options={paymentSourceOptions} onChange={(paymentSource) => setValues((current) => ({ ...current, paymentSource, paymentWorkflowStatus: paymentSource === 'b2b' ? 'pending_from_b2b_agent' : current.paymentWorkflowStatus }))} />
-                <SelectField label="Payment Workflow" value={values.paymentWorkflowStatus} options={paymentWorkflowOptions} onChange={(paymentWorkflowStatus) => setValues((current) => ({ ...current, paymentWorkflowStatus }))} />
-                <SelectField label="Collection Status" value={values.collectionStatus} options={collectionStatusOptions} onChange={(collectionStatus) => setValues((current) => ({ ...current, collectionStatus }))} />
-              </div>
-
-              <div className="grid gap-3 md:grid-cols-2">
-                <TextField label="Manager" value={values.assignedManagerName} onChange={(assignedManagerName) => setValues((current) => ({ ...current, assignedManagerName }))} placeholder="Manager name" />
-                <TextField label="Assigned Vehicle" value={values.assignedVehicleName} onChange={(assignedVehicleName) => setValues((current) => ({ ...current, assignedVehicleName }))} placeholder="Vehicle name/code" />
-                <TextField label="B2B Agent" value={values.b2bAgentName} onChange={(b2bAgentName) => setValues((current) => ({ ...current, b2bAgentName }))} placeholder="Agent company" />
+                <TextField label="Assigned Manager" value={values.assignedManagerName} onChange={(assignedManagerName) => setValues((current) => ({ ...current, assignedManagerName }))} placeholder="Manager name" />
                 <NumberField label="Amount Received" value={values.amountReceivedAed} onChange={(amountReceivedAed) => setValues((current) => ({ ...current, amountReceivedAed }))} />
+                <ReadOnlyField label="Payment Type" value={sourceLabel} />
               </div>
 
-              <label className="flex items-center gap-2 text-sm font-semibold text-foreground">
+              <label className="flex items-center gap-2 rounded-xl border border-border bg-white px-3 py-2 text-sm font-semibold text-foreground">
                 <input type="checkbox" checked={values.customerArrived} onChange={(event) => setValues((current) => ({ ...current, customerArrived: event.target.checked }))} className="size-4 rounded border-border" />
                 Customer arrived / received by manager
               </label>
 
-              <TextAreaField label="Manager Note" value={values.managerNote} onChange={(managerNote) => setValues((current) => ({ ...current, managerNote }))} />
               <TextAreaField label="Internal Note" value={values.internalNote} onChange={(internalNote) => setValues((current) => ({ ...current, internalNote }))} />
-
-              <div className="grid gap-2 rounded-xl border border-primary/15 bg-white px-3 py-2 text-xs text-primary-900 md:grid-cols-3">
-                <div><span className="font-bold">Total:</span> {formatAed(total)}</div>
-                <div><span className="font-bold">Received:</span> {formatAed(amountReceived)}</div>
-                <div><span className="font-bold">Pending:</span> {formatAed(amountPending)}</div>
-              </div>
-
-              <div className="flex flex-col gap-2 sm:flex-row">
-                {whatsapp ? <Button asChild variant="outline"><a href={whatsapp} target="_blank" rel="noopener noreferrer"><MessageCircle data-icon aria-hidden="true" />WhatsApp Customer</a></Button> : null}
-                <Button type="button" onClick={submit} disabled={saving}><Save data-icon aria-hidden="true" />{saving ? 'Saving...' : 'Save Changes'}</Button>
-              </div>
             </div>
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-3 border-t border-border/70 bg-white px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="grid gap-2 rounded-xl border border-primary/15 bg-primary-50/80 px-3 py-2 text-xs text-primary-900 sm:grid-cols-3 lg:min-w-[25rem]">
+            <div><span className="font-bold">Total:</span> {formatAed(total)}</div>
+            <div><span className="font-bold">Received:</span> {formatAed(amountReceived)}</div>
+            <div><span className="font-bold">Pending:</span> {formatAed(amountPending)}</div>
+          </div>
+          <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+            {whatsapp ? <Button asChild variant="outline" className="rounded-full"><a href={whatsapp} target="_blank" rel="noopener noreferrer"><MessageCircle data-icon aria-hidden="true" />WhatsApp Customer</a></Button> : null}
+            <Button type="button" onClick={submit} disabled={saving} className="rounded-full"><Save data-icon aria-hidden="true" />{saving ? 'Saving...' : 'Save Changes'}</Button>
           </div>
         </div>
       </div>
@@ -491,7 +486,7 @@ function ManageBookingModal({ booking, onClose, onSave }: { booking: BookingRow;
 }
 
 function InfoLine({ label, value }: { label: string; value: string }) {
-  return <div className="rounded-xl border border-border/70 bg-white px-3 py-2"><p className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">{label}</p><p className="mt-1 text-sm font-semibold leading-5 text-foreground">{value}</p></div>;
+  return <div className="grid gap-1 rounded-xl border border-border/60 bg-[#F7FAFA] px-3 py-2 sm:grid-cols-[7rem_1fr]"><p className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">{label}</p><p className="text-sm font-semibold leading-5 text-foreground sm:text-right">{value}</p></div>;
 }
 
 function SelectField({ label, value, options, onChange }: { label: string; value: string; options: string[]; onChange: (value: string) => void }) {
@@ -500,6 +495,10 @@ function SelectField({ label, value, options, onChange }: { label: string; value
 
 function TextField({ label, value, onChange, placeholder }: { label: string; value: string; onChange: (value: string) => void; placeholder?: string }) {
   return <label className="grid gap-1.5 text-sm font-semibold text-foreground">{label}<Input value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} className="h-10 rounded-xl" /></label>;
+}
+
+function ReadOnlyField({ label, value }: { label: string; value: string }) {
+  return <div className="grid gap-1.5 text-sm font-semibold text-foreground"><span>{label}</span><div className="flex h-10 items-center rounded-xl border border-border bg-white px-3 text-sm text-muted-foreground">{value}</div></div>;
 }
 
 function NumberField({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
