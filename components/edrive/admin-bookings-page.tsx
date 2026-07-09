@@ -84,7 +84,7 @@ type ManageValues = {
   internalNote: string;
 };
 
-const bookingStatusOptions = ['Pending', 'Confirmed', 'Checked-In', 'In Progress', 'Completed', 'Cancelled', 'No Show'];
+const bookingStatusOptions = ['Pending', 'Confirmed', 'Cancelled'];
 const adminStatusOptions = ['New', 'Reviewed', 'Contacted', 'Confirmed', 'Closed'];
 const paymentStatusOptions = ['Not Paid', 'Partial', 'Paid', 'Refunded'];
 
@@ -120,7 +120,6 @@ function prettyKey(value: string | null | undefined) {
 
 function statusClass(status: string | null) {
   if (status === 'Confirmed') return 'bg-emerald-50 text-emerald-700 border-emerald-200';
-  if (status === 'Checked-In' || status === 'In Progress') return 'bg-primary-50 text-primary-900 border-primary/20';
   if (status === 'Cancelled' || status === 'No Show') return 'bg-red-50 text-red-700 border-red-200';
   if (status === 'Completed') return 'bg-primary-50 text-primary-900 border-primary/20';
   return 'bg-gold/10 text-gold border-gold/35';
