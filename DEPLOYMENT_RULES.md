@@ -85,4 +85,4 @@ Before changing deployment, database, or booking workflow files:
 
 ## Deployment marker
 
-Last FTP deploy trigger: 2026-07-09 12:57 GST from main.
+Last FTP deploy trigger: 2026-07-09 17:02 GST from main.
