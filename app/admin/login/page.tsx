@@ -16,6 +16,10 @@ const loginOptions = [
   { id: 'agent' as const, title: 'B2B Agent', description: 'Hotels, travel agents, vendors and tour partners.', icon: Building2 }
 ];
 
+function isActiveStatus(value: string | null | undefined) {
+  return String(value || '').trim().toLowerCase() === 'active';
+}
+
 export default function Page() {
   const router = useRouter();
   const [loginType, setLoginType] = useState<LoginType>('staff');
@@ -44,10 +48,9 @@ export default function Page() {
         .from('admin_users')
         .select('id,status')
         .eq('auth_user_id', loginData.user.id)
-        .eq('status', 'active')
         .maybeSingle();
 
-      if (profileError || !profile) {
+      if (profileError || !profile || !isActiveStatus(profile.status)) {
         await supabase.auth.signOut();
         setLoading(false);
         setError('This account is not linked to an active eDrive staff profile. Please contact the administrator.');
@@ -61,13 +64,12 @@ export default function Page() {
     }
 
     const { data: agent, error: agentError } = await supabase
-      .from('b2b_agent_users')
-      .select('id,status,agent_id')
+      .from('b2b_agents')
+      .select('id,status,auth_user_id')
       .eq('auth_user_id', loginData.user.id)
-      .eq('status', 'active')
       .maybeSingle();
 
-    if (agentError || !agent) {
+    if (agentError || !agent || !isActiveStatus(agent.status)) {
       await supabase.auth.signOut();
       setLoading(false);
       setError('This account is not linked to an active B2B agent profile. Please contact the administrator.');
@@ -141,7 +143,7 @@ export default function Page() {
 
                 {error ? <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</p> : null}
 
-                <Button type="submit" disabled={loading} className="mt-2 h-14 rounded-full bg-primary-900 text-base shadow-[0_14px_30px_rgba(4,32,40,0.22)] hover:bg-primary-800">
+                <Button type="submit" disabled={loading} className="h-14 w-full rounded-full bg-primary-900 text-base shadow-[0_20px_38px_rgba(8,37,50,0.18)] hover:bg-primary-800">
                   <ArrowRightToLine className="size-5 text-gold" aria-hidden="true" />{loading ? 'Signing in...' : loginType === 'staff' ? 'Sign in as Staff' : 'Sign in as B2B Agent'}
                 </Button>
               </form>
@@ -154,24 +156,17 @@ export default function Page() {
             <div className="relative z-10 flex h-full min-h-[30rem] flex-col justify-between">
               <div>
                 <span className="inline-flex items-center gap-2 rounded-full border border-gold/45 bg-white/52 px-4 py-2 text-xs font-bold uppercase tracking-[0.2em] text-[#9A6B25] shadow-[0_12px_30px_rgba(8,37,50,0.12)] backdrop-blur-md">
-                  <ShieldCheck className="size-4 text-[#9A6B25]" aria-hidden="true" /> Secure Portal
+                  <UserRound className="size-4" aria-hidden="true" />Secure Portal
                 </span>
-                <h1 className="mt-7 max-w-[28rem] font-heading text-[3.2rem] font-semibold leading-[0.96] tracking-[-0.04em] text-[#8B6426] drop-shadow-[0_1px_0_rgba(255,255,255,0.75)] sm:text-[4.2rem] xl:text-[4.85rem]">
-                  <span className="block">Welcome to</span>
+                <h1 className="mt-8 max-w-[24rem] font-heading text-5xl font-semibold leading-[0.96] tracking-[-0.05em] text-primary-900 sm:text-6xl">
+                  Premium marine operations for
                   <span className="block text-primary-900">eDrive</span>
                 </h1>
                 <div className="mt-5 h-1 w-20 rounded-full bg-[#B98A42] shadow-[0_8px_20px_rgba(185,138,66,0.26)]" />
-                <p className="ml-1 mt-3 max-w-[22rem] rounded-xl border border-white/24 bg-white/16 px-3.5 py-2.5 text-xs font-semibold leading-5 text-primary-900/90 shadow-[0_10px_24px_rgba(8,37,50,0.07)] backdrop-blur-sm sm:text-sm sm:leading-6">
-                  Staff access is verified by Supabase Auth User ID, not by email fallback.
-                </p>
               </div>
-              <div className="flex max-w-[35rem] flex-wrap gap-3">
-                {['Secure access', 'Admin portal', 'Daily operations'].map((label) => (
-                  <div key={label} className="flex min-w-[8.25rem] items-center gap-2 rounded-full border border-white/45 bg-white/38 px-4 py-2.5 shadow-[0_12px_28px_rgba(8,37,50,0.12)] backdrop-blur-md">
-                    <UserRound className="size-4 text-[#9A6B25]" aria-hidden="true" />
-                    <p className="text-xs font-bold text-primary-900">{label}</p>
-                  </div>
-                ))}
+              <div className="grid gap-3 rounded-[1.5rem] border border-white/45 bg-white/42 p-4 shadow-[0_18px_44px_rgba(8,37,50,0.12)] backdrop-blur-md sm:grid-cols-2">
+                <div><p className="text-xs font-bold uppercase tracking-[0.18em] text-[#9A6B25]">Staff</p><p className="mt-1 text-sm font-semibold text-primary-900">Bookings, fleet and payment operations.</p></div>
+                <div><p className="text-xs font-bold uppercase tracking-[0.18em] text-[#9A6B25]">Partners</p><p className="mt-1 text-sm font-semibold text-primary-900">B2B access for selected agents and vendors.</p></div>
               </div>
             </div>
           </div>
