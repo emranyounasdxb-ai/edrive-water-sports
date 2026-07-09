@@ -128,6 +128,27 @@ create table if not exists public.bookings (
 );
 
 alter table public.bookings
+  add column if not exists booking_number text default ('EDW-' || to_char(now(), 'YYYYMMDD') || '-' || upper(substr(replace(gen_random_uuid()::text, '-', ''), 1, 6))),
+  add column if not exists customer_id uuid references public.customers(id),
+  add column if not exists vehicle_id uuid references public.vehicles(id),
+  add column if not exists coupon_id uuid references public.coupons(id),
+  add column if not exists start_at timestamptz not null default now(),
+  add column if not exists end_at timestamptz not null default (now() + interval '1 hour'),
+  add column if not exists duration_minutes integer not null default 60,
+  add column if not exists status public.booking_status not null default 'pending',
+  add column if not exists gross_amount_aed numeric(12,2) not null default 0,
+  add column if not exists discount_amount_aed numeric(12,2) not null default 0,
+  add column if not exists net_amount_aed numeric(12,2) not null default 0,
+  add column if not exists special_notes text,
+  add column if not exists assigned_staff_id uuid references public.users(id),
+  add column if not exists created_by uuid references public.users(id),
+  add column if not exists updated_by uuid references public.users(id),
+  add column if not exists created_at timestamptz not null default now(),
+  add column if not exists updated_at timestamptz not null default now();
+
+update public.bookings set end_at = start_at + interval '1 hour' where end_at <= start_at;
+
+alter table public.bookings
   drop constraint if exists bookings_no_active_overlap;
 
 alter table public.bookings
@@ -136,6 +157,8 @@ alter table public.bookings
     vehicle_id with =,
     tstzrange(start_at, end_at, '[)') with &&
   ) where (status::text in ('pending', 'confirmed'));
+
+create unique index if not exists bookings_booking_number_unique on public.bookings(booking_number);
 
 create table if not exists public.payments (
   id uuid primary key default gen_random_uuid(),
@@ -148,6 +171,16 @@ create table if not exists public.payments (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.payments
+  add column if not exists booking_id uuid references public.bookings(id) on delete cascade,
+  add column if not exists amount_aed numeric(12,2) not null default 0,
+  add column if not exists payment_method text,
+  add column if not exists payment_status text not null default 'unpaid',
+  add column if not exists provider_reference text,
+  add column if not exists metadata jsonb not null default '{}'::jsonb,
+  add column if not exists created_at timestamptz not null default now(),
+  add column if not exists updated_at timestamptz not null default now();
 
 create table if not exists public.logs (
   id uuid primary key default gen_random_uuid(),
