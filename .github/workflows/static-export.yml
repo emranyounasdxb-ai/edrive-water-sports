@@ -1,4 +1,4 @@
-name: Static Export
+name: FTP Static Deploy
 
 on:
   workflow_dispatch:
@@ -7,7 +7,7 @@ on:
       - main
 
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
     env:
       NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
@@ -29,9 +29,23 @@ jobs:
       - name: Build static export
         run: npm run build
 
-      - name: Upload static export
+      - name: Upload static export artifact
         uses: actions/upload-artifact@v4
         with:
           name: edrive-static-export
           path: out
           if-no-files-found: error
+
+      - name: Deploy to cPanel by FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.6
+        with:
+          server: ${{ secrets.CPANEL_FTP_SERVER }}
+          username: ${{ secrets.CPANEL_FTP_USERNAME }}
+          password: ${{ secrets.CPANEL_FTP_PASSWORD }}
+          local-dir: ./out/
+          server-dir: ${{ secrets.CPANEL_FTP_SERVER_DIR }}
+          dangerous-clean-slate: false
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/node_modules/**
