@@ -22,8 +22,6 @@ set customer_name = coalesce(nullif(trim(b.customer_name), ''), c.full_name, 'Cu
     customer_email = coalesce(nullif(trim(b.customer_email), ''), c.email, ''),
     customer_whatsapp = coalesce(nullif(trim(b.customer_whatsapp), ''), c.whatsapp, ''),
     customer_country = coalesce(nullif(trim(b.customer_country), ''), c.country, ''),
-    booking_source = coalesce(nullif(trim(b.booking_source), ''), 'website'),
-    payment_status = coalesce(nullif(trim(b.payment_status), ''), 'not_paid'),
     updated_at = now()
 from public.customers c
 where c.id = b.customer_id;
@@ -34,6 +32,4 @@ set customer_name = coalesce(nullif(trim(customer_name), ''), 'Customer'),
     customer_email = coalesce(customer_email, ''),
     customer_whatsapp = coalesce(customer_whatsapp, ''),
     customer_country = coalesce(customer_country, ''),
-    booking_source = coalesce(nullif(trim(booking_source), ''), 'website'),
-    payment_status = coalesce(nullif(trim(payment_status), ''), 'not_paid'),
     updated_at = now();
