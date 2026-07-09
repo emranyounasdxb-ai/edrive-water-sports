@@ -78,6 +78,10 @@ function categoryLabel(category: string) {
   return category.replace(/_/g, ' ');
 }
 
+function packageSelectLabel(item: PackageRow) {
+  return item.title || `${categoryLabel(item.category)} ${item.duration_minutes} min`;
+}
+
 function todayIso() {
   return new Date().toISOString().slice(0, 10);
 }
@@ -263,7 +267,7 @@ export default function B2BNewBookingPage() {
             <CardHeader className="border-b border-border/70 bg-[#F7FAFA]">
               <div className="mb-2 flex size-12 items-center justify-center rounded-2xl bg-primary-50 text-primary"><CalendarPlus className="size-5" aria-hidden="true" /></div>
               <CardTitle className="font-heading text-2xl font-semibold">Create B2B booking</CardTitle>
-              <CardDescription>{agent?.company_name} ke liye booking create karein. Yahan sirf B2B package price show hoti hai.</CardDescription>
+              <CardDescription>{agent?.company_name} ke liye booking create karein. Package select karein, B2B price side summary me show hogi.</CardDescription>
             </CardHeader>
             <CardContent className="p-5">
               {error ? <p className="mb-4 rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</p> : null}
@@ -273,7 +277,7 @@ export default function B2BNewBookingPage() {
                 <label className="grid gap-1.5 text-sm font-semibold text-foreground md:col-span-2">
                   B2B Package
                   <select value={form.packageId} onChange={(event) => updateField('packageId', event.target.value)} required className="h-11 rounded-xl border border-border bg-white px-3 text-sm text-foreground outline-none focus:border-primary">
-                    {packages.map((item) => <option key={item.id} value={item.id}>{item.title} · {categoryLabel(item.category)} · {item.duration_minutes} min · {item.capacity || 2} seater · {formatAed(Number(item.b2b_price || 0))}</option>)}
+                    {packages.map((item) => <option key={item.id} value={item.id}>{packageSelectLabel(item)}</option>)}
                   </select>
                 </label>
                 <FormInput label="Customer Name" value={form.customerName} required onChange={(value) => updateField('customerName', value)} />
