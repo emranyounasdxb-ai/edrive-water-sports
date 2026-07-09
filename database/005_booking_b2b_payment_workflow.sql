@@ -1,3 +1,5 @@
+create extension if not exists btree_gist;
+
 do $$ begin create type public.payment_workflow_status as enum ('unpaid','partial_paid','paid','paid_to_manager','pending_from_b2b_agent','received_by_admin','settled','refund_pending','refunded'); exception when duplicate_object then null; end $$;
 do $$ begin create type public.collection_status as enum ('pending_collection','with_admin','with_manager','with_captain','with_driver','with_b2b_agent','deposited','verified_by_finance'); exception when duplicate_object then null; end $$;
 do $$ begin create type public.fleet_status as enum ('available','assigned','in_ride','maintenance','damaged','out_of_service'); exception when duplicate_object then null; end $$;
@@ -103,7 +105,7 @@ alter table public.bookings
 alter table public.bookings drop constraint if exists bookings_source_check;
 alter table public.bookings add constraint bookings_source_check check (source in ('website','admin','walk_in','b2b'));
 alter table public.bookings drop constraint if exists bookings_no_active_overlap;
-alter table public.bookings add constraint bookings_no_active_overlap exclude using gist (coalesce(assigned_vehicle_id, vehicle_id) with =, tstzrange(start_at,end_at,'[)') with &&) where (status::text in ('pending','confirmed','checked_in','ready','in_progress'));
+alter table public.bookings add constraint bookings_no_active_overlap exclude using gist (coalesce(assigned_vehicle_id, vehicle_id) with =, tstzrange(start_at,end_at,'[)') with &&) where (status in ('pending'::public.booking_status,'confirmed'::public.booking_status,'checked_in'::public.booking_status,'ready'::public.booking_status,'in_progress'::public.booking_status));
 
 alter table public.payments drop constraint if exists payments_payment_status_check;
 alter table public.payments add constraint payments_payment_status_check check (payment_status in ('unpaid','authorized','paid','paid_to_manager','pending_from_b2b_agent','received_by_admin','settled','failed','refunded'));
