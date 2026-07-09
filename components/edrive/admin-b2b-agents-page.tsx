@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Building2, FileClock, RefreshCw, Save, Trash2, UsersRound, WalletCards } from 'lucide-react';
+import { Building2, Eye, FileClock, MessageCircle, RefreshCw, Save, Trash2, UsersRound, WalletCards, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,11 +9,13 @@ import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
 import { formatAed } from '@/lib/booking-data';
+import { bookingRequestsTable } from '@/lib/booking-records';
 import { supabase } from '@/lib/supabase-client';
 
 type AgentStatus = 'Active' | 'Inactive' | 'Suspended';
 type AgentType = 'B2B Agent' | 'Tour Operator' | 'Hotel' | 'Travel Desk' | 'Vendor' | 'Freelancer';
 type PaymentTerms = 'Instant' | 'Daily' | 'Weekly' | 'Monthly' | 'Custom';
+type PortalRole = 'super_admin' | 'admin' | 'booking_staff' | 'manager' | 'finance' | string;
 
 type AgentRow = {
   id: string;
@@ -50,6 +52,26 @@ type AgentForm = {
   notes: string;
 };
 
+type BookingRow = {
+  b2b_agent_id?: string | null;
+  b2b_agent_name?: string | null;
+  b2b_agent_email?: string | null;
+  payment_source?: string | null;
+  total_amount?: number | string | null;
+  amount_pending_aed?: number | string | null;
+  status?: string | null;
+  preferred_date?: string | null;
+  created_at?: string | null;
+};
+
+type AgentStats = {
+  totalBookings: number;
+  pendingBookings: number;
+  pendingAmount: number;
+  totalAmount: number;
+  lastBookingDate: string;
+};
+
 const tableName = 'b2b_agents';
 const defaultRateProfile = 'Default B2B Package Rates';
 const agentTypes: AgentType[] = ['B2B Agent', 'Tour Operator', 'Hotel', 'Travel Desk', 'Vendor', 'Freelancer'];
@@ -76,14 +98,7 @@ const emptyForm: AgentForm = {
 const testAgents = [
   { agent_code: 'B2B-001', company_name: 'SkyWay Travel LLC', agent_type: 'B2B Agent', contact_person: 'Ahmed Khan', phone: '+971500000001', login_email: 'skyway@test.com', email: 'skyway@test.com', billing_email: 'skyway@test.com', payment_terms: 'Instant', credit_limit_aed: 5000, status: 'Active', rate_profile: defaultRateProfile, special_pricing: false, notes: 'Test partner account. Create Supabase Auth login separately with the shared test password.', is_test_record: true },
   { agent_code: 'B2B-002', company_name: 'Golden Wings Tourism', agent_type: 'Tour Operator', contact_person: 'Sarah Ali', phone: '+971500000002', login_email: 'golden@test.com', email: 'golden@test.com', billing_email: 'golden@test.com', payment_terms: 'Weekly', credit_limit_aed: 12000, status: 'Active', rate_profile: defaultRateProfile, special_pricing: false, notes: 'Test partner account. Create Supabase Auth login separately with the shared test password.', is_test_record: true },
-  { agent_code: 'B2B-003', company_name: 'Royal Stay Hotels', agent_type: 'Hotel', contact_person: "John D'Souza", phone: '+971500000003', login_email: 'royalstay@test.com', email: 'royalstay@test.com', billing_email: 'royalstay@test.com', payment_terms: 'Monthly', credit_limit_aed: 20000, status: 'Active', rate_profile: defaultRateProfile, special_pricing: false, notes: 'Test partner account. Create Supabase Auth login separately with the shared test password.', is_test_record: true },
-  { agent_code: 'B2B-004', company_name: 'Gulf Corporate Travel', agent_type: 'Travel Desk', contact_person: 'Faisal Ahmed', phone: '+971500000004', login_email: 'gulfdesk@test.com', email: 'gulfdesk@test.com', billing_email: 'gulfdesk@test.com', payment_terms: 'Monthly', credit_limit_aed: 10000, status: 'Active', rate_profile: defaultRateProfile, special_pricing: false, notes: 'Test partner account. Create Supabase Auth login separately with the shared test password.', is_test_record: true },
-  { agent_code: 'B2B-005', company_name: 'Global Visa Services', agent_type: 'Vendor', contact_person: 'Imran Sheikh', phone: '+971500000005', login_email: 'visa@test.com', email: 'visa@test.com', billing_email: 'visa@test.com', payment_terms: 'Weekly', credit_limit_aed: 3000, status: 'Active', rate_profile: defaultRateProfile, special_pricing: true, notes: 'Special fixed referral handling for testing.', is_test_record: true },
-  { agent_code: 'B2B-006', company_name: 'Elite Holidays UAE', agent_type: 'B2B Agent', contact_person: 'Maria Fernandes', phone: '+971500000006', login_email: 'elite@test.com', email: 'elite@test.com', billing_email: 'elite@test.com', payment_terms: 'Daily', credit_limit_aed: 4000, status: 'Active', rate_profile: defaultRateProfile, special_pricing: false, notes: 'Test partner account. Create Supabase Auth login separately with the shared test password.', is_test_record: true },
-  { agent_code: 'B2B-007', company_name: 'Desert Pearl Tourism', agent_type: 'Tour Operator', contact_person: 'Khalid Hassan', phone: '+971500000007', login_email: 'desert@test.com', email: 'desert@test.com', billing_email: 'desert@test.com', payment_terms: 'Custom', credit_limit_aed: 0, status: 'Suspended', rate_profile: defaultRateProfile, special_pricing: true, notes: 'Suspended test account for access-block testing.', is_test_record: true },
-  { agent_code: 'B2B-008', company_name: 'City Hotels Group', agent_type: 'Hotel', contact_person: 'Robert Thomas', phone: '+971500000008', login_email: 'cityhotel@test.com', email: 'cityhotel@test.com', billing_email: 'cityhotel@test.com', payment_terms: 'Monthly', credit_limit_aed: 25000, status: 'Active', rate_profile: defaultRateProfile, special_pricing: false, notes: 'Test partner account. Create Supabase Auth login separately with the shared test password.', is_test_record: true },
-  { agent_code: 'B2B-009', company_name: 'FlyConnect Travel', agent_type: 'B2B Agent', contact_person: 'Zubair Malik', phone: '+971500000009', login_email: 'flyconnect@test.com', email: 'flyconnect@test.com', billing_email: 'flyconnect@test.com', payment_terms: 'Instant', credit_limit_aed: 0, status: 'Inactive', rate_profile: defaultRateProfile, special_pricing: false, notes: 'Inactive test account for access-block testing.', is_test_record: true },
-  { agent_code: 'B2B-010', company_name: 'Quick Booking Services', agent_type: 'Freelancer', contact_person: 'Ali Raza', phone: '+971500000010', login_email: 'freelancer@test.com', email: 'freelancer@test.com', billing_email: 'freelancer@test.com', payment_terms: 'Instant', credit_limit_aed: 1500, status: 'Active', rate_profile: defaultRateProfile, special_pricing: false, notes: 'Test partner account. Create Supabase Auth login separately with the shared test password.', is_test_record: true }
+  { agent_code: 'B2B-003', company_name: 'Royal Stay Hotels', agent_type: 'Hotel', contact_person: "John D'Souza", phone: '+971500000003', login_email: 'royalstay@test.com', email: 'royalstay@test.com', billing_email: 'royalstay@test.com', payment_terms: 'Monthly', credit_limit_aed: 20000, status: 'Active', rate_profile: defaultRateProfile, special_pricing: false, notes: 'Test partner account. Create Supabase Auth login separately with the shared test password.', is_test_record: true }
 ];
 
 function cleanEmail(value: string) {
@@ -107,6 +122,10 @@ function normalizeStatus(value: string): AgentStatus {
 
 function asBool(value: unknown) {
   return value === true || value === 'true';
+}
+
+function asNumber(value: unknown) {
+  return Number(value || 0);
 }
 
 function mapAgent(row: Record<string, unknown>): AgentRow {
@@ -163,14 +182,61 @@ function formFromAgent(agent: AgentRow): AgentForm {
   };
 }
 
+function matchAgentBooking(agent: AgentRow, booking: BookingRow) {
+  const bookingName = String(booking.b2b_agent_name || '').toLowerCase();
+  const bookingEmail = String(booking.b2b_agent_email || '').toLowerCase();
+  return booking.b2b_agent_id === agent.id || bookingName === agent.company_name.toLowerCase() || bookingEmail === agent.login_email.toLowerCase();
+}
+
+function emptyStats(): AgentStats {
+  return { totalBookings: 0, pendingBookings: 0, pendingAmount: 0, totalAmount: 0, lastBookingDate: '-' };
+}
+
+function formatDate(value: string | null | undefined) {
+  if (!value) return '-';
+  return new Intl.DateTimeFormat('en-AE', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(value.includes('T') ? value : `${value}T12:00:00`));
+}
+
+function whatsappHref(phone: string, company: string) {
+  let digits = phone.replace(/\D/g, '');
+  if (!digits || digits.length < 7) return '';
+  if (digits.startsWith('00')) digits = digits.slice(2);
+  if (digits.startsWith('0')) digits = `971${digits.slice(1)}`;
+  if (digits.startsWith('5') && digits.length === 9) digits = `971${digits}`;
+  const message = encodeURIComponent(`Hello ${company}, this is eDrive Water Sports regarding your B2B partner account.`);
+  return `https://web.whatsapp.com/send?phone=${digits}&text=${message}&app_absent=0`;
+}
+
 export function AdminB2BAgentsCleanPage() {
   const [agents, setAgents] = useState<AgentRow[]>([]);
+  const [bookings, setBookings] = useState<BookingRow[]>([]);
   const [form, setForm] = useState<AgentForm>(emptyForm);
   const [editingId, setEditingId] = useState('');
+  const [role, setRole] = useState<PortalRole>('admin');
+  const [roleReady, setRoleReady] = useState(false);
+  const [selectedAgent, setSelectedAgent] = useState<AgentRow | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [query, setQuery] = useState('');
+
+  const canManageAgents = role === 'super_admin';
+
+  async function loadRole() {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const authUser = sessionData.session?.user;
+    const authEmail = authUser?.email || '';
+    if (!authUser) {
+      setRole('admin');
+      setRoleReady(true);
+      return;
+    }
+    const filter = authEmail ? `auth_user_id.eq.${authUser.id},email.eq.${authEmail}` : `auth_user_id.eq.${authUser.id}`;
+    const { data } = await supabase.from('admin_users').select('role,status').or(filter).limit(1);
+    const profile = (data || [])[0] as { role?: string | null; status?: string | null } | undefined;
+    setRole(String(profile?.role || 'admin'));
+    setRoleReady(true);
+  }
 
   async function loadAgents() {
     setLoading(true);
@@ -187,16 +253,51 @@ export function AdminB2BAgentsCleanPage() {
     setLoading(false);
   }
 
+  async function loadBookings() {
+    const { data } = await supabase
+      .from(bookingRequestsTable)
+      .select('b2b_agent_id,b2b_agent_name,b2b_agent_email,payment_source,total_amount,amount_pending_aed,status,preferred_date,created_at')
+      .eq('payment_source', 'b2b')
+      .limit(500);
+    setBookings((data || []) as BookingRow[]);
+  }
+
+  async function refreshAll() {
+    await Promise.all([loadRole(), loadAgents(), loadBookings()]);
+  }
+
   useEffect(() => {
-    void loadAgents();
+    void refreshAll();
   }, []);
+
+  const statsByAgent = useMemo(() => {
+    const map = new Map<string, AgentStats>();
+    agents.forEach((agent) => {
+      const stats = emptyStats();
+      bookings.filter((booking) => matchAgentBooking(agent, booking)).forEach((booking) => {
+        stats.totalBookings += 1;
+        const pending = asNumber(booking.amount_pending_aed);
+        stats.pendingAmount += pending;
+        stats.totalAmount += asNumber(booking.total_amount);
+        if ((booking.status || 'Pending') === 'Pending') stats.pendingBookings += 1;
+        const dateValue = booking.preferred_date || booking.created_at || '';
+        if (dateValue && (stats.lastBookingDate === '-' || new Date(dateValue) > new Date(stats.lastBookingDate))) stats.lastBookingDate = dateValue;
+      });
+      stats.lastBookingDate = formatDate(stats.lastBookingDate === '-' ? '' : stats.lastBookingDate);
+      map.set(agent.id || agent.agent_code, stats);
+    });
+    return map;
+  }, [agents, bookings]);
 
   const metrics = useMemo(() => {
     const active = agents.filter((agent) => agent.status === 'Active').length;
     const blocked = agents.filter((agent) => agent.status !== 'Active').length;
     const creditLimit = agents.reduce((sum, agent) => sum + Number(agent.credit_limit_aed || 0), 0);
-    return { active, blocked, creditLimit };
-  }, [agents]);
+    const pendingAmount = bookings.reduce((sum, booking) => sum + asNumber(booking.amount_pending_aed), 0);
+    const todayIso = new Date().toISOString().slice(0, 10);
+    const todayBookings = bookings.filter((booking) => String(booking.created_at || '').slice(0, 10) === todayIso || booking.preferred_date === todayIso).length;
+    return { active, blocked, creditLimit, pendingAmount, todayBookings };
+  }, [agents, bookings]);
 
   const filteredAgents = useMemo(() => {
     const term = query.trim().toLowerCase();
@@ -214,6 +315,7 @@ export function AdminB2BAgentsCleanPage() {
   }
 
   async function saveAgent() {
+    if (!canManageAgents) return;
     setSaving(true);
     setError('');
     try {
@@ -256,6 +358,7 @@ export function AdminB2BAgentsCleanPage() {
   }
 
   async function addTestAgents() {
+    if (!canManageAgents) return;
     setSaving(true);
     setError('');
     try {
@@ -270,6 +373,7 @@ export function AdminB2BAgentsCleanPage() {
   }
 
   async function deleteTestAgents() {
+    if (!canManageAgents) return;
     if (!window.confirm('Delete all test B2B agents?')) return;
     setSaving(true);
     setError('');
@@ -286,6 +390,10 @@ export function AdminB2BAgentsCleanPage() {
   }
 
   function editAgent(agent: AgentRow) {
+    if (!canManageAgents) {
+      setSelectedAgent(agent);
+      return;
+    }
     setEditingId(agent.id);
     setForm(formFromAgent(agent));
   }
@@ -297,117 +405,161 @@ export function AdminB2BAgentsCleanPage() {
           <div>
             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">B2B Agents</p>
             <h1 className="mt-2 font-heading text-3xl font-semibold text-foreground sm:text-4xl">Partner accounts</h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">Clean setup for partner login, billing terms, package rate profile, status, and test records.</p>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">{canManageAgents ? 'Owner level setup for partner login, billing terms, rate profile and status.' : 'Operational view for partner contacts, bookings, pending amount and status.'}</p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button type="button" variant="outline" onClick={loadAgents} disabled={saving}><RefreshCw data-icon aria-hidden="true" />Refresh</Button>
-            <Button type="button" variant="outline" onClick={addTestAgents} disabled={saving}>Add Test Agents</Button>
-            <Button type="button" variant="danger" onClick={deleteTestAgents} disabled={saving}><Trash2 data-icon aria-hidden="true" />Delete Test Agents</Button>
+            <Button type="button" variant="outline" onClick={refreshAll} disabled={saving}><RefreshCw data-icon aria-hidden="true" />Refresh</Button>
+            {canManageAgents ? <Button type="button" variant="outline" onClick={addTestAgents} disabled={saving}>Add Test Agents</Button> : null}
+            {canManageAgents ? <Button type="button" variant="danger" onClick={deleteTestAgents} disabled={saving}><Trash2 data-icon aria-hidden="true" />Delete Test Agents</Button> : null}
           </div>
         </div>
 
         {error ? <p className="mt-5 rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</p> : null}
+        {!roleReady ? <p className="mt-5 rounded-xl bg-primary-50 px-4 py-3 text-sm font-semibold text-primary-900">Loading access...</p> : null}
 
-        <div className="mt-6 grid gap-4 md:grid-cols-3">
+        <div className="mt-6 grid gap-4 md:grid-cols-3 xl:grid-cols-4">
           <Metric title="Active Agents" value={String(metrics.active)} icon={UsersRound} />
-          <Metric title="Blocked Accounts" value={String(metrics.blocked)} icon={FileClock} />
-          <Metric title="Credit Limit" value={formatAed(metrics.creditLimit)} icon={WalletCards} />
+          <Metric title="B2B Bookings Today" value={String(metrics.todayBookings)} icon={FileClock} />
+          <Metric title="Pending Collection" value={formatAed(metrics.pendingAmount)} icon={WalletCards} />
+          {canManageAgents ? <Metric title="Credit Limit" value={formatAed(metrics.creditLimit)} icon={WalletCards} /> : <Metric title="Blocked Accounts" value={String(metrics.blocked)} icon={Building2} />}
         </div>
 
-        <Card className="mt-6 overflow-hidden rounded-[1.5rem] border-border/80 bg-white">
-          <CardHeader className="border-b border-border/70 bg-[#F7FAFA]">
-            <CardTitle className="font-heading text-xl font-semibold">{editingId ? 'Edit B2B agent' : 'Add B2B agent'}</CardTitle>
-            <CardDescription>Package B2B rates stay in packages. Use special pricing only for custom deals.</CardDescription>
-          </CardHeader>
-          <CardContent className="p-5">
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-              <Field label="Agent Code"><Input value={form.agent_code} onChange={(event) => setField('agent_code', event.target.value)} placeholder="B2B-001" /></Field>
-              <Field label="Company / Agent Name"><Input value={form.company_name} onChange={(event) => setField('company_name', event.target.value)} placeholder="SkyWay Travel LLC" /></Field>
-              <Field label="Agent Type"><Select value={form.agent_type} options={agentTypes} onChange={(value) => setField('agent_type', value as AgentType)} /></Field>
-              <Field label="Contact Person"><Input value={form.contact_person} onChange={(event) => setField('contact_person', event.target.value)} placeholder="Ahmed Khan" /></Field>
-              <Field label="Phone / WhatsApp"><Input value={form.phone} onChange={(event) => setField('phone', event.target.value)} placeholder="+971..." /></Field>
-              <Field label="Login Email"><Input type="email" value={form.login_email} onChange={(event) => setField('login_email', event.target.value)} placeholder="agent@test.com" /></Field>
-              <Field label="Billing Email"><Input type="email" value={form.billing_email} onChange={(event) => setField('billing_email', event.target.value)} placeholder="billing@test.com" /></Field>
-              <Field label="Payment Terms"><Select value={form.payment_terms} options={paymentTermsOptions} onChange={(value) => setField('payment_terms', value as PaymentTerms)} /></Field>
-              <Field label="Credit Limit / Allowed Balance"><Input type="number" min="0" value={form.credit_limit_aed} onChange={(event) => setField('credit_limit_aed', event.target.value)} placeholder="5000" /></Field>
-              <Field label="Status"><Select value={form.status} options={statusOptions} onChange={(value) => setField('status', value as AgentStatus)} /></Field>
-              <Field label="Rate Profile"><Input value={form.rate_profile} onChange={(event) => setField('rate_profile', event.target.value)} /></Field>
-              <div className="rounded-xl border border-border bg-[#F7FAFA] px-4 py-3">
-                <label className="flex items-center gap-3 text-sm font-semibold text-foreground">
-                  <input type="checkbox" checked={form.special_pricing} onChange={(event) => setField('special_pricing', event.target.checked)} className="size-4 rounded border-border" />
-                  Special Pricing
-                </label>
-                <p className="mt-1 text-xs leading-5 text-muted-foreground">Keep off for default B2B package rates.</p>
+        {canManageAgents ? (
+          <Card className="mt-6 overflow-hidden rounded-[1.5rem] border-border/80 bg-white">
+            <CardHeader className="border-b border-border/70 bg-[#F7FAFA]">
+              <CardTitle className="font-heading text-xl font-semibold">{editingId ? 'Edit B2B agent' : 'Add B2B agent'}</CardTitle>
+              <CardDescription>Package B2B rates stay in packages. Use special pricing only for custom deals.</CardDescription>
+            </CardHeader>
+            <CardContent className="p-5">
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                <Field label="Agent Code"><Input value={form.agent_code} onChange={(event) => setField('agent_code', event.target.value)} placeholder="B2B-001" /></Field>
+                <Field label="Company / Agent Name"><Input value={form.company_name} onChange={(event) => setField('company_name', event.target.value)} placeholder="SkyWay Travel LLC" /></Field>
+                <Field label="Agent Type"><Select value={form.agent_type} options={agentTypes} onChange={(value) => setField('agent_type', value as AgentType)} /></Field>
+                <Field label="Contact Person"><Input value={form.contact_person} onChange={(event) => setField('contact_person', event.target.value)} placeholder="Ahmed Khan" /></Field>
+                <Field label="Phone / WhatsApp"><Input value={form.phone} onChange={(event) => setField('phone', event.target.value)} placeholder="+971..." /></Field>
+                <Field label="Login Email"><Input type="email" value={form.login_email} onChange={(event) => setField('login_email', event.target.value)} placeholder="agent@test.com" /></Field>
+                <Field label="Billing Email"><Input type="email" value={form.billing_email} onChange={(event) => setField('billing_email', event.target.value)} placeholder="billing@test.com" /></Field>
+                <Field label="Payment Terms"><Select value={form.payment_terms} options={paymentTermsOptions} onChange={(value) => setField('payment_terms', value as PaymentTerms)} /></Field>
+                <Field label="Credit Limit / Allowed Balance"><Input type="number" min="0" value={form.credit_limit_aed} onChange={(event) => setField('credit_limit_aed', event.target.value)} placeholder="5000" /></Field>
+                <Field label="Status"><Select value={form.status} options={statusOptions} onChange={(value) => setField('status', value as AgentStatus)} /></Field>
+                <Field label="Rate Profile"><Input value={form.rate_profile} onChange={(event) => setField('rate_profile', event.target.value)} /></Field>
+                <div className="rounded-xl border border-border bg-[#F7FAFA] px-4 py-3">
+                  <label className="flex items-center gap-3 text-sm font-semibold text-foreground">
+                    <input type="checkbox" checked={form.special_pricing} onChange={(event) => setField('special_pricing', event.target.checked)} className="size-4 rounded border-border" />
+                    Special Pricing
+                  </label>
+                  <p className="mt-1 text-xs leading-5 text-muted-foreground">Keep off for default B2B package rates.</p>
+                </div>
+                <div className="md:col-span-2 xl:col-span-3"><Field label="Notes"><Textarea value={form.notes} onChange={(event) => setField('notes', event.target.value)} placeholder="Agreement notes, custom terms, or internal details." /></Field></div>
               </div>
-              <div className="md:col-span-2 xl:col-span-3">
-                <Field label="Notes"><Textarea value={form.notes} onChange={(event) => setField('notes', event.target.value)} placeholder="Agreement notes, custom terms, or internal details." /></Field>
+              <div className="mt-5 flex flex-wrap items-center gap-2">
+                <Button type="button" onClick={saveAgent} disabled={saving}><Save data-icon aria-hidden="true" />{saving ? 'Saving...' : editingId ? 'Update Agent' : 'Save Agent'}</Button>
+                {editingId ? <Button type="button" variant="outline" onClick={resetForm}>Cancel Edit</Button> : null}
+                <p className="text-xs leading-5 text-muted-foreground">Portal password is managed in Supabase Auth and is not saved in this form.</p>
               </div>
-            </div>
-            <div className="mt-5 flex flex-wrap items-center gap-2">
-              <Button type="button" onClick={saveAgent} disabled={saving}><Save data-icon aria-hidden="true" />{saving ? 'Saving...' : editingId ? 'Update Agent' : 'Save Agent'}</Button>
-              {editingId ? <Button type="button" variant="outline" onClick={resetForm}>Cancel Edit</Button> : null}
-              <p className="text-xs leading-5 text-muted-foreground">Portal password is managed in Supabase Auth and is not saved in this form.</p>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        ) : null}
 
         <Card className="mt-6 overflow-hidden rounded-[1.5rem] border-border/80 bg-white">
           <CardHeader className="gap-4 border-b border-border/70 bg-[#F7FAFA] sm:flex-row sm:items-center sm:justify-between">
             <div>
               <CardTitle className="font-heading text-xl font-semibold">Agent list</CardTitle>
-              <CardDescription>{loading ? 'Loading records...' : `${agents.length} records`}</CardDescription>
+              <CardDescription>{loading ? 'Loading records...' : canManageAgents ? `${agents.length} records` : 'Read-only operational view'}</CardDescription>
             </div>
             <Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search agents..." className="h-10 max-w-xs rounded-full" />
           </CardHeader>
           <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Agent</TableHead>
-                  <TableHead>Contact</TableHead>
-                  <TableHead>Login</TableHead>
-                  <TableHead>Terms</TableHead>
-                  <TableHead>Rate Profile</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Action</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loading ? <TableRow><TableCell colSpan={7} className="py-8 text-center">Loading B2B agents...</TableCell></TableRow> : null}
-                {!loading && filteredAgents.length === 0 ? <TableRow><TableCell colSpan={7} className="py-8 text-center">No B2B agents found.</TableCell></TableRow> : null}
-                {filteredAgents.map((agent) => (
-                  <TableRow key={agent.id || agent.agent_code}>
-                    <TableCell>
-                      <div className="font-bold text-primary-900">{agent.company_name}</div>
-                      <div className="text-xs text-muted-foreground">{agent.agent_code || '-'} · {agent.agent_type}</div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="font-semibold text-foreground">{agent.contact_person || '-'}</div>
-                      <div className="text-xs text-muted-foreground">{agent.phone || '-'}</div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="font-semibold text-foreground">{agent.login_email || '-'}</div>
-                      <div className="text-xs text-muted-foreground">Billing: {agent.billing_email || '-'}</div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="font-semibold text-foreground">{agent.payment_terms}</div>
-                      <div className="text-xs text-muted-foreground">Limit {formatAed(agent.credit_limit_aed)}</div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="font-semibold text-foreground">{agent.rate_profile || defaultRateProfile}</div>
-                      <div className="text-xs text-muted-foreground">{agent.special_pricing ? 'Special pricing enabled' : 'Default package rates'}</div>
-                    </TableCell>
-                    <TableCell><Badge variant={statusBadge(agent.status)}>{agent.status}</Badge>{agent.is_test_record ? <div className="mt-1 text-xs font-semibold text-gold">Test record</div> : null}</TableCell>
-                    <TableCell><Button type="button" size="sm" variant="outline" onClick={() => editAgent(agent)}>Edit</Button></TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  {canManageAgents ? <SuperAdminHeader /> : <AdminHeader />}
+                </TableHeader>
+                <TableBody>
+                  {loading ? <TableRow><TableCell colSpan={canManageAgents ? 7 : 6} className="py-8 text-center">Loading B2B agents...</TableCell></TableRow> : null}
+                  {!loading && filteredAgents.length === 0 ? <TableRow><TableCell colSpan={canManageAgents ? 7 : 6} className="py-8 text-center">No B2B agents found.</TableCell></TableRow> : null}
+                  {filteredAgents.map((agent) => canManageAgents ? (
+                    <SuperAdminRow key={agent.id || agent.agent_code} agent={agent} onEdit={editAgent} />
+                  ) : (
+                    <AdminRow key={agent.id || agent.agent_code} agent={agent} stats={statsByAgent.get(agent.id || agent.agent_code) || emptyStats()} onView={setSelectedAgent} />
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           </CardContent>
         </Card>
       </div>
+      {selectedAgent ? <AgentViewModal agent={selectedAgent} stats={statsByAgent.get(selectedAgent.id || selectedAgent.agent_code) || emptyStats()} onClose={() => setSelectedAgent(null)} /> : null}
     </section>
   );
+}
+
+function SuperAdminHeader() {
+  return <TableRow><TableHead>Agent</TableHead><TableHead>Contact</TableHead><TableHead>Login</TableHead><TableHead>Terms</TableHead><TableHead>Rate Profile</TableHead><TableHead>Status</TableHead><TableHead>Action</TableHead></TableRow>;
+}
+
+function AdminHeader() {
+  return <TableRow><TableHead>Agent</TableHead><TableHead>Contact</TableHead><TableHead>Bookings</TableHead><TableHead>Pending Amount</TableHead><TableHead>Status</TableHead><TableHead>Action</TableHead></TableRow>;
+}
+
+function SuperAdminRow({ agent, onEdit }: { agent: AgentRow; onEdit: (agent: AgentRow) => void }) {
+  return (
+    <TableRow>
+      <TableCell><div className="font-bold text-primary-900">{agent.company_name}</div><div className="text-xs text-muted-foreground">{agent.agent_code || '-'} · {agent.agent_type}</div></TableCell>
+      <TableCell><div className="font-semibold text-foreground">{agent.contact_person || '-'}</div><div className="text-xs text-muted-foreground">{agent.phone || '-'}</div></TableCell>
+      <TableCell><div className="font-semibold text-foreground">{agent.login_email || '-'}</div><div className="text-xs text-muted-foreground">Billing: {agent.billing_email || '-'}</div></TableCell>
+      <TableCell><div className="font-semibold text-foreground">{agent.payment_terms}</div><div className="text-xs text-muted-foreground">Limit {formatAed(agent.credit_limit_aed)}</div></TableCell>
+      <TableCell><div className="font-semibold text-foreground">{agent.rate_profile || defaultRateProfile}</div><div className="text-xs text-muted-foreground">{agent.special_pricing ? 'Special pricing enabled' : 'Default package rates'}</div></TableCell>
+      <TableCell><Badge variant={statusBadge(agent.status)}>{agent.status}</Badge>{agent.is_test_record ? <div className="mt-1 text-xs font-semibold text-gold">Test record</div> : null}</TableCell>
+      <TableCell><Button type="button" size="sm" variant="outline" onClick={() => onEdit(agent)}>Edit</Button></TableCell>
+    </TableRow>
+  );
+}
+
+function AdminRow({ agent, stats, onView }: { agent: AgentRow; stats: AgentStats; onView: (agent: AgentRow) => void }) {
+  return (
+    <TableRow>
+      <TableCell><div className="font-bold text-primary-900">{agent.company_name}</div><div className="text-xs text-muted-foreground">{agent.agent_code || '-'} · {agent.agent_type}</div></TableCell>
+      <TableCell><div className="font-semibold text-foreground">{agent.contact_person || '-'}</div><div className="text-xs text-muted-foreground">{agent.phone || '-'}</div></TableCell>
+      <TableCell><div className="font-semibold text-foreground">{stats.totalBookings} total · {stats.pendingBookings} pending</div><div className="text-xs text-muted-foreground">Last: {stats.lastBookingDate}</div></TableCell>
+      <TableCell><div className="font-semibold text-foreground">{formatAed(stats.pendingAmount)}</div><div className="text-xs text-muted-foreground">Total value {formatAed(stats.totalAmount)}</div></TableCell>
+      <TableCell><Badge variant={statusBadge(agent.status)}>{agent.status}</Badge></TableCell>
+      <TableCell><Button type="button" size="sm" variant="outline" onClick={() => onView(agent)}><Eye className="size-4" aria-hidden="true" />View</Button></TableCell>
+    </TableRow>
+  );
+}
+
+function AgentViewModal({ agent, stats, onClose }: { agent: AgentRow; stats: AgentStats; onClose: () => void }) {
+  const whatsapp = whatsappHref(agent.phone, agent.company_name);
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-primary-900/35 p-4 backdrop-blur-sm">
+      <div className="w-full max-w-2xl overflow-hidden rounded-[1.5rem] border border-white/80 bg-white shadow-[0_24px_70px_rgba(8,37,50,0.2)]">
+        <div className="flex items-start justify-between gap-4 border-b border-border/70 bg-[#F7FAFA] px-5 py-4">
+          <div><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">B2B Partner</p><h2 className="mt-1 font-heading text-2xl font-semibold text-foreground">{agent.company_name}</h2><p className="mt-1 text-sm text-muted-foreground">{agent.agent_code} · {agent.agent_type}</p></div>
+          <button type="button" onClick={onClose} className="flex size-9 items-center justify-center rounded-full border border-border bg-white text-muted-foreground"><X className="size-4" aria-hidden="true" /></button>
+        </div>
+        <div className="grid gap-4 p-5 sm:grid-cols-2">
+          <Info label="Contact" value={agent.contact_person || '-'} />
+          <Info label="Phone" value={agent.phone || '-'} />
+          <Info label="Login Email" value={agent.login_email || '-'} />
+          <Info label="Status" value={agent.status} />
+          <Info label="Total Bookings" value={String(stats.totalBookings)} />
+          <Info label="Pending Bookings" value={String(stats.pendingBookings)} />
+          <Info label="Pending Amount" value={formatAed(stats.pendingAmount)} />
+          <Info label="Last Booking" value={stats.lastBookingDate} />
+          {agent.notes ? <div className="sm:col-span-2"><Info label="Notes" value={agent.notes} /></div> : null}
+        </div>
+        <div className="flex flex-col gap-2 border-t border-border/70 px-5 py-4 sm:flex-row sm:justify-end">
+          {whatsapp ? <Button asChild className="rounded-full border-[#25D366] bg-[#25D366] text-white hover:bg-[#1EBE5D] hover:text-white"><a href={whatsapp} target="_blank" rel="noopener noreferrer"><MessageCircle className="size-4" aria-hidden="true" />WhatsApp Agent</a></Button> : null}
+          <Button type="button" variant="outline" className="rounded-full" onClick={onClose}>Close</Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Info({ label, value }: { label: string; value: string }) {
+  return <div className="rounded-xl border border-border bg-[#F7FAFA] px-3 py-2"><p className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">{label}</p><p className="mt-1 whitespace-pre-wrap text-sm font-semibold text-foreground">{value}</p></div>;
 }
 
 function Metric({ title, value, icon: Icon }: { title: string; value: string; icon: typeof Building2 }) {
