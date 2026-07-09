@@ -6,6 +6,11 @@ do $$ begin
   create type public.booking_status as enum ('pending', 'confirmed', 'cancelled', 'completed');
 exception when duplicate_object then null; end $$;
 
+alter type public.booking_status add value if not exists 'pending';
+alter type public.booking_status add value if not exists 'confirmed';
+alter type public.booking_status add value if not exists 'cancelled';
+alter type public.booking_status add value if not exists 'completed';
+
 do $$ begin
   create type public.discount_type as enum ('percentage', 'fixed');
 exception when duplicate_object then null; end $$;
@@ -130,7 +135,7 @@ alter table public.bookings
   exclude using gist (
     vehicle_id with =,
     tstzrange(start_at, end_at, '[)') with &&
-  ) where (status in ('pending', 'confirmed'));
+  ) where (status::text in ('pending', 'confirmed'));
 
 create table if not exists public.payments (
   id uuid primary key default gen_random_uuid(),
