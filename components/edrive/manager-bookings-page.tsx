@@ -26,6 +26,7 @@ type ManagerBooking = {
   customer_name: string | null;
   customer_phone: string | null;
   customer_notes?: string | null;
+  internal_note?: string | null;
   total_amount: number | null;
   payment_status: string | null;
   payment_method?: string | null;
@@ -83,6 +84,12 @@ function managerName(profile: ManagerProfile | null) {
   return profile?.full_name || profile?.email || '';
 }
 
+function shortNote(value: string | null | undefined) {
+  const note = String(value || '').trim();
+  if (!note) return '';
+  return note.length > 80 ? `${note.slice(0, 80)}...` : note;
+}
+
 export function ManagerBookingsPage() {
   const [items, setItems] = useState<ManagerBooking[]>([]);
   const [fleet, setFleet] = useState<FleetOption[]>([]);
@@ -100,23 +107,14 @@ export function ManagerBookingsPage() {
 
     const authEmail = authUser.email || '';
     const filter = authEmail ? `auth_user_id.eq.${authUser.id},email.eq.${authEmail}` : `auth_user_id.eq.${authUser.id}`;
-    const { data } = await supabase
-      .from('admin_users')
-      .select('full_name,email,role,status')
-      .or(filter)
-      .limit(1);
-
+    const { data } = await supabase.from('admin_users').select('full_name,email,role,status').or(filter).limit(1);
     const nextProfile = ((data || [])[0] || null) as ManagerProfile | null;
     setProfile(nextProfile);
     return nextProfile;
   }
 
   async function loadFleet() {
-    const { data } = await supabase
-      .from('vehicles')
-      .select('id,vehicle_code,name,type,capacity,status')
-      .in('status', ['available', 'Available'])
-      .order('vehicle_code', { ascending: true });
+    const { data } = await supabase.from('vehicles').select('id,vehicle_code,name,type,capacity,status').in('status', ['available', 'Available']).order('vehicle_code', { ascending: true });
     setFleet((data || []) as FleetOption[]);
   }
 
@@ -138,7 +136,6 @@ export function ManagerBookingsPage() {
     }
 
     const { data, error: queryError } = await queryBuilder;
-
     if (queryError) {
       setError(queryError.message);
       setItems([]);
@@ -227,7 +224,7 @@ export function ManagerBookingsPage() {
   const filtered = useMemo(() => {
     const term = query.trim().toLowerCase();
     if (!term) return items;
-    return items.filter((booking) => [booking.booking_code, booking.customer_name, booking.customer_phone, packageLabel(booking), booking.status, booking.assigned_manager_name, booking.assigned_vehicle_code].some((value) => String(value || '').toLowerCase().includes(term)));
+    return items.filter((booking) => [booking.booking_code, booking.customer_name, booking.customer_phone, packageLabel(booking), booking.status, booking.assigned_manager_name, booking.assigned_vehicle_code, booking.customer_notes, booking.internal_note].some((value) => String(value || '').toLowerCase().includes(term)));
   }, [items, query]);
 
   const confirmed = items.filter((item) => item.status === 'Confirmed').length;
@@ -242,7 +239,7 @@ export function ManagerBookingsPage() {
           <div>
             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Manager Operations</p>
             <h1 className="mt-2 font-heading text-3xl font-semibold text-foreground sm:text-4xl">{isPersonalManagerView ? 'My assigned bookings' : 'Confirmed bookings'}</h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">{isPersonalManagerView ? 'Only bookings assigned to your manager profile are shown here.' : 'Assign a vehicle first. After assignment, booking moves to In Progress and only completion/payment can be updated.'}</p>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">{isPersonalManagerView ? 'Only bookings assigned to your manager profile are shown here. Customer note and admin note are visible for operations.' : 'Assign a vehicle first. After assignment, booking moves to In Progress and only completion/payment can be updated.'}</p>
           </div>
           <Button type="button" onClick={refreshAll} variant="outline"><RefreshCw data-icon aria-hidden="true" />Refresh</Button>
         </div>
@@ -256,27 +253,14 @@ export function ManagerBookingsPage() {
         <Card className="mt-6 overflow-hidden rounded-[1.5rem] border-border/80 bg-white">
           <CardHeader className="gap-4 border-b border-border/70 bg-[#F7FAFA] sm:flex-row sm:items-center sm:justify-between">
             <CardTitle className="font-heading text-xl font-semibold">Manager booking list</CardTitle>
-            <div className="relative w-full sm:max-w-xs">
-              <Search className="pointer-events-none absolute left-3 top-3 size-4 text-muted-foreground" />
-              <Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search bookings..." className="h-10 rounded-full pl-9" />
-            </div>
+            <div className="relative w-full sm:max-w-xs"><Search className="pointer-events-none absolute left-3 top-3 size-4 text-muted-foreground" /><Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search bookings..." className="h-10 rounded-full pl-9" /></div>
           </CardHeader>
           <CardContent className="p-0">
             {error ? <p className="m-4 rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</p> : null}
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
-                  <TableRow>
-                    <TableHead>Booking</TableHead>
-                    <TableHead>Customer</TableHead>
-                    <TableHead>Package</TableHead>
-                    <TableHead>Date / Time</TableHead>
-                    <TableHead>Manager</TableHead>
-                    <TableHead>Vehicle</TableHead>
-                    <TableHead>Total</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Action</TableHead>
-                  </TableRow>
+                  <TableRow><TableHead>Booking</TableHead><TableHead>Customer</TableHead><TableHead>Package</TableHead><TableHead>Date / Time</TableHead><TableHead>Notes</TableHead><TableHead>Vehicle</TableHead><TableHead>Total</TableHead><TableHead>Status</TableHead><TableHead>Action</TableHead></TableRow>
                 </TableHeader>
                 <TableBody>
                   {loading ? <TableRow><TableCell colSpan={9} className="py-8 text-center text-sm text-muted-foreground">Loading confirmed bookings...</TableCell></TableRow> : null}
@@ -287,7 +271,7 @@ export function ManagerBookingsPage() {
                       <TableCell><div className="font-semibold text-foreground">{booking.customer_name || '-'}</div><div className="text-xs text-muted-foreground">{booking.customer_phone || '-'}</div></TableCell>
                       <TableCell><div className="font-semibold text-foreground">{packageLabel(booking)}</div><div className="text-xs text-muted-foreground">{serviceDetail(booking)}</div></TableCell>
                       <TableCell>{niceDate(booking.preferred_date)}<div className="text-xs text-muted-foreground">{booking.preferred_time || '-'}</div></TableCell>
-                      <TableCell>{booking.assigned_manager_name || '-'}</TableCell>
+                      <TableCell><NotePreview title="Customer" value={booking.customer_notes} /><NotePreview title="Admin" value={booking.internal_note} /></TableCell>
                       <TableCell><div className="font-semibold text-foreground">{booking.assigned_vehicle_code || '-'}</div><div className="text-xs text-muted-foreground">{booking.assigned_vehicle_name || ''}</div></TableCell>
                       <TableCell>{formatAed(Number(booking.total_amount || 0))}</TableCell>
                       <TableCell><span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-bold ${statusClass(booking.status)}`}>{booking.status || 'Confirmed'}</span></TableCell>
@@ -315,7 +299,7 @@ function AssignVehicleModal({ booking, fleet, onClose, onAssign }: { booking: Ma
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   async function submit() { setSaving(true); setError(''); try { await onAssign(booking, vehicleId); } catch (saveError) { setError(saveError instanceof Error ? saveError.message : 'Failed to assign vehicle.'); } finally { setSaving(false); } }
-  return <div className="fixed inset-0 z-50 flex items-center justify-center bg-primary-900/35 p-4 backdrop-blur-sm"><div className="w-full max-w-xl rounded-[1.6rem] border border-white/80 bg-white shadow-[0_28px_80px_rgba(8,37,50,0.28)]"><div className="flex items-start justify-between gap-4 border-b border-border/70 bg-[#F7FAFA] px-5 py-4"><div><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Assign Vehicle</p><h2 className="mt-1 font-heading text-xl font-semibold text-foreground">{booking.booking_code}</h2></div><button type="button" onClick={onClose} className="flex size-9 items-center justify-center rounded-full border border-border bg-white text-muted-foreground"><X className="size-4" /></button></div><div className="grid gap-4 p-5">{error ? <p className="rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</p> : null}<InfoLine label="Package" value={packageLabel(booking)} /><InfoLine label="Required Capacity" value={`${booking.selected_package_capacity || '-'} seater`} /><label className="grid gap-1.5 text-sm font-semibold text-foreground">Available Vehicle<select value={vehicleId} onChange={(event) => setVehicleId(event.target.value)} className="h-11 rounded-xl border border-border bg-white px-3 text-sm outline-none focus:border-primary"><option value="">Select vehicle</option>{fleet.map((vehicle) => <option key={vehicle.id} value={vehicle.id}>{vehicleLabel(vehicle)}</option>)}</select></label><p className="rounded-xl bg-primary-50 px-3 py-2 text-xs font-semibold leading-5 text-primary-900">After assigning, booking status will become In Progress and No Show will be locked.</p><Button type="button" onClick={submit} disabled={saving || !vehicleId}><Ship data-icon />{saving ? 'Assigning...' : 'Assign Vehicle & Start'}</Button></div></div></div>;
+  return <div className="fixed inset-0 z-50 flex items-center justify-center bg-primary-900/35 p-4 backdrop-blur-sm"><div className="w-full max-w-xl rounded-[1.6rem] border border-white/80 bg-white shadow-[0_28px_80px_rgba(8,37,50,0.28)]"><div className="flex items-start justify-between gap-4 border-b border-border/70 bg-[#F7FAFA] px-5 py-4"><div><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Assign Vehicle</p><h2 className="mt-1 font-heading text-xl font-semibold text-foreground">{booking.booking_code}</h2></div><button type="button" onClick={onClose} className="flex size-9 items-center justify-center rounded-full border border-border bg-white text-muted-foreground"><X className="size-4" /></button></div><div className="grid gap-4 p-5">{error ? <p className="rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</p> : null}<InfoLine label="Package" value={packageLabel(booking)} /><InfoLine label="Customer Note" value={booking.customer_notes || 'No customer note.'} /><InfoLine label="Admin Note" value={booking.internal_note || 'No admin note.'} /><InfoLine label="Required Capacity" value={`${booking.selected_package_capacity || '-'} seater`} /><label className="grid gap-1.5 text-sm font-semibold text-foreground">Available Vehicle<select value={vehicleId} onChange={(event) => setVehicleId(event.target.value)} className="h-11 rounded-xl border border-border bg-white px-3 text-sm outline-none focus:border-primary"><option value="">Select vehicle</option>{fleet.map((vehicle) => <option key={vehicle.id} value={vehicle.id}>{vehicleLabel(vehicle)}</option>)}</select></label><p className="rounded-xl bg-primary-50 px-3 py-2 text-xs font-semibold leading-5 text-primary-900">After assigning, booking status will become In Progress and No Show will be locked.</p><Button type="button" onClick={submit} disabled={saving || !vehicleId}><Ship data-icon />{saving ? 'Assigning...' : 'Assign Vehicle & Start'}</Button></div></div></div>;
 }
 
 function PaymentModal({ booking, onClose, onSave, readOnly = false }: { booking: ManagerBooking; onClose: () => void; onSave: (booking: ManagerBooking, form: PaymentForm) => Promise<void>; readOnly?: boolean }) {
@@ -323,8 +307,12 @@ function PaymentModal({ booking, onClose, onSave, readOnly = false }: { booking:
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   async function submit() { setSaving(true); setError(''); try { await onSave(booking, form); } catch (saveError) { setError(saveError instanceof Error ? saveError.message : 'Failed to save payment.'); } finally { setSaving(false); } }
-  return <div className="fixed inset-0 z-50 flex items-center justify-center bg-primary-900/35 p-4 backdrop-blur-sm"><div className="w-full max-w-3xl rounded-[1.6rem] border border-white/80 bg-white shadow-[0_28px_80px_rgba(8,37,50,0.28)]"><div className="flex items-start justify-between gap-4 border-b border-border/70 bg-[#F7FAFA] px-5 py-4"><div><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">{readOnly ? 'Payment Slip' : 'Complete Booking'}</p><h2 className="mt-1 font-heading text-xl font-semibold text-foreground">{booking.booking_code}</h2></div><button type="button" onClick={onClose} className="flex size-9 items-center justify-center rounded-full border border-border bg-white text-muted-foreground"><X className="size-4" /></button></div><div className="grid gap-4 p-5 lg:grid-cols-[1fr_0.9fr]">{error ? <p className="rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 lg:col-span-2">{error}</p> : null}<div className="grid gap-3"><InfoLine label="Customer" value={booking.customer_name || '-'} /><InfoLine label="Package" value={packageLabel(booking)} /><InfoLine label="Vehicle" value={`${booking.assigned_vehicle_code || '-'} ${booking.assigned_vehicle_name || ''}`} /><InfoLine label="Charge Amount" value={formatAed(Number(booking.total_amount || 0))} /></div>{readOnly ? <div className="grid gap-3 rounded-[1.25rem] border border-primary/15 bg-primary-50 p-4"><InfoLine label="Payment Status" value={booking.payment_status || '-'} /><InfoLine label="Payment Method" value={booking.payment_method || '-'} /><InfoLine label="Received Amount" value={formatAed(Number(booking.payment_received_amount || booking.total_amount || 0))} /><InfoLine label="Cash Handover" value={booking.cash_handover_status || 'not_applicable'} /><p className="rounded-xl bg-white px-3 py-2 text-xs font-semibold leading-5 text-primary-900">This payment is locked after completion. Admin can handle corrections or cash handover from the admin account.</p><Button type="button" variant="outline" onClick={onClose}>Close Slip</Button></div> : <div className="grid gap-3 rounded-[1.25rem] border border-border bg-[#F7FAFA] p-4"><SelectField label="Payment Status" value={form.paymentStatus} options={paymentStatuses} onChange={(paymentStatus) => setForm((current) => ({ ...current, paymentStatus }))} /><SelectField label="Payment Method" value={form.paymentMethod} options={paymentMethods} onChange={(paymentMethod) => setForm((current) => ({ ...current, paymentMethod }))} /><label className="grid gap-1.5 text-sm font-semibold text-foreground">Received Amount<input value={form.receivedAmount} onChange={(event) => setForm((current) => ({ ...current, receivedAmount: event.target.value }))} type="number" min="0" step="0.01" className="h-10 rounded-xl border border-border bg-white px-3 text-sm outline-none focus:border-primary" /></label>{form.paymentMethod === 'Cash' ? <p className="rounded-xl bg-gold/10 px-3 py-2 text-xs font-semibold leading-5 text-primary-900">Cash will stay in manager balance until admin marks it received.</p> : null}<Button type="button" onClick={submit} disabled={saving}><Save data-icon />{saving ? 'Saving...' : 'Complete & Save Payment'}</Button></div>}</div></div></div>;
+  return <div className="fixed inset-0 z-50 flex items-center justify-center bg-primary-900/35 p-4 backdrop-blur-sm"><div className="w-full max-w-3xl rounded-[1.6rem] border border-white/80 bg-white shadow-[0_28px_80px_rgba(8,37,50,0.28)]"><div className="flex items-start justify-between gap-4 border-b border-border/70 bg-[#F7FAFA] px-5 py-4"><div><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">{readOnly ? 'Payment Slip' : 'Complete Booking'}</p><h2 className="mt-1 font-heading text-xl font-semibold text-foreground">{booking.booking_code}</h2></div><button type="button" onClick={onClose} className="flex size-9 items-center justify-center rounded-full border border-border bg-white text-muted-foreground"><X className="size-4" /></button></div><div className="grid gap-4 p-5 lg:grid-cols-[1fr_0.9fr]">{error ? <p className="rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 lg:col-span-2">{error}</p> : null}<div className="grid gap-3"><InfoLine label="Customer" value={booking.customer_name || '-'} /><InfoLine label="Package" value={packageLabel(booking)} /><InfoLine label="Customer Note" value={booking.customer_notes || 'No customer note.'} /><InfoLine label="Admin Note" value={booking.internal_note || 'No admin note.'} /><InfoLine label="Vehicle" value={`${booking.assigned_vehicle_code || '-'} ${booking.assigned_vehicle_name || ''}`} /><InfoLine label="Charge Amount" value={formatAed(Number(booking.total_amount || 0))} /></div>{readOnly ? <div className="grid gap-3 rounded-[1.25rem] border border-primary/15 bg-primary-50 p-4"><InfoLine label="Payment Status" value={booking.payment_status || '-'} /><InfoLine label="Payment Method" value={booking.payment_method || '-'} /><InfoLine label="Received Amount" value={formatAed(Number(booking.payment_received_amount || booking.total_amount || 0))} /><InfoLine label="Cash Handover" value={booking.cash_handover_status || 'not_applicable'} /><p className="rounded-xl bg-white px-3 py-2 text-xs font-semibold leading-5 text-primary-900">This payment is locked after completion. Admin can handle corrections or cash handover from the admin account.</p><Button type="button" variant="outline" onClick={onClose}>Close Slip</Button></div> : <div className="grid gap-3 rounded-[1.25rem] border border-border bg-[#F7FAFA] p-4"><SelectField label="Payment Status" value={form.paymentStatus} options={paymentStatuses} onChange={(paymentStatus) => setForm((current) => ({ ...current, paymentStatus }))} /><SelectField label="Payment Method" value={form.paymentMethod} options={paymentMethods} onChange={(paymentMethod) => setForm((current) => ({ ...current, paymentMethod }))} /><label className="grid gap-1.5 text-sm font-semibold text-foreground">Received Amount<input value={form.receivedAmount} onChange={(event) => setForm((current) => ({ ...current, receivedAmount: event.target.value }))} type="number" min="0" step="0.01" className="h-10 rounded-xl border border-border bg-white px-3 text-sm outline-none focus:border-primary" /></label>{form.paymentMethod === 'Cash' ? <p className="rounded-xl bg-gold/10 px-3 py-2 text-xs font-semibold leading-5 text-primary-900">Cash will stay in manager balance until admin marks it received.</p> : null}<Button type="button" onClick={submit} disabled={saving}><Save data-icon />{saving ? 'Saving...' : 'Complete & Save Payment'}</Button></div>}</div></div></div>;
 }
 
-function InfoLine({ label, value }: { label: string; value: string }) { return <div className="rounded-xl border border-border/70 bg-white px-3 py-2"><p className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">{label}</p><p className="mt-1 text-sm font-semibold leading-5 text-foreground">{value}</p></div>; }
+function NotePreview({ title, value }: { title: string; value?: string | null }) {
+  const note = shortNote(value);
+  return <div className="max-w-[14rem] text-xs leading-5"><span className="font-bold text-muted-foreground">{title}: </span><span className="text-foreground">{note || '-'}</span></div>;
+}
+function InfoLine({ label, value }: { label: string; value: string }) { return <div className="rounded-xl border border-border/70 bg-white px-3 py-2"><p className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">{label}</p><p className="mt-1 whitespace-pre-wrap text-sm font-semibold leading-5 text-foreground">{value}</p></div>; }
 function SelectField({ label, value, options, onChange }: { label: string; value: string; options: string[]; onChange: (value: string) => void }) { return <label className="grid gap-1.5 text-sm font-semibold text-foreground">{label}<select value={value} onChange={(event) => onChange(event.target.value)} className="h-10 rounded-xl border border-border bg-white px-3 text-sm outline-none focus:border-primary">{options.map((option) => <option key={option} value={option}>{option || 'None'}</option>)}</select></label>; }
