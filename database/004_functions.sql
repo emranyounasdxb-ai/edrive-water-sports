@@ -1,3 +1,6 @@
+create extension if not exists pgcrypto;
+create extension if not exists btree_gist;
+
 create or replace function public.touch_updated_at()
 returns trigger
 language plpgsql
@@ -7,6 +10,56 @@ begin
   return new;
 end;
 $$;
+
+alter table public.bookings
+  add column if not exists booking_number text default ('EDW-' || to_char(now(), 'YYYYMMDD') || '-' || upper(substr(replace(gen_random_uuid()::text, '-', ''), 1, 6))),
+  add column if not exists customer_id uuid references public.customers(id),
+  add column if not exists vehicle_id uuid references public.vehicles(id),
+  add column if not exists coupon_id uuid references public.coupons(id),
+  add column if not exists start_at timestamptz not null default now(),
+  add column if not exists end_at timestamptz not null default (now() + interval '1 hour'),
+  add column if not exists duration_minutes integer not null default 60,
+  add column if not exists status public.booking_status not null default 'pending',
+  add column if not exists gross_amount_aed numeric(12,2) not null default 0,
+  add column if not exists discount_amount_aed numeric(12,2) not null default 0,
+  add column if not exists net_amount_aed numeric(12,2) not null default 0,
+  add column if not exists special_notes text,
+  add column if not exists assigned_staff_id uuid references public.users(id),
+  add column if not exists created_by uuid references public.users(id),
+  add column if not exists updated_by uuid references public.users(id),
+  add column if not exists created_at timestamptz not null default now(),
+  add column if not exists updated_at timestamptz not null default now();
+
+alter table public.customers
+  add column if not exists full_name text,
+  add column if not exists phone text,
+  add column if not exists whatsapp text,
+  add column if not exists email text,
+  add column if not exists country text,
+  add column if not exists normalized_email text generated always as (lower(nullif(email, ''))) stored,
+  add column if not exists normalized_phone text generated always as (regexp_replace(phone, '[^0-9+]', '', 'g')) stored,
+  add column if not exists created_at timestamptz not null default now(),
+  add column if not exists updated_at timestamptz not null default now();
+
+alter table public.vehicles
+  add column if not exists rental_price_aed_per_hour numeric(12,2) not null default 0,
+  add column if not exists is_available boolean not null default true,
+  add column if not exists is_visible_public boolean not null default true,
+  add column if not exists is_archived boolean not null default false,
+  add column if not exists updated_at timestamptz not null default now();
+
+alter table public.coupons
+  add column if not exists code text,
+  add column if not exists discount_type public.discount_type,
+  add column if not exists discount_value numeric(12,2) not null default 0,
+  add column if not exists expires_at timestamptz,
+  add column if not exists max_usage integer,
+  add column if not exists used_count integer not null default 0,
+  add column if not exists is_active boolean not null default true,
+  add column if not exists updated_at timestamptz not null default now();
+
+alter table public.users
+  add column if not exists updated_at timestamptz not null default now();
 
 drop trigger if exists touch_users_updated_at on public.users;
 create trigger touch_users_updated_at before update on public.users for each row execute function public.touch_updated_at();
