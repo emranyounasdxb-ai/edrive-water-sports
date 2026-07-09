@@ -78,6 +78,10 @@ create table if not exists public.customers (
   updated_at timestamptz not null default now()
 );
 
+alter table public.customers
+  add column if not exists normalized_email text generated always as (lower(nullif(email, ''))) stored,
+  add column if not exists normalized_phone text generated always as (regexp_replace(phone, '[^0-9+]', '', 'g')) stored;
+
 create unique index if not exists customers_normalized_email_unique on public.customers (normalized_email) where normalized_email is not null;
 create index if not exists customers_normalized_phone_idx on public.customers (normalized_phone);
 
