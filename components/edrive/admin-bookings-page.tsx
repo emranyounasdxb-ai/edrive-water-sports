@@ -66,6 +66,11 @@ type DebugState = {
   lastLoadedAt: string;
 };
 
+type ManagerOption = {
+  name: string;
+  email: string;
+};
+
 type ManageValues = {
   status: string;
   adminStatus: string;
@@ -85,8 +90,6 @@ type ManageValues = {
 };
 
 const bookingStatusOptions = ['Pending', 'Confirmed', 'Cancelled'];
-const adminStatusOptions = ['New', 'Reviewed', 'Contacted', 'Confirmed', 'Closed'];
-const paymentStatusOptions = ['Not Paid', 'Partial', 'Paid', 'Refunded'];
 
 const supabaseProjectHost = (() => {
   try {
@@ -104,14 +107,13 @@ function displayText(value: string | null | undefined, fallback = '-') {
   return String(value || '').trim() || fallback;
 }
 
+function isActiveStatus(value: string | null | undefined) {
+  return String(value || '').trim().toLowerCase() === 'active';
+}
+
 function niceDate(value: string | null) {
   if (!value) return 'Not selected';
   return new Intl.DateTimeFormat('en-AE', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(`${value}T12:00:00`));
-}
-
-function niceCreatedAt(value: string | null) {
-  if (!value) return '-';
-  return new Intl.DateTimeFormat('en-AE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(value));
 }
 
 function prettyKey(value: string | null | undefined) {
@@ -160,11 +162,24 @@ function bookingPending(booking: BookingRow) {
   return Math.max(total - received, 0);
 }
 
-function whatsAppHref(booking: BookingRow) {
-  const digits = String(booking.customer_phone || '').replace(/\D/g, '');
+function whatsappPhone(value: string | null) {
+  let digits = String(value || '').replace(/\D/g, '');
   if (!digits || digits.length < 7) return '';
-  const message = encodeURIComponent(`Hello ${booking.customer_name || ''}, this is eDrive Water Sports regarding your booking ${booking.booking_code}.`);
-  return `https://wa.me/${digits}?text=${message}`;
+  if (digits.startsWith('00')) digits = digits.slice(2);
+  if (digits.startsWith('0')) digits = `971${digits.slice(1)}`;
+  if (digits.startsWith('5') && digits.length === 9) digits = `971${digits}`;
+  return digits;
+}
+
+function whatsAppHref(booking: BookingRow) {
+  const phone = whatsappPhone(booking.customer_phone);
+  if (!phone) return '';
+  const customerName = booking.customer_name || 'there';
+  const packageName = packageLabel(booking);
+  const dateText = niceDate(booking.preferred_date);
+  const timeText = booking.preferred_time || 'your selected time';
+  const message = encodeURIComponent(`Hello ${customerName}, this is eDrive Water Sports. We would like to confirm your ${packageName} booking for ${dateText} at ${timeText}. Please reply to confirm your availability. Thank you.`);
+  return `https://web.whatsapp.com/send?phone=${phone}&text=${message}&app_absent=0`;
 }
 
 function defaultWorkflowStatus(values: ManageValues) {
@@ -178,8 +193,15 @@ function defaultWorkflowStatus(values: ManageValues) {
   return 'unpaid';
 }
 
+function adminStatusForBookingStatus(status: string, fallback: string) {
+  if (status === 'Confirmed') return 'Confirmed';
+  if (status === 'Cancelled') return 'Closed';
+  return fallback || 'New';
+}
+
 export function AdminBookingsLivePage() {
   const [bookings, setBookings] = useState<BookingRow[]>([]);
+  const [managers, setManagers] = useState<ManagerOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [query, setQuery] = useState('');
@@ -192,6 +214,21 @@ export function AdminBookingsLivePage() {
     lastError: '',
     lastLoadedAt: '-'
   });
+
+  async function loadManagers() {
+    const { data } = await supabase
+      .from('admin_users')
+      .select('full_name,email,role,status')
+      .order('full_name', { ascending: true })
+      .limit(100);
+
+    const rows = ((data || []) as Array<{ full_name: string | null; email: string | null; role: string | null; status: string | null }>);
+    const activeManagers = rows
+      .filter((item) => String(item.role || '').trim().toLowerCase() === 'manager' && isActiveStatus(item.status))
+      .map((item) => ({ name: item.full_name || item.email || 'Manager', email: item.email || '' }));
+
+    setManagers(activeManagers);
+  }
 
   async function loadBookings() {
     setLoading(true);
@@ -225,17 +262,22 @@ export function AdminBookingsLivePage() {
     setLoading(false);
   }
 
+  async function refreshAll() {
+    await Promise.all([loadBookings(), loadManagers()]);
+  }
+
   async function saveBookingStatus(booking: BookingRow, values: ManageValues) {
     const total = bookingTotal(booking);
     const amountReceived = Math.max(asNumber(values.amountReceivedAed), 0);
     const amountPending = Math.max(total - amountReceived, 0);
+    const assignedManagerName = values.assignedManagerName.trim();
     const workflowStatus = values.paymentWorkflowStatus || defaultWorkflowStatus(values);
     const now = new Date().toISOString();
 
     const payload: Record<string, unknown> = {
       status: values.status,
-      admin_status: values.adminStatus,
-      manager_status: values.managerStatus,
+      admin_status: adminStatusForBookingStatus(values.status, values.adminStatus),
+      manager_status: assignedManagerName ? 'Assigned' : values.managerStatus,
       payment_status: values.paymentStatus,
       payment_method: values.paymentMethod || null,
       payment_source: values.paymentSource,
@@ -243,7 +285,7 @@ export function AdminBookingsLivePage() {
       collection_status: values.collectionStatus,
       amount_received_aed: amountReceived,
       amount_pending_aed: amountPending,
-      assigned_manager_name: values.assignedManagerName.trim() || null,
+      assigned_manager_name: assignedManagerName || null,
       assigned_vehicle_name: values.assignedVehicleName.trim() || null,
       b2b_agent_name: values.paymentSource === 'b2b' ? values.b2bAgentName.trim() || null : null,
       customer_arrived: values.customerArrived,
@@ -253,24 +295,23 @@ export function AdminBookingsLivePage() {
     };
 
     if (values.status === 'Confirmed' && !booking.confirmed_at) payload.confirmed_at = now;
-    if (values.status === 'Completed' && !booking.completed_at) payload.completed_at = now;
     if ((values.collectionStatus === 'with_admin' || values.collectionStatus === 'settled') && !booking.admin_payment_received_at) payload.admin_payment_received_at = now;
 
     const queryBuilder = supabase.from(bookingRequestsTable).update(payload);
     const result = booking.id ? await queryBuilder.eq('id', booking.id) : await queryBuilder.eq('booking_code', booking.booking_code);
     if (result.error) throw new Error(result.error.message);
-    await loadBookings();
+    await refreshAll();
     setSelectedBooking(null);
   }
 
   useEffect(() => {
-    void loadBookings();
+    void refreshAll();
   }, []);
 
   const filtered = useMemo(() => {
     const term = query.trim().toLowerCase();
     if (!term) return bookings;
-    return bookings.filter((booking) => [booking.booking_code, booking.booking_number, booking.customer_name, booking.customer_phone, booking.customer_email, packageLabel(booking), booking.status, booking.manager_status, booking.payment_workflow_status, booking.collection_status].some((value) => String(value || '').toLowerCase().includes(term)));
+    return bookings.filter((booking) => [booking.booking_code, booking.booking_number, booking.customer_name, booking.customer_phone, booking.customer_email, packageLabel(booking), booking.status, booking.manager_status, booking.payment_workflow_status, booking.collection_status, booking.assigned_manager_name].some((value) => String(value || '').toLowerCase().includes(term)));
   }, [bookings, query]);
 
   const newCount = bookings.filter((booking) => (booking.admin_status || 'New') === 'New').length;
@@ -286,7 +327,7 @@ export function AdminBookingsLivePage() {
             <h1 className="mt-2 font-heading text-3xl font-semibold text-foreground sm:text-4xl">Website booking requests</h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">Live records saved from the public booking form in Supabase.</p>
           </div>
-          <Button type="button" onClick={loadBookings} variant="outline"><RefreshCw data-icon aria-hidden="true" />Refresh</Button>
+          <Button type="button" onClick={refreshAll} variant="outline"><RefreshCw data-icon aria-hidden="true" />Refresh</Button>
         </div>
 
         <div className="mt-6 grid gap-4 md:grid-cols-3">
@@ -352,7 +393,7 @@ export function AdminBookingsLivePage() {
                       <TableCell>{formatAed(bookingTotal(booking))}<div className="text-xs text-muted-foreground">Pending {formatAed(bookingPending(booking))}</div></TableCell>
                       <TableCell><div className="font-semibold text-foreground">{booking.payment_status || 'Not Paid'}</div><div className="text-xs text-muted-foreground">{prettyKey(booking.collection_status || 'pending_collection')}</div></TableCell>
                       <TableCell><span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-bold ${statusClass(booking.status)}`}>{booking.status || 'Pending'}</span></TableCell>
-                      <TableCell><div className="font-semibold text-foreground">{booking.manager_status || 'Pending'}</div><div className="text-xs text-muted-foreground">{booking.assigned_vehicle_name || 'No vehicle assigned'}</div></TableCell>
+                      <TableCell><div className="font-semibold text-foreground">{booking.manager_status || 'Pending'}</div><div className="text-xs text-muted-foreground">{booking.assigned_manager_name || 'No manager assigned'}</div></TableCell>
                       <TableCell><Button type="button" size="sm" variant="outline" onClick={() => setSelectedBooking(booking)}>Manage</Button></TableCell>
                     </TableRow>
                   ))}
@@ -363,10 +404,10 @@ export function AdminBookingsLivePage() {
         </Card>
 
         <div className="mt-4 rounded-[1.25rem] border border-primary/15 bg-primary-50 px-4 py-3 text-sm leading-6 text-primary-900">
-          <FileClock className="mr-2 inline size-4" aria-hidden="true" /> New bookings appear here after the public booking success page saves them to Supabase.
+          <FileClock className="mr-2 inline size-4" aria-hidden="true" /> Confirm booking and assign a manager to send it to the manager dashboard.
         </div>
       </div>
-      {selectedBooking ? <ManageBookingModal booking={selectedBooking} onClose={() => setSelectedBooking(null)} onSave={saveBookingStatus} /> : null}
+      {selectedBooking ? <ManageBookingModal booking={selectedBooking} managers={managers} onClose={() => setSelectedBooking(null)} onSave={saveBookingStatus} /> : null}
     </section>
   );
 }
@@ -375,7 +416,7 @@ function Metric({ title, value, icon: Icon }: { title: string; value: string; ic
   return <Card className="rounded-[1.35rem]"><CardContent className="flex items-center gap-4 p-4"><span className="flex size-11 items-center justify-center rounded-2xl bg-primary-50 text-primary"><Icon className="size-5" aria-hidden="true" /></span><div><p className="text-xs font-semibold text-muted-foreground">{title}</p><p className="mt-1 font-heading text-2xl font-semibold text-foreground">{value}</p></div></CardContent></Card>;
 }
 
-function ManageBookingModal({ booking, onClose, onSave }: { booking: BookingRow; onClose: () => void; onSave: (booking: BookingRow, values: ManageValues) => Promise<void> }) {
+function ManageBookingModal({ booking, managers, onClose, onSave }: { booking: BookingRow; managers: ManagerOption[]; onClose: () => void; onSave: (booking: BookingRow, values: ManageValues) => Promise<void> }) {
   const total = bookingTotal(booking);
   const [values, setValues] = useState<ManageValues>({
     status: booking.status || 'Pending',
@@ -400,6 +441,7 @@ function ManageBookingModal({ booking, onClose, onSave }: { booking: BookingRow;
   const amountReceived = Math.max(asNumber(values.amountReceivedAed), 0);
   const amountPending = Math.max(total - amountReceived, 0);
   const sourceLabel = values.paymentSource === 'b2b' ? 'B2B Booking' : 'Direct Booking';
+  const managerOptions = Array.from(new Set([values.assignedManagerName, ...managers.map((manager) => manager.name)].filter(Boolean)));
 
   async function submit() {
     setSaving(true);
@@ -443,6 +485,7 @@ function ManageBookingModal({ booking, onClose, onSave }: { booking: BookingRow;
                 <InfoLine label="Package" value={packageLabel(booking)} />
                 <InfoLine label="Date / Time" value={`${niceDate(booking.preferred_date)} · ${booking.preferred_time || '-'}`} />
                 <InfoLine label="Party" value={`${booking.vehicle_quantity || 1} vehicle · ${booking.guest_count || '-'} guests`} />
+                <InfoLine label="Assigned Manager" value={values.assignedManagerName || 'Not assigned'} />
                 <InfoLine label="Assigned Vehicle" value={booking.assigned_vehicle_name || 'Not assigned'} />
                 {booking.customer_notes ? <InfoLine label="Customer Note" value={booking.customer_notes} /> : null}
               </div>
@@ -451,9 +494,7 @@ function ManageBookingModal({ booking, onClose, onSave }: { booking: BookingRow;
             <div className="grid gap-3 rounded-[1.15rem] border border-border bg-[#F7FAFA] p-4">
               <div className="grid gap-3 md:grid-cols-2">
                 <SelectField label="Booking Status" value={values.status} options={bookingStatusOptions} onChange={(status) => setValues((current) => ({ ...current, status }))} />
-                <SelectField label="Admin Status" value={values.adminStatus} options={adminStatusOptions} onChange={(adminStatus) => setValues((current) => ({ ...current, adminStatus }))} />
-                <SelectField label="Payment Status" value={values.paymentStatus} options={paymentStatusOptions} onChange={(paymentStatus) => setValues((current) => ({ ...current, paymentStatus }))} />
-                <TextField label="Assigned Manager" value={values.assignedManagerName} onChange={(assignedManagerName) => setValues((current) => ({ ...current, assignedManagerName }))} placeholder="Manager name" />
+                <ManagerSelectField value={values.assignedManagerName} options={managerOptions} onChange={(assignedManagerName) => setValues((current) => ({ ...current, assignedManagerName }))} />
                 <NumberField label="Amount Received" value={values.amountReceivedAed} onChange={(amountReceivedAed) => setValues((current) => ({ ...current, amountReceivedAed }))} />
                 <ReadOnlyField label="Payment Type" value={sourceLabel} />
               </div>
@@ -464,6 +505,7 @@ function ManageBookingModal({ booking, onClose, onSave }: { booking: BookingRow;
               </label>
 
               <TextAreaField label="Internal Note" value={values.internalNote} onChange={(internalNote) => setValues((current) => ({ ...current, internalNote }))} />
+              {values.status === 'Confirmed' && !values.assignedManagerName ? <p className="rounded-xl bg-amber-50 px-3 py-2 text-xs font-semibold leading-5 text-amber-700">Confirmed booking manager dashboard par tab jayegi jab manager select hoga.</p> : null}
             </div>
           </div>
         </div>
@@ -492,8 +534,8 @@ function SelectField({ label, value, options, onChange }: { label: string; value
   return <label className="grid gap-1.5 text-sm font-semibold text-foreground">{label}<select value={value} onChange={(event) => onChange(event.target.value)} className="h-10 rounded-xl border border-border bg-white px-3 text-sm text-foreground outline-none focus:border-primary">{options.map((option) => <option key={option} value={option}>{option ? prettyKey(option) : 'None'}</option>)}</select></label>;
 }
 
-function TextField({ label, value, onChange, placeholder }: { label: string; value: string; onChange: (value: string) => void; placeholder?: string }) {
-  return <label className="grid gap-1.5 text-sm font-semibold text-foreground">{label}<Input value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} className="h-10 rounded-xl" /></label>;
+function ManagerSelectField({ value, options, onChange }: { value: string; options: string[]; onChange: (value: string) => void }) {
+  return <label className="grid gap-1.5 text-sm font-semibold text-foreground">Assigned Manager<select value={value} onChange={(event) => onChange(event.target.value)} className="h-10 rounded-xl border border-border bg-white px-3 text-sm text-foreground outline-none focus:border-primary"><option value="">Select manager</option>{options.map((option) => <option key={option} value={option}>{option}</option>)}</select></label>;
 }
 
 function ReadOnlyField({ label, value }: { label: string; value: string }) {
