@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { CalendarDays, ClipboardCheck, FileClock, MessageCircle, RefreshCw, Save, Search, WalletCards, X } from 'lucide-react';
+import { CalendarDays, ClipboardCheck, FileClock, MessageCircle, RefreshCw, Save, Search, Ship, WalletCards, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -13,8 +13,10 @@ import { supabase } from '@/lib/supabase-client';
 type BookingRow = {
   id: string;
   booking_code: string;
+  booking_number?: string | null;
   status: string | null;
   admin_status: string | null;
+  manager_status?: string | null;
   selected_package_name?: string | null;
   selected_package_category?: string | null;
   selected_package_capacity?: number | null;
@@ -32,11 +34,25 @@ type BookingRow = {
   customer_email: string | null;
   customer_hotel_or_area?: string | null;
   customer_notes?: string | null;
-  subtotal?: number | null;
-  vat_amount?: number | null;
-  total_amount: number | null;
+  subtotal?: number | string | null;
+  vat_amount?: number | string | null;
+  total_amount: number | string | null;
   payment_status: string | null;
   payment_method?: string | null;
+  payment_source?: string | null;
+  payment_workflow_status?: string | null;
+  collection_status?: string | null;
+  amount_received_aed?: number | string | null;
+  amount_pending_aed?: number | string | null;
+  assigned_manager_name?: string | null;
+  assigned_vehicle_name?: string | null;
+  b2b_agent_name?: string | null;
+  customer_arrived?: boolean | null;
+  confirmed_at?: string | null;
+  completed_at?: string | null;
+  admin_payment_received_at?: string | null;
+  manager_note?: string | null;
+  internal_note?: string | null;
   created_at: string | null;
   updated_at?: string | null;
 };
@@ -53,14 +69,29 @@ type DebugState = {
 type ManageValues = {
   status: string;
   adminStatus: string;
+  managerStatus: string;
   paymentStatus: string;
   paymentMethod: string;
+  paymentSource: string;
+  paymentWorkflowStatus: string;
+  collectionStatus: string;
+  amountReceivedAed: string;
+  assignedManagerName: string;
+  assignedVehicleName: string;
+  b2bAgentName: string;
+  customerArrived: boolean;
+  managerNote: string;
+  internalNote: string;
 };
 
 const bookingStatusOptions = ['Pending', 'Confirmed', 'Cancelled', 'No Show', 'Completed'];
-const adminStatusOptions = ['New', 'Reviewed', 'Contacted', 'Closed'];
+const adminStatusOptions = ['New', 'Reviewed', 'Contacted', 'Confirmed', 'Closed'];
+const managerStatusOptions = ['Pending', 'Assigned', 'Guest Received', 'In Progress', 'Completed'];
 const paymentStatusOptions = ['Not Paid', 'Partial', 'Paid', 'Refunded'];
 const paymentMethodOptions = ['', 'Cash', 'Card', 'Bank Transfer', 'Online Link', 'B2B Invoice'];
+const paymentSourceOptions = ['direct', 'b2b'];
+const paymentWorkflowOptions = ['unpaid', 'partial_paid', 'paid_to_manager', 'pending_from_b2b_agent', 'received_by_admin', 'settled', 'refunded'];
+const collectionStatusOptions = ['pending_collection', 'with_manager', 'with_b2b_agent', 'with_admin', 'settled'];
 
 const supabaseProjectHost = (() => {
   try {
@@ -70,6 +101,14 @@ const supabaseProjectHost = (() => {
   }
 })();
 
+function asNumber(value: unknown) {
+  return Number(value || 0);
+}
+
+function displayText(value: string | null | undefined, fallback = '-') {
+  return String(value || '').trim() || fallback;
+}
+
 function niceDate(value: string | null) {
   if (!value) return 'Not selected';
   return new Intl.DateTimeFormat('en-AE', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(`${value}T12:00:00`));
@@ -78,6 +117,10 @@ function niceDate(value: string | null) {
 function niceCreatedAt(value: string | null) {
   if (!value) return '-';
   return new Intl.DateTimeFormat('en-AE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(value));
+}
+
+function prettyKey(value: string | null | undefined) {
+  return displayText(value).replace(/_/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
 function statusClass(status: string | null) {
@@ -111,11 +154,34 @@ function serviceDetail(booking: BookingRow) {
   return parts.join(' · ');
 }
 
+function bookingTotal(booking: BookingRow) {
+  return asNumber(booking.total_amount);
+}
+
+function bookingPending(booking: BookingRow) {
+  const pending = asNumber(booking.amount_pending_aed);
+  if (pending > 0) return pending;
+  const total = bookingTotal(booking);
+  const received = asNumber(booking.amount_received_aed);
+  return Math.max(total - received, 0);
+}
+
 function whatsAppHref(booking: BookingRow) {
   const digits = String(booking.customer_phone || '').replace(/\D/g, '');
   if (!digits || digits.length < 7) return '';
   const message = encodeURIComponent(`Hello ${booking.customer_name || ''}, this is eDrive Water Sports regarding your booking ${booking.booking_code}.`);
   return `https://wa.me/${digits}?text=${message}`;
+}
+
+function defaultWorkflowStatus(values: ManageValues) {
+  const received = asNumber(values.amountReceivedAed);
+  if (values.paymentStatus === 'Refunded') return 'refunded';
+  if (values.paymentSource === 'b2b') return 'pending_from_b2b_agent';
+  if (values.collectionStatus === 'settled') return 'settled';
+  if (values.collectionStatus === 'with_admin') return 'received_by_admin';
+  if (values.paymentStatus === 'Paid') return 'paid_to_manager';
+  if (received > 0) return 'partial_paid';
+  return 'unpaid';
 }
 
 export function AdminBookingsLivePage() {
@@ -166,13 +232,35 @@ export function AdminBookingsLivePage() {
   }
 
   async function saveBookingStatus(booking: BookingRow, values: ManageValues) {
-    const payload = {
+    const total = bookingTotal(booking);
+    const amountReceived = Math.max(asNumber(values.amountReceivedAed), 0);
+    const amountPending = Math.max(total - amountReceived, 0);
+    const workflowStatus = values.paymentWorkflowStatus || defaultWorkflowStatus(values);
+    const now = new Date().toISOString();
+
+    const payload: Record<string, unknown> = {
       status: values.status,
       admin_status: values.adminStatus,
+      manager_status: values.managerStatus,
       payment_status: values.paymentStatus,
       payment_method: values.paymentMethod || null,
-      updated_at: new Date().toISOString()
+      payment_source: values.paymentSource,
+      payment_workflow_status: workflowStatus,
+      collection_status: values.collectionStatus,
+      amount_received_aed: amountReceived,
+      amount_pending_aed: amountPending,
+      assigned_manager_name: values.assignedManagerName.trim() || null,
+      assigned_vehicle_name: values.assignedVehicleName.trim() || null,
+      b2b_agent_name: values.paymentSource === 'b2b' ? values.b2bAgentName.trim() || null : null,
+      customer_arrived: values.customerArrived,
+      manager_note: values.managerNote.trim() || null,
+      internal_note: values.internalNote.trim() || null,
+      updated_at: now
     };
+
+    if (values.status === 'Confirmed' && !booking.confirmed_at) payload.confirmed_at = now;
+    if (values.status === 'Completed' && !booking.completed_at) payload.completed_at = now;
+    if ((values.collectionStatus === 'with_admin' || values.collectionStatus === 'settled') && !booking.admin_payment_received_at) payload.admin_payment_received_at = now;
 
     const queryBuilder = supabase.from(bookingRequestsTable).update(payload);
     const result = booking.id ? await queryBuilder.eq('id', booking.id) : await queryBuilder.eq('booking_code', booking.booking_code);
@@ -188,12 +276,12 @@ export function AdminBookingsLivePage() {
   const filtered = useMemo(() => {
     const term = query.trim().toLowerCase();
     if (!term) return bookings;
-    return bookings.filter((booking) => [booking.booking_code, booking.customer_name, booking.customer_phone, booking.customer_email, packageLabel(booking), booking.status].some((value) => String(value || '').toLowerCase().includes(term)));
+    return bookings.filter((booking) => [booking.booking_code, booking.booking_number, booking.customer_name, booking.customer_phone, booking.customer_email, packageLabel(booking), booking.status, booking.manager_status, booking.payment_workflow_status, booking.collection_status].some((value) => String(value || '').toLowerCase().includes(term)));
   }, [bookings, query]);
 
   const newCount = bookings.filter((booking) => (booking.admin_status || 'New') === 'New').length;
   const confirmedCount = bookings.filter((booking) => booking.status === 'Confirmed').length;
-  const pendingPayment = bookings.filter((booking) => (booking.payment_status || 'Not Paid') !== 'Paid').reduce((sum, booking) => sum + Number(booking.total_amount || 0), 0);
+  const pendingPayment = bookings.reduce((sum, booking) => sum + bookingPending(booking), 0);
 
   return (
     <section className="container-x py-6 sm:py-8">
@@ -210,7 +298,7 @@ export function AdminBookingsLivePage() {
         <div className="mt-6 grid gap-4 md:grid-cols-3">
           <Metric title="New Requests" value={String(newCount)} icon={CalendarDays} />
           <Metric title="Confirmed" value={String(confirmedCount)} icon={ClipboardCheck} />
-          <Metric title="Pending Payments" value={formatAed(pendingPayment)} icon={WalletCards} />
+          <Metric title="Pending Collection" value={formatAed(pendingPayment)} icon={WalletCards} />
         </div>
 
         <Card className="mt-5 rounded-[1.35rem] border-primary/15 bg-primary-50/55">
@@ -243,17 +331,21 @@ export function AdminBookingsLivePage() {
                     <TableHead>Package / Service</TableHead>
                     <TableHead>Date / Time</TableHead>
                     <TableHead>Total</TableHead>
+                    <TableHead>Payment</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Created</TableHead>
+                    <TableHead>Operations</TableHead>
                     <TableHead>Action</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {loading ? <TableRow><TableCell colSpan={8} className="py-8 text-center text-sm text-muted-foreground">Loading bookings...</TableCell></TableRow> : null}
-                  {!loading && filtered.length === 0 ? <TableRow><TableCell colSpan={8} className="py-8 text-center text-sm text-muted-foreground">No booking requests found.</TableCell></TableRow> : null}
+                  {loading ? <TableRow><TableCell colSpan={9} className="py-8 text-center text-sm text-muted-foreground">Loading bookings...</TableCell></TableRow> : null}
+                  {!loading && filtered.length === 0 ? <TableRow><TableCell colSpan={9} className="py-8 text-center text-sm text-muted-foreground">No booking requests found.</TableCell></TableRow> : null}
                   {filtered.map((booking, index) => (
                     <TableRow key={booking.id || `${booking.booking_code}-${index}`}>
-                      <TableCell className="font-bold text-primary-900">{booking.booking_code}</TableCell>
+                      <TableCell>
+                        <div className="font-bold text-primary-900">{booking.booking_code}</div>
+                        {booking.booking_number && booking.booking_number !== booking.booking_code ? <div className="text-xs text-muted-foreground">{booking.booking_number}</div> : null}
+                      </TableCell>
                       <TableCell>
                         <div className="font-semibold text-foreground">{booking.customer_name || '-'}</div>
                         <div className="text-xs text-muted-foreground">{booking.customer_phone || booking.customer_email || '-'}</div>
@@ -263,9 +355,10 @@ export function AdminBookingsLivePage() {
                         <div className="text-xs text-muted-foreground">{serviceDetail(booking)}</div>
                       </TableCell>
                       <TableCell>{niceDate(booking.preferred_date)}<div className="text-xs text-muted-foreground">{booking.preferred_time || '-'}</div></TableCell>
-                      <TableCell>{formatAed(Number(booking.total_amount || 0))}<div className="text-xs text-muted-foreground">{booking.payment_status || 'Not Paid'}</div></TableCell>
+                      <TableCell>{formatAed(bookingTotal(booking))}<div className="text-xs text-muted-foreground">Pending {formatAed(bookingPending(booking))}</div></TableCell>
+                      <TableCell><div className="font-semibold text-foreground">{booking.payment_status || 'Not Paid'}</div><div className="text-xs text-muted-foreground">{prettyKey(booking.collection_status || 'pending_collection')}</div></TableCell>
                       <TableCell><span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-bold ${statusClass(booking.status)}`}>{booking.status || 'Pending'}</span></TableCell>
-                      <TableCell className="text-xs text-muted-foreground">{niceCreatedAt(booking.created_at)}</TableCell>
+                      <TableCell><div className="font-semibold text-foreground">{booking.manager_status || 'Pending'}</div><div className="text-xs text-muted-foreground">{booking.assigned_vehicle_name || 'No vehicle assigned'}</div></TableCell>
                       <TableCell><Button type="button" size="sm" variant="outline" onClick={() => setSelectedBooking(booking)}>Manage</Button></TableCell>
                     </TableRow>
                   ))}
@@ -289,15 +382,29 @@ function Metric({ title, value, icon: Icon }: { title: string; value: string; ic
 }
 
 function ManageBookingModal({ booking, onClose, onSave }: { booking: BookingRow; onClose: () => void; onSave: (booking: BookingRow, values: ManageValues) => Promise<void> }) {
+  const total = bookingTotal(booking);
   const [values, setValues] = useState<ManageValues>({
     status: booking.status || 'Pending',
     adminStatus: booking.admin_status || 'New',
+    managerStatus: booking.manager_status || 'Pending',
     paymentStatus: booking.payment_status || 'Not Paid',
-    paymentMethod: booking.payment_method || ''
+    paymentMethod: booking.payment_method || '',
+    paymentSource: booking.payment_source || 'direct',
+    paymentWorkflowStatus: booking.payment_workflow_status || 'unpaid',
+    collectionStatus: booking.collection_status || 'pending_collection',
+    amountReceivedAed: String(booking.amount_received_aed ?? 0),
+    assignedManagerName: booking.assigned_manager_name || '',
+    assignedVehicleName: booking.assigned_vehicle_name || '',
+    b2bAgentName: booking.b2b_agent_name || '',
+    customerArrived: Boolean(booking.customer_arrived),
+    managerNote: booking.manager_note || '',
+    internalNote: booking.internal_note || ''
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const whatsapp = whatsAppHref(booking);
+  const amountReceived = Math.max(asNumber(values.amountReceivedAed), 0);
+  const amountPending = Math.max(total - amountReceived, 0);
 
   async function submit() {
     setSaving(true);
@@ -313,7 +420,7 @@ function ManageBookingModal({ booking, onClose, onSave }: { booking: BookingRow;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-primary-900/35 p-4 backdrop-blur-sm">
-      <div className="max-h-[92vh] w-full max-w-3xl overflow-hidden rounded-[1.6rem] border border-white/80 bg-white shadow-[0_28px_80px_rgba(8,37,50,0.28)]">
+      <div className="max-h-[92vh] w-full max-w-5xl overflow-hidden rounded-[1.6rem] border border-white/80 bg-white shadow-[0_28px_80px_rgba(8,37,50,0.28)]">
         <div className="flex items-start justify-between gap-4 border-b border-border/70 bg-[#F7FAFA] px-5 py-4">
           <div>
             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Manage Booking</p>
@@ -324,7 +431,7 @@ function ManageBookingModal({ booking, onClose, onSave }: { booking: BookingRow;
 
         <div className="max-h-[calc(92vh-5rem)] overflow-y-auto p-5">
           {error ? <p className="mb-4 rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</p> : null}
-          <div className="grid gap-4 lg:grid-cols-[1fr_0.9fr]">
+          <div className="grid gap-4 lg:grid-cols-[1fr_1.1fr]">
             <div className="grid gap-3 rounded-[1.25rem] border border-border bg-white p-4">
               <InfoLine label="Customer" value={booking.customer_name || '-'} />
               <InfoLine label="Phone" value={booking.customer_phone || '-'} />
@@ -333,17 +440,48 @@ function ManageBookingModal({ booking, onClose, onSave }: { booking: BookingRow;
               <InfoLine label="Service" value={serviceDetail(booking)} />
               <InfoLine label="Date / Time" value={`${niceDate(booking.preferred_date)} · ${booking.preferred_time || '-'}`} />
               <InfoLine label="Party" value={`${booking.vehicle_quantity || 1} vehicle · ${booking.guest_count || '-'} guests`} />
-              <InfoLine label="Total" value={formatAed(Number(booking.total_amount || 0))} />
+              <InfoLine label="Total" value={formatAed(total)} />
+              <InfoLine label="Pending" value={formatAed(amountPending)} />
               {booking.customer_notes ? <InfoLine label="Notes" value={booking.customer_notes} /> : null}
             </div>
 
-            <div className="grid gap-3 rounded-[1.25rem] border border-border bg-[#F7FAFA] p-4">
-              <SelectField label="Booking Status" value={values.status} options={bookingStatusOptions} onChange={(status) => setValues((current) => ({ ...current, status }))} />
-              <SelectField label="Admin Status" value={values.adminStatus} options={adminStatusOptions} onChange={(adminStatus) => setValues((current) => ({ ...current, adminStatus }))} />
-              <SelectField label="Payment Status" value={values.paymentStatus} options={paymentStatusOptions} onChange={(paymentStatus) => setValues((current) => ({ ...current, paymentStatus }))} />
-              <SelectField label="Payment Method" value={values.paymentMethod} options={paymentMethodOptions} onChange={(paymentMethod) => setValues((current) => ({ ...current, paymentMethod }))} />
-              {whatsapp ? <Button asChild variant="outline"><a href={whatsapp} target="_blank" rel="noopener noreferrer"><MessageCircle data-icon aria-hidden="true" />WhatsApp Customer</a></Button> : null}
-              <Button type="button" onClick={submit} disabled={saving}><Save data-icon aria-hidden="true" />{saving ? 'Saving...' : 'Save Changes'}</Button>
+            <div className="grid gap-4 rounded-[1.25rem] border border-border bg-[#F7FAFA] p-4">
+              <div className="grid gap-3 md:grid-cols-2">
+                <SelectField label="Booking Status" value={values.status} options={bookingStatusOptions} onChange={(status) => setValues((current) => ({ ...current, status }))} />
+                <SelectField label="Admin Status" value={values.adminStatus} options={adminStatusOptions} onChange={(adminStatus) => setValues((current) => ({ ...current, adminStatus }))} />
+                <SelectField label="Manager Status" value={values.managerStatus} options={managerStatusOptions} onChange={(managerStatus) => setValues((current) => ({ ...current, managerStatus }))} />
+                <SelectField label="Payment Status" value={values.paymentStatus} options={paymentStatusOptions} onChange={(paymentStatus) => setValues((current) => ({ ...current, paymentStatus }))} />
+                <SelectField label="Payment Method" value={values.paymentMethod} options={paymentMethodOptions} onChange={(paymentMethod) => setValues((current) => ({ ...current, paymentMethod }))} />
+                <SelectField label="Payment Source" value={values.paymentSource} options={paymentSourceOptions} onChange={(paymentSource) => setValues((current) => ({ ...current, paymentSource, paymentWorkflowStatus: paymentSource === 'b2b' ? 'pending_from_b2b_agent' : current.paymentWorkflowStatus }))} />
+                <SelectField label="Payment Workflow" value={values.paymentWorkflowStatus} options={paymentWorkflowOptions} onChange={(paymentWorkflowStatus) => setValues((current) => ({ ...current, paymentWorkflowStatus }))} />
+                <SelectField label="Collection Status" value={values.collectionStatus} options={collectionStatusOptions} onChange={(collectionStatus) => setValues((current) => ({ ...current, collectionStatus }))} />
+              </div>
+
+              <div className="grid gap-3 md:grid-cols-2">
+                <TextField label="Manager" value={values.assignedManagerName} onChange={(assignedManagerName) => setValues((current) => ({ ...current, assignedManagerName }))} placeholder="Manager name" />
+                <TextField label="Assigned Vehicle" value={values.assignedVehicleName} onChange={(assignedVehicleName) => setValues((current) => ({ ...current, assignedVehicleName }))} placeholder="Vehicle name/code" />
+                <TextField label="B2B Agent" value={values.b2bAgentName} onChange={(b2bAgentName) => setValues((current) => ({ ...current, b2bAgentName }))} placeholder="Agent company" />
+                <NumberField label="Amount Received" value={values.amountReceivedAed} onChange={(amountReceivedAed) => setValues((current) => ({ ...current, amountReceivedAed }))} />
+              </div>
+
+              <label className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                <input type="checkbox" checked={values.customerArrived} onChange={(event) => setValues((current) => ({ ...current, customerArrived: event.target.checked }))} className="size-4 rounded border-border" />
+                Customer arrived / received by manager
+              </label>
+
+              <TextAreaField label="Manager Note" value={values.managerNote} onChange={(managerNote) => setValues((current) => ({ ...current, managerNote }))} />
+              <TextAreaField label="Internal Note" value={values.internalNote} onChange={(internalNote) => setValues((current) => ({ ...current, internalNote }))} />
+
+              <div className="grid gap-2 rounded-xl border border-primary/15 bg-white px-3 py-2 text-xs text-primary-900 md:grid-cols-3">
+                <div><span className="font-bold">Total:</span> {formatAed(total)}</div>
+                <div><span className="font-bold">Received:</span> {formatAed(amountReceived)}</div>
+                <div><span className="font-bold">Pending:</span> {formatAed(amountPending)}</div>
+              </div>
+
+              <div className="flex flex-col gap-2 sm:flex-row">
+                {whatsapp ? <Button asChild variant="outline"><a href={whatsapp} target="_blank" rel="noopener noreferrer"><MessageCircle data-icon aria-hidden="true" />WhatsApp Customer</a></Button> : null}
+                <Button type="button" onClick={submit} disabled={saving}><Save data-icon aria-hidden="true" />{saving ? 'Saving...' : 'Save Changes'}</Button>
+              </div>
             </div>
           </div>
         </div>
@@ -357,5 +495,17 @@ function InfoLine({ label, value }: { label: string; value: string }) {
 }
 
 function SelectField({ label, value, options, onChange }: { label: string; value: string; options: string[]; onChange: (value: string) => void }) {
-  return <label className="grid gap-1.5 text-sm font-semibold text-foreground">{label}<select value={value} onChange={(event) => onChange(event.target.value)} className="h-10 rounded-xl border border-border bg-white px-3 text-sm text-foreground outline-none focus:border-primary">{options.map((option) => <option key={option} value={option}>{option || 'None'}</option>)}</select></label>;
+  return <label className="grid gap-1.5 text-sm font-semibold text-foreground">{label}<select value={value} onChange={(event) => onChange(event.target.value)} className="h-10 rounded-xl border border-border bg-white px-3 text-sm text-foreground outline-none focus:border-primary">{options.map((option) => <option key={option} value={option}>{option ? prettyKey(option) : 'None'}</option>)}</select></label>;
+}
+
+function TextField({ label, value, onChange, placeholder }: { label: string; value: string; onChange: (value: string) => void; placeholder?: string }) {
+  return <label className="grid gap-1.5 text-sm font-semibold text-foreground">{label}<Input value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} className="h-10 rounded-xl" /></label>;
+}
+
+function NumberField({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+  return <label className="grid gap-1.5 text-sm font-semibold text-foreground">{label}<Input type="number" min="0" step="0.01" value={value} onChange={(event) => onChange(event.target.value)} className="h-10 rounded-xl" /></label>;
+}
+
+function TextAreaField({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+  return <label className="grid gap-1.5 text-sm font-semibold text-foreground">{label}<textarea value={value} onChange={(event) => onChange(event.target.value)} rows={3} className="rounded-xl border border-border bg-white px-3 py-2 text-sm text-foreground outline-none focus:border-primary" /></label>;
 }
