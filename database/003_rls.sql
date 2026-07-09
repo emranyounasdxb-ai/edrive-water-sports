@@ -43,6 +43,25 @@ as $$
   select coalesce(public.current_staff_role() = any(allowed_roles), false);
 $$;
 
+drop policy if exists "roles staff read" on public.roles;
+drop policy if exists "users self read" on public.users;
+drop policy if exists "users admin manage" on public.users;
+drop policy if exists "vehicles public read" on public.vehicles;
+drop policy if exists "vehicles staff manage" on public.vehicles;
+drop policy if exists "vehicle images public read" on public.vehicle_images;
+drop policy if exists "vehicle images staff manage" on public.vehicle_images;
+drop policy if exists "customers staff read" on public.customers;
+drop policy if exists "customers staff manage" on public.customers;
+drop policy if exists "coupons staff read" on public.coupons;
+drop policy if exists "coupons admin manager manage" on public.coupons;
+drop policy if exists "bookings staff read" on public.bookings;
+drop policy if exists "bookings staff update" on public.bookings;
+drop policy if exists "bookings staff insert" on public.bookings;
+drop policy if exists "payments staff read" on public.payments;
+drop policy if exists "payments admin manager manage" on public.payments;
+drop policy if exists "logs staff read" on public.logs;
+drop policy if exists "logs staff insert" on public.logs;
+
 create policy "roles staff read" on public.roles for select to authenticated using (public.is_staff());
 
 create policy "users self read" on public.users for select to authenticated using (id = auth.uid() or public.has_staff_role(array['admin','manager']));
