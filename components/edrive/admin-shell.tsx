@@ -28,6 +28,10 @@ function isManagerRole(role: string) {
   return role === 'manager';
 }
 
+function isActiveStatus(status: string | null | undefined) {
+  return String(status || '').trim().toLowerCase() === 'active';
+}
+
 function isManagerPathAllowed(pathname: string) {
   return ['/admin/manager', '/admin/vehicle-assignment', '/admin/operations-schedule', '/admin/payments', '/admin/vehicles', '/admin/maintenance'].some((path) => pathname === path || pathname.startsWith(`${path}/`));
 }
@@ -84,13 +88,13 @@ export function AdminShell({ children }: { children: ReactNode }) {
 
       const profile = (profiles?.[0] ?? null) as AdminProfile | null;
       if (!profile) {
-        setAccessIssue(`No active admin profile found for ${authEmail || authUser.id}. Check Vercel Supabase env and admin_users policies.`);
+        setAccessIssue(`No active admin profile found for ${authEmail || authUser.id}. Check Supabase admin_users profile and policies.`);
         setReady(true);
         return;
       }
 
-      if (profile.status !== 'active') {
-        setAccessIssue('Admin profile exists but is not active.');
+      if (!isActiveStatus(profile.status)) {
+        setAccessIssue(`Admin profile exists but status is ${profile.status || 'empty'}.`);
         setReady(true);
         return;
       }
@@ -128,7 +132,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
           <BrandMark className="mx-auto mb-5 w-fit" />
           <h1 className="font-heading text-2xl font-semibold text-primary-900">Admin access needs attention</h1>
           <p className="mt-3 text-sm leading-6 text-muted-foreground">{accessIssue || 'Admin profile could not be loaded.'}</p>
-          <p className="mt-3 rounded-2xl bg-primary-50 p-3 text-xs font-semibold text-primary-900">Please check Vercel Supabase env variables and SELECT policy on admin_users for authenticated users.</p>
+          <p className="mt-3 rounded-2xl bg-primary-50 p-3 text-xs font-semibold text-primary-900">Please check Supabase admin_users profile status and SELECT policy for authenticated users.</p>
           <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-center">
             <Button asChild variant="outline" className="rounded-full"><Link href="/admin/login">Back to login</Link></Button>
             <Button type="button" className="rounded-full" onClick={async () => { await supabase.auth.signOut(); router.replace('/admin/login'); }}>Sign out</Button>
