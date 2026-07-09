@@ -365,11 +365,11 @@ function ManageBookingModal({ booking, managers, onClose, onSave }: { booking: B
               <ReadOnlyNote label="Customer / Agent Note" value={booking.customer_notes || ''} />
             </div>
 
-            <div className="grid gap-3 rounded-[1.15rem] border border-border bg-[#F7FAFA] p-4">
-              <div className="grid gap-3 md:grid-cols-2">
+            <div className="grid gap-2.5 rounded-[1.15rem] border border-border bg-[#F7FAFA] p-3.5">
+              <div className="grid gap-2.5 md:grid-cols-2">
                 <SelectField label="Booking Status" value={values.status} options={bookingStatusOptions} onChange={(status) => setValues((current) => ({ ...current, status }))} />
                 <ManagerSelectField value={values.assignedManagerName} options={managerOptions} onChange={(assignedManagerName) => setValues((current) => ({ ...current, assignedManagerName }))} />
-                <ReadOnlyField label="Booking Type" value={sourceLabel} />
+                <BookingTypeAmountField typeLabel={sourceLabel} amount={formatAed(total)} />
               </div>
               <TextAreaField label="Internal Note" value={values.internalNote} onChange={(internalNote) => setValues((current) => ({ ...current, internalNote }))} />
               {values.status === 'Confirmed' && !values.assignedManagerName ? <p className="rounded-xl bg-amber-50 px-3 py-2 text-xs font-semibold leading-5 text-amber-700">Confirmed booking manager dashboard par tab jayegi jab manager select hoga.</p> : null}
@@ -379,7 +379,7 @@ function ManageBookingModal({ booking, managers, onClose, onSave }: { booking: B
 
         <div className="flex flex-col gap-3 border-t border-border/70 bg-white px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="rounded-xl border border-primary/15 bg-primary-50/80 px-3 py-2 text-xs text-primary-900"><span className="font-bold">Total:</span> {formatAed(total)} <span className="mx-2 text-muted-foreground">·</span> <span className="font-bold">Type:</span> {sourceLabel}</div>
-          <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">{whatsapp ? <Button asChild variant="outline" className="rounded-full"><a href={whatsapp} target="_blank" rel="noopener noreferrer"><MessageCircle data-icon aria-hidden="true" />WhatsApp Customer</a></Button> : null}<Button type="button" onClick={submit} disabled={saving} className="rounded-full"><Save data-icon aria-hidden="true" />{saving ? 'Saving...' : 'Save Changes'}</Button></div>
+          <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">{whatsapp ? <Button asChild className="rounded-full border-[#25D366] bg-[#25D366] text-white hover:bg-[#1EBE5D] hover:text-white"><a href={whatsapp} target="_blank" rel="noopener noreferrer"><MessageCircle data-icon aria-hidden="true" />WhatsApp Customer</a></Button> : null}<Button type="button" onClick={submit} disabled={saving} className="rounded-full"><Save data-icon aria-hidden="true" />{saving ? 'Saving...' : 'Save Changes'}</Button></div>
         </div>
       </div>
     </div>
@@ -387,7 +387,7 @@ function ManageBookingModal({ booking, managers, onClose, onSave }: { booking: B
 }
 
 function InfoLine({ label, value }: { label: string; value: string }) {
-  return <div className="grid gap-1 rounded-xl border border-border/60 bg-[#F7FAFA] px-3 py-2 sm:grid-cols-[7rem_1fr]"><p className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">{label}</p><p className="text-sm font-semibold leading-5 text-foreground sm:text-right">{value}</p></div>;
+  return <div className="grid gap-1 rounded-xl border border-border/60 bg-[#F7FAFA] px-3 py-2 sm:grid-cols-[9rem_1fr]"><p className="whitespace-nowrap text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground">{label}</p><p className="text-sm font-semibold leading-5 text-foreground sm:text-right">{value}</p></div>;
 }
 
 function ReadOnlyNote({ label, value }: { label: string; value: string }) {
@@ -402,10 +402,10 @@ function ManagerSelectField({ value, options, onChange }: { value: string; optio
   return <label className="grid gap-1.5 text-sm font-semibold text-foreground">Assigned Manager<select value={value} onChange={(event) => onChange(event.target.value)} className="h-10 rounded-xl border border-border bg-white px-3 text-sm text-foreground outline-none focus:border-primary"><option value="">Select manager</option>{options.map((option) => <option key={option} value={option}>{option}</option>)}</select></label>;
 }
 
-function ReadOnlyField({ label, value }: { label: string; value: string }) {
-  return <div className="grid gap-1.5 text-sm font-semibold text-foreground"><span>{label}</span><div className="flex h-10 items-center rounded-xl border border-border bg-white px-3 text-sm text-muted-foreground">{value}</div></div>;
+function BookingTypeAmountField({ typeLabel, amount }: { typeLabel: string; amount: string }) {
+  return <div className="grid gap-1.5 text-sm font-semibold text-foreground md:col-span-2"><span>Booking Type / Amount</span><div className="grid gap-2 rounded-xl border border-border bg-white p-2 sm:grid-cols-2"><div className="rounded-lg bg-[#F7FAFA] px-3 py-2"><p className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">Type</p><p className="mt-1 text-sm font-bold text-foreground">{typeLabel}</p></div><div className="rounded-lg bg-primary-50 px-3 py-2"><p className="text-[10px] font-bold uppercase tracking-[0.12em] text-primary">Amount</p><p className="mt-1 text-sm font-bold text-primary-900">{amount}</p></div></div></div>;
 }
 
 function TextAreaField({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
-  return <label className="grid gap-1.5 text-sm font-semibold text-foreground">{label}<textarea value={value} onChange={(event) => onChange(event.target.value)} rows={5} className="rounded-xl border border-border bg-white px-3 py-2 text-sm text-foreground outline-none focus:border-primary" /></label>;
+  return <label className="grid gap-1.5 text-sm font-semibold text-foreground">{label}<textarea value={value} onChange={(event) => onChange(event.target.value)} rows={4} className="rounded-xl border border-border bg-white px-3 py-2 text-sm text-foreground outline-none focus:border-primary" /></label>;
 }
