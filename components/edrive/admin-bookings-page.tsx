@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { CalendarDays, ClipboardCheck, FileClock, MessageCircle, RefreshCw, Save, Search, WalletCards, X } from 'lucide-react';
+import { CalendarDays, ClipboardCheck, MessageCircle, RefreshCw, Save, Search, WalletCards, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -49,32 +49,11 @@ type BookingRow = {
   updated_at?: string | null;
 };
 
-type DebugState = {
-  projectHost: string;
-  table: string;
-  count: number | null;
-  receivedRows: number;
-  lastError: string;
-  lastLoadedAt: string;
-};
-
 type ManagerOption = { name: string; email: string };
-
-type ManageValues = {
-  status: string;
-  assignedManagerName: string;
-  internalNote: string;
-};
+type BookingFilter = 'all' | 'new' | 'pending' | 'confirmed' | 'b2b' | 'direct' | 'unassigned';
+type ManageValues = { status: string; assignedManagerName: string; internalNote: string };
 
 const bookingStatusOptions = ['Pending', 'Confirmed', 'Cancelled'];
-
-const supabaseProjectHost = (() => {
-  try {
-    return new URL(process.env.NEXT_PUBLIC_SUPABASE_URL || '').host || 'missing-url';
-  } catch {
-    return 'invalid-url';
-  }
-})();
 
 function asNumber(value: unknown) {
   return Number(value || 0);
@@ -143,6 +122,10 @@ function paymentTypeLabel(booking: BookingRow) {
   return booking.payment_source === 'b2b' || booking.b2b_agent_name ? 'B2B' : 'Direct Sale';
 }
 
+function isB2BBooking(booking: BookingRow) {
+  return paymentTypeLabel(booking) === 'B2B';
+}
+
 function whatsappPhone(value: string | null) {
   let digits = String(value || '').replace(/\D/g, '');
   if (!digits || digits.length < 7) return '';
@@ -181,8 +164,8 @@ export function AdminBookingsLivePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [query, setQuery] = useState('');
+  const [activeFilter, setActiveFilter] = useState<BookingFilter>('all');
   const [selectedBooking, setSelectedBooking] = useState<BookingRow | null>(null);
-  const [debug, setDebug] = useState<DebugState>({ projectHost: supabaseProjectHost, table: bookingRequestsTable, count: null, receivedRows: 0, lastError: '', lastLoadedAt: '-' });
 
   async function loadManagers() {
     const { data } = await supabase.from('admin_users').select('full_name,email,role,status').order('full_name', { ascending: true }).limit(100);
@@ -196,15 +179,12 @@ export function AdminBookingsLivePage() {
   async function loadBookings() {
     setLoading(true);
     setError('');
-    const { data, error: queryError, count } = await supabase.from(bookingRequestsTable).select('*', { count: 'exact' }).order('created_at', { ascending: false }).limit(100);
-    const rows = (data || []) as BookingRow[];
-    const message = queryError?.message || '';
-    setDebug({ projectHost: supabaseProjectHost, table: bookingRequestsTable, count: typeof count === 'number' ? count : null, receivedRows: rows.length, lastError: message, lastLoadedAt: new Date().toLocaleString('en-AE') });
+    const { data, error: queryError } = await supabase.from(bookingRequestsTable).select('*').order('created_at', { ascending: false }).limit(200);
     if (queryError) {
-      setError(message);
+      setError(queryError.message);
       setBookings([]);
     } else {
-      setBookings(rows);
+      setBookings((data || []) as BookingRow[]);
     }
     setLoading(false);
   }
@@ -234,71 +214,135 @@ export function AdminBookingsLivePage() {
 
   useEffect(() => { void refreshAll(); }, []);
 
+  const stats = useMemo(() => {
+    const newCount = bookings.filter((booking) => (booking.admin_status || 'New') === 'New').length;
+    const confirmedCount = bookings.filter((booking) => booking.status === 'Confirmed').length;
+    const pendingPayment = bookings.reduce((sum, booking) => sum + bookingPending(booking), 0);
+    const b2bPending = bookings.filter((booking) => isB2BBooking(booking) && bookingPending(booking) > 0).length;
+    return { newCount, confirmedCount, pendingPayment, b2bPending };
+  }, [bookings]);
+
+  const filterOptions = useMemo(() => [
+    { id: 'all' as const, label: 'All', count: bookings.length },
+    { id: 'new' as const, label: 'New', count: stats.newCount },
+    { id: 'pending' as const, label: 'Pending', count: bookings.filter((booking) => (booking.status || 'Pending') === 'Pending').length },
+    { id: 'confirmed' as const, label: 'Confirmed', count: stats.confirmedCount },
+    { id: 'b2b' as const, label: 'B2B', count: bookings.filter(isB2BBooking).length },
+    { id: 'direct' as const, label: 'Direct Sale', count: bookings.filter((booking) => !isB2BBooking(booking)).length },
+    { id: 'unassigned' as const, label: 'Unassigned', count: bookings.filter((booking) => !booking.assigned_manager_name).length }
+  ], [bookings, stats.confirmedCount, stats.newCount]);
+
   const filtered = useMemo(() => {
     const term = query.trim().toLowerCase();
-    if (!term) return bookings;
-    return bookings.filter((booking) => [booking.booking_code, booking.booking_number, booking.customer_name, booking.customer_phone, booking.customer_email, packageLabel(booking), booking.status, booking.manager_status, booking.assigned_manager_name].some((value) => String(value || '').toLowerCase().includes(term)));
-  }, [bookings, query]);
-
-  const newCount = bookings.filter((booking) => (booking.admin_status || 'New') === 'New').length;
-  const confirmedCount = bookings.filter((booking) => booking.status === 'Confirmed').length;
-  const pendingPayment = bookings.reduce((sum, booking) => sum + bookingPending(booking), 0);
+    return bookings.filter((booking) => {
+      const matchesSearch = !term || [booking.booking_code, booking.booking_number, booking.customer_name, booking.customer_phone, booking.customer_email, packageLabel(booking), booking.status, booking.manager_status, booking.assigned_manager_name, paymentTypeLabel(booking)].some((value) => String(value || '').toLowerCase().includes(term));
+      if (!matchesSearch) return false;
+      if (activeFilter === 'new') return (booking.admin_status || 'New') === 'New';
+      if (activeFilter === 'pending') return (booking.status || 'Pending') === 'Pending';
+      if (activeFilter === 'confirmed') return booking.status === 'Confirmed';
+      if (activeFilter === 'b2b') return isB2BBooking(booking);
+      if (activeFilter === 'direct') return !isB2BBooking(booking);
+      if (activeFilter === 'unassigned') return !booking.assigned_manager_name;
+      return true;
+    });
+  }, [activeFilter, bookings, query]);
 
   return (
-    <section className="container-x py-6 sm:py-8">
-      <div className="mx-auto max-w-7xl">
+    <section className="w-full py-4 sm:py-6">
+      <div className="w-full">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Bookings</p>
-            <h1 className="mt-2 font-heading text-3xl font-semibold text-foreground sm:text-4xl">Website booking requests</h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">Live records saved from the public booking form in Supabase.</p>
+            <h1 className="mt-2 font-heading text-3xl font-semibold text-foreground sm:text-4xl">Booking requests</h1>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">Manage direct sale and B2B bookings, confirm requests, and assign managers.</p>
           </div>
-          <Button type="button" onClick={refreshAll} variant="outline"><RefreshCw data-icon aria-hidden="true" />Refresh</Button>
+          <Button type="button" onClick={refreshAll} variant="outline" className="w-fit rounded-full bg-white"><RefreshCw data-icon aria-hidden="true" />Refresh</Button>
         </div>
 
-        <div className="mt-6 grid gap-4 md:grid-cols-3">
-          <Metric title="New Requests" value={String(newCount)} icon={CalendarDays} />
-          <Metric title="Confirmed" value={String(confirmedCount)} icon={ClipboardCheck} />
-          <Metric title="Pending Collection" value={formatAed(pendingPayment)} icon={WalletCards} />
+        <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <Metric title="New Requests" value={String(stats.newCount)} icon={CalendarDays} />
+          <Metric title="Confirmed" value={String(stats.confirmedCount)} icon={ClipboardCheck} />
+          <Metric title="Pending Collection" value={formatAed(stats.pendingPayment)} icon={WalletCards} />
+          <Metric title="B2B Pending" value={String(stats.b2bPending)} icon={WalletCards} />
         </div>
 
-        <Card className="mt-5 rounded-[1.35rem] border-primary/15 bg-primary-50/55">
-          <CardContent className="grid gap-2 p-4 text-xs text-primary-900 md:grid-cols-2 xl:grid-cols-5">
-            <div><span className="font-bold">Project:</span> {debug.projectHost}</div>
-            <div><span className="font-bold">Table:</span> {debug.table}</div>
-            <div><span className="font-bold">Count:</span> {debug.count ?? '-'}</div>
-            <div><span className="font-bold">Rows received:</span> {debug.receivedRows}</div>
-            <div><span className="font-bold">Loaded:</span> {debug.lastLoadedAt}</div>
-            {debug.lastError ? <div className="rounded-lg bg-red-50 px-3 py-2 font-semibold text-red-700 md:col-span-2 xl:col-span-5">Supabase error: {debug.lastError}</div> : null}
-          </CardContent>
-        </Card>
-
-        <Card className="mt-6 overflow-hidden rounded-[1.5rem] border-border/80 bg-white">
-          <CardHeader className="gap-4 border-b border-border/70 bg-[#F7FAFA] sm:flex-row sm:items-center sm:justify-between">
-            <CardTitle className="font-heading text-xl font-semibold">Booking list</CardTitle>
-            <div className="relative w-full sm:max-w-xs"><Search className="pointer-events-none absolute left-3 top-3 size-4 text-muted-foreground" aria-hidden="true" /><Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search bookings..." className="h-10 rounded-full pl-9" /></div>
+        <Card className="mt-6 overflow-hidden rounded-[1.5rem] border-border/80 bg-white shadow-[0_18px_45px_rgba(8,37,50,0.06)]">
+          <CardHeader className="gap-4 border-b border-border/70 bg-[#F7FAFA] lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <CardTitle className="font-heading text-xl font-semibold">Booking list</CardTitle>
+              <p className="mt-1 text-xs font-semibold text-muted-foreground">Showing {filtered.length} of {bookings.length} records</p>
+            </div>
+            <div className="relative w-full lg:max-w-sm">
+              <Search className="pointer-events-none absolute left-3 top-3 size-4 text-muted-foreground" aria-hidden="true" />
+              <Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search booking, customer, manager..." className="h-10 rounded-full bg-white pl-9" />
+            </div>
           </CardHeader>
+
+          <div className="flex gap-2 overflow-x-auto border-b border-border/70 bg-white px-4 py-3">
+            {filterOptions.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => setActiveFilter(item.id)}
+                className={`whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-bold transition ${activeFilter === item.id ? 'border-primary bg-primary text-white' : 'border-border bg-white text-muted-foreground hover:border-primary/40 hover:text-primary-900'}`}
+              >
+                {item.label} <span className={activeFilter === item.id ? 'text-white/75' : 'text-muted-foreground'}>{item.count}</span>
+              </button>
+            ))}
+          </div>
+
           <CardContent className="p-0">
             {error ? <p className="m-4 rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</p> : null}
             <div className="overflow-x-auto">
-              <Table>
+              <Table className="min-w-[1260px]">
                 <TableHeader>
-                  <TableRow><TableHead>Booking</TableHead><TableHead>Customer</TableHead><TableHead>Package / Service</TableHead><TableHead>Date / Time</TableHead><TableHead>Total</TableHead><TableHead>Type</TableHead><TableHead>Status</TableHead><TableHead>Operations</TableHead><TableHead>Action</TableHead></TableRow>
+                  <TableRow className="bg-[#F7FAFA]">
+                    <TableHead className="w-[170px] whitespace-nowrap">Booking</TableHead>
+                    <TableHead className="w-[190px] whitespace-nowrap">Customer</TableHead>
+                    <TableHead className="w-[230px] whitespace-nowrap">Package</TableHead>
+                    <TableHead className="w-[150px] whitespace-nowrap">Schedule</TableHead>
+                    <TableHead className="w-[150px] whitespace-nowrap">Amount</TableHead>
+                    <TableHead className="w-[150px] whitespace-nowrap">Type</TableHead>
+                    <TableHead className="w-[130px] whitespace-nowrap">Status</TableHead>
+                    <TableHead className="w-[170px] whitespace-nowrap">Manager</TableHead>
+                    <TableHead className="w-[110px] whitespace-nowrap text-right">Action</TableHead>
+                  </TableRow>
                 </TableHeader>
                 <TableBody>
                   {loading ? <TableRow><TableCell colSpan={9} className="py-8 text-center text-sm text-muted-foreground">Loading bookings...</TableCell></TableRow> : null}
                   {!loading && filtered.length === 0 ? <TableRow><TableCell colSpan={9} className="py-8 text-center text-sm text-muted-foreground">No booking requests found.</TableCell></TableRow> : null}
                   {filtered.map((booking, index) => (
-                    <TableRow key={booking.id || `${booking.booking_code}-${index}`}>
-                      <TableCell><div className="font-bold text-primary-900">{booking.booking_code}</div>{booking.booking_number && booking.booking_number !== booking.booking_code ? <div className="text-xs text-muted-foreground">{booking.booking_number}</div> : null}</TableCell>
-                      <TableCell><div className="font-semibold text-foreground">{booking.customer_name || '-'}</div><div className="text-xs text-muted-foreground">{booking.customer_phone || booking.customer_email || '-'}</div></TableCell>
-                      <TableCell><div className="font-semibold text-foreground">{packageLabel(booking)}</div><div className="text-xs text-muted-foreground">{serviceDetail(booking)}</div></TableCell>
-                      <TableCell>{niceDate(booking.preferred_date)}<div className="text-xs text-muted-foreground">{booking.preferred_time || '-'}</div></TableCell>
-                      <TableCell>{formatAed(bookingTotal(booking))}<div className="text-xs text-muted-foreground">Pending {formatAed(bookingPending(booking))}</div></TableCell>
-                      <TableCell><div className="font-semibold text-foreground">{paymentTypeLabel(booking)}</div><div className="text-xs text-muted-foreground">{booking.b2b_agent_name || prettyKey(booking.payment_source || 'direct')}</div></TableCell>
-                      <TableCell><span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-bold ${statusClass(booking.status)}`}>{booking.status || 'Pending'}</span></TableCell>
-                      <TableCell><div className="font-semibold text-foreground">{booking.manager_status || 'Pending'}</div><div className="text-xs text-muted-foreground">{booking.assigned_manager_name || 'No manager assigned'}</div></TableCell>
-                      <TableCell><Button type="button" size="sm" variant="outline" onClick={() => setSelectedBooking(booking)}>Manage</Button></TableCell>
+                    <TableRow key={booking.id || `${booking.booking_code}-${index}`} className="align-top hover:bg-[#F7FAFA]">
+                      <TableCell className="whitespace-nowrap py-4">
+                        <div className="font-mono text-[13px] font-bold text-primary-900">{booking.booking_code}</div>
+                        {booking.booking_number && booking.booking_number !== booking.booking_code ? <div className="text-xs text-muted-foreground">{booking.booking_number}</div> : null}
+                      </TableCell>
+                      <TableCell className="py-4">
+                        <div className="whitespace-nowrap font-semibold text-foreground">{booking.customer_name || '-'}</div>
+                        <div className="whitespace-nowrap text-xs text-muted-foreground">{booking.customer_phone || booking.customer_email || '-'}</div>
+                      </TableCell>
+                      <TableCell className="py-4">
+                        <div className="font-semibold text-foreground">{packageLabel(booking)}</div>
+                        <div className="text-xs text-muted-foreground">{serviceDetail(booking)}</div>
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap py-4">
+                        <div className="font-semibold text-foreground">{niceDate(booking.preferred_date)}</div>
+                        <div className="text-xs text-muted-foreground">{booking.preferred_time || '-'}</div>
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap py-4">
+                        <div className="font-semibold text-foreground">{formatAed(bookingTotal(booking))}</div>
+                        <div className="text-xs font-semibold text-muted-foreground">Pending {formatAed(bookingPending(booking))}</div>
+                      </TableCell>
+                      <TableCell className="py-4">
+                        <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-bold ${isB2BBooking(booking) ? 'border-primary/25 bg-primary-50 text-primary' : 'border-border bg-[#F4F7F8] text-muted-foreground'}`}>{paymentTypeLabel(booking)}</span>
+                        <div className="mt-1 max-w-[135px] truncate text-xs text-muted-foreground">{booking.b2b_agent_name || prettyKey(booking.payment_source || 'direct')}</div>
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap py-4"><span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-bold ${statusClass(booking.status)}`}>{booking.status || 'Pending'}</span></TableCell>
+                      <TableCell className="py-4">
+                        <div className="whitespace-nowrap font-semibold text-foreground">{booking.assigned_manager_name || 'Unassigned'}</div>
+                        <div className="whitespace-nowrap text-xs text-muted-foreground">{booking.manager_status || 'Pending'}</div>
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap py-4 text-right"><Button type="button" size="sm" variant="outline" className="rounded-full bg-white" onClick={() => setSelectedBooking(booking)}>Manage</Button></TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -306,8 +350,6 @@ export function AdminBookingsLivePage() {
             </div>
           </CardContent>
         </Card>
-
-        <div className="mt-4 rounded-[1.25rem] border border-primary/15 bg-primary-50 px-4 py-3 text-sm leading-6 text-primary-900"><FileClock className="mr-2 inline size-4" aria-hidden="true" /> Confirm booking and assign a manager to send it to the manager dashboard.</div>
       </div>
       {selectedBooking ? <ManageBookingModal booking={selectedBooking} managers={managers} onClose={() => setSelectedBooking(null)} onSave={saveBookingStatus} /> : null}
     </section>
@@ -315,7 +357,7 @@ export function AdminBookingsLivePage() {
 }
 
 function Metric({ title, value, icon: Icon }: { title: string; value: string; icon: typeof CalendarDays }) {
-  return <Card className="rounded-[1.35rem]"><CardContent className="flex items-center gap-4 p-4"><span className="flex size-11 items-center justify-center rounded-2xl bg-primary-50 text-primary"><Icon className="size-5" aria-hidden="true" /></span><div><p className="text-xs font-semibold text-muted-foreground">{title}</p><p className="mt-1 font-heading text-2xl font-semibold text-foreground">{value}</p></div></CardContent></Card>;
+  return <Card className="rounded-[1.35rem] bg-white shadow-[0_12px_32px_rgba(8,37,50,0.06)]"><CardContent className="flex items-center gap-4 p-4"><span className="flex size-11 items-center justify-center rounded-2xl bg-primary-50 text-primary"><Icon className="size-5" aria-hidden="true" /></span><div><p className="text-xs font-semibold text-muted-foreground">{title}</p><p className="mt-1 font-heading text-2xl font-semibold text-foreground">{value}</p></div></CardContent></Card>;
 }
 
 function ManageBookingModal({ booking, managers, onClose, onSave }: { booking: BookingRow; managers: ManagerOption[]; onClose: () => void; onSave: (booking: BookingRow, values: ManageValues) => Promise<void> }) {
