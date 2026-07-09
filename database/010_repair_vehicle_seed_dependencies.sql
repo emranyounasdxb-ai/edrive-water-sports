@@ -1,4 +1,5 @@
 alter table public.vehicles
+  add column if not exists vehicle_code text,
   add column if not exists name text,
   add column if not exists slug text,
   add column if not exists type public.vehicle_type,
@@ -14,12 +15,16 @@ alter table public.vehicles
   add column if not exists sort_order integer not null default 100,
   add column if not exists updated_at timestamptz not null default now();
 
+alter table public.vehicles
+  alter column vehicle_code set default ('VH-' || upper(substr(replace(gen_random_uuid()::text, '-', ''), 1, 8)));
+
 update public.vehicles
 set slug = 'vehicle-' || substr(id::text, 1, 8)
 where slug is null or trim(slug) = '';
 
 update public.vehicles
-set name = coalesce(nullif(trim(name), ''), slug),
+set vehicle_code = coalesce(nullif(trim(vehicle_code), ''), 'VH-' || upper(substr(replace(id::text, '-', ''), 1, 8))),
+    name = coalesce(nullif(trim(name), ''), slug),
     type = coalesce(type, 'jet_ski'::public.vehicle_type),
     rental_price_aed_per_hour = coalesce(rental_price_aed_per_hour, 0),
     location = coalesce(nullif(trim(location), ''), 'Dubai'),
@@ -32,7 +37,11 @@ set name = coalesce(nullif(trim(name), ''), slug),
 create unique index if not exists vehicles_slug_unique
 on public.vehicles(slug);
 
+create unique index if not exists vehicles_vehicle_code_unique
+on public.vehicles(vehicle_code);
+
 insert into public.vehicles (
+  vehicle_code,
   name,
   slug,
   type,
@@ -47,6 +56,7 @@ insert into public.vehicles (
   sort_order
 ) values
 (
+  'JS-1100-001',
   'Premium Jet Ski 1100CC',
   'premium-jet-ski-1100cc',
   'jet_ski',
@@ -61,6 +71,7 @@ insert into public.vehicles (
   10
 ),
 (
+  'JC-LUX-001',
   'Luxury Jet Car',
   'luxury-jet-car',
   'jet_car',
@@ -75,6 +86,7 @@ insert into public.vehicles (
   20
 )
 on conflict (slug) do update set
+  vehicle_code = excluded.vehicle_code,
   name = excluded.name,
   type = excluded.type,
   description = excluded.description,
