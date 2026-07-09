@@ -9,16 +9,13 @@ import { BrandMark } from '@/components/edrive/brand';
 import { supabase } from '@/lib/supabase-client';
 
 type AgentProfile = {
-  full_name: string;
-  email: string;
+  company_name: string;
+  contact_person: string;
+  login_email: string | null;
+  email: string | null;
   phone: string | null;
-  role: string | null;
+  agent_type: string | null;
   status: string;
-  b2b_agents?: {
-    company_name?: string | null;
-    agent_type?: string | null;
-    status?: string | null;
-  } | null;
 };
 
 const quickCards = [
@@ -27,6 +24,10 @@ const quickCards = [
   { title: 'Commission', description: 'View earned and pending commission.', icon: BadgeDollarSign },
   { title: 'Support', description: 'Contact eDrive operations team.', icon: Headphones }
 ];
+
+function isActiveStatus(value: string | null | undefined) {
+  return String(value || '').trim().toLowerCase() === 'active';
+}
 
 export default function AgentPortalPage() {
   const router = useRouter();
@@ -49,17 +50,15 @@ export default function AgentPortalPage() {
         return;
       }
 
-      const authEmail = authUser.email || '';
-      const queryFilter = authEmail ? `auth_user_id.eq.${authUser.id},email.eq.${authEmail}` : `auth_user_id.eq.${authUser.id}`;
       const { data, error: profileError } = await supabase
-        .from('b2b_agent_users')
-        .select('full_name,email,phone,role,status,b2b_agents(company_name,agent_type,status)')
-        .or(queryFilter)
-        .limit(1);
+        .from('b2b_agents')
+        .select('company_name,contact_person,login_email,email,phone,agent_type,status')
+        .eq('auth_user_id', authUser.id)
+        .maybeSingle();
 
       if (!active) return;
 
-      const nextProfile = (data?.[0] ?? null) as AgentProfile | null;
+      const nextProfile = data as AgentProfile | null;
 
       if (profileError) {
         setError(`B2B profile read error: ${profileError.message}`);
@@ -67,7 +66,7 @@ export default function AgentPortalPage() {
         return;
       }
 
-      if (!nextProfile || nextProfile.status !== 'active') {
+      if (!nextProfile || !isActiveStatus(nextProfile.status)) {
         setError('Active B2B agent profile nahi mila. Please login screen se B2B Agent select karein ya admin se contact karein.');
         setLoading(false);
         return;
@@ -108,7 +107,9 @@ export default function AgentPortalPage() {
     );
   }
 
-  const companyName = profile.b2b_agents?.company_name || 'B2B Partner';
+  const companyName = profile.company_name || 'B2B Partner';
+  const contactName = profile.contact_person || companyName;
+  const profileEmail = profile.login_email || profile.email || '-';
 
   return (
     <main className="min-h-screen bg-[linear-gradient(135deg,#F5F8F8_0%,#EEF7F7_52%,#F8F2E8_100%)] px-4 py-5 text-foreground sm:px-6 lg:px-8">
@@ -125,8 +126,8 @@ export default function AgentPortalPage() {
           <div className="grid gap-0 lg:grid-cols-[0.95fr_1.05fr]">
             <div className="p-6 sm:p-9 lg:p-12">
               <span className="inline-flex rounded-full border border-primary/20 bg-primary-50 px-4 py-2 text-xs font-extrabold uppercase tracking-[0.2em] text-primary">B2B Agent Portal</span>
-              <h1 className="mt-6 max-w-xl font-heading text-4xl font-semibold leading-tight tracking-[-0.04em] text-primary-900 sm:text-5xl">Welcome, {profile.full_name}</h1>
-              <p className="mt-4 max-w-xl text-base leading-7 text-muted-foreground">{companyName} ke liye limited partner dashboard. Yahan se bookings, commission, profile aur support workflows manage honge.</p>
+              <h1 className="mt-6 max-w-xl font-heading text-4xl font-semibold leading-tight tracking-[-0.04em] text-primary-900 sm:text-5xl">Welcome, {contactName}</h1>
+              <p className="mt-4 max-w-xl text-base leading-7 text-muted-foreground">{companyName} ke liye limited partner dashboard. Yahan se bookings, invoices, reports aur payment workflows manage honge.</p>
 
               <div className="mt-7 grid gap-3 rounded-[1.5rem] border border-border bg-white/82 p-4 shadow-sm sm:grid-cols-2">
                 <div className="rounded-2xl bg-[#F4F7F8] p-4">
@@ -135,7 +136,7 @@ export default function AgentPortalPage() {
                 </div>
                 <div className="rounded-2xl bg-[#F4F7F8] p-4">
                   <p className="text-xs font-bold uppercase tracking-[0.16em] text-muted-foreground">Email</p>
-                  <p className="mt-2 text-sm font-semibold text-primary-900">{profile.email}</p>
+                  <p className="mt-2 text-sm font-semibold text-primary-900">{profileEmail}</p>
                 </div>
               </div>
             </div>
@@ -144,7 +145,7 @@ export default function AgentPortalPage() {
               <img src="/images/admin/login-hero.webp" alt="B2B partner portal" className="absolute inset-0 h-full w-full object-cover opacity-55" />
               <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(4,32,40,0.92),rgba(14,124,134,0.46))]" />
               <div className="relative z-10 flex h-full flex-col justify-end">
-                <p className="max-w-md font-heading text-3xl font-semibold leading-tight">Partner bookings, customer requests and commission tracking in one clean portal.</p>
+                <p className="max-w-md font-heading text-3xl font-semibold leading-tight">Partner bookings, customer requests and payment tracking in one clean portal.</p>
               </div>
             </div>
           </div>
