@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowRight, Clock, MessageCircle, TicketCheck, Users } from 'lucide-react';
+import { ArrowRight, Clock, TicketCheck, Users } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/supabase-client';
@@ -194,7 +194,7 @@ Please confirm availability and the best timing.`);
         <p className="mt-2 overflow-hidden text-[12px] leading-5 text-muted-foreground [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]">{description}</p>
         <div className="mt-auto grid gap-1.5 pt-3">
           <Button asChild size="sm" className="h-8 w-full rounded-full text-[10.5px] font-bold shadow-[0_8px_18px_rgba(8,37,50,0.12)]"><Link href={bookingHref} className="justify-center">Book This Package<ArrowRight className="ml-1 size-3 shrink-0" aria-hidden="true" /></Link></Button>
-          <Button asChild size="sm" variant="outline" className="h-8 w-full rounded-full border-emerald-300 bg-emerald-500 text-[10.5px] font-bold text-white shadow-[0_8px_18px_rgba(16,185,129,0.14)] hover:bg-emerald-600 hover:text-white"><a href={`${whatsappUrl}?text=${whatsappMessage}`} target="_blank" rel="noopener noreferrer" className="justify-center"><MessageCircle className="size-3 shrink-0" aria-hidden="true" />Ask on WhatsApp</a></Button>
+          <Button asChild size="sm" variant="outline" className="h-8 w-full rounded-full border-emerald-300 bg-emerald-500 text-[10.5px] font-bold text-white shadow-[0_8px_18px_rgba(16,185,129,0.14)] hover:bg-emerald-600 hover:text-white"><a href={`${whatsappUrl}?text=${whatsappMessage}`} target="_blank" rel="noopener noreferrer" className="justify-center">Ask on WhatsApp</a></Button>
         </div>
       </div>
     </article>
