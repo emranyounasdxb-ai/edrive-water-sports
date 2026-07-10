@@ -33,7 +33,7 @@ function isActiveStatus(status: string | null | undefined) {
 }
 
 function isManagerPathAllowed(pathname: string) {
-  return ['/admin/manager', '/admin/vehicle-assignment', '/admin/operations-schedule', '/admin/payments', '/admin/vehicles', '/admin/maintenance'].some((path) => pathname === path || pathname.startsWith(`${path}/`));
+  return ['/admin/manager', '/admin/my-rides', '/admin/operations-schedule', '/admin/payments', '/admin/vehicles', '/admin/maintenance'].some((path) => pathname === path || pathname.startsWith(`${path}/`));
 }
 
 function roleLabel(role: string) {
