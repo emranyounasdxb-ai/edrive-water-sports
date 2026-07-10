@@ -153,15 +153,17 @@ function HomeHero() {
               <span className="mt-1 block text-primary-300">Dubai Islands</span>
             </h1>
             <p className="mt-5 max-w-xl text-base leading-7 text-white/82 sm:text-lg">Jet ski and jet car packages with clear pricing, flexible timing, and fast team confirmation.</p>
-            <div className="mt-8 flex max-w-xl flex-col overflow-hidden rounded-[1.2rem] border border-white/16 bg-primary-900/92 shadow-[0_18px_45px_rgba(0,0,0,0.28)] sm:flex-row">
-              <Link href="#live-packages" className="inline-flex min-h-14 flex-1 items-center justify-center gap-2 px-5 text-sm font-bold text-accent-300 transition hover:bg-white/10">
-                <CalendarCheck className="size-4" aria-hidden="true" />
-                View Packages
-              </Link>
-              <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-14 flex-[1.1] items-center justify-between gap-3 border-t border-white/12 bg-primary px-5 text-xs font-semibold text-white transition hover:bg-primary-600 sm:border-l sm:border-t-0">
-                <span>WhatsApp for availability and support</span>
+            <div className="mt-8 max-w-md">
+              <a
+                href={whatsappUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex min-h-14 w-full items-center justify-between gap-4 rounded-full border border-emerald-300/45 bg-[#25D366] px-5 text-sm font-bold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.32),0_18px_38px_rgba(37,211,102,0.22)] transition hover:-translate-y-0.5 hover:bg-[#1EBE5D] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.38),0_22px_44px_rgba(37,211,102,0.30)]"
+              >
+                <span className="inline-flex items-center gap-2"><MessageCircle className="size-5" aria-hidden="true" />WhatsApp Availability</span>
                 <ArrowRight className="size-4 shrink-0" aria-hidden="true" />
               </a>
+              <p className="mt-3 text-xs font-semibold text-white/68">Packages and prices are listed below.</p>
             </div>
           </div>
         </MotionReveal>
