@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
-import { AlertCircle, CalendarDays, CheckCircle2, ClipboardCheck, Clock3, CreditCard, RefreshCw, Save, Search, X } from 'lucide-react';
+import { AlertCircle, CheckCircle2, ClipboardCheck, Clock3, CreditCard, RefreshCw, Save, Search, WalletCards, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -96,7 +96,25 @@ function receivedAmount(booking: BookingRow) {
   return Math.max(totalAmount(booking) - pending, 0);
 }
 
+function managerStage(booking: BookingRow) {
+  const raw = text(booking.manager_status, 'Pending');
+  return raw === 'Assigned' ? 'Pending' : raw;
+}
+
+function cardStatus(booking: BookingRow) {
+  const status = text(booking.status, 'Confirmed');
+  const stage = managerStage(booking);
+  const workflow = text(booking.payment_workflow_status, '').toLowerCase();
+  if (status === 'Completed' || stage === 'Completed') return 'Completed';
+  if (status === 'No Show' || stage === 'No Show') return 'No Show';
+  if (workflow.includes('ride in progress')) return 'In Progress';
+  if (stage === 'Checked-In') return 'Checked-In';
+  if (status === 'Confirmed') return 'Confirmed';
+  return status || 'Confirmed';
+}
+
 function pendingAmount(booking: BookingRow) {
+  if (cardStatus(booking) === 'No Show') return 0;
   const pending = numberValue(booking.amount_pending_aed);
   if (pending > 0) return pending;
   return Math.max(totalAmount(booking) - receivedAmount(booking), 0);
@@ -106,28 +124,14 @@ function isB2BBooking(booking: BookingRow) {
   return String(booking.payment_source || '').toLowerCase() === 'b2b' || Boolean(booking.b2b_agent_name);
 }
 
-function managerStage(booking: BookingRow) {
-  const raw = text(booking.manager_status, 'Pending');
-  return raw === 'Assigned' ? 'Pending' : raw;
-}
-
-function workflowStage(booking: BookingRow) {
-  const workflow = text(booking.payment_workflow_status, '').toLowerCase();
-  const collection = text(booking.collection_status, '').toLowerCase();
-  if (workflow === 'ride in progress' || collection === 'ride_in_progress') return 'In Progress';
-  return '';
-}
-
-function cardStatus(booking: BookingRow) {
-  const status = text(booking.status, 'Confirmed');
-  const stage = managerStage(booking);
-  const workflow = workflowStage(booking);
-  if (status === 'Completed' || stage === 'Completed') return 'Completed';
-  if (status === 'No Show' || stage === 'No Show') return 'No Show';
-  if (workflow) return workflow;
-  if (stage === 'Checked-In') return 'Checked-In';
-  if (status === 'Confirmed') return 'Confirmed';
-  return status || 'Confirmed';
+function paymentSubText(booking: BookingRow) {
+  const status = cardStatus(booking);
+  if (status === 'No Show') return 'No collection';
+  if (status === 'Completed') {
+    if (text(booking.payment_method, '') === 'B2B Invoice') return `B2B pending ${formatAed(pendingAmount(booking))}`;
+    return `Received ${formatAed(receivedAmount(booking))}`;
+  }
+  return `Pending ${formatAed(pendingAmount(booking))}`;
 }
 
 function statusTone(status: unknown) {
@@ -279,7 +283,6 @@ function RideCard({ booking, vehicles, onSaved }: { booking: BookingRow; vehicle
       const payload: Record<string, unknown> = {
         assigned_vehicle_name: vehicle,
         payment_workflow_status: 'Ride In Progress',
-        collection_status: 'ride_in_progress',
         updated_at: new Date().toISOString()
       };
       const query = supabase.from(bookingRequestsTable).update(payload);
@@ -300,6 +303,10 @@ function RideCard({ booking, vehicles, onSaved }: { booking: BookingRow; vehicle
       const payload: Record<string, unknown> = {
         status: 'No Show',
         manager_status: 'No Show',
+        amount_received_aed: 0,
+        amount_pending_aed: 0,
+        payment_status: 'No Show',
+        collection_status: 'no_collection',
         payment_workflow_status: 'No Show',
         updated_at: new Date().toISOString()
       };
@@ -323,11 +330,11 @@ function RideCard({ booking, vehicles, onSaved }: { booking: BookingRow; vehicle
       status: 'Completed',
       manager_status: 'Completed',
       payment_method: values.method,
-      payment_workflow_status: values.method === 'B2B Invoice' ? 'B2B Invoice Generated' : 'Payment Collected',
       amount_received_aed: received,
       amount_pending_aed: pending,
       payment_status: values.method === 'B2B Invoice' ? 'Not Paid' : pending <= 0 ? 'Paid' : 'Partial Paid',
       collection_status: values.method === 'B2B Invoice' ? 'pending_collection' : pending <= 0 ? 'collected' : 'partial_collection',
+      payment_workflow_status: values.method === 'B2B Invoice' ? 'B2B Invoice Generated' : 'Collected By Manager',
       internal_note: noteParts.join('\n'),
       updated_at: new Date().toISOString()
     };
@@ -353,7 +360,7 @@ function RideCard({ booking, vehicles, onSaved }: { booking: BookingRow; vehicle
         <Detail label="Schedule" value={dateLabel(booking.preferred_date)} sub={text(booking.preferred_time, 'Time pending')} />
         <Detail label="Ride" value={rideDetails(booking)} sub={text(booking.customer_phone || booking.customer_email, '')} />
         <Detail label="Vehicle" value={vehicle || 'Not selected'} sub={inProgress || completed ? 'Assigned vehicle' : 'Select before ride'} />
-        <Detail label="Payment" value={formatAed(totalAmount(booking))} sub={`Pending ${formatAed(pendingAmount(booking))}`} />
+        <Detail label="Payment" value={formatAed(totalAmount(booking))} sub={paymentSubText(booking)} />
       </div>
       {error ? <p className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-xs font-semibold text-red-700">{error}</p> : null}
       <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
@@ -402,14 +409,17 @@ function ManagerAssignedRidesPage({ manager }: { manager: ManagerProfile }) {
   const scopedBookings = useMemo(() => bookings.filter((booking) => isVisibleBooking(booking) && matchesManager(booking, manager)), [bookings, manager]);
   const visible = useMemo(() => {
     const term = query.trim().toLowerCase();
-    return scopedBookings.filter((booking) => !term || [bookingCode(booking), booking.customer_name, booking.customer_phone, packageLabel(booking), booking.assigned_vehicle_name, cardStatus(booking)].some((value) => String(value || '').toLowerCase().includes(term))).sort(sortSchedule);
+    return scopedBookings.filter((booking) => !term || [bookingCode(booking), booking.customer_name, booking.customer_phone, packageLabel(booking), booking.assigned_vehicle_name, booking.manager_status, booking.payment_method].some((value) => String(value || '').toLowerCase().includes(term))).sort(sortSchedule);
   }, [query, scopedBookings]);
 
   const metrics = useMemo(() => {
     const active = scopedBookings.filter((booking) => ['Confirmed', 'Checked-In', 'In Progress'].includes(cardStatus(booking))).length;
+    const inProgress = scopedBookings.filter((booking) => cardStatus(booking) === 'In Progress').length;
     const completed = scopedBookings.filter((booking) => cardStatus(booking) === 'Completed').length;
-    const pending = scopedBookings.reduce((sum, booking) => sum + pendingAmount(booking), 0);
-    return { total: scopedBookings.length, active, completed, pending };
+    const completedBookings = scopedBookings.filter((booking) => cardStatus(booking) === 'Completed');
+    const cash = completedBookings.filter((booking) => text(booking.payment_method, '').toLowerCase() === 'cash').reduce((sum, booking) => sum + receivedAmount(booking), 0);
+    const card = completedBookings.filter((booking) => text(booking.payment_method, '').toLowerCase() === 'card').reduce((sum, booking) => sum + receivedAmount(booking), 0);
+    return { active, inProgress, completed, cash, card };
   }, [scopedBookings]);
 
   return (
@@ -424,11 +434,12 @@ function ManagerAssignedRidesPage({ manager }: { manager: ManagerProfile }) {
       </div>
 
       {error ? <p className="mt-5 rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</p> : null}
-      <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <MetricCard title="Assigned Rides" value={String(metrics.total)} icon={ClipboardCheck} />
-        <MetricCard title="Active Rides" value={String(metrics.active)} icon={Clock3} />
+      <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        <MetricCard title="Assigned Rides" value={String(metrics.active)} icon={ClipboardCheck} />
+        <MetricCard title="In Progress" value={String(metrics.inProgress)} icon={Clock3} />
         <MetricCard title="Completed" value={String(metrics.completed)} icon={CheckCircle2} />
-        <MetricCard title="Pending Collection" value={formatAed(metrics.pending)} icon={CreditCard} />
+        <MetricCard title="Cash in Hand" value={formatAed(metrics.cash)} icon={WalletCards} />
+        <MetricCard title="Card Payments" value={formatAed(metrics.card)} icon={CreditCard} />
       </div>
 
       <Card className="mt-5 overflow-hidden rounded-[1.5rem] border-border/80 bg-white">
