@@ -54,7 +54,7 @@ export const adminNavItems = [
 
 export const managerNavItems = [
   { href: '/admin/manager', label: 'Today Overview', icon: 'LayoutDashboard' },
-  { href: '/admin/vehicle-assignment', label: 'My Rides', icon: 'ClipboardCheck' },
+  { href: '/admin/my-rides', label: 'My Rides', icon: 'ClipboardCheck' },
   { href: '/admin/operations-schedule', label: 'Ride Schedule', icon: 'CalendarDays' },
   { href: '/admin/vehicles', label: 'Fleet Status', icon: 'Ship' },
   { href: '/admin/maintenance', label: 'Maintenance Notes', icon: 'Settings' },
