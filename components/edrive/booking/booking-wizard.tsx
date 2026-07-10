@@ -1,12 +1,11 @@
 'use client';
 
-import Image from 'next/image';
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, ArrowRight, Check, ChevronDown, ChevronLeft, ChevronRight, Clock3, Mail, MapPin, Minus, Phone, Plus, Send, UserRound } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, ChevronDown, ChevronLeft, ChevronRight, Clock3, Mail, MapPin, Minus, Phone, Plus, Send, TicketCheck, UserRound } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { durationPackages, experienceOptions, formatAed, formatDuration, generateBookingCode, getBookingTotals, getCapacityPerVehicle, getExperience, getSelectedRateForDuration, initialBookingDraft, inquiryTypes, timeSlots } from '@/lib/booking-data';
+import { formatAed, formatDuration, generateBookingCode, getBookingTotals, getCapacityPerVehicle, getExperience, getSelectedRateForDuration, initialBookingDraft, timeSlots } from '@/lib/booking-data';
 import type { BookingDraft, BookingRateOption, BookingRequest } from '@/lib/booking-data';
 import { companyInfo } from '@/lib/company-info';
 import { supabase } from '@/lib/supabase-client';
@@ -16,7 +15,7 @@ import { BookingSuccess } from './booking-success';
 import { BookingSummaryTicket } from './booking-summary-ticket';
 
 const STORAGE_KEY = 'edrive-booking-requests';
-const steps = ['Select Experience', 'Select Duration', 'Vehicles & Guests', 'Date & Time', 'Contact Details', 'Review & Submit'];
+const steps = ['Select Package', 'Select Duration', 'Vehicles & Guests', 'Date & Time', 'Contact Details', 'Review & Submit'];
 const fieldLabel = 'grid gap-1.5 text-sm font-semibold text-foreground';
 
 const packageCategoryLabels: Record<string, string> = {
@@ -34,6 +33,20 @@ type PackageRateRow = {
   base_price: number;
   b2b_price: number | null;
   capacity: number;
+  short_description?: string | null;
+  display_order?: number | null;
+};
+
+type PackageGroup = {
+  key: string;
+  title: string;
+  slug: string;
+  category: string;
+  categoryLabel: string;
+  capacity: number;
+  description: string;
+  displayOrder: number;
+  rates: BookingRateOption[];
 };
 
 function hasPackageParams() {
@@ -78,20 +91,68 @@ function mapRates(rows: PackageRateRow[]): BookingRateOption[] {
     .sort((a, b) => a.minutes - b.minutes);
 }
 
+function groupPackageRows(rows: PackageRateRow[]) {
+  const grouped = new Map<string, PackageRateRow[]>();
+
+  rows.forEach((row) => {
+    const capacity = Number(row.capacity || 2);
+    const key = `${row.category}-${capacity}`;
+    grouped.set(key, [...(grouped.get(key) || []), row]);
+  });
+
+  return Array.from(grouped.entries())
+    .map(([key, groupRows]) => {
+      const first = groupRows[0];
+      const capacity = Number(first.capacity || 2);
+      return {
+        key,
+        title: rideTitle(first.category, capacity),
+        slug: rideSlug(first.category, capacity),
+        category: first.category,
+        categoryLabel: categoryLabel(first.category),
+        capacity,
+        description: first.short_description || `Choose your ${rideTitle(first.category, capacity).toLowerCase()} duration and submit your request.`,
+        displayOrder: Number(first.display_order || 100),
+        rates: mapRates(groupRows)
+      } as PackageGroup;
+    })
+    .filter((group) => group.rates.length > 0)
+    .sort((a, b) => a.displayOrder - b.displayOrder || a.capacity - b.capacity);
+}
+
+function draftFromPackageGroup(group: PackageGroup) {
+  const preferredRate = group.rates.find((rate) => rate.minutes === 60) || group.rates[0];
+  return {
+    ...initialBookingDraft,
+    selectedPackageName: group.title,
+    selectedPackageSlug: group.slug,
+    selectedPackageCategory: group.categoryLabel,
+    selectedPackageCapacity: group.capacity,
+    selectedPackagePrice: preferredRate.price,
+    selectedPackageB2BPrice: preferredRate.b2bPrice,
+    selectedPackageRates: group.rates,
+    experienceType: experienceTypeFromCategory(group.category),
+    durationMinutes: preferredRate.minutes,
+    inquiryType: '',
+    vehicleQuantity: 1,
+    guestCount: group.capacity
+  } satisfies BookingDraft;
+}
+
 export function BookingWizard() {
   const [step, setStep] = useState(() => (hasPackageParams() ? 1 : 0));
   const [draft, setDraft] = useState<BookingDraft>(initialBookingDraft);
   const [submitted, setSubmitted] = useState<BookingRequest | null>(null);
   const [ready, setReady] = useState(false);
   const [packageQueryMode, setPackageQueryMode] = useState(() => hasPackageParams());
+  const [packageGroups, setPackageGroups] = useState<PackageGroup[]>([]);
 
   const experience = getExperience(draft.experienceType);
   const isSales = experience.serviceType === 'sales_inquiry';
   const capacityPerVehicle = getCapacityPerVehicle(draft);
   const capacity = draft.vehicleQuantity * capacityPerVehicle;
   const capacityExceeded = draft.guestCount > capacity;
-  const lockedPackage = Boolean(draft.selectedPackageName && draft.selectedPackageCapacity);
-  const packageFlow = packageQueryMode || lockedPackage;
+  const packageFlow = packageQueryMode;
   const visibleSteps = packageFlow ? steps.slice(1) : steps;
   const visibleStepIndex = packageFlow ? Math.max(0, step - 1) : step;
   const visibleStepLabel = visibleSteps[visibleStepIndex] || steps[step];
@@ -104,88 +165,53 @@ export function BookingWizard() {
     setStep(packageFlow && nextStep === 0 ? 1 : nextStep);
   }
 
+  function selectPackageGroup(group: PackageGroup) {
+    setDraft(draftFromPackageGroup(group));
+  }
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const categoryParam = params.get('category');
     const selectedCapacity = Number(params.get('capacity') || 0);
-
-    if (!categoryParam || !selectedCapacity) {
-      setPackageQueryMode(false);
-      setReady(true);
-      return;
-    }
-
-    setPackageQueryMode(true);
-    setStep(1);
-    const selectedCategory = categoryParam;
     let active = true;
 
-    async function loadSelectedVehicleRates() {
+    async function loadPackages() {
       const { data } = await supabase
         .from('packages')
-        .select('id,title,slug,category,duration_minutes,base_price,b2b_price,capacity')
+        .select('id,title,slug,category,duration_minutes,base_price,b2b_price,capacity,short_description,display_order')
         .eq('status', 'active')
-        .eq('category', selectedCategory)
-        .eq('capacity', selectedCapacity)
+        .order('display_order', { ascending: true })
+        .order('capacity', { ascending: true })
         .order('duration_minutes', { ascending: true });
 
       if (!active) return;
-      const rates = mapRates((data || []) as PackageRateRow[]);
-      if (!rates.length) {
+      const groups = groupPackageRows((data || []) as PackageRateRow[]);
+      setPackageGroups(groups);
+
+      if (categoryParam && selectedCapacity) {
+        const selectedGroup = groups.find((group) => group.category === categoryParam && group.capacity === selectedCapacity);
+        if (selectedGroup) {
+          setPackageQueryMode(true);
+          setDraft(draftFromPackageGroup(selectedGroup));
+          setStep(1);
+        } else {
+          setPackageQueryMode(false);
+          setStep(0);
+        }
+      } else {
         setPackageQueryMode(false);
-        setStep(0);
-        setReady(true);
-        return;
       }
 
-      const preferredRate = rates.find((rate) => rate.minutes === 60) || rates[0];
-      const title = rideTitle(selectedCategory, selectedCapacity);
-      const experienceType = experienceTypeFromCategory(selectedCategory);
-
-      setDraft({
-        ...initialBookingDraft,
-        selectedPackageName: title,
-        selectedPackageSlug: rideSlug(selectedCategory, selectedCapacity),
-        selectedPackageCategory: categoryLabel(selectedCategory),
-        selectedPackageCapacity: selectedCapacity,
-        selectedPackagePrice: preferredRate.price,
-        selectedPackageB2BPrice: preferredRate.b2bPrice,
-        selectedPackageRates: rates,
-        experienceType,
-        durationMinutes: preferredRate.minutes,
-        inquiryType: '',
-        vehicleQuantity: 1,
-        guestCount: selectedCapacity
-      });
-      setStep(1);
       setReady(true);
     }
 
-    void loadSelectedVehicleRates();
-
+    void loadPackages();
     return () => { active = false; };
   }, []);
 
-  function selectExperience(experienceType: BookingDraft['experienceType']) {
-    if (packageFlow) return;
-    const nextExperience = getExperience(experienceType);
-    updateDraft({
-      selectedPackageName: undefined,
-      selectedPackageSlug: undefined,
-      selectedPackageCategory: undefined,
-      selectedPackagePrice: undefined,
-      selectedPackageB2BPrice: undefined,
-      selectedPackageCapacity: undefined,
-      selectedPackageRates: undefined,
-      experienceType,
-      durationMinutes: nextExperience.serviceType === 'rental' ? 60 : 0,
-      inquiryType: nextExperience.serviceType === 'sales_inquiry' ? 'Price Quote' : '',
-      vehicleQuantity: 1,
-      guestCount: nextExperience.capacity
-    });
-  }
-
   const canContinue = useMemo(() => {
+    if (step === 0) return Boolean(draft.selectedPackageRates?.length);
+    if (step === 1) return Boolean(draft.selectedPackageRates?.length && draft.durationMinutes > 0);
     if (step === 2) return !capacityExceeded && draft.vehicleQuantity > 0 && draft.guestCount > 0;
     if (step === 3) return Boolean(draft.preferredDate && draft.preferredTime);
     if (step === 4) return Boolean(draft.customerName.trim() && draft.customerPhone.trim() && (!draft.customerEmail || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(draft.customerEmail)));
@@ -276,7 +302,7 @@ export function BookingWizard() {
         <div className="mx-auto max-w-6xl">
           <div className="premium-surface rounded-[1.65rem] p-5 text-center">
             <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-primary">Preparing Booking</p>
-            <h2 className="mt-2 font-heading text-xl font-semibold text-foreground">Loading selected package...</h2>
+            <h2 className="mt-2 font-heading text-xl font-semibold text-foreground">Loading live packages...</h2>
           </div>
         </div>
       </section>
@@ -307,7 +333,7 @@ export function BookingWizard() {
                 <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary-50 text-xs font-bold text-primary">{visibleStepIndex + 1}</span>
               </div>
 
-              {step === 0 && !packageFlow ? <ExperienceStep selected={draft.experienceType} onSelect={selectExperience} /> : null}
+              {step === 0 && !packageFlow ? <PackageSelectionStep groups={packageGroups} selectedSlug={draft.selectedPackageSlug || ''} onSelect={selectPackageGroup} /> : null}
               {step === 1 ? <DurationStep draft={draft} onUpdate={updateDraft} /> : null}
               {step === 2 ? <PartyStep draft={draft} capacity={capacity} capacityPerVehicle={capacityPerVehicle} exceeded={capacityExceeded} onUpdate={updateDraft} /> : null}
               {step === 3 ? <ScheduleStep draft={draft} onUpdate={updateDraft} /> : null}
@@ -360,33 +386,41 @@ function WizardProgress({ currentStep, packageFlow, onStepSelect }: { currentSte
   );
 }
 
-function ExperienceStep({ selected, onSelect }: { selected: BookingDraft['experienceType']; onSelect: (id: BookingDraft['experienceType']) => void }) {
+function PackageSelectionStep({ groups, selectedSlug, onSelect }: { groups: PackageGroup[]; selectedSlug: string; onSelect: (group: PackageGroup) => void }) {
+  if (!groups.length) {
+    return <div className="rounded-[1.25rem] border border-amber-200 bg-amber-50 p-4 text-sm font-semibold leading-6 text-amber-800">No active packages are available right now. Please add active packages from the admin package dashboard.</div>;
+  }
+
   return (
-    <div className="grid gap-3">
-      {experienceOptions.map((item) => {
-        const active = item.id === selected;
-        return (
-          <button key={item.id} type="button" onClick={() => onSelect(item.id)} className={cn('group grid overflow-hidden rounded-[1.25rem] border bg-white text-left transition sm:grid-cols-[125px_1fr]', active ? 'border-primary shadow-sm ring-2 ring-primary/10' : 'border-border/80 hover:border-primary/35')} aria-pressed={active}>
-            <div className="relative min-h-[95px] overflow-hidden bg-primary-50 sm:min-h-full"><Image src={item.image} alt="" fill className="object-cover transition duration-500 group-hover:scale-105" sizes="125px" /></div>
-            <div className="flex items-start justify-between gap-3 p-4">
-              <div>
-                <div className="flex flex-wrap items-center gap-2"><h3 className="font-heading text-lg font-semibold text-foreground">{item.title}</h3>{item.recommended ? <span className="rounded-full bg-accent-200 px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.1em] text-primary-900">Popular</span> : null}</div>
-                <p className="mt-1.5 max-w-xl text-xs leading-5 text-muted-foreground">{item.shortDescription}</p>
-                <p className="mt-2 text-xs font-medium text-muted-foreground">Duration and pricing will show in the next step.</p>
+    <div>
+      <p className="mb-3 text-sm leading-6 text-muted-foreground">Select from live packages managed in the admin dashboard. Future package changes will appear here automatically.</p>
+      <div className="grid gap-3 sm:grid-cols-2">
+        {groups.map((group) => {
+          const active = group.slug === selectedSlug;
+          const startingPrice = Math.min(...group.rates.map((rate) => rate.price));
+          return (
+            <button key={group.key} type="button" onClick={() => onSelect(group)} className={cn('group rounded-[1.25rem] border bg-white p-4 text-left transition duration-200 hover:-translate-y-0.5 hover:border-primary/45 hover:shadow-md', active ? 'border-primary bg-gradient-to-br from-primary-50 via-white to-accent-100/40 shadow-md ring-1 ring-primary/15' : 'border-border shadow-sm')} aria-pressed={active}>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="flex flex-wrap items-center gap-2"><TicketCheck className="size-4 text-primary" aria-hidden="true" /><h3 className="font-heading text-lg font-semibold text-foreground">{group.title}</h3></div>
+                  <p className="mt-1.5 text-xs leading-5 text-muted-foreground">{group.categoryLabel} · {group.capacity} seater</p>
+                  <p className="mt-2 text-sm font-bold text-primary-900">From {formatAed(startingPrice)}</p>
+                  <div className="mt-3 flex flex-wrap gap-1.5">{group.rates.map((rate) => <span key={rate.id} className="rounded-full bg-primary-50 px-2 py-1 text-[10px] font-semibold text-primary-900">{rate.minutes} min · {formatAed(rate.price)}</span>)}</div>
+                </div>
+                <span className={cn('mt-1 flex size-5 shrink-0 items-center justify-center rounded-full border', active ? 'border-primary bg-primary text-white' : 'border-border bg-background')}>{active ? <Check className="size-3" aria-hidden="true" /> : null}</span>
               </div>
-              <span className={cn('mt-1 flex size-5 shrink-0 items-center justify-center rounded-full border', active ? 'border-primary bg-primary text-white' : 'border-border bg-background')}>{active ? <Check className="size-3" aria-hidden="true" /> : null}</span>
-            </div>
-          </button>
-        );
-      })}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }
 
 function DurationStep({ draft, onUpdate }: { draft: BookingDraft; onUpdate: (values: Partial<BookingDraft>) => void }) {
   const experience = getExperience(draft.experienceType);
-  if (experience.serviceType === 'sales_inquiry') return <div><p className="mb-3 text-sm leading-6 text-muted-foreground">Tell us what kind of sales help you need.</p><div className="grid gap-3 sm:grid-cols-2">{inquiryTypes.map((type) => <ChoiceButton key={type} active={draft.inquiryType === type} onClick={() => onUpdate({ inquiryType: type })} title={type} detail="Direct follow-up" />)}</div></div>;
-  const packages: BookingRateOption[] = draft.selectedPackageRates?.length ? draft.selectedPackageRates : durationPackages[draft.experienceType as keyof typeof durationPackages].map((item) => ({ category: draft.experienceType, minutes: item.minutes, price: item.price, b2bPrice: undefined, capacity: getCapacityPerVehicle(draft) }));
+  const packages: BookingRateOption[] = draft.selectedPackageRates || [];
+  if (!packages.length) return <div className="rounded-[1.25rem] border border-amber-200 bg-amber-50 p-4 text-sm font-semibold leading-6 text-amber-800">Please select an active package first. Package prices come only from the admin package dashboard.</div>;
   return <div><p className="mb-3 text-sm leading-6 text-muted-foreground">Choose duration for {draft.selectedPackageName || experience.title}. Prices shown are per vehicle.</p><div className="grid gap-3 md:grid-cols-3">{packages.map((item) => <ChoiceButton key={item.minutes} active={draft.durationMinutes === item.minutes} onClick={() => onUpdate({ durationMinutes: item.minutes, selectedPackagePrice: item.price, selectedPackageB2BPrice: item.b2bPrice, selectedPackageCapacity: item.capacity })} title={formatDuration(item.minutes)} detail={formatAed(item.price)} />)}</div></div>;
 }
 
