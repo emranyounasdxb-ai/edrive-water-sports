@@ -108,23 +108,25 @@ export function LivePackageShowcase({ title = 'Live Booking Packages', text = ''
   if (!loading && !visibleItems.length) return null;
 
   return (
-    <section id="live-packages" className={cn('border-y border-border bg-white/70', compact ? 'py-7' : 'py-10 sm:py-12 lg:py-14')}>
+    <section id="live-packages" className={cn('border-y border-border bg-white/70', compact ? 'py-6' : 'py-8 sm:py-10 lg:py-11')}>
       <div className="container-x">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <div className="mb-3 flex flex-wrap items-center gap-2">
-              <Badge className="rounded-full bg-primary text-white">Live prices</Badge>
-              <Badge className="rounded-full bg-white text-primary-900" variant="secondary">{loading ? 'Loading packages' : `${visibleItems.length} packages`}</Badge>
+        <div className="mx-auto max-w-5xl">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <div className="mb-2 flex flex-wrap items-center gap-2">
+                <Badge className="rounded-full bg-primary px-2.5 py-1 text-[10px] text-white">Live prices</Badge>
+                <Badge className="rounded-full bg-white px-2.5 py-1 text-[10px] text-primary-900" variant="secondary">{loading ? 'Loading packages' : `${visibleItems.length} packages`}</Badge>
+              </div>
+              <h2 className="section-title">{title}</h2>
+              {text ? <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">{text}</p> : null}
             </div>
-            <h2 className="section-title">{title}</h2>
-            {text ? <p className="mt-3 max-w-2xl text-sm leading-7 text-muted-foreground sm:text-base">{text}</p> : null}
           </div>
-        </div>
 
-        <div className="mt-7 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {loading
-            ? Array.from({ length: limit || 9 }).map((_, index) => <div key={index} className="h-80 animate-pulse rounded-[1.5rem] bg-white/80" />)
-            : visibleItems.map((item, index) => <LivePackageCard key={item.id} item={item} index={index} />)}
+          <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {loading
+              ? Array.from({ length: limit || 9 }).map((_, index) => <div key={index} className="h-64 animate-pulse rounded-[1.25rem] bg-white/80" />)
+              : visibleItems.map((item, index) => <LivePackageCard key={item.id} item={item} index={index} />)}
+          </div>
         </div>
       </div>
     </section>
@@ -145,36 +147,36 @@ Price: ${formatAed(Number(item.base_price || 0))}
 Please confirm availability and the best timing.`);
 
   return (
-    <article className="premium-surface premium-card-hover flex h-full min-w-0 flex-col overflow-hidden rounded-[1.45rem] p-2.5">
-      <div className="relative aspect-[16/9] w-full overflow-hidden rounded-[1.05rem] bg-primary-50">
+    <article className="premium-surface premium-card-hover flex h-full min-w-0 flex-col overflow-hidden rounded-[1.2rem] p-2">
+      <div className="relative aspect-[16/8.6] w-full overflow-hidden rounded-[0.9rem] bg-primary-50">
         {imageSrc && !imageFailed ? (
           <img src={imageSrc} alt={item.title} onError={() => setImageFailed(true)} className="h-full w-full object-cover object-center transition duration-700 hover:scale-105" loading="lazy" />
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-primary-100 via-white to-accent-100 text-primary">
-            <TicketCheck className="size-7" aria-hidden="true" />
+            <TicketCheck className="size-6" aria-hidden="true" />
           </div>
         )}
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-primary-950/22 to-transparent" aria-hidden="true" />
-        <div className="absolute left-2.5 top-2.5 flex size-10 items-center justify-center rounded-2xl bg-white/82 text-primary shadow-sm backdrop-blur-sm">
-          <TicketCheck className="size-5" aria-hidden="true" />
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-primary-950/22 to-transparent" aria-hidden="true" />
+        <div className="absolute left-2 top-2 flex size-8 items-center justify-center rounded-xl bg-white/82 text-primary shadow-sm backdrop-blur-sm">
+          <TicketCheck className="size-4" aria-hidden="true" />
         </div>
-        <Badge className="absolute right-2.5 top-2.5 bg-white/92 px-2.5 py-1 text-[10px] font-bold text-primary-900 shadow-sm" variant="secondary">{categoryLabel(item.category)}</Badge>
+        <Badge className="absolute right-2 top-2 bg-white/92 px-2 py-0.5 text-[9px] font-bold text-primary-900 shadow-sm" variant="secondary">{categoryLabel(item.category)}</Badge>
       </div>
 
-      <div className="flex flex-1 flex-col px-3 pb-2.5 pt-3">
-        <h3 className="font-heading text-[1rem] font-semibold leading-[1.3] tracking-[-0.01em] text-foreground sm:text-[1.05rem]">{item.title}</h3>
-        <div className="mt-3 grid gap-2 rounded-[1rem] bg-primary-50 px-3.5 py-3 text-xs">
-          <div className="flex items-center justify-between gap-3">
-            <span className="font-bold text-primary-900">{formatAed(Number(item.base_price || 0))}</span>
-            <span className="rounded-full bg-white px-2.5 py-1 text-[10px] font-bold text-primary-900">{item.duration_minutes} min</span>
+      <div className="flex flex-1 flex-col px-2.5 pb-2 pt-2.5">
+        <h3 className="font-heading text-[0.92rem] font-semibold leading-[1.25] tracking-[-0.01em] text-foreground sm:text-[0.96rem]">{item.title}</h3>
+        <div className="mt-2 grid gap-1.5 rounded-[0.85rem] bg-primary-50 px-3 py-2 text-xs">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[12px] font-bold text-primary-900">{formatAed(Number(item.base_price || 0))}</span>
+            <span className="rounded-full bg-white px-2 py-0.5 text-[9px] font-bold text-primary-900">{item.duration_minutes} min</span>
           </div>
-          <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground"><Users className="size-3.5 text-primary" aria-hidden="true" />{item.capacity} seater</p>
-          <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground"><Clock className="size-3.5 text-primary" aria-hidden="true" />Exact package price from backend</p>
+          <p className="flex items-center gap-1.5 text-[10.5px] text-muted-foreground"><Users className="size-3 text-primary" aria-hidden="true" />{item.capacity} seater</p>
+          <p className="flex items-center gap-1.5 text-[10.5px] text-muted-foreground"><Clock className="size-3 text-primary" aria-hidden="true" />Live price from backend</p>
         </div>
-        <p className="mt-3 text-[13px] leading-6 text-muted-foreground">{description}</p>
-        <div className="mt-auto grid gap-2 pt-4">
-          <Button asChild size="sm" className="h-9 w-full rounded-full text-[11px] font-bold shadow-[0_8px_18px_rgba(8,37,50,0.16)]"><Link href={bookingHref} className="justify-center">Book This Package<ArrowRight className="ml-1 size-3.5 shrink-0" aria-hidden="true" /></Link></Button>
-          <Button asChild size="sm" variant="outline" className="h-9 w-full rounded-full border-emerald-300 bg-emerald-500 text-[11px] font-bold text-white shadow-[0_8px_18px_rgba(16,185,129,0.18)] hover:bg-emerald-600 hover:text-white"><a href={`${whatsappUrl}?text=${whatsappMessage}`} target="_blank" rel="noopener noreferrer" className="justify-center"><MessageCircle className="size-3.5 shrink-0" aria-hidden="true" />Ask on WhatsApp</a></Button>
+        <p className="mt-2 overflow-hidden text-[12px] leading-5 text-muted-foreground [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]">{description}</p>
+        <div className="mt-auto grid gap-1.5 pt-3">
+          <Button asChild size="sm" className="h-8 w-full rounded-full text-[10.5px] font-bold shadow-[0_8px_18px_rgba(8,37,50,0.12)]"><Link href={bookingHref} className="justify-center">Book This Package<ArrowRight className="ml-1 size-3 shrink-0" aria-hidden="true" /></Link></Button>
+          <Button asChild size="sm" variant="outline" className="h-8 w-full rounded-full border-emerald-300 bg-emerald-500 text-[10.5px] font-bold text-white shadow-[0_8px_18px_rgba(16,185,129,0.14)] hover:bg-emerald-600 hover:text-white"><a href={`${whatsappUrl}?text=${whatsappMessage}`} target="_blank" rel="noopener noreferrer" className="justify-center"><MessageCircle className="size-3 shrink-0" aria-hidden="true" />Ask on WhatsApp</a></Button>
         </div>
       </div>
     </article>
