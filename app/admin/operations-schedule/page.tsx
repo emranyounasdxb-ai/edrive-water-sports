@@ -1,5 +1,10 @@
-import { AdminSchedulePage } from '@/components/edrive/admin-pages';
+import type { Metadata } from 'next';
+import { AdminOperationsSchedulePage } from '@/components/edrive/admin-operations-modules';
+
+export const metadata: Metadata = {
+  title: 'Schedule'
+};
 
 export default function Page() {
-  return <AdminSchedulePage />;
+  return <AdminOperationsSchedulePage />;
 }
