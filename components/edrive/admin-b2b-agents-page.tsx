@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { Building2, Eye, FileClock, MessageCircle, RefreshCw, Save, Trash2, UsersRound, WalletCards, X } from 'lucide-react';
+import { BookOpen, Building2, Eye, FileClock, MessageCircle, ReceiptText, RefreshCw, Save, Trash2, UsersRound, WalletCards, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -16,6 +16,7 @@ type AgentStatus = 'Active' | 'Inactive' | 'Suspended';
 type AgentType = 'B2B Agent' | 'Tour Operator' | 'Hotel' | 'Travel Desk' | 'Vendor' | 'Freelancer';
 type PaymentTerms = 'Instant' | 'Daily' | 'Weekly' | 'Monthly' | 'Custom';
 type PortalRole = 'super_admin' | 'admin' | 'booking_staff' | 'manager' | 'finance' | string;
+type AgentTab = 'profile' | 'bookings' | 'ledger';
 
 type AgentRow = {
   id: string;
@@ -52,7 +53,7 @@ type AgentForm = {
   notes: string;
 };
 
-type BookingRow = {
+type BookingRow = Record<string, unknown> & {
   b2b_agent_id?: string | null;
   b2b_agent_name?: string | null;
   b2b_agent_email?: string | null;
@@ -96,57 +97,9 @@ const emptyForm: AgentForm = {
 };
 
 const testAgents = [
-  {
-    agent_code: 'B2B-001',
-    company_name: 'SkyWay Travel LLC',
-    agent_type: 'B2B Agent',
-    contact_person: 'Ahmed Khan',
-    phone: '+971500000001',
-    login_email: 'skyway@test.com',
-    email: 'skyway@test.com',
-    billing_email: 'skyway@test.com',
-    payment_terms: 'Instant',
-    credit_limit_aed: 5000,
-    status: 'Active',
-    rate_profile: defaultRateProfile,
-    special_pricing: false,
-    notes: 'Test partner account. Create Supabase Auth login separately with the shared test password.',
-    is_test_record: true
-  },
-  {
-    agent_code: 'B2B-002',
-    company_name: 'Golden Wings Tourism',
-    agent_type: 'Tour Operator',
-    contact_person: 'Sarah Ali',
-    phone: '+971500000002',
-    login_email: 'golden@test.com',
-    email: 'golden@test.com',
-    billing_email: 'golden@test.com',
-    payment_terms: 'Weekly',
-    credit_limit_aed: 12000,
-    status: 'Active',
-    rate_profile: defaultRateProfile,
-    special_pricing: false,
-    notes: 'Test partner account. Create Supabase Auth login separately with the shared test password.',
-    is_test_record: true
-  },
-  {
-    agent_code: 'B2B-003',
-    company_name: 'Royal Stay Hotels',
-    agent_type: 'Hotel',
-    contact_person: "John D'Souza",
-    phone: '+971500000003',
-    login_email: 'royalstay@test.com',
-    email: 'royalstay@test.com',
-    billing_email: 'royalstay@test.com',
-    payment_terms: 'Monthly',
-    credit_limit_aed: 20000,
-    status: 'Active',
-    rate_profile: defaultRateProfile,
-    special_pricing: false,
-    notes: 'Test partner account. Create Supabase Auth login separately with the shared test password.',
-    is_test_record: true
-  }
+  { agent_code: 'B2B-001', company_name: 'SkyWay Travel LLC', agent_type: 'B2B Agent', contact_person: 'Ahmed Khan', phone: '+971500000001', login_email: 'skyway@test.com', email: 'skyway@test.com', billing_email: 'skyway@test.com', payment_terms: 'Instant', credit_limit_aed: 5000, status: 'Active', rate_profile: defaultRateProfile, special_pricing: false, notes: 'Test partner account. Create Supabase Auth login separately with the shared test password.', is_test_record: true },
+  { agent_code: 'B2B-002', company_name: 'Golden Wings Tourism', agent_type: 'Tour Operator', contact_person: 'Sarah Ali', phone: '+971500000002', login_email: 'golden@test.com', email: 'golden@test.com', billing_email: 'golden@test.com', payment_terms: 'Weekly', credit_limit_aed: 12000, status: 'Active', rate_profile: defaultRateProfile, special_pricing: false, notes: 'Test partner account. Create Supabase Auth login separately with the shared test password.', is_test_record: true },
+  { agent_code: 'B2B-003', company_name: 'Royal Stay Hotels', agent_type: 'Hotel', contact_person: "John D'Souza", phone: '+971500000003', login_email: 'royalstay@test.com', email: 'royalstay@test.com', billing_email: 'royalstay@test.com', payment_terms: 'Monthly', credit_limit_aed: 20000, status: 'Active', rate_profile: defaultRateProfile, special_pricing: false, notes: 'Test partner account. Create Supabase Auth login separately with the shared test password.', is_test_record: true }
 ];
 
 function cleanEmail(value: string) {
@@ -173,7 +126,8 @@ function asBool(value: unknown) {
 }
 
 function asNumber(value: unknown) {
-  return Number(value || 0);
+  const numberValue = Number(value || 0);
+  return Number.isFinite(numberValue) ? numberValue : 0;
 }
 
 function mapAgent(row: Record<string, unknown>): AgentRow {
@@ -255,6 +209,62 @@ function whatsappHref(phone: string, company: string) {
   return `https://web.whatsapp.com/send?phone=${digits}&text=${message}&app_absent=0`;
 }
 
+function textFromBooking(booking: BookingRow, keys: string[], fallback = '-') {
+  for (const key of keys) {
+    const value = booking[key];
+    if (value !== undefined && value !== null && String(value).trim()) return String(value);
+  }
+  return fallback;
+}
+
+function numberFromBooking(booking: BookingRow, keys: string[]) {
+  for (const key of keys) {
+    const value = booking[key];
+    if (value !== undefined && value !== null && value !== '') return asNumber(value);
+  }
+  return 0;
+}
+
+function bookingTotal(booking: BookingRow) {
+  return numberFromBooking(booking, ['total_amount', 'total_amount_aed', 'amount_total_aed', 'total_aed', 'total', 'price']);
+}
+
+function bookingPending(booking: BookingRow) {
+  return numberFromBooking(booking, ['amount_pending_aed', 'pending_amount_aed', 'pending_amount', 'balance_due_aed', 'balance_due']);
+}
+
+function bookingReceived(booking: BookingRow) {
+  const received = numberFromBooking(booking, ['amount_received_aed', 'amount_received', 'paid_amount_aed', 'paid_amount', 'payment_received_aed']);
+  if (received > 0) return received;
+  return Math.max(bookingTotal(booking) - bookingPending(booking), 0);
+}
+
+function bookingReference(booking: BookingRow) {
+  return textFromBooking(booking, ['booking_code', 'booking_reference', 'reference', 'booking_id', 'id'], 'Booking');
+}
+
+function bookingCustomer(booking: BookingRow) {
+  return textFromBooking(booking, ['customer_name', 'name', 'full_name', 'client_name', 'customer'], '-');
+}
+
+function bookingPackage(booking: BookingRow) {
+  return textFromBooking(booking, ['package_title', 'package_name', 'package', 'package_label', 'service_name', 'ride_title'], '-');
+}
+
+function bookingDate(booking: BookingRow) {
+  const date = textFromBooking(booking, ['preferred_date', 'booking_date', 'date'], '');
+  return date ? formatDate(date) : formatDate(String(booking.created_at || ''));
+}
+
+function bookingTime(booking: BookingRow) {
+  return textFromBooking(booking, ['preferred_time', 'booking_time', 'time_slot', 'time'], '-');
+}
+
+function bookingsForAgent(agent: AgentRow | null, bookings: BookingRow[]) {
+  if (!agent) return [];
+  return bookings.filter((booking) => matchAgentBooking(agent, booking));
+}
+
 export function AdminB2BAgentsCleanPage() {
   const [agents, setAgents] = useState<AgentRow[]>([]);
   const [bookings, setBookings] = useState<BookingRow[]>([]);
@@ -263,6 +273,7 @@ export function AdminB2BAgentsCleanPage() {
   const [role, setRole] = useState<PortalRole>('admin');
   const [roleReady, setRoleReady] = useState(false);
   const [selectedAgent, setSelectedAgent] = useState<AgentRow | null>(null);
+  const [selectedTab, setSelectedTab] = useState<AgentTab>('profile');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -304,7 +315,7 @@ export function AdminB2BAgentsCleanPage() {
   async function loadBookings() {
     const { data } = await supabase
       .from(bookingRequestsTable)
-      .select('b2b_agent_id,b2b_agent_name,b2b_agent_email,payment_source,total_amount,amount_pending_aed,status,preferred_date,created_at')
+      .select('*')
       .eq('payment_source', 'b2b')
       .limit(500);
     setBookings((data || []) as BookingRow[]);
@@ -322,13 +333,12 @@ export function AdminB2BAgentsCleanPage() {
     const map = new Map<string, AgentStats>();
     agents.forEach((agent) => {
       const stats = emptyStats();
-      bookings.filter((booking) => matchAgentBooking(agent, booking)).forEach((booking) => {
+      bookingsForAgent(agent, bookings).forEach((booking) => {
         stats.totalBookings += 1;
-        const pending = asNumber(booking.amount_pending_aed);
-        stats.pendingAmount += pending;
-        stats.totalAmount += asNumber(booking.total_amount);
+        stats.pendingAmount += bookingPending(booking);
+        stats.totalAmount += bookingTotal(booking);
         if ((booking.status || 'Pending') === 'Pending') stats.pendingBookings += 1;
-        const dateValue = booking.preferred_date || booking.created_at || '';
+        const dateValue = String(booking.preferred_date || booking.created_at || '');
         if (dateValue && (stats.lastBookingDate === '-' || new Date(dateValue) > new Date(stats.lastBookingDate))) stats.lastBookingDate = dateValue;
       });
       stats.lastBookingDate = formatDate(stats.lastBookingDate === '-' ? '' : stats.lastBookingDate);
@@ -341,7 +351,7 @@ export function AdminB2BAgentsCleanPage() {
     const active = agents.filter((agent) => agent.status === 'Active').length;
     const blocked = agents.filter((agent) => agent.status !== 'Active').length;
     const creditLimit = agents.reduce((sum, agent) => sum + Number(agent.credit_limit_aed || 0), 0);
-    const pendingAmount = bookings.reduce((sum, booking) => sum + asNumber(booking.amount_pending_aed), 0);
+    const pendingAmount = bookings.reduce((sum, booking) => sum + bookingPending(booking), 0);
     const todayIso = new Date().toISOString().slice(0, 10);
     const todayBookings = bookings.filter((booking) => String(booking.created_at || '').slice(0, 10) === todayIso || booking.preferred_date === todayIso).length;
     return { active, blocked, creditLimit, pendingAmount, todayBookings };
@@ -353,6 +363,8 @@ export function AdminB2BAgentsCleanPage() {
     return agents.filter((agent) => [agent.agent_code, agent.company_name, agent.agent_type, agent.contact_person, agent.phone, agent.login_email, agent.status].some((value) => String(value || '').toLowerCase().includes(term)));
   }, [agents, query]);
 
+  const selectedBookings = useMemo(() => bookingsForAgent(selectedAgent, bookings), [selectedAgent, bookings]);
+
   function setField<Key extends keyof AgentForm>(key: Key, value: AgentForm[Key]) {
     setForm((current) => ({ ...current, [key]: value }));
   }
@@ -360,6 +372,11 @@ export function AdminB2BAgentsCleanPage() {
   function resetForm() {
     setEditingId('');
     setForm({ ...emptyForm, agent_code: nextAgentCode(agents) });
+  }
+
+  function openAgent(agent: AgentRow, tab: AgentTab = 'profile') {
+    setSelectedAgent(agent);
+    setSelectedTab(tab);
   }
 
   async function saveAgent() {
@@ -438,10 +455,6 @@ export function AdminB2BAgentsCleanPage() {
   }
 
   function editAgent(agent: AgentRow) {
-    if (!canManageAgents) {
-      setSelectedAgent(agent);
-      return;
-    }
     setEditingId(agent.id);
     setForm(formFromAgent(agent));
   }
@@ -527,9 +540,9 @@ export function AdminB2BAgentsCleanPage() {
                   {loading ? <TableRow><TableCell colSpan={canManageAgents ? 7 : 6} className="py-8 text-center">Loading B2B agents...</TableCell></TableRow> : null}
                   {!loading && filteredAgents.length === 0 ? <TableRow><TableCell colSpan={canManageAgents ? 7 : 6} className="py-8 text-center">No B2B agents found.</TableCell></TableRow> : null}
                   {filteredAgents.map((agent) => canManageAgents ? (
-                    <SuperAdminRow key={agent.id || agent.agent_code} agent={agent} onEdit={editAgent} />
+                    <SuperAdminRow key={agent.id || agent.agent_code} agent={agent} onEdit={editAgent} onOpen={openAgent} />
                   ) : (
-                    <AdminRow key={agent.id || agent.agent_code} agent={agent} stats={statsByAgent.get(agent.id || agent.agent_code) || emptyStats()} onView={setSelectedAgent} />
+                    <AdminRow key={agent.id || agent.agent_code} agent={agent} stats={statsByAgent.get(agent.id || agent.agent_code) || emptyStats()} onOpen={openAgent} />
                   ))}
                 </TableBody>
               </Table>
@@ -543,14 +556,24 @@ export function AdminB2BAgentsCleanPage() {
                   agent={agent}
                   stats={statsByAgent.get(agent.id || agent.agent_code) || emptyStats()}
                   canManageAgents={canManageAgents}
-                  onAction={canManageAgents ? editAgent : setSelectedAgent}
+                  onOpen={openAgent}
+                  onEdit={editAgent}
                 />
               ))}
             </div>
           </CardContent>
         </Card>
       </div>
-      {selectedAgent ? <AgentViewModal agent={selectedAgent} stats={statsByAgent.get(selectedAgent.id || selectedAgent.agent_code) || emptyStats()} onClose={() => setSelectedAgent(null)} /> : null}
+      {selectedAgent ? (
+        <AgentProfileModal
+          agent={selectedAgent}
+          stats={statsByAgent.get(selectedAgent.id || selectedAgent.agent_code) || emptyStats()}
+          bookings={selectedBookings}
+          activeTab={selectedTab}
+          onTabChange={setSelectedTab}
+          onClose={() => setSelectedAgent(null)}
+        />
+      ) : null}
     </section>
   );
 }
@@ -558,13 +581,13 @@ export function AdminB2BAgentsCleanPage() {
 function SuperAdminHeader() {
   return (
     <TableRow>
-      <TableHead className="w-[18%]">Agent</TableHead>
-      <TableHead className="w-[14%]">Contact</TableHead>
-      <TableHead className="w-[22%]">Login</TableHead>
-      <TableHead className="w-[14%]">Terms</TableHead>
-      <TableHead className="w-[17%]">Rate Profile</TableHead>
+      <TableHead className="w-[17%]">Agent</TableHead>
+      <TableHead className="w-[13%]">Contact</TableHead>
+      <TableHead className="w-[20%]">Login</TableHead>
+      <TableHead className="w-[13%]">Terms</TableHead>
+      <TableHead className="w-[15%]">Rate Profile</TableHead>
       <TableHead className="w-[8%]">Status</TableHead>
-      <TableHead className="w-[7%] text-right">Action</TableHead>
+      <TableHead className="w-[14%] text-right">Action</TableHead>
     </TableRow>
   );
 }
@@ -573,61 +596,75 @@ function AdminHeader() {
   return (
     <TableRow>
       <TableHead className="w-[22%]">Agent</TableHead>
-      <TableHead className="w-[18%]">Contact</TableHead>
-      <TableHead className="w-[20%]">Bookings</TableHead>
-      <TableHead className="w-[20%]">Pending Amount</TableHead>
-      <TableHead className="w-[10%]">Status</TableHead>
-      <TableHead className="w-[10%] text-right">Action</TableHead>
+      <TableHead className="w-[16%]">Contact</TableHead>
+      <TableHead className="w-[18%]">Bookings</TableHead>
+      <TableHead className="w-[18%]">Pending Amount</TableHead>
+      <TableHead className="w-[9%]">Status</TableHead>
+      <TableHead className="w-[17%] text-right">Action</TableHead>
     </TableRow>
   );
 }
 
-function SuperAdminRow({ agent, onEdit }: { agent: AgentRow; onEdit: (agent: AgentRow) => void }) {
+function SuperAdminRow({ agent, onEdit, onOpen }: { agent: AgentRow; onEdit: (agent: AgentRow) => void; onOpen: (agent: AgentRow, tab?: AgentTab) => void }) {
   return (
     <TableRow>
-      <TableCell className="align-top"><CellTitle title={agent.company_name} subtitle={`${agent.agent_code || '-'} · ${agent.agent_type}`} /></TableCell>
+      <TableCell className="align-top"><button type="button" onClick={() => onOpen(agent, 'profile')} className="w-full text-left"><CellTitle title={agent.company_name} subtitle={`${agent.agent_code || '-'} · ${agent.agent_type}`} /></button></TableCell>
       <TableCell className="align-top"><CellTitle title={agent.contact_person || '-'} subtitle={agent.phone || '-'} /></TableCell>
       <TableCell className="align-top"><CellTitle title={agent.login_email || '-'} subtitle={`Billing: ${agent.billing_email || '-'}`} /></TableCell>
       <TableCell className="align-top"><CellTitle title={agent.payment_terms} subtitle={`Limit ${formatAed(agent.credit_limit_aed)}`} /></TableCell>
       <TableCell className="align-top"><CellTitle title={agent.rate_profile || defaultRateProfile} subtitle={agent.special_pricing ? 'Special pricing enabled' : 'Default package rates'} /></TableCell>
       <TableCell className="align-top"><Badge variant={statusBadge(agent.status)}>{agent.status}</Badge>{agent.is_test_record ? <div className="mt-1 text-xs font-semibold text-gold">Test record</div> : null}</TableCell>
-      <TableCell className="align-top text-right"><Button type="button" size="sm" variant="outline" onClick={() => onEdit(agent)} className="rounded-full">Edit</Button></TableCell>
+      <TableCell className="align-top text-right"><RowActions agent={agent} onOpen={onOpen} onEdit={onEdit} showEdit /></TableCell>
     </TableRow>
   );
 }
 
-function AdminRow({ agent, stats, onView }: { agent: AgentRow; stats: AgentStats; onView: (agent: AgentRow) => void }) {
+function AdminRow({ agent, stats, onOpen }: { agent: AgentRow; stats: AgentStats; onOpen: (agent: AgentRow, tab?: AgentTab) => void }) {
   return (
     <TableRow>
-      <TableCell className="align-top"><CellTitle title={agent.company_name} subtitle={`${agent.agent_code || '-'} · ${agent.agent_type}`} /></TableCell>
+      <TableCell className="align-top"><button type="button" onClick={() => onOpen(agent, 'profile')} className="w-full text-left"><CellTitle title={agent.company_name} subtitle={`${agent.agent_code || '-'} · ${agent.agent_type}`} /></button></TableCell>
       <TableCell className="align-top"><CellTitle title={agent.contact_person || '-'} subtitle={agent.phone || '-'} /></TableCell>
       <TableCell className="align-top"><CellTitle title={`${stats.totalBookings} total · ${stats.pendingBookings} pending`} subtitle={`Last: ${stats.lastBookingDate}`} /></TableCell>
       <TableCell className="align-top"><CellTitle title={formatAed(stats.pendingAmount)} subtitle={`Total value ${formatAed(stats.totalAmount)}`} /></TableCell>
       <TableCell className="align-top"><Badge variant={statusBadge(agent.status)}>{agent.status}</Badge></TableCell>
-      <TableCell className="align-top text-right"><Button type="button" size="sm" variant="outline" onClick={() => onView(agent)} className="rounded-full"><Eye className="size-4" aria-hidden="true" />View</Button></TableCell>
+      <TableCell className="align-top text-right"><RowActions agent={agent} onOpen={onOpen} /></TableCell>
     </TableRow>
   );
 }
 
-function MobileAgentCard({ agent, stats, canManageAgents, onAction }: { agent: AgentRow; stats: AgentStats; canManageAgents: boolean; onAction: (agent: AgentRow) => void }) {
+function RowActions({ agent, onOpen, onEdit, showEdit = false }: { agent: AgentRow; onOpen: (agent: AgentRow, tab?: AgentTab) => void; onEdit?: (agent: AgentRow) => void; showEdit?: boolean }) {
+  return (
+    <div className="flex flex-wrap justify-end gap-1.5">
+      <Button type="button" size="sm" variant="outline" onClick={() => onOpen(agent, 'profile')} className="h-8 rounded-full px-3"><Eye className="size-3.5" aria-hidden="true" />Profile</Button>
+      <Button type="button" size="sm" variant="outline" onClick={() => onOpen(agent, 'bookings')} className="h-8 rounded-full px-3"><BookOpen className="size-3.5" aria-hidden="true" />Bookings</Button>
+      <Button type="button" size="sm" variant="outline" onClick={() => onOpen(agent, 'ledger')} className="h-8 rounded-full px-3"><ReceiptText className="size-3.5" aria-hidden="true" />Ledger</Button>
+      {showEdit && onEdit ? <Button type="button" size="sm" variant="outline" onClick={() => onEdit(agent)} className="h-8 rounded-full px-3">Edit</Button> : null}
+    </div>
+  );
+}
+
+function MobileAgentCard({ agent, stats, canManageAgents, onOpen, onEdit }: { agent: AgentRow; stats: AgentStats; canManageAgents: boolean; onOpen: (agent: AgentRow, tab?: AgentTab) => void; onEdit: (agent: AgentRow) => void }) {
   return (
     <div className="rounded-[1.2rem] border border-border bg-white p-4 shadow-[0_10px_28px_rgba(8,37,50,0.08)]">
-      <div className="flex items-start justify-between gap-3">
+      <button type="button" onClick={() => onOpen(agent, 'profile')} className="flex w-full items-start justify-between gap-3 text-left">
         <div className="min-w-0">
           <h3 className="break-words font-heading text-base font-semibold text-foreground">{agent.company_name}</h3>
           <p className="mt-1 text-xs text-muted-foreground">{agent.agent_code || '-'} · {agent.agent_type}</p>
         </div>
         <Badge variant={statusBadge(agent.status)}>{agent.status}</Badge>
-      </div>
+      </button>
       <div className="mt-4 grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
         <InfoBlock label="Contact" value={agent.contact_person || '-'} subValue={agent.phone || '-'} />
         <InfoBlock label="Bookings" value={`${stats.totalBookings} total`} subValue={`${stats.pendingBookings} pending`} />
         <InfoBlock label="Pending" value={formatAed(stats.pendingAmount)} subValue={`Total ${formatAed(stats.totalAmount)}`} />
         <InfoBlock label="Last" value={stats.lastBookingDate} subValue={canManageAgents ? agent.payment_terms : 'Booking'} />
       </div>
-      <Button type="button" size="sm" variant="outline" onClick={() => onAction(agent)} className="mt-4 w-full rounded-full">
-        {canManageAgents ? 'Edit' : <><Eye className="size-4" aria-hidden="true" />View</>}
-      </Button>
+      <div className="mt-4 grid gap-2 sm:grid-cols-3">
+        <Button type="button" size="sm" variant="outline" onClick={() => onOpen(agent, 'profile')} className="rounded-full"><Eye className="size-4" aria-hidden="true" />Profile</Button>
+        <Button type="button" size="sm" variant="outline" onClick={() => onOpen(agent, 'bookings')} className="rounded-full"><BookOpen className="size-4" aria-hidden="true" />Bookings</Button>
+        <Button type="button" size="sm" variant="outline" onClick={() => onOpen(agent, 'ledger')} className="rounded-full"><ReceiptText className="size-4" aria-hidden="true" />Ledger</Button>
+        {canManageAgents ? <Button type="button" size="sm" variant="outline" onClick={() => onEdit(agent)} className="rounded-full sm:col-span-3">Edit Agent</Button> : null}
+      </div>
     </div>
   );
 }
@@ -651,37 +688,148 @@ function InfoBlock({ label, value, subValue }: { label: string; value: string; s
   );
 }
 
-function AgentViewModal({ agent, stats, onClose }: { agent: AgentRow; stats: AgentStats; onClose: () => void }) {
+function AgentProfileModal({ agent, stats, bookings, activeTab, onTabChange, onClose }: { agent: AgentRow; stats: AgentStats; bookings: BookingRow[]; activeTab: AgentTab; onTabChange: (tab: AgentTab) => void; onClose: () => void }) {
   const whatsapp = whatsappHref(agent.phone, agent.company_name);
+  const ledger = useMemo(() => {
+    const total = bookings.reduce((sum, booking) => sum + bookingTotal(booking), 0);
+    const received = bookings.reduce((sum, booking) => sum + bookingReceived(booking), 0);
+    const pending = bookings.reduce((sum, booking) => sum + bookingPending(booking), 0);
+    return { total, received, pending };
+  }, [bookings]);
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-primary-900/35 p-4 backdrop-blur-sm">
-      <div className="max-h-[92vh] w-full max-w-2xl overflow-auto rounded-[1.5rem] border border-white/80 bg-white shadow-[0_24px_70px_rgba(8,37,50,0.2)]">
-        <div className="flex items-start justify-between gap-4 border-b border-border/70 bg-[#F7FAFA] px-5 py-4">
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">B2B Partner</p>
-            <h2 className="mt-1 font-heading text-2xl font-semibold text-foreground">{agent.company_name}</h2>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-primary-900/35 p-3 backdrop-blur-sm sm:p-4">
+      <div className="max-h-[94vh] w-full max-w-6xl overflow-hidden rounded-[1.5rem] border border-white/80 bg-white shadow-[0_24px_70px_rgba(8,37,50,0.2)]">
+        <div className="flex items-start justify-between gap-4 border-b border-border/70 bg-[#F7FAFA] px-4 py-4 sm:px-5">
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">B2B Partner Profile</p>
+            <h2 className="mt-1 break-words font-heading text-xl font-semibold text-foreground sm:text-2xl">{agent.company_name}</h2>
             <p className="mt-1 text-sm text-muted-foreground">{agent.agent_code} · {agent.agent_type}</p>
           </div>
-          <button type="button" onClick={onClose} className="flex size-9 items-center justify-center rounded-full border border-border bg-white text-muted-foreground" aria-label="Close">
+          <button type="button" onClick={onClose} className="flex size-9 shrink-0 items-center justify-center rounded-full border border-border bg-white text-muted-foreground" aria-label="Close">
             <X className="size-4" aria-hidden="true" />
           </button>
         </div>
-        <div className="grid gap-4 p-5 sm:grid-cols-2">
-          <Info label="Contact" value={agent.contact_person || '-'} />
-          <Info label="Phone" value={agent.phone || '-'} />
-          <Info label="Login Email" value={agent.login_email || '-'} />
-          <Info label="Status" value={agent.status} />
-          <Info label="Total Bookings" value={String(stats.totalBookings)} />
-          <Info label="Pending Bookings" value={String(stats.pendingBookings)} />
-          <Info label="Pending Amount" value={formatAed(stats.pendingAmount)} />
-          <Info label="Last Booking" value={stats.lastBookingDate} />
-          {agent.notes ? <div className="sm:col-span-2"><Info label="Notes" value={agent.notes} /></div> : null}
+
+        <div className="border-b border-border/70 bg-white px-4 py-3 sm:px-5">
+          <div className="flex flex-wrap gap-2">
+            <TabButton active={activeTab === 'profile'} onClick={() => onTabChange('profile')} icon={Eye}>Profile</TabButton>
+            <TabButton active={activeTab === 'bookings'} onClick={() => onTabChange('bookings')} icon={BookOpen}>Bookings</TabButton>
+            <TabButton active={activeTab === 'ledger'} onClick={() => onTabChange('ledger')} icon={ReceiptText}>Ledger</TabButton>
+          </div>
         </div>
-        <div className="flex flex-col gap-2 border-t border-border/70 px-5 py-4 sm:flex-row sm:justify-end">
+
+        <div className="max-h-[66vh] overflow-auto p-4 sm:p-5">
+          {activeTab === 'profile' ? <ProfileTab agent={agent} stats={stats} bookings={bookings} ledger={ledger} /> : null}
+          {activeTab === 'bookings' ? <BookingsTab bookings={bookings} /> : null}
+          {activeTab === 'ledger' ? <LedgerTab bookings={bookings} ledger={ledger} /> : null}
+        </div>
+
+        <div className="flex flex-col gap-2 border-t border-border/70 px-4 py-4 sm:flex-row sm:justify-end sm:px-5">
           {whatsapp ? <Button asChild className="rounded-full border-[#25D366] bg-[#25D366] text-white hover:bg-[#1EBE5D] hover:text-white"><a href={whatsapp} target="_blank" rel="noopener noreferrer"><MessageCircle className="size-4" aria-hidden="true" />WhatsApp Agent</a></Button> : null}
           <Button type="button" variant="outline" className="rounded-full" onClick={onClose}>Close</Button>
         </div>
       </div>
+    </div>
+  );
+}
+
+function TabButton({ active, onClick, icon: Icon, children }: { active: boolean; onClick: () => void; icon: typeof Eye; children: ReactNode }) {
+  return (
+    <button type="button" onClick={onClick} className={`inline-flex items-center gap-2 rounded-full border px-3 py-2 text-xs font-bold transition ${active ? 'border-primary bg-primary text-white shadow-sm' : 'border-border bg-white text-primary-900 hover:bg-primary-50'}`}>
+      <Icon className="size-4" aria-hidden="true" />
+      {children}
+    </button>
+  );
+}
+
+function ProfileTab({ agent, stats, bookings, ledger }: { agent: AgentRow; stats: AgentStats; bookings: BookingRow[]; ledger: { total: number; received: number; pending: number } }) {
+  return (
+    <div className="grid gap-4 lg:grid-cols-[0.95fr_1.05fr]">
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Info label="Contact" value={agent.contact_person || '-'} />
+        <Info label="Phone" value={agent.phone || '-'} />
+        <Info label="Login Email" value={agent.login_email || '-'} />
+        <Info label="Billing Email" value={agent.billing_email || '-'} />
+        <Info label="Status" value={agent.status} />
+        <Info label="Payment Terms" value={agent.payment_terms} />
+        <Info label="Rate Profile" value={agent.rate_profile || defaultRateProfile} />
+        <Info label="Credit Limit" value={formatAed(agent.credit_limit_aed)} />
+        {agent.notes ? <div className="sm:col-span-2"><Info label="Notes" value={agent.notes} /></div> : null}
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Info label="Total Bookings" value={String(stats.totalBookings)} />
+        <Info label="Pending Bookings" value={String(stats.pendingBookings)} />
+        <Info label="Total Value" value={formatAed(ledger.total)} />
+        <Info label="Received" value={formatAed(ledger.received)} />
+        <Info label="Pending Amount" value={formatAed(ledger.pending)} />
+        <Info label="Last Booking" value={stats.lastBookingDate} />
+        <div className="sm:col-span-2"><Info label="Records Loaded" value={`${bookings.length} booking records`} /></div>
+      </div>
+    </div>
+  );
+}
+
+function BookingsTab({ bookings }: { bookings: BookingRow[] }) {
+  if (!bookings.length) return <EmptyState title="No booking records" text="Bookings from this B2B agent will appear here." />;
+  return (
+    <div className="grid gap-3">
+      {bookings.map((booking, index) => (
+        <div key={`${bookingReference(booking)}-${index}`} className="rounded-2xl border border-border bg-[#F7FAFA] p-4">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+            <div className="min-w-0">
+              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary">{bookingReference(booking)}</p>
+              <h3 className="mt-1 break-words font-heading text-base font-semibold text-foreground">{bookingCustomer(booking)}</h3>
+              <p className="mt-1 text-sm text-muted-foreground">{bookingPackage(booking)}</p>
+            </div>
+            <Badge variant="secondary">{textFromBooking(booking, ['status', 'booking_status'], 'Pending')}</Badge>
+          </div>
+          <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+            <InfoBlock label="Date" value={bookingDate(booking)} subValue={bookingTime(booking)} />
+            <InfoBlock label="Total" value={formatAed(bookingTotal(booking))} subValue={`Received ${formatAed(bookingReceived(booking))}`} />
+            <InfoBlock label="Pending" value={formatAed(bookingPending(booking))} subValue={textFromBooking(booking, ['payment_status'], 'Payment')} />
+            <InfoBlock label="Phone" value={textFromBooking(booking, ['customer_phone', 'phone', 'mobile'], '-')} subValue={textFromBooking(booking, ['email', 'customer_email'], '')} />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function LedgerTab({ bookings, ledger }: { bookings: BookingRow[]; ledger: { total: number; received: number; pending: number } }) {
+  if (!bookings.length) return <EmptyState title="No ledger records" text="Booking and payment values will appear after this agent creates bookings." />;
+  return (
+    <div className="grid gap-4">
+      <div className="grid gap-3 sm:grid-cols-3">
+        <Info label="Total Business" value={formatAed(ledger.total)} />
+        <Info label="Received" value={formatAed(ledger.received)} />
+        <Info label="Pending" value={formatAed(ledger.pending)} />
+      </div>
+      <div className="overflow-hidden rounded-2xl border border-border">
+        <div className="hidden bg-[#F7FAFA] px-4 py-3 text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground md:grid md:grid-cols-[1.2fr_1fr_1fr_1fr_1fr]">
+          <span>Booking</span><span>Total</span><span>Received</span><span>Pending</span><span>Status</span>
+        </div>
+        <div className="divide-y divide-border">
+          {bookings.map((booking, index) => (
+            <div key={`${bookingReference(booking)}-ledger-${index}`} className="grid gap-2 px-4 py-3 text-sm md:grid-cols-[1.2fr_1fr_1fr_1fr_1fr] md:items-center">
+              <div className="min-w-0"><p className="break-words font-bold text-primary-900">{bookingReference(booking)}</p><p className="text-xs text-muted-foreground">{bookingDate(booking)}</p></div>
+              <p className="font-semibold text-foreground">{formatAed(bookingTotal(booking))}</p>
+              <p className="font-semibold text-foreground">{formatAed(bookingReceived(booking))}</p>
+              <p className="font-semibold text-foreground">{formatAed(bookingPending(booking))}</p>
+              <p className="text-xs font-semibold text-muted-foreground">{textFromBooking(booking, ['payment_status', 'status'], 'Pending')}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function EmptyState({ title, text }: { title: string; text: string }) {
+  return (
+    <div className="rounded-2xl border border-dashed border-border bg-[#F7FAFA] px-4 py-8 text-center">
+      <p className="font-heading text-lg font-semibold text-foreground">{title}</p>
+      <p className="mt-2 text-sm text-muted-foreground">{text}</p>
     </div>
   );
 }
