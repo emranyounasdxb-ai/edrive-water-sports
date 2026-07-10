@@ -24,6 +24,7 @@ import { dubaiWaterfrontImage, fleetHeroImage, fleetShowcaseImage, jetCarLightIm
 import { cn } from '@/lib/utils';
 import { BookingForm } from './booking-form';
 import { ContactForm } from './contact-form';
+import { LivePackageShowcase } from './live-package-showcase';
 import { MotionReveal } from './motion-reveal';
 
 const sectionPad = 'py-10 sm:py-12 lg:py-14';
@@ -40,20 +41,26 @@ const serviceCards = [
   {
     icon: Waves,
     title: 'Jet Ski Experiences',
-    text: 'Premium jet ski rides with safety briefing, clear timing, and booking confirmation from the eDrive team.',
-    image: jetSkiLightImage
+    text: 'Premium jet ski rides with clear duration options, safety briefing, and fast booking confirmation.',
+    image: jetSkiLightImage,
+    href: '/jet-ski-rentals',
+    cta: 'View Jet Ski Packages'
   },
   {
     icon: Car,
     title: 'Jet Car Experiences',
     text: 'Luxury jet car rides for couples, families, photos, birthdays, and premium Dubai water moments.',
-    image: jetCarLightImage
+    image: jetCarLightImage,
+    href: '/jet-car-rentals',
+    cta: 'View Jet Car Packages'
   },
   {
     icon: Crown,
     title: 'VIP Marine Support',
     text: 'Private timing, group planning, and elevated guest support for special bookings and VIP requests.',
-    image: fleetShowcaseImage
+    image: fleetShowcaseImage,
+    href: '/contact',
+    cta: 'Request VIP Support'
   }
 ];
 
@@ -62,6 +69,12 @@ const whyChoose = [
   { icon: ShieldCheck, title: 'Safety First', text: 'Every ride is supported with safety basics, team guidance, and a clear booking flow.' },
   { icon: MessageCircle, title: 'Fast Support', text: 'WhatsApp, phone, and email support are available for questions and confirmations.' },
   { icon: CalendarCheck, title: 'Easy Booking', text: 'Choose your ride type, date, time, guests, and submit the request in minutes.' }
+];
+
+const bookingSteps = [
+  { icon: Sparkles, title: 'Choose package', text: 'Select an original live package from the approved backend list.' },
+  { icon: CalendarCheck, title: 'Pick date and time', text: 'Share your preferred slot and guest count in the booking form.' },
+  { icon: MessageCircle, title: 'Team confirms', text: 'The eDrive team confirms availability and final booking details.' }
 ];
 
 const membershipTiers = [
@@ -87,9 +100,16 @@ export function HomePage() {
     <>
       <HomeHero />
 
+      <LivePackageShowcase
+        title="Bookable Packages"
+        text="Only active packages from the admin backend are shown here. New packages and price updates will appear from the live package list."
+        limit={6}
+        compact
+      />
+
       <section className="bg-[#f4f5f5]">
         <div className={cn('container-x', sectionPad)}>
-          <SectionHeader title="Premium Water Sports Experiences" text="No dummy packages are shown here. Original bookable packages will appear from the live package system after they are added in Supabase." />
+          <SectionHeader title="Premium Water Sports Experiences" text="Choose jet ski, jet car, or VIP marine support. Package pricing is handled from the live backend package list." />
           <div className="mt-7 grid gap-5 md:grid-cols-3">
             {serviceCards.map((item) => <ServiceCard key={item.title} {...item} />)}
           </div>
@@ -98,8 +118,19 @@ export function HomePage() {
 
       <section className="border-y border-border bg-white/70">
         <div className={cn('container-x', sectionPad)}>
-          <SectionHeader title="Why Choose eDrive" text="A clean booking experience for Dubai jet ski and jet car guests, focused on real services and confirmed availability." />
+          <SectionHeader title="Why Choose eDrive" text="A clean booking experience for Dubai jet ski and jet car guests, focused on real packages, support, and confirmed availability." />
           <FeatureGrid items={whyChoose} className="mt-7 lg:grid-cols-4" />
+        </div>
+      </section>
+
+      <section className="bg-[#f4f5f5]">
+        <div className={cn('container-x grid gap-7 lg:grid-cols-[0.78fr_1.22fr] lg:items-center', sectionPad)}>
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-primary">How it works</p>
+            <h2 className="mt-3 section-title">From package card to confirmed water time</h2>
+            <p className="mt-3 text-sm leading-7 text-muted-foreground sm:text-base">The home page is now shorter and booking-focused. Customers see live packages first, then submit a request for confirmation.</p>
+          </div>
+          <FeatureGrid items={bookingSteps} className="lg:grid-cols-3" />
         </div>
       </section>
 
@@ -123,16 +154,16 @@ function HomeHero() {
               Premium Water Sports
               <span className="mt-1 block text-primary-300">Dubai Islands</span>
             </h1>
-            <p className="mt-5 max-w-xl text-base leading-7 text-white/82 sm:text-lg">Jet skis, jet cars, and unforgettable moments on the water.</p>
+            <p className="mt-5 max-w-xl text-base leading-7 text-white/82 sm:text-lg">Jet ski and jet car packages with live pricing, clear timing, and fast team confirmation.</p>
             <div className="mt-8 flex max-w-xl flex-col overflow-hidden rounded-[1.2rem] border border-white/16 bg-primary-900/92 shadow-[0_18px_45px_rgba(0,0,0,0.28)] sm:flex-row">
-              <Link href="/booking" className="inline-flex min-h-14 flex-1 items-center justify-center gap-2 px-5 text-sm font-bold text-accent-300 transition hover:bg-white/10">
+              <Link href="#live-packages" className="inline-flex min-h-14 flex-1 items-center justify-center gap-2 px-5 text-sm font-bold text-accent-300 transition hover:bg-white/10">
                 <CalendarCheck className="size-4" aria-hidden="true" />
-                Book Now
+                View Packages
               </Link>
-              <Link href="/contact" className="inline-flex min-h-14 flex-[1.1] items-center justify-between gap-3 border-t border-white/12 bg-primary px-5 text-xs font-semibold text-white transition hover:bg-primary-600 sm:border-l sm:border-t-0">
-                <span>Contact the team for availability and support</span>
+              <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-14 flex-[1.1] items-center justify-between gap-3 border-t border-white/12 bg-primary px-5 text-xs font-semibold text-white transition hover:bg-primary-600 sm:border-l sm:border-t-0">
+                <span>WhatsApp for availability and support</span>
                 <ArrowRight className="size-4 shrink-0" aria-hidden="true" />
-              </Link>
+              </a>
             </div>
           </div>
         </MotionReveal>
@@ -312,7 +343,7 @@ function SectionHeader({ title, text }: { title: string; text: string }) {
   );
 }
 
-function ServiceCard({ icon: Icon, title, text, image }: { icon: LucideIcon; title: string; text: string; image: string }) {
+function ServiceCard({ icon: Icon, title, text, image, href, cta }: { icon: LucideIcon; title: string; text: string; image: string; href: string; cta: string }) {
   return (
     <article className="premium-surface premium-card-hover overflow-hidden rounded-[1.75rem] p-3">
       <div className="relative aspect-[16/10] overflow-hidden rounded-[1.35rem] bg-primary-50">
@@ -322,7 +353,7 @@ function ServiceCard({ icon: Icon, title, text, image }: { icon: LucideIcon; tit
         <span className="flex size-10 items-center justify-center rounded-2xl bg-primary-50 text-primary"><Icon className="size-5" aria-hidden="true" /></span>
         <h3 className="mt-4 font-heading text-2xl font-semibold text-foreground">{title}</h3>
         <p className="mt-2 text-sm leading-7 text-muted-foreground">{text}</p>
-        <Button asChild className="mt-5 w-full rounded-full"><Link href="/booking">Book Now<ArrowRight data-icon aria-hidden="true" /></Link></Button>
+        <Button asChild className="mt-5 w-full rounded-full"><Link href={href}>{cta}<ArrowRight data-icon aria-hidden="true" /></Link></Button>
       </div>
     </article>
   );
@@ -360,18 +391,16 @@ function HomeContactStrip() {
   return (
     <section className="bg-[#f4f5f5] py-9 sm:py-11">
       <div className="container-x">
-        <div className="premium-dark grid gap-5 rounded-[1.6rem] px-5 py-5 text-white sm:px-6 lg:grid-cols-[1.25fr_0.9fr_auto] lg:items-center">
-          <div>
-            <p className="text-xs font-bold text-accent-300">Ready to Ride?</p>
-            <h2 className="mt-1 font-heading text-3xl font-semibold text-white">Let&apos;s Make Waves</h2>
-            <p className="mt-2 text-xs leading-5 text-white/68">Our team is here to help you plan the perfect experience.</p>
+        <div className="grid overflow-hidden rounded-[1.5rem] bg-primary-900 text-white shadow-[0_18px_45px_rgba(8,37,50,0.18)] lg:grid-cols-[1fr_auto] lg:items-center">
+          <div className="p-6 sm:p-7">
+            <p className="text-xs font-bold uppercase tracking-[0.22em] text-accent-300">Need help choosing?</p>
+            <h2 className="mt-2 font-heading text-2xl font-semibold">Talk to eDrive before you book.</h2>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-white/72">Tell us your date, number of guests, and whether you prefer jet ski, jet car, combo, family, VIP, or special group support.</p>
           </div>
-          <div className="grid gap-2 text-xs text-white/82">
-            <a href={`tel:${companyInfo.landlineHref}`} className="inline-flex items-center gap-2 transition hover:text-accent-300"><Phone className="size-4 text-primary-200" aria-hidden="true" />{companyInfo.landlineDisplay}</a>
-            <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 transition hover:text-accent-300"><MessageCircle className="size-4 text-primary-200" aria-hidden="true" />Chat on WhatsApp</a>
-            <a href={`mailto:${companyInfo.bookingEmail}`} className="inline-flex items-center gap-2 transition hover:text-accent-300"><Mail className="size-4 text-primary-200" aria-hidden="true" />{companyInfo.bookingEmail}</a>
+          <div className="flex flex-col gap-2 p-5 sm:flex-row lg:flex-col lg:p-6">
+            <Button asChild className="rounded-full bg-[#25D366] text-white hover:bg-[#1EBE5D]"><a href={whatsappUrl} target="_blank" rel="noopener noreferrer"><MessageCircle data-icon aria-hidden="true" />WhatsApp eDrive</a></Button>
+            <Button asChild variant="outline" className="rounded-full bg-white text-primary-900 hover:bg-white"><a href={`tel:${companyInfo.landlineHref}`}><Phone data-icon aria-hidden="true" />Call now</a></Button>
           </div>
-          <Button asChild variant="outline" className="border-white/20 bg-white text-primary-900 hover:bg-primary-50"><Link href="/contact">Contact Us<ArrowRight data-icon aria-hidden="true" /></Link></Button>
         </div>
       </div>
     </section>
