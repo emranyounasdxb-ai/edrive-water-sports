@@ -134,7 +134,7 @@ export function LivePackageShowcase({ title = 'Live Booking Packages', text = ''
 function LivePackageCard({ item, index }: { item: LivePackage; index: number }) {
   const [imageFailed, setImageFailed] = useState(false);
   const imageSrc = imageForLivePackage(item, index);
-  const bookingHref = `/booking?package=${encodeURIComponent(item.id)}`;
+  const bookingHref = `/booking?category=${encodeURIComponent(item.category)}&capacity=${encodeURIComponent(String(item.capacity || 2))}&duration=${encodeURIComponent(String(item.duration_minutes || 0))}`;
   const description = item.short_description || defaultDescription(item);
   const whatsappMessage = encodeURIComponent(`Hello eDrive, I am interested in this package: ${item.title}
 
