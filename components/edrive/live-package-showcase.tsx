@@ -121,9 +121,9 @@ export function LivePackageShowcase({ title = 'Live Booking Packages', text = ''
           </div>
         </div>
 
-        <div className={cn('mt-7 grid gap-4 sm:grid-cols-2', compact ? 'lg:grid-cols-3 xl:grid-cols-4' : 'lg:grid-cols-3 xl:grid-cols-4')}>
+        <div className="mt-7 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {loading
-            ? Array.from({ length: limit || 8 }).map((_, index) => <div key={index} className="h-80 animate-pulse rounded-[1.5rem] bg-white/80" />)
+            ? Array.from({ length: limit || 9 }).map((_, index) => <div key={index} className="h-80 animate-pulse rounded-[1.5rem] bg-white/80" />)
             : visibleItems.map((item, index) => <LivePackageCard key={item.id} item={item} index={index} />)}
         </div>
       </div>
