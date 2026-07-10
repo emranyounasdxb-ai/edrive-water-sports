@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { LivePackageShowcase } from '@/components/edrive/live-package-showcase';
 import { FleetPage } from '@/components/edrive/public-pages';
 
 export const metadata: Metadata = {
@@ -7,5 +8,10 @@ export const metadata: Metadata = {
 };
 
 export default function Page() {
-  return <FleetPage />;
+  return (
+    <>
+      <FleetPage />
+      <LivePackageShowcase title="Live Fleet Packages" text="Only active packages from the admin package dashboard are shown here. New package updates appear live on the website." />
+    </>
+  );
 }
