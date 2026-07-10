@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
-import { CalendarDays, CheckCircle2, ClipboardCheck, Clock3, CreditCard, RefreshCw, Save, Search } from 'lucide-react';
+import { CalendarDays, CheckCircle2, ClipboardCheck, Clock3, CreditCard, RefreshCw, Save, Search, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -41,15 +41,19 @@ type BookingRow = Record<string, unknown> & {
   amount_pending_aed?: number | string | null;
   payment_status?: string | null;
   payment_method?: string | null;
+  payment_source?: string | null;
+  payment_workflow_status?: string | null;
+  collection_status?: string | null;
   assigned_manager_name?: string | null;
   assigned_vehicle_name?: string | null;
   b2b_agent_name?: string | null;
+  internal_note?: string | null;
 };
 
 type VehicleOption = { name: string; code: string; type: string; status: string };
 type ManagerProfile = { name: string; email: string; role: string; ready: boolean };
+type CompletionValues = { method: 'Cash' | 'Card' | 'B2B Invoice'; amount: number; reference: string; note: string };
 
-const stageOptions = ['Assigned', 'Checked-In', 'In Progress', 'Completed', 'No Show'];
 const selectClass = 'h-10 w-full rounded-xl border border-border bg-white px-3 text-sm font-semibold text-foreground shadow-sm outline-none transition focus:border-primary/50 focus:ring-2 focus:ring-primary/10';
 
 function text(value: unknown, fallback = '-') {
@@ -98,8 +102,17 @@ function pendingAmount(booking: BookingRow) {
   return Math.max(totalAmount(booking) - receivedAmount(booking), 0);
 }
 
+function isB2BBooking(booking: BookingRow) {
+  return String(booking.payment_source || '').toLowerCase() === 'b2b' || Boolean(booking.b2b_agent_name);
+}
+
+function rideStage(booking: BookingRow) {
+  const raw = text(booking.manager_status, 'Pending');
+  return raw === 'Assigned' ? 'Pending' : raw;
+}
+
 function statusTone(status: unknown) {
-  const value = text(status, 'Assigned').toLowerCase();
+  const value = text(status, 'Pending').toLowerCase();
   if (value.includes('complete') || value.includes('paid')) return 'border-emerald-200 bg-emerald-50 text-emerald-700';
   if (value.includes('no show') || value.includes('cancel')) return 'border-red-200 bg-red-50 text-red-700';
   if (value.includes('progress') || value.includes('check')) return 'border-primary/25 bg-primary-50 text-primary';
@@ -114,7 +127,7 @@ function matchesManager(booking: BookingRow, manager: ManagerProfile) {
 }
 
 function isConfirmedBooking(booking: BookingRow) {
-  return text(booking.status, '').toLowerCase() === 'confirmed';
+  return text(booking.status, '').toLowerCase() === 'confirmed' || text(booking.status, '').toLowerCase() === 'completed';
 }
 
 function sortSchedule(a: BookingRow, b: BookingRow) {
@@ -154,33 +167,133 @@ function Detail({ label, value, sub }: { label: string; value: ReactNode; sub?: 
   return <div className="min-w-0 rounded-xl bg-[#F7FAFA] px-3 py-2"><p className="text-[9px] font-bold uppercase tracking-[0.14em] text-muted-foreground">{label}</p><div className="mt-1 break-words text-sm font-bold text-foreground">{value}</div>{sub ? <div className="mt-0.5 break-words text-xs text-muted-foreground">{sub}</div> : null}</div>;
 }
 
-function RideCard({ booking, vehicles, onSaved }: { booking: BookingRow; vehicles: VehicleOption[]; onSaved: () => Promise<void> }) {
-  const [vehicle, setVehicle] = useState(text(booking.assigned_vehicle_name, ''));
-  const [stage, setStage] = useState(text(booking.manager_status, 'Assigned'));
+function PaymentModal({ booking, onClose, onComplete }: { booking: BookingRow; onClose: () => void; onComplete: (values: CompletionValues) => Promise<void> }) {
+  const isB2B = isB2BBooking(booking);
+  const total = totalAmount(booking);
+  const defaultAmount = isB2B ? 0 : pendingAmount(booking) || total;
+  const [method, setMethod] = useState<CompletionValues['method']>(isB2B ? 'B2B Invoice' : 'Cash');
+  const [amount, setAmount] = useState(String(defaultAmount));
+  const [reference, setReference] = useState('');
+  const [note, setNote] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-  const vehicleOptions = Array.from(new Set([vehicle, ...vehicles.map((item) => item.name || item.code)].filter(Boolean)));
 
-  async function save() {
+  async function submit() {
+    const numericAmount = Number(amount || 0);
+    if (!isB2B && (!Number.isFinite(numericAmount) || numericAmount <= 0)) {
+      setError('Received amount required.');
+      return;
+    }
+    if (method === 'Card' && !reference.trim()) {
+      setError('Card reference number required.');
+      return;
+    }
+    setSaving(true);
+    setError('');
+    try {
+      await onComplete({ method, amount: isB2B ? 0 : numericAmount, reference: reference.trim(), note: note.trim() });
+    } catch (completeError) {
+      setError(completeError instanceof Error ? completeError.message : 'Unable to complete ride.');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm">
+      <div className="w-full max-w-xl overflow-hidden rounded-[1.5rem] border border-border bg-white shadow-[0_28px_90px_rgba(8,37,50,0.22)]">
+        <div className="flex items-start justify-between border-b border-border/70 bg-[#F7FAFA] p-5">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary">Complete Ride</p>
+            <h2 className="mt-1 font-heading text-xl font-semibold text-foreground">{bookingCode(booking)}</h2>
+            <p className="mt-1 text-sm text-muted-foreground">{packageLabel(booking)} · {formatAed(total)}</p>
+          </div>
+          <button type="button" onClick={onClose} className="flex size-9 items-center justify-center rounded-full bg-white text-muted-foreground shadow-sm hover:text-foreground" aria-label="Close"><X className="size-4" aria-hidden="true" /></button>
+        </div>
+        <div className="space-y-4 p-5">
+          {isB2B ? (
+            <div className="rounded-2xl border border-primary/15 bg-primary-50 p-4">
+              <p className="text-sm font-bold text-primary-900">B2B invoice will be generated</p>
+              <p className="mt-1 text-xs leading-5 text-muted-foreground">Payment will stay pending with {text(booking.b2b_agent_name, 'B2B agent')} and appear in B2B ledger.</p>
+            </div>
+          ) : (
+            <>
+              <label className="grid gap-1.5 text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">Payment Method<select value={method} onChange={(event) => setMethod(event.target.value as CompletionValues['method'])} className={selectClass}><option value="Cash">Cash</option><option value="Card">Card</option></select></label>
+              <label className="grid gap-1.5 text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">Amount Received<Input value={amount} onChange={(event) => setAmount(event.target.value)} type="number" min="0" step="0.01" className="h-10 rounded-xl bg-white" /></label>
+              {method === 'Card' ? <label className="grid gap-1.5 text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">Card Reference Number<Input value={reference} onChange={(event) => setReference(event.target.value)} className="h-10 rounded-xl bg-white" placeholder="Card approval / reference" /></label> : null}
+            </>
+          )}
+          <label className="grid gap-1.5 text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">Manager Note<textarea value={note} onChange={(event) => setNote(event.target.value)} className="min-h-24 rounded-xl border border-border bg-white px-3 py-2 text-sm font-semibold text-foreground shadow-sm outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10" placeholder="Optional completion note" /></label>
+          {error ? <p className="rounded-xl bg-red-50 px-3 py-2 text-xs font-semibold text-red-700">{error}</p> : null}
+        </div>
+        <div className="flex flex-col gap-2 border-t border-border/70 p-5 sm:flex-row sm:justify-end">
+          <Button type="button" variant="outline" onClick={onClose} className="rounded-full bg-white">Cancel</Button>
+          <Button type="button" onClick={submit} disabled={saving} className="rounded-full"><CheckCircle2 className="size-4" aria-hidden="true" />{saving ? 'Completing...' : isB2B ? 'Generate Invoice' : 'Complete Payment'}</Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function RideCard({ booking, vehicles, onSaved }: { booking: BookingRow; vehicles: VehicleOption[]; onSaved: () => Promise<void> }) {
+  const [vehicle, setVehicle] = useState(text(booking.assigned_vehicle_name, ''));
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [completionOpen, setCompletionOpen] = useState(false);
+  const vehicleOptions = Array.from(new Set([vehicle, ...vehicles.map((item) => item.name || item.code)].filter(Boolean)));
+  const stage = rideStage(booking);
+  const inProgress = stage === 'In Progress';
+  const completed = stage === 'Completed' || text(booking.status, '') === 'Completed';
+
+  async function startRide() {
+    if (!vehicle.trim()) {
+      setError('Please select vehicle first.');
+      return;
+    }
     setSaving(true);
     setError('');
     try {
       const payload: Record<string, unknown> = {
-        assigned_vehicle_name: vehicle || null,
-        manager_status: stage,
+        assigned_vehicle_name: vehicle,
+        manager_status: 'In Progress',
         updated_at: new Date().toISOString()
       };
-      if (stage === 'Completed') payload.status = 'Completed';
-      if (stage === 'No Show') payload.status = 'No Show';
       const query = supabase.from(bookingRequestsTable).update(payload);
       const result = booking.id ? await query.eq('id', booking.id) : await query.eq('booking_code', bookingCode(booking));
       if (result.error) throw new Error(result.error.message);
       await onSaved();
     } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : 'Unable to save ride update.');
+      setError(saveError instanceof Error ? saveError.message : 'Unable to start ride.');
     } finally {
       setSaving(false);
     }
+  }
+
+  async function completeRide(values: CompletionValues) {
+    const total = totalAmount(booking);
+    const received = values.method === 'B2B Invoice' ? 0 : values.amount;
+    const pending = values.method === 'B2B Invoice' ? total : Math.max(total - received, 0);
+    const noteParts = [booking.internal_note, values.method === 'Card' && values.reference ? `Card ref: ${values.reference}` : '', values.note].filter(Boolean).map(String);
+    const payload: Record<string, unknown> = {
+      status: 'Completed',
+      manager_status: 'Completed',
+      payment_method: values.method,
+      amount_received_aed: received,
+      amount_pending_aed: pending,
+      payment_status: values.method === 'B2B Invoice' ? 'Not Paid' : pending <= 0 ? 'Paid' : 'Partial Paid',
+      collection_status: values.method === 'B2B Invoice' ? 'pending_collection' : pending <= 0 ? 'collected' : 'partial_collection',
+      internal_note: noteParts.join('\n'),
+      updated_at: new Date().toISOString()
+    };
+    if (values.method === 'B2B Invoice') {
+      payload.payment_source = 'b2b';
+      payload.payment_workflow_status = 'B2B Invoice Generated';
+    }
+    const query = supabase.from(bookingRequestsTable).update(payload);
+    const result = booking.id ? await query.eq('id', booking.id) : await query.eq('booking_code', bookingCode(booking));
+    if (result.error) throw new Error(result.error.message);
+    setCompletionOpen(false);
+    await onSaved();
   }
 
   return (
@@ -191,20 +304,24 @@ function RideCard({ booking, vehicles, onSaved }: { booking: BookingRow; vehicle
           <h3 className="mt-1 break-words font-heading text-base font-semibold text-foreground">{text(booking.customer_name, 'Guest')}</h3>
           <p className="mt-1 text-sm text-muted-foreground">{packageLabel(booking)}</p>
         </div>
-        <div className="flex flex-wrap gap-2 sm:justify-end"><span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-bold ${statusTone(stage)}`}>{stage}</span>{booking.b2b_agent_name ? <Badge variant="secondary">B2B · {booking.b2b_agent_name}</Badge> : <Badge variant="secondary">Direct Sale</Badge>}</div>
+        <div className="flex flex-wrap gap-2 sm:justify-end"><span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-bold ${statusTone(stage)}`}>{stage}</span>{isB2BBooking(booking) ? <Badge variant="secondary">B2B · {text(booking.b2b_agent_name, 'Agent')}</Badge> : <Badge variant="secondary">Direct Sale</Badge>}</div>
       </div>
       <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
         <Detail label="Schedule" value={dateLabel(booking.preferred_date)} sub={text(booking.preferred_time, 'Time pending')} />
         <Detail label="Ride" value={rideDetails(booking)} sub={text(booking.customer_phone || booking.customer_email, '')} />
-        <Detail label="Vehicle" value={vehicle || 'Not selected'} sub="Assigned vehicle" />
+        <Detail label="Vehicle" value={vehicle || 'Not selected'} sub={inProgress || completed ? 'Assigned vehicle' : 'Select before ride'} />
         <Detail label="Payment" value={formatAed(totalAmount(booking))} sub={`Pending ${formatAed(pendingAmount(booking))}`} />
       </div>
       {error ? <p className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-xs font-semibold text-red-700">{error}</p> : null}
-      <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
-        <label className="grid gap-1.5 text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">Vehicle<select value={vehicle} onChange={(event) => setVehicle(event.target.value)} className={selectClass}><option value="">Select vehicle</option>{vehicleOptions.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
-        <label className="grid gap-1.5 text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">Ride Stage<select value={stage} onChange={(event) => setStage(event.target.value)} className={selectClass}>{stageOptions.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
-        <Button type="button" onClick={save} disabled={saving} className="rounded-full"><Save className="size-4" aria-hidden="true" />{saving ? 'Saving...' : 'Save Update'}</Button>
+      <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
+        <label className="grid gap-1.5 text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">Vehicle<select value={vehicle} onChange={(event) => setVehicle(event.target.value)} disabled={completed} className={selectClass}><option value="">Select vehicle</option>{vehicleOptions.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          {!completed && !inProgress ? <Button type="button" onClick={startRide} disabled={saving} className="rounded-full"><Save className="size-4" aria-hidden="true" />{saving ? 'Starting...' : 'Start Ride'}</Button> : null}
+          {inProgress ? <Button type="button" onClick={() => setCompletionOpen(true)} className="rounded-full bg-emerald-600 hover:bg-emerald-700"><CheckCircle2 className="size-4" aria-hidden="true" />Complete Ride</Button> : null}
+          {completed ? <Button type="button" disabled className="rounded-full bg-emerald-600"><CheckCircle2 className="size-4" aria-hidden="true" />Completed</Button> : null}
+        </div>
       </div>
+      {completionOpen ? <PaymentModal booking={booking} onClose={() => setCompletionOpen(false)} onComplete={completeRide} /> : null}
     </div>
   );
 }
@@ -244,8 +361,8 @@ function ManagerAssignedRidesPage({ manager }: { manager: ManagerProfile }) {
   }, [query, scopedBookings]);
 
   const metrics = useMemo(() => {
-    const active = scopedBookings.filter((booking) => ['Assigned', 'Checked-In', 'In Progress'].includes(text(booking.manager_status, 'Assigned'))).length;
-    const completed = scopedBookings.filter((booking) => text(booking.manager_status, '') === 'Completed').length;
+    const active = scopedBookings.filter((booking) => ['Pending', 'Checked-In', 'In Progress'].includes(rideStage(booking))).length;
+    const completed = scopedBookings.filter((booking) => rideStage(booking) === 'Completed' || text(booking.status, '') === 'Completed').length;
     const pending = scopedBookings.reduce((sum, booking) => sum + pendingAmount(booking), 0);
     return { total: scopedBookings.length, active, completed, pending };
   }, [scopedBookings]);
