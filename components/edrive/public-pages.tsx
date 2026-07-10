@@ -153,14 +153,14 @@ function HomeHero() {
               <span className="mt-1 block text-primary-300">Dubai Islands</span>
             </h1>
             <p className="mt-5 max-w-xl text-base leading-7 text-white/82 sm:text-lg">Jet ski and jet car packages with clear pricing, flexible timing, and fast team confirmation.</p>
-            <div className="mt-8 max-w-md">
+            <div className="mt-8 flex">
               <a
                 href={whatsappUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex min-h-14 w-full items-center justify-center gap-3 rounded-full border border-emerald-300/45 bg-[#25D366] px-5 text-sm font-bold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.32),0_18px_38px_rgba(37,211,102,0.22)] transition hover:-translate-y-0.5 hover:bg-[#1EBE5D] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.38),0_22px_44px_rgba(37,211,102,0.30)]"
+                className="inline-flex min-h-12 w-auto items-center justify-center gap-2 rounded-full border border-emerald-300/45 bg-[#25D366] px-6 text-sm font-bold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.32),0_14px_28px_rgba(37,211,102,0.22)] transition hover:-translate-y-0.5 hover:bg-[#1EBE5D] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.38),0_18px_36px_rgba(37,211,102,0.30)]"
               >
-                <span>WhatsApp Availability</span>
+                <span>Check Availability</span>
                 <ArrowRight className="size-4 shrink-0" aria-hidden="true" />
               </a>
             </div>
@@ -380,8 +380,8 @@ function HomeContactStrip() {
             <p className="mt-2 max-w-3xl text-sm leading-6 text-white/70">Tell us your date, number of guests, and whether you prefer jet ski, jet car, combo, family, VIP, or special group support.</p>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row">
-            <Button asChild className="rounded-full bg-emerald-500 hover:bg-emerald-600"><a href={whatsappUrl} target="_blank" rel="noopener noreferrer"><MessageCircle data-icon aria-hidden="true" />WhatsApp eDrive</a></Button>
-            <Button asChild variant="outline" className="rounded-full bg-white text-primary-900 hover:bg-primary-50"><a href={`tel:${companyInfo.landlineHref}`}><Phone data-icon aria-hidden="true" />Call now</a></Button>
+            <Button asChild className="rounded-full bg-emerald-500 hover:bg-emerald-600"><a href={whatsappUrl} target="_blank" rel="noopener noreferrer"><MessageCircle data-icon aria-hidden="true" />Chat on WhatsApp</a></Button>
+            <Button asChild variant="outline" className="rounded-full bg-white text-primary-900 hover:bg-primary-50"><a href={`tel:${companyInfo.landlineHref}`}><Phone data-icon aria-hidden="true" />Call Now</a></Button>
           </div>
         </div>
       </div>
