@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState, type FormEvent } from 'react';
-import { CalendarCheck, Instagram, Loader2, LockKeyhole, Mail, MapPin, Menu, Phone, Search, TicketCheck, X } from 'lucide-react';
+import { Instagram, Loader2, LockKeyhole, Mail, MapPin, Menu, Phone, Search, TicketCheck, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { companyInfo } from '@/lib/company-info';
 import { bookingRequestsTable } from '@/lib/booking-records';
@@ -14,6 +14,7 @@ import { BrandMark } from './brand';
 
 const menuPillClass = 'border border-white/75 bg-white/72 shadow-[inset_0_1px_0_rgba(255,255,255,0.95),inset_0_-8px_14px_rgba(8,37,50,0.025),0_5px_14px_rgba(8,37,50,0.045)] hover:border-primary/15 hover:bg-primary-50/80 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.95),inset_0_-8px_14px_rgba(8,37,50,0.025),0_8px_18px_rgba(8,37,50,0.07)]';
 const activeMenuClass = 'border-primary/18 bg-primary-100 text-primary-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.95),inset_0_-8px_14px_rgba(8,37,50,0.03),0_9px_20px_rgba(8,37,50,0.09)]';
+const softActionClass = 'h-9 rounded-full border border-white/90 bg-white/82 px-4 text-[11px] font-bold text-primary-950 shadow-[inset_0_1px_0_rgba(255,255,255,0.95),inset_0_-8px_16px_rgba(8,37,50,0.025),0_10px_24px_rgba(8,37,50,0.11),0_2px_4px_rgba(255,255,255,0.7)] backdrop-blur-sm transition duration-200 hover:-translate-y-0.5 hover:border-primary/20 hover:bg-white hover:shadow-[inset_0_1px_0_rgba(255,255,255,1),inset_0_-8px_16px_rgba(8,37,50,0.03),0_14px_30px_rgba(8,37,50,0.15)]';
 
 const policyLinks = [
   { href: '/privacy-policy', label: 'Privacy Policy' },
@@ -110,15 +111,12 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
             </div>
 
             <div className="hidden shrink-0 items-center gap-2 md:flex">
-              <button type="button" onClick={openStatusModal} className={cn('hidden items-center gap-2 whitespace-nowrap rounded-full px-3 py-2 text-[11px] font-bold leading-none text-primary-950 shadow-[inset_0_1px_0_rgba(255,255,255,0.55),0_8px_18px_rgba(159,118,44,0.16)] transition hover:bg-accent-300 lg:inline-flex', scrolled ? 'bg-accent-200/90 backdrop-blur-sm' : 'bg-accent-200')}>
+              <button type="button" onClick={openStatusModal} className={cn('hidden items-center gap-2 whitespace-nowrap leading-none lg:inline-flex', softActionClass, scrolled ? 'bg-white/90' : 'bg-white/82')}>
                 <TicketCheck className="size-3.5" aria-hidden="true" />
                 My Booking
               </button>
-              <Button asChild variant="outline" size="sm" className={cn('h-8 rounded-full px-3 text-[11px] shadow-[inset_0_1px_0_rgba(255,255,255,0.95),0_6px_15px_rgba(8,37,50,0.075)] hover:bg-primary-50', scrolled ? 'border-white/90 bg-white/90 backdrop-blur-sm' : 'border-border bg-white')}>
+              <Button asChild variant="outline" size="sm" className={cn(softActionClass, scrolled ? 'bg-white/90' : 'bg-white/82')}>
                 <Link href="/admin"><LockKeyhole data-icon aria-hidden="true" />Staff Login</Link>
-              </Button>
-              <Button asChild size="sm" className="h-8 rounded-full bg-primary-900 px-3 text-[11px] shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_9px_20px_rgba(8,37,50,0.2)] hover:bg-primary-800">
-                <Link href="/booking"><CalendarCheck data-icon aria-hidden="true" />Book Ride</Link>
               </Button>
             </div>
 
@@ -145,15 +143,12 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
                   </Link>
                 );
               })}
-              <div className="mt-3 grid gap-2 sm:grid-cols-3">
-                <Button type="button" variant="gold" className="rounded-full" onClick={openStatusModal}>
+              <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                <Button type="button" variant="outline" className="rounded-full border-white/90 bg-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.95),0_10px_24px_rgba(8,37,50,0.1)]" onClick={openStatusModal}>
                   <TicketCheck data-icon aria-hidden="true" />My Booking
                 </Button>
-                <Button asChild variant="outline" className="rounded-full">
+                <Button asChild variant="outline" className="rounded-full border-white/90 bg-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.95),0_10px_24px_rgba(8,37,50,0.1)]">
                   <Link href="/admin" onClick={() => setOpen(false)}><LockKeyhole data-icon aria-hidden="true" />Staff Login</Link>
-                </Button>
-                <Button asChild className="rounded-full">
-                  <Link href="/booking" onClick={() => setOpen(false)}><CalendarCheck data-icon aria-hidden="true" />Book Ride</Link>
                 </Button>
               </div>
             </div>
