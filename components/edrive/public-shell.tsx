@@ -112,13 +112,13 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
             <div className="hidden shrink-0 items-center gap-2 md:flex">
               <button type="button" onClick={openStatusModal} className={cn('hidden items-center gap-2 whitespace-nowrap rounded-full px-3 py-2 text-[11px] font-bold leading-none text-primary-950 shadow-[inset_0_1px_0_rgba(255,255,255,0.55),0_8px_18px_rgba(159,118,44,0.16)] transition hover:bg-accent-300 lg:inline-flex', scrolled ? 'bg-accent-200/90 backdrop-blur-sm' : 'bg-accent-200')}>
                 <TicketCheck className="size-3.5" aria-hidden="true" />
-                Check Status
+                My Booking
               </button>
               <Button asChild variant="outline" size="sm" className={cn('h-8 rounded-full px-3 text-[11px] shadow-[inset_0_1px_0_rgba(255,255,255,0.95),0_6px_15px_rgba(8,37,50,0.075)] hover:bg-primary-50', scrolled ? 'border-white/90 bg-white/90 backdrop-blur-sm' : 'border-border bg-white')}>
-                <Link href="/admin"><LockKeyhole data-icon aria-hidden="true" />Admin Portal</Link>
+                <Link href="/admin"><LockKeyhole data-icon aria-hidden="true" />Staff Login</Link>
               </Button>
               <Button asChild size="sm" className="h-8 rounded-full bg-primary-900 px-3 text-[11px] shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_9px_20px_rgba(8,37,50,0.2)] hover:bg-primary-800">
-                <Link href="/booking"><CalendarCheck data-icon aria-hidden="true" />Book Now</Link>
+                <Link href="/booking"><CalendarCheck data-icon aria-hidden="true" />Book Ride</Link>
               </Button>
             </div>
 
@@ -147,13 +147,13 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
               })}
               <div className="mt-3 grid gap-2 sm:grid-cols-3">
                 <Button type="button" variant="gold" className="rounded-full" onClick={openStatusModal}>
-                  <TicketCheck data-icon aria-hidden="true" />Check Status
+                  <TicketCheck data-icon aria-hidden="true" />My Booking
                 </Button>
                 <Button asChild variant="outline" className="rounded-full">
-                  <Link href="/admin" onClick={() => setOpen(false)}><LockKeyhole data-icon aria-hidden="true" />Admin Portal</Link>
+                  <Link href="/admin" onClick={() => setOpen(false)}><LockKeyhole data-icon aria-hidden="true" />Staff Login</Link>
                 </Button>
                 <Button asChild className="rounded-full">
-                  <Link href="/booking" onClick={() => setOpen(false)}><CalendarCheck data-icon aria-hidden="true" />Book Now</Link>
+                  <Link href="/booking" onClick={() => setOpen(false)}><CalendarCheck data-icon aria-hidden="true" />Book Ride</Link>
                 </Button>
               </div>
             </div>
@@ -228,7 +228,7 @@ function PublicFooter() {
           {publicNavItems.map((item) => (
             <Link key={item.href} href={item.href} className="text-sm text-muted-foreground transition hover:text-primary">{item.label}</Link>
           ))}
-          <Link href="/booking" className="text-sm text-muted-foreground transition hover:text-primary">Book Now</Link>
+          <Link href="/booking" className="text-sm text-muted-foreground transition hover:text-primary">Book Ride</Link>
         </div>
         <div className="flex flex-col gap-4">
           <h3 className="text-sm font-semibold text-foreground">Contact</h3>
