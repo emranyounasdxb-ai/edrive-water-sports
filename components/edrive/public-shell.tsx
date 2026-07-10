@@ -14,7 +14,9 @@ import { BrandMark } from './brand';
 
 const menuPillClass = 'border border-white/75 bg-white/72 shadow-[inset_0_1px_0_rgba(255,255,255,0.95),inset_0_-8px_14px_rgba(8,37,50,0.025),0_5px_14px_rgba(8,37,50,0.045)] hover:border-primary/15 hover:bg-primary-50/80 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.95),inset_0_-8px_14px_rgba(8,37,50,0.025),0_8px_18px_rgba(8,37,50,0.07)]';
 const activeMenuClass = 'border-primary/18 bg-primary-100 text-primary-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.95),inset_0_-8px_14px_rgba(8,37,50,0.03),0_9px_20px_rgba(8,37,50,0.09)]';
-const softActionClass = 'h-9 rounded-full border border-white/90 bg-white/82 px-4 text-[11px] font-bold text-primary-950 shadow-[inset_0_1px_0_rgba(255,255,255,0.95),inset_0_-8px_16px_rgba(8,37,50,0.025),0_10px_24px_rgba(8,37,50,0.11),0_2px_4px_rgba(255,255,255,0.7)] backdrop-blur-sm transition duration-200 hover:-translate-y-0.5 hover:border-primary/20 hover:bg-white hover:shadow-[inset_0_1px_0_rgba(255,255,255,1),inset_0_-8px_16px_rgba(8,37,50,0.03),0_14px_30px_rgba(8,37,50,0.15)]';
+const actionBaseClass = 'inline-flex h-9 items-center justify-center gap-2 whitespace-nowrap rounded-full px-4 text-[11px] font-bold leading-none transition-all duration-200 hover:-translate-y-0.5';
+const myBookingActionClass = `${actionBaseClass} border border-cyan-100 bg-[linear-gradient(145deg,#E9FCFF_0%,#C8F5F8_48%,#FFFFFF_100%)] text-primary-950 shadow-[inset_0_1px_0_rgba(255,255,255,0.98),inset_0_-10px_18px_rgba(0,139,156,0.08),0_12px_26px_rgba(0,139,156,0.18),0_2px_5px_rgba(255,255,255,0.8)] hover:border-primary/25 hover:shadow-[inset_0_1px_0_rgba(255,255,255,1),inset_0_-10px_18px_rgba(0,139,156,0.11),0_16px_34px_rgba(0,139,156,0.24)]`;
+const staffActionClass = `${actionBaseClass} border border-amber-100 bg-[linear-gradient(145deg,#FFF6D9_0%,#FFFFFF_48%,#EAF8FA_100%)] text-primary-950 shadow-[inset_0_1px_0_rgba(255,255,255,0.98),inset_0_-10px_18px_rgba(159,118,44,0.08),0_12px_26px_rgba(8,37,50,0.13),0_2px_5px_rgba(255,255,255,0.82)] hover:border-accent-300/70 hover:shadow-[inset_0_1px_0_rgba(255,255,255,1),inset_0_-10px_18px_rgba(159,118,44,0.11),0_16px_34px_rgba(8,37,50,0.18)]`;
 
 const policyLinks = [
   { href: '/privacy-policy', label: 'Privacy Policy' },
@@ -77,19 +79,19 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
         <nav className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
           <div
             className={cn(
-              'flex min-h-[50px] items-center justify-between gap-3 rounded-full px-4 ring-1 transition-all duration-300 ease-out',
+              'relative flex min-h-[50px] items-center justify-between gap-3 rounded-full px-4 ring-1 transition-all duration-300 ease-out',
               'shadow-[inset_0_1px_0_rgba(255,255,255,1),inset_0_-10px_22px_rgba(8,37,50,0.025),0_18px_42px_rgba(8,37,50,0.18),0_3px_8px_rgba(255,255,255,0.65)]',
               scrolled
                 ? 'border border-white/90 bg-white/90 ring-black/5 backdrop-blur-sm shadow-[inset_0_1px_0_rgba(255,255,255,0.95),inset_0_-10px_22px_rgba(8,37,50,0.025),0_14px_32px_rgba(8,37,50,0.12)]'
                 : 'border border-white bg-white ring-black/5'
             )}
           >
-            <Link href="/" aria-label="eDrive Water Sports home" className="flex shrink-0 items-center">
+            <Link href="/" aria-label="eDrive Water Sports home" className="z-10 flex shrink-0 items-center">
               <BrandMark className="[&_img]:h-9 [&_img]:w-auto" />
             </Link>
 
-            <div className="hidden min-w-0 flex-1 items-center justify-center lg:flex">
-              <div className={cn('flex items-center gap-1.5 rounded-full p-1 transition-all duration-300', scrolled ? 'bg-white/82 shadow-[inset_0_1px_5px_rgba(8,37,50,0.04)] backdrop-blur-sm' : 'bg-white shadow-[inset_0_1px_4px_rgba(8,37,50,0.05)]')}>
+            <div className="pointer-events-none absolute left-1/2 top-1/2 hidden -translate-x-1/2 -translate-y-1/2 lg:flex">
+              <div className={cn('pointer-events-auto flex items-center justify-center gap-1.5 rounded-full p-1 transition-all duration-300', scrolled ? 'bg-white/82 shadow-[inset_0_1px_5px_rgba(8,37,50,0.04)] backdrop-blur-sm' : 'bg-white shadow-[inset_0_1px_4px_rgba(8,37,50,0.05)]')}>
                 {publicNavItems.map((item) => {
                   const active = currentPath === normalizePath(item.href);
                   return (
@@ -98,7 +100,7 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
                       href={item.href}
                       aria-current={active ? 'page' : undefined}
                       className={cn(
-                        'inline-flex h-8 shrink-0 items-center justify-center whitespace-nowrap rounded-full px-3 text-[11px] font-bold leading-none text-slate-700 transition-all duration-200 xl:px-4 xl:text-xs',
+                        'inline-flex h-8 shrink-0 items-center justify-center whitespace-nowrap rounded-full px-3 text-center text-[11px] font-bold leading-none text-slate-700 transition-all duration-200 xl:px-4 xl:text-xs',
                         menuPillClass,
                         active && activeMenuClass
                       )}
@@ -110,17 +112,18 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
               </div>
             </div>
 
-            <div className="hidden shrink-0 items-center gap-2 md:flex">
-              <button type="button" onClick={openStatusModal} className={cn('hidden items-center gap-2 whitespace-nowrap leading-none lg:inline-flex', softActionClass, scrolled ? 'bg-white/90' : 'bg-white/82')}>
+            <div className="z-10 ml-auto hidden shrink-0 items-center gap-2 md:flex">
+              <button type="button" onClick={openStatusModal} className={cn('hidden lg:inline-flex', myBookingActionClass)}>
                 <TicketCheck className="size-3.5" aria-hidden="true" />
-                My Booking
+                <span>My Booking</span>
               </button>
-              <Button asChild variant="outline" size="sm" className={cn(softActionClass, scrolled ? 'bg-white/90' : 'bg-white/82')}>
-                <Link href="/admin"><LockKeyhole data-icon aria-hidden="true" />Staff Login</Link>
-              </Button>
+              <Link href="/admin" className={staffActionClass}>
+                <LockKeyhole className="size-3.5" aria-hidden="true" />
+                <span>Staff Login</span>
+              </Link>
             </div>
 
-            <Button variant="outline" size="icon" className={cn('size-9 shrink-0 rounded-full lg:hidden', scrolled ? 'bg-white/90 backdrop-blur-sm' : 'bg-white')} onClick={() => setOpen((value) => !value)} aria-label="Toggle navigation">
+            <Button variant="outline" size="icon" className={cn('z-10 size-9 shrink-0 rounded-full lg:hidden', scrolled ? 'bg-white/90 backdrop-blur-sm' : 'bg-white')} onClick={() => setOpen((value) => !value)} aria-label="Toggle navigation">
               {open ? <X data-icon aria-hidden="true" /> : <Menu data-icon aria-hidden="true" />}
             </Button>
           </div>
@@ -144,12 +147,14 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
                 );
               })}
               <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                <Button type="button" variant="outline" className="rounded-full border-white/90 bg-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.95),0_10px_24px_rgba(8,37,50,0.1)]" onClick={openStatusModal}>
-                  <TicketCheck data-icon aria-hidden="true" />My Booking
-                </Button>
-                <Button asChild variant="outline" className="rounded-full border-white/90 bg-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.95),0_10px_24px_rgba(8,37,50,0.1)]">
-                  <Link href="/admin" onClick={() => setOpen(false)}><LockKeyhole data-icon aria-hidden="true" />Staff Login</Link>
-                </Button>
+                <button type="button" className={myBookingActionClass} onClick={openStatusModal}>
+                  <TicketCheck className="size-3.5" aria-hidden="true" />
+                  <span>My Booking</span>
+                </button>
+                <Link href="/admin" onClick={() => setOpen(false)} className={staffActionClass}>
+                  <LockKeyhole className="size-3.5" aria-hidden="true" />
+                  <span>Staff Login</span>
+                </Link>
               </div>
             </div>
           </div>
