@@ -70,7 +70,7 @@ const whyChoose = [
 ];
 
 const bookingSteps = [
-  { icon: Sparkles, title: 'Choose package', text: 'Select an original live package from the approved backend list.' },
+  { icon: Sparkles, title: 'Choose package', text: 'Select your ride, duration, and preferred experience.' },
   { icon: CalendarCheck, title: 'Pick date and time', text: 'Share your preferred slot and guest count in the booking form.' },
   { icon: MessageCircle, title: 'Team confirms', text: 'The eDrive team confirms availability and final booking details.' }
 ];
@@ -100,14 +100,14 @@ export function HomePage() {
 
       <LivePackageShowcase
         title="Bookable Packages"
-        text="Only active packages from the admin backend are shown here. New packages and price updates will appear from the live package list."
+        text="Choose your ride, duration, and price. New packages and price changes appear automatically when updated by eDrive."
         limit={6}
         compact
       />
 
       <section className="bg-[#f4f5f5]">
         <div className={cn('container-x', sectionPad)}>
-          <SectionHeader title="Premium Water Sports Experiences" text="Choose jet ski, jet car, or VIP marine support. Package pricing is handled from the live backend package list." />
+          <SectionHeader title="Premium Water Sports Experiences" text="Choose jet ski, jet car, or VIP marine support with clear package options and fast team confirmation." />
           <div className="mt-7 grid gap-5 md:grid-cols-3">
             {serviceCards.map((item) => <ServiceCard key={item.title} {...item} />)}
           </div>
@@ -125,8 +125,8 @@ export function HomePage() {
         <div className={cn('container-x grid gap-7 lg:grid-cols-[0.78fr_1.22fr] lg:items-center', sectionPad)}>
           <div>
             <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-primary">How it works</p>
-            <h2 className="mt-3 section-title">From package card to confirmed water time</h2>
-            <p className="mt-3 text-sm leading-7 text-muted-foreground sm:text-base">The home page is now shorter and booking-focused. Customers see live packages first, then submit a request for confirmation.</p>
+            <h2 className="mt-3 section-title">From package choice to confirmed water time</h2>
+            <p className="mt-3 text-sm leading-7 text-muted-foreground sm:text-base">Choose your package, share your preferred time, and our team will confirm availability before your ride.</p>
           </div>
           <FeatureGrid items={bookingSteps} className="lg:grid-cols-3" />
         </div>
@@ -152,7 +152,7 @@ function HomeHero() {
               Premium Water Sports
               <span className="mt-1 block text-primary-300">Dubai Islands</span>
             </h1>
-            <p className="mt-5 max-w-xl text-base leading-7 text-white/82 sm:text-lg">Jet ski and jet car packages with live pricing, clear timing, and fast team confirmation.</p>
+            <p className="mt-5 max-w-xl text-base leading-7 text-white/82 sm:text-lg">Jet ski and jet car packages with clear pricing, flexible timing, and fast team confirmation.</p>
             <div className="mt-8 flex max-w-xl flex-col overflow-hidden rounded-[1.2rem] border border-white/16 bg-primary-900/92 shadow-[0_18px_45px_rgba(0,0,0,0.28)] sm:flex-row">
               <Link href="#live-packages" className="inline-flex min-h-14 flex-1 items-center justify-center gap-2 px-5 text-sm font-bold text-accent-300 transition hover:bg-white/10">
                 <CalendarCheck className="size-4" aria-hidden="true" />
@@ -175,7 +175,7 @@ export function FleetPage() {
     <>
       <PublicHero
         title="Explore Our Premium Water Sports Fleet"
-        text="Choose from premium jet ski and jet car ride types designed for unforgettable Dubai water experiences. Bookable packages will be shown only after original prices are added."
+        text="Choose from premium jet ski and jet car ride types designed for unforgettable Dubai water experiences."
         image={fleetHeroImage}
         imageAlt="Premium eDrive jet ski and jet car fleet in Dubai"
         actions={[
@@ -185,7 +185,7 @@ export function FleetPage() {
       />
 
       <section className={cn('container-x', sectionPad)}>
-        <SectionHeader title="Ride Types" text="Clean service information only, without dummy package prices or duplicate location packages." />
+        <SectionHeader title="Ride Types" text="Choose the ride style that matches your group, timing, and Dubai water experience." />
         <div className="mt-7 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
           {serviceCards.map((item) => <ServiceCard key={item.title} {...item} />)}
         </div>
@@ -259,145 +259,128 @@ export function ContactPage() {
           { href: '/booking', label: 'Book Now', icon: CalendarCheck, variant: 'gold' }
         ]}
       />
-
-      <section className={cn('container-x', sectionPad)}>
-        <SectionHeader title="Quick Contact" text="Reach the eDrive team for booking support, timing questions, arrival details, and availability checks." />
-        <div className="mt-7 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {contacts.map((item) => (
-            <a key={item.title} href={item.href} target={item.external ? '_blank' : undefined} rel={item.external ? 'noopener noreferrer' : undefined} className="premium-surface premium-card-hover rounded-[1.75rem] p-5">
-              <item.icon className="size-6 text-primary" aria-hidden="true" />
-              <h2 className="mt-4 font-heading text-xl font-semibold text-foreground">{item.title}</h2>
-              <p className="mt-2 break-words text-sm leading-6 text-muted-foreground">{item.text}</p>
-            </a>
-          ))}
+      <section className={cn('container-x grid gap-6 lg:grid-cols-[0.8fr_1.2fr]', sectionPad)}>
+        <div className="space-y-4">
+          {contacts.map((item) => {
+            const Icon = item.icon;
+            const content = (
+              <Card className="premium-card-hover">
+                <CardContent className="flex items-center gap-4 p-4">
+                  <span className="flex size-12 items-center justify-center rounded-md bg-primary-50 text-primary"><Icon data-icon aria-hidden="true" /></span>
+                  <div>
+                    <p className="text-sm font-semibold text-muted-foreground">{item.title}</p>
+                    <p className="text-base font-semibold text-foreground">{item.text}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+            return item.external ? <a key={item.title} href={item.href} target="_blank" rel="noopener noreferrer">{content}</a> : <a key={item.title} href={item.href}>{content}</a>;
+          })}
         </div>
-      </section>
-
-      <section className="border-y border-border bg-white/70">
-        <div className={cn('container-x grid gap-7 lg:grid-cols-[0.95fr_1.05fr]', sectionPad)}>
-          <ContactForm />
-          <Card id="map" className="overflow-hidden p-3">
-            <div className="overflow-hidden rounded-[1.5rem]">
-              <iframe src={companyInfo.mapEmbedSrc} width="100%" height="430" style={{ border: 0 }} allowFullScreen loading="lazy" referrerPolicy="strict-origin-when-cross-origin" title="eDrive Water Sports location map" className="block w-full" />
-            </div>
-            <CardContent className="p-5">
-              <h2 className="font-heading text-2xl font-semibold text-foreground">{companyInfo.locationName}</h2>
-              <p className="mt-3 text-sm leading-7 text-muted-foreground">Use the map for directions to our main Dubai Islands Marina location. For bookings and arrival instructions, contact our team before your ride.</p>
-            </CardContent>
-          </Card>
-        </div>
+        <ContactForm />
       </section>
     </>
   );
 }
 
-export function LegacyRoutePage({ title, text, href, cta }: { title: string; text: string; href: string; cta: string }) {
+function PublicHero({ title, text, image, imageAlt, actions = [] }: { title: string; text: string; image: string; imageAlt: string; actions?: HeroAction[] }) {
   return (
-    <section className="container-x py-14 sm:py-16">
-      <div className="premium-surface mx-auto max-w-3xl rounded-[2rem] p-7 text-center sm:p-9">
-        <h1 className="font-heading text-4xl font-semibold leading-tight text-foreground">{title}</h1>
-        <p className="mx-auto mt-4 max-w-2xl text-sm leading-7 text-muted-foreground">{text}</p>
-        <Button asChild className="mt-6"><Link href={href}>{cta}<ArrowRight data-icon aria-hidden="true" /></Link></Button>
-      </div>
-    </section>
-  );
-}
-
-function PublicHero({ title, text, image, imageAlt, actions }: { title: string; text: string; image: string; imageAlt: string; actions: HeroAction[] }) {
-  return (
-    <section className="border-b border-border bg-white/70 soft-grid">
-      <div className="container-x grid gap-7 py-8 lg:grid-cols-[0.82fr_1.18fr] lg:items-center">
+    <section className="relative isolate overflow-hidden bg-primary-900 text-white">
+      <Image src={image} alt={imageAlt} fill priority className="object-cover opacity-55" sizes="100vw" />
+      <div className="absolute inset-0 bg-primary-950/65" />
+      <div className="container-x relative py-24 sm:py-28 lg:py-32">
         <MotionReveal>
-          <div className="max-w-2xl">
-            <h1 className="font-heading text-3xl font-semibold leading-tight text-foreground sm:text-4xl lg:text-5xl">{title}</h1>
-            <p className="mt-4 text-sm leading-7 text-muted-foreground sm:text-base">{text}</p>
-            <div className="mt-6 flex flex-wrap gap-3">
-              {actions.map((action) => <ActionButton key={action.label} action={action} />)}
-            </div>
+          <div className="max-w-3xl">
+            <p className="mb-3 text-xs font-bold uppercase tracking-[0.24em] text-accent-300">eDrive Water Sports</p>
+            <h1 className="font-heading text-4xl font-semibold leading-tight text-white sm:text-5xl">{title}</h1>
+            <p className="mt-4 max-w-2xl text-base leading-7 text-white/82 sm:text-lg">{text}</p>
+            {actions.length ? (
+              <div className="mt-7 flex flex-wrap gap-3">
+                {actions.map((action) => <HeroButton key={action.label} action={action} />)}
+              </div>
+            ) : null}
           </div>
         </MotionReveal>
-        <div className="relative min-h-[280px] overflow-hidden rounded-[2rem] border border-white/70 shadow-glass lg:min-h-[360px]">
-          <Image src={image} alt={imageAlt} fill className="object-cover" sizes="(max-width: 1024px) 100vw, 52vw" />
-          <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent,rgba(4,23,33,0.28))]" />
-        </div>
       </div>
     </section>
   );
 }
 
-function ActionButton({ action }: { action: HeroAction }) {
-  const variant = action.variant === 'gold' ? 'gold' : action.variant === 'outline' ? 'outline' : 'default';
-  const content = <>{<action.icon data-icon aria-hidden="true" />}{action.label}</>;
-  if (action.external) return <Button asChild variant={variant}><a href={action.href} target="_blank" rel="noopener noreferrer">{content}</a></Button>;
-  return <Button asChild variant={variant}><Link href={action.href}>{content}</Link></Button>;
+function HeroButton({ action }: { action: HeroAction }) {
+  const Icon = action.icon;
+  const className = cn('rounded-full', action.variant === 'outline' && 'bg-white text-primary-900 hover:bg-primary-50', action.variant === 'gold' && 'bg-accent text-primary-950 hover:bg-accent-300');
+  const content = <><Icon data-icon aria-hidden="true" />{action.label}</>;
+  if (action.external) return <Button asChild className={className}><a href={action.href} target="_blank" rel="noopener noreferrer">{content}</a></Button>;
+  return <Button asChild className={className}><Link href={action.href}>{content}</Link></Button>;
 }
 
 function SectionHeader({ title, text }: { title: string; text: string }) {
   return (
-    <div className="max-w-3xl">
+    <div>
       <h2 className="section-title">{title}</h2>
-      <p className="mt-3 text-sm leading-7 text-muted-foreground sm:text-base">{text}</p>
+      <p className="mt-3 max-w-2xl text-sm leading-7 text-muted-foreground sm:text-base">{text}</p>
     </div>
   );
 }
 
 function ServiceCard({ icon: Icon, title, text, image, href, cta }: { icon: LucideIcon; title: string; text: string; image: string; href: string; cta: string }) {
   return (
-    <article className="premium-surface premium-card-hover overflow-hidden rounded-[1.75rem] p-3">
-      <div className="relative aspect-[16/10] overflow-hidden rounded-[1.35rem] bg-primary-50">
-        <Image src={image} alt={title} fill className="object-cover transition duration-700 hover:scale-105" sizes="(max-width: 768px) 100vw, 33vw" />
-      </div>
-      <div className="p-4">
-        <span className="flex size-10 items-center justify-center rounded-2xl bg-primary-50 text-primary"><Icon className="size-5" aria-hidden="true" /></span>
-        <h3 className="mt-4 font-heading text-2xl font-semibold text-foreground">{title}</h3>
-        <p className="mt-2 text-sm leading-7 text-muted-foreground">{text}</p>
-        <Button asChild className="mt-5 w-full rounded-full"><Link href={href}>{cta}<ArrowRight data-icon aria-hidden="true" /></Link></Button>
-      </div>
-    </article>
+    <Card className="premium-card-hover overflow-hidden rounded-[1.5rem]">
+      <Image src={image} alt={title} width={900} height={600} className="h-56 w-full object-cover" />
+      <CardContent className="p-5">
+        <span className="mb-4 flex size-11 items-center justify-center rounded-md bg-primary-50 text-primary"><Icon data-icon aria-hidden="true" /></span>
+        <h3 className="font-heading text-2xl font-semibold text-foreground">{title}</h3>
+        <p className="mt-3 min-h-[5.5rem] text-sm leading-7 text-muted-foreground">{text}</p>
+        <Button asChild className="mt-4 w-full rounded-full"><Link href={href}>{cta}<ArrowRight data-icon aria-hidden="true" /></Link></Button>
+      </CardContent>
+    </Card>
   );
 }
 
-function FeatureGrid({ items, className }: { items: Array<{ icon: LucideIcon; title: string; text: string }>; className?: string }) {
+function FeatureGrid({ items, className }: { items: { icon: LucideIcon; title: string; text: string }[]; className?: string }) {
+  return <div className={cn('grid gap-4 md:grid-cols-2', className)}>{items.map((item) => <FeatureCard key={item.title} item={item} />)}</div>;
+}
+
+function FeatureCard({ item }: { item: { icon: LucideIcon; title: string; text: string } }) {
+  const Icon = item.icon;
   return (
-    <div className={cn('grid gap-4 md:grid-cols-2', className)}>
-      {items.map((item) => (
-        <div key={item.title} className="premium-surface rounded-[1.5rem] p-5">
-          <item.icon className="size-6 text-primary" aria-hidden="true" />
-          <h3 className="mt-4 font-heading text-xl font-semibold text-foreground">{item.title}</h3>
-          <p className="mt-2 text-sm leading-7 text-muted-foreground">{item.text}</p>
-        </div>
-      ))}
-    </div>
+    <Card className="premium-card-hover">
+      <CardContent className="p-5">
+        <span className="mb-4 flex size-10 items-center justify-center rounded-md bg-primary-50 text-primary"><Icon data-icon aria-hidden="true" /></span>
+        <h3 className="font-semibold text-foreground">{item.title}</h3>
+        <p className="mt-2 text-sm leading-6 text-muted-foreground">{item.text}</p>
+      </CardContent>
+    </Card>
   );
 }
 
 function MembershipTierCard({ tier }: { tier: { name: string; bestFor: string; benefits: string[] } }) {
   return (
-    <article className="premium-surface premium-card-hover rounded-[1.75rem] p-6">
-      <Crown className="size-7 text-primary" aria-hidden="true" />
-      <h3 className="mt-4 font-heading text-2xl font-semibold text-foreground">{tier.name}</h3>
-      <p className="mt-2 text-sm leading-6 text-muted-foreground">{tier.bestFor}</p>
-      <ul className="mt-5 grid gap-2">
-        {tier.benefits.map((benefit) => <li key={benefit} className="flex items-start gap-2 text-sm leading-6 text-muted-foreground"><CheckCircle2 className="mt-1 size-4 shrink-0 text-primary" aria-hidden="true" />{benefit}</li>)}
-      </ul>
-      <Button asChild className="mt-6 w-full rounded-full"><Link href="/contact">Apply Now<ArrowRight data-icon aria-hidden="true" /></Link></Button>
-    </article>
+    <Card className="premium-card-hover">
+      <CardContent className="p-6">
+        <h3 className="font-heading text-2xl font-semibold text-foreground">{tier.name}</h3>
+        <p className="mt-2 text-sm leading-6 text-muted-foreground">{tier.bestFor}</p>
+        <ul className="mt-5 grid gap-3">
+          {tier.benefits.map((benefit) => <li key={benefit} className="flex items-center gap-3 text-sm text-foreground"><CheckCircle2 className="size-4 text-primary" aria-hidden="true" />{benefit}</li>)}
+        </ul>
+      </CardContent>
+    </Card>
   );
 }
 
 function HomeContactStrip() {
   return (
-    <section className="bg-[#f4f5f5] py-9 sm:py-11">
+    <section className="bg-[#f4f5f5] pb-10 sm:pb-12 lg:pb-14">
       <div className="container-x">
-        <div className="grid overflow-hidden rounded-[1.5rem] bg-primary-900 text-white shadow-[0_18px_45px_rgba(8,37,50,0.18)] lg:grid-cols-[1fr_auto] lg:items-center">
-          <div className="p-6 sm:p-7">
-            <p className="text-xs font-bold uppercase tracking-[0.22em] text-accent-300">Need help choosing?</p>
+        <div className="flex flex-col gap-4 rounded-[1.5rem] bg-primary-900 p-5 text-white shadow-xl lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-accent-300">Need help choosing?</p>
             <h2 className="mt-2 font-heading text-2xl font-semibold">Talk to eDrive before you book.</h2>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-white/72">Tell us your date, number of guests, and whether you prefer jet ski, jet car, combo, family, VIP, or special group support.</p>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-white/70">Tell us your date, number of guests, and whether you prefer jet ski, jet car, combo, family, VIP, or special group support.</p>
           </div>
-          <div className="flex flex-col gap-2 p-5 sm:flex-row lg:flex-col lg:p-6">
-            <Button asChild className="rounded-full bg-[#25D366] text-white hover:bg-[#1EBE5D]"><a href={whatsappUrl} target="_blank" rel="noopener noreferrer"><MessageCircle data-icon aria-hidden="true" />WhatsApp eDrive</a></Button>
-            <Button asChild variant="outline" className="rounded-full bg-white text-primary-900 hover:bg-white"><a href={`tel:${companyInfo.landlineHref}`}><Phone data-icon aria-hidden="true" />Call now</a></Button>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Button asChild className="rounded-full bg-emerald-500 hover:bg-emerald-600"><a href={whatsappUrl} target="_blank" rel="noopener noreferrer"><MessageCircle data-icon aria-hidden="true" />WhatsApp eDrive</a></Button>
+            <Button asChild variant="outline" className="rounded-full bg-white text-primary-900 hover:bg-primary-50"><a href={`tel:${companyInfo.landlineHref}`}><Phone data-icon aria-hidden="true" />Call now</a></Button>
           </div>
         </div>
       </div>
