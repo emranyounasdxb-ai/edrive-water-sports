@@ -1,79 +1,132 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import { CalendarDays, RefreshCw, Save, Search, Ship, WalletCards, X } from 'lucide-react';
+import Link from 'next/link';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import type { LucideIcon } from 'lucide-react';
+import { AlertCircle, CalendarDays, CheckCircle2, Clock3, CreditCard, RefreshCw, Search, WalletCards } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { formatAed } from '@/lib/booking-data';
 import { bookingRequestsTable } from '@/lib/booking-records';
 import { supabase } from '@/lib/supabase-client';
 
-type ManagerBooking = {
-  id: string;
-  booking_code: string;
-  status: string | null;
+type ManagerBooking = Record<string, unknown> & {
+  id?: string | null;
+  booking_code?: string | null;
+  booking_number?: string | null;
+  status?: string | null;
+  manager_status?: string | null;
   selected_package_name?: string | null;
-  selected_package_capacity?: number | null;
-  experience_type: string | null;
-  service_type: string | null;
-  duration_minutes?: number | null;
-  vehicle_quantity?: number | null;
-  guest_count?: number | null;
-  preferred_date: string | null;
-  preferred_time: string | null;
-  customer_name: string | null;
-  customer_phone: string | null;
-  customer_notes?: string | null;
-  internal_note?: string | null;
-  total_amount: number | null;
-  payment_status: string | null;
+  selected_package_category?: string | null;
+  selected_package_capacity?: number | string | null;
+  experience_type?: string | null;
+  service_type?: string | null;
+  duration_minutes?: number | string | null;
+  preferred_date?: string | null;
+  preferred_time?: string | null;
+  customer_name?: string | null;
+  customer_phone?: string | null;
+  customer_email?: string | null;
+  total_amount?: number | string | null;
+  amount_received_aed?: number | string | null;
+  amount_pending_aed?: number | string | null;
   payment_method?: string | null;
-  payment_received_amount?: number | null;
-  cash_handover_status?: string | null;
+  payment_source?: string | null;
+  payment_workflow_status?: string | null;
   assigned_manager_name?: string | null;
-  assigned_vehicle_id?: string | null;
-  assigned_vehicle_code?: string | null;
   assigned_vehicle_name?: string | null;
+  b2b_agent_name?: string | null;
 };
 
-type FleetOption = { id: string; vehicle_code: string | null; name: string | null; type: string | null; capacity: number | null; status: string | null };
-type PaymentForm = { paymentStatus: string; paymentMethod: string; receivedAmount: string };
 type ManagerProfile = { full_name: string | null; email: string | null; role: string | null; status: string | null };
 
-const paymentStatuses = ['Not Paid', 'Partial', 'Paid', 'Refunded'];
-const paymentMethods = ['', 'Cash', 'Card', 'B2B Invoice', 'Bank Transfer', 'Online Link'];
+type Metric = { title: string; value: string; icon: LucideIcon };
 
-function niceDate(value: string | null) {
-  if (!value) return 'Not selected';
-  return new Intl.DateTimeFormat('en-AE', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(`${value}T12:00:00`));
+function asText(value: unknown, fallback = '-') {
+  const text = String(value ?? '').trim();
+  return text || fallback;
+}
+
+function asNumber(value: unknown) {
+  const numberValue = Number(value || 0);
+  return Number.isFinite(numberValue) ? numberValue : 0;
+}
+
+function localDateKey(offsetDays = 0) {
+  const date = new Date();
+  date.setDate(date.getDate() + offsetDays);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function dateKey(value: unknown) {
+  return asText(value, '').slice(0, 10);
+}
+
+function niceDate(value: unknown) {
+  const text = asText(value, '');
+  if (!text) return 'No date';
+  return new Intl.DateTimeFormat('en-AE', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(text.includes('T') ? text : `${text}T12:00:00`));
+}
+
+function bookingCode(booking: ManagerBooking) {
+  return asText(booking.booking_code || booking.booking_number || booking.id, 'Booking');
 }
 
 function packageLabel(booking: ManagerBooking) {
-  return booking.selected_package_name || booking.experience_type || '-';
+  return asText(booking.selected_package_name || booking.selected_package_category || booking.experience_type || booking.service_type, 'Package');
 }
 
 function serviceDetail(booking: ManagerBooking) {
-  const parts = [booking.service_type || 'website'];
-  if (booking.selected_package_capacity) parts.push(`${booking.selected_package_capacity} seater`);
-  if (booking.duration_minutes) parts.push(`${booking.duration_minutes} min`);
-  return parts.join(' · ');
+  const parts = [booking.service_type, booking.selected_package_capacity ? `${booking.selected_package_capacity} seater` : '', booking.duration_minutes ? `${booking.duration_minutes} min` : ''].filter(Boolean).map(String);
+  return parts.length ? parts.join(' · ') : 'Ride details pending';
 }
 
-function statusClass(status: string | null) {
-  if (status === 'Completed') return 'bg-emerald-50 text-emerald-700 border-emerald-200';
-  if (status === 'No Show') return 'bg-red-50 text-red-700 border-red-200';
-  if (status === 'In Progress') return 'bg-primary-50 text-primary-900 border-primary/20';
-  return 'bg-gold/10 text-gold border-gold/35';
+function totalAmount(booking: ManagerBooking) {
+  return asNumber(booking.total_amount || booking.selected_package_price || booking.selected_package_b2b_price);
 }
 
-function isCashWithManager(booking: ManagerBooking) {
-  return booking.payment_method === 'Cash' && booking.cash_handover_status !== 'received' && Number(booking.payment_received_amount || 0) > 0;
+function receivedAmount(booking: ManagerBooking) {
+  const received = asNumber(booking.amount_received_aed);
+  if (received > 0) return received;
+  const pending = asNumber(booking.amount_pending_aed);
+  return Math.max(totalAmount(booking) - pending, 0);
 }
 
-function vehicleLabel(vehicle: FleetOption) {
-  return `${vehicle.vehicle_code || 'Unit'} — ${vehicle.name || 'Vehicle'}${vehicle.capacity ? ` (${vehicle.capacity} seater)` : ''}`;
+function managerStage(booking: ManagerBooking) {
+  const raw = asText(booking.manager_status, 'Pending');
+  return raw === 'Assigned' ? 'Pending' : raw;
+}
+
+function rideStatus(booking: ManagerBooking) {
+  const status = asText(booking.status, 'Confirmed');
+  const stage = managerStage(booking);
+  const workflow = asText(booking.payment_workflow_status, '').toLowerCase();
+  if (status === 'Completed' || stage === 'Completed') return 'Completed';
+  if (status === 'No Show' || stage === 'No Show') return 'No Show';
+  if (workflow.includes('ride in progress')) return 'In Progress';
+  if (status === 'Confirmed') return 'Confirmed';
+  return status;
+}
+
+function statusTone(status: string) {
+  const value = status.toLowerCase();
+  if (value.includes('complete')) return 'border-emerald-200 bg-emerald-50 text-emerald-700';
+  if (value.includes('no show') || value.includes('cancel')) return 'border-red-200 bg-red-50 text-red-700';
+  if (value.includes('progress')) return 'border-primary/25 bg-primary-50 text-primary';
+  return 'border-gold/35 bg-gold/10 text-gold';
+}
+
+function isB2B(booking: ManagerBooking) {
+  return String(booking.payment_source || '').toLowerCase() === 'b2b' || Boolean(booking.b2b_agent_name);
+}
+
+function sourceLabel(booking: ManagerBooking) {
+  return isB2B(booking) ? `B2B${booking.b2b_agent_name ? ` · ${booking.b2b_agent_name}` : ''}` : 'Direct Sale';
 }
 
 function isManagerProfile(profile: ManagerProfile | null) {
@@ -84,27 +137,68 @@ function managerName(profile: ManagerProfile | null) {
   return profile?.full_name || profile?.email || '';
 }
 
-function shortNote(value: string | null | undefined) {
-  const note = String(value || '').trim();
-  if (!note) return '';
-  return note.length > 80 ? `${note.slice(0, 80)}...` : note;
+function matchesManager(booking: ManagerBooking, profile: ManagerProfile | null) {
+  if (!isManagerProfile(profile)) return true;
+  const assigned = String(booking.assigned_manager_name || '').trim().toLowerCase();
+  const name = String(managerName(profile)).trim().toLowerCase();
+  const email = String(profile?.email || '').trim().toLowerCase();
+  return Boolean(assigned && (assigned === name || assigned === email));
+}
+
+function scheduleSortValue(booking: ManagerBooking) {
+  const date = dateKey(booking.preferred_date) || '9999-12-31';
+  const time = asText(booking.preferred_time, '23:59');
+  return `${date} ${time}`;
+}
+
+function MetricCard({ title, value, icon: Icon }: Metric) {
+  return (
+    <Card className="rounded-[1.25rem] border-border/80 bg-white shadow-[0_12px_32px_rgba(8,37,50,0.055)]">
+      <CardContent className="flex min-w-0 items-center gap-3 p-4">
+        <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-primary-50 text-primary"><Icon className="size-5" aria-hidden="true" /></span>
+        <div className="min-w-0"><p className="truncate text-xs font-semibold text-muted-foreground">{title}</p><p className="mt-1 break-words font-heading text-xl font-semibold leading-tight text-foreground sm:text-2xl">{value}</p></div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function Detail({ label, value, sub }: { label: string; value: ReactNode; sub?: ReactNode }) {
+  return <div className="min-w-0 rounded-xl bg-[#F7FAFA] px-3 py-2"><p className="text-[9px] font-bold uppercase tracking-[0.14em] text-muted-foreground">{label}</p><div className="mt-1 break-words text-sm font-bold text-foreground">{value}</div>{sub ? <div className="mt-0.5 break-words text-xs text-muted-foreground">{sub}</div> : null}</div>;
+}
+
+function RideSummaryCard({ booking }: { booking: ManagerBooking }) {
+  const status = rideStatus(booking);
+  return (
+    <div className="rounded-[1.25rem] border border-border bg-white p-4 shadow-[0_12px_30px_rgba(8,37,50,0.055)]">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary">{bookingCode(booking)}</p>
+          <h3 className="mt-1 break-words font-heading text-base font-semibold text-foreground">{asText(booking.customer_name, 'Guest')}</h3>
+          <p className="mt-1 text-sm text-muted-foreground">{packageLabel(booking)}</p>
+        </div>
+        <div className="flex flex-wrap gap-2 sm:justify-end"><span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-bold ${statusTone(status)}`}>{status}</span><Badge variant="secondary">{sourceLabel(booking)}</Badge></div>
+      </div>
+      <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+        <Detail label="Time" value={asText(booking.preferred_time, 'Time pending')} sub={niceDate(booking.preferred_date)} />
+        <Detail label="Ride" value={serviceDetail(booking)} sub={asText(booking.customer_phone || booking.customer_email, '')} />
+        <Detail label="Vehicle" value={asText(booking.assigned_vehicle_name, 'Not selected')} sub={status === 'Confirmed' ? 'Select from My Rides' : 'Ride progress'} />
+        <Detail label="Payment" value={formatAed(totalAmount(booking))} sub={status === 'Completed' ? `Received ${formatAed(receivedAmount(booking))}` : status === 'No Show' ? 'No collection' : 'Pending collection'} />
+      </div>
+    </div>
+  );
 }
 
 export function ManagerBookingsPage() {
   const [items, setItems] = useState<ManagerBooking[]>([]);
-  const [fleet, setFleet] = useState<FleetOption[]>([]);
   const [profile, setProfile] = useState<ManagerProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [query, setQuery] = useState('');
-  const [assigning, setAssigning] = useState<ManagerBooking | null>(null);
-  const [paying, setPaying] = useState<ManagerBooking | null>(null);
 
   async function loadCurrentProfile() {
     const { data: sessionData } = await supabase.auth.getSession();
     const authUser = sessionData.session?.user;
     if (!authUser) return null;
-
     const authEmail = authUser.email || '';
     const filter = authEmail ? `auth_user_id.eq.${authUser.id},email.eq.${authEmail}` : `auth_user_id.eq.${authUser.id}`;
     const { data } = await supabase.from('admin_users').select('full_name,email,role,status').or(filter).limit(1);
@@ -113,206 +207,79 @@ export function ManagerBookingsPage() {
     return nextProfile;
   }
 
-  async function loadFleet() {
-    const { data } = await supabase.from('vehicles').select('id,vehicle_code,name,type,capacity,status').in('status', ['available', 'Available']).order('vehicle_code', { ascending: true });
-    setFleet((data || []) as FleetOption[]);
-  }
-
   async function loadBookings(managerProfile: ManagerProfile | null) {
     setLoading(true);
     setError('');
-
-    let queryBuilder = supabase
-      .from(bookingRequestsTable)
-      .select('*')
-      .in('status', ['Confirmed', 'In Progress', 'Completed', 'No Show'])
-      .order('preferred_date', { ascending: true })
-      .order('preferred_time', { ascending: true })
-      .limit(200);
-
-    if (isManagerProfile(managerProfile)) {
-      const name = managerName(managerProfile);
-      if (name) queryBuilder = queryBuilder.eq('assigned_manager_name', name);
-    }
-
-    const { data, error: queryError } = await queryBuilder;
+    const { data, error: queryError } = await supabase.from(bookingRequestsTable).select('*').in('status', ['Confirmed', 'Completed', 'No Show']).order('preferred_date', { ascending: true }).order('preferred_time', { ascending: true }).limit(500);
     if (queryError) {
       setError(queryError.message);
       setItems([]);
     } else {
-      setItems((data || []) as ManagerBooking[]);
+      setItems(((data || []) as ManagerBooking[]).filter((booking) => matchesManager(booking, managerProfile)));
     }
     setLoading(false);
   }
 
   async function refreshAll() {
     const currentProfile = await loadCurrentProfile();
-    await Promise.all([loadBookings(currentProfile), loadFleet()]);
-  }
-
-  async function markNoShow(booking: ManagerBooking) {
-    const now = new Date().toISOString();
-    const result = booking.id
-      ? await supabase.from(bookingRequestsTable).update({ status: 'No Show', no_show_at: now, updated_at: now }).eq('id', booking.id)
-      : await supabase.from(bookingRequestsTable).update({ status: 'No Show', no_show_at: now, updated_at: now }).eq('booking_code', booking.booking_code);
-    if (result.error) setError(result.error.message);
-    else await refreshAll();
-  }
-
-  async function assignVehicle(booking: ManagerBooking, vehicleId: string) {
-    const vehicle = fleet.find((item) => item.id === vehicleId);
-    if (!vehicle) throw new Error('Please select a vehicle.');
-    const now = new Date().toISOString();
-    const bookingPayload = {
-      status: 'In Progress',
-      assigned_vehicle_id: vehicle.id,
-      assigned_vehicle_code: vehicle.vehicle_code || null,
-      assigned_vehicle_name: vehicle.name || null,
-      vehicle_assigned_at: now,
-      updated_at: now
-    };
-    const bookingResult = booking.id
-      ? await supabase.from(bookingRequestsTable).update(bookingPayload).eq('id', booking.id)
-      : await supabase.from(bookingRequestsTable).update(bookingPayload).eq('booking_code', booking.booking_code);
-    if (bookingResult.error) throw new Error(bookingResult.error.message);
-
-    await supabase.from('vehicles').update({ status: 'booked', is_available: false }).eq('id', vehicle.id);
-    await supabase.from('booking_vehicle_progress').insert({
-      booking_id: booking.id || null,
-      booking_code: booking.booking_code,
-      vehicle_id: vehicle.id,
-      vehicle_code: vehicle.vehicle_code,
-      vehicle_name: vehicle.name,
-      status: 'In Progress',
-      package_name: packageLabel(booking),
-      duration_minutes: booking.duration_minutes || null,
-      total_amount: booking.total_amount || 0,
-      started_at: now
-    });
-    setAssigning(null);
-    await refreshAll();
-  }
-
-  async function savePayment(booking: ManagerBooking, form: PaymentForm) {
-    if (booking.status === 'Completed') throw new Error('Completed booking payment cannot be edited. Please view the payment slip.');
-
-    const now = new Date().toISOString();
-    const amount = Number(form.receivedAmount || 0);
-    const payload: Record<string, unknown> = {
-      status: 'Completed',
-      payment_status: form.paymentStatus,
-      payment_method: form.paymentMethod || null,
-      payment_received_amount: amount,
-      payment_received_at: amount > 0 ? now : null,
-      cash_handover_status: form.paymentMethod === 'Cash' && amount > 0 ? 'pending_handover' : 'not_applicable',
-      completed_at: now,
-      updated_at: now
-    };
-    const result = booking.id
-      ? await supabase.from(bookingRequestsTable).update(payload).eq('id', booking.id)
-      : await supabase.from(bookingRequestsTable).update(payload).eq('booking_code', booking.booking_code);
-    if (result.error) throw new Error(result.error.message);
-
-    if (booking.assigned_vehicle_id) await supabase.from('vehicles').update({ status: 'available', is_available: true }).eq('id', booking.assigned_vehicle_id);
-    await supabase.from('booking_vehicle_progress').update({ status: 'Completed', completed_at: now, total_amount: booking.total_amount || 0 }).eq('booking_code', booking.booking_code);
-    setPaying(null);
-    await refreshAll();
+    await loadBookings(currentProfile);
   }
 
   useEffect(() => { void refreshAll(); }, []);
 
-  const filtered = useMemo(() => {
+  const today = localDateKey();
+  const todayItems = useMemo(() => items.filter((booking) => dateKey(booking.preferred_date) === today), [items, today]);
+  const visibleToday = useMemo(() => {
     const term = query.trim().toLowerCase();
-    if (!term) return items;
-    return items.filter((booking) => [booking.booking_code, booking.customer_name, booking.customer_phone, packageLabel(booking), booking.status, booking.assigned_manager_name, booking.assigned_vehicle_code, booking.customer_notes, booking.internal_note].some((value) => String(value || '').toLowerCase().includes(term)));
-  }, [items, query]);
+    return todayItems
+      .filter((booking) => !term || [bookingCode(booking), booking.customer_name, booking.customer_phone, packageLabel(booking), booking.assigned_vehicle_name, booking.payment_method].some((value) => String(value || '').toLowerCase().includes(term)))
+      .sort((a, b) => scheduleSortValue(a).localeCompare(scheduleSortValue(b)));
+  }, [query, todayItems]);
 
-  const confirmed = items.filter((item) => item.status === 'Confirmed').length;
-  const inProgress = items.filter((item) => item.status === 'In Progress').length;
-  const managerCash = items.filter(isCashWithManager).reduce((sum, item) => sum + Number(item.payment_received_amount || 0), 0);
-  const isPersonalManagerView = isManagerProfile(profile);
+  const metrics = useMemo(() => {
+    const inProgress = todayItems.filter((booking) => rideStatus(booking) === 'In Progress').length;
+    const completedToday = todayItems.filter((booking) => rideStatus(booking) === 'Completed').length;
+    const noShowToday = todayItems.filter((booking) => rideStatus(booking) === 'No Show').length;
+    const cash = items.filter((booking) => rideStatus(booking) === 'Completed' && asText(booking.payment_method, '').toLowerCase() === 'cash').reduce((sum, booking) => sum + receivedAmount(booking), 0);
+    const card = items.filter((booking) => rideStatus(booking) === 'Completed' && asText(booking.payment_method, '').toLowerCase() === 'card').reduce((sum, booking) => sum + receivedAmount(booking), 0);
+    return { today: todayItems.length, inProgress, completedToday, noShowToday, cash, card };
+  }, [items, todayItems]);
 
   return (
-    <section className="container-x py-6 sm:py-8">
-      <div className="mx-auto max-w-7xl">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Manager Operations</p>
-            <h1 className="mt-2 font-heading text-3xl font-semibold text-foreground sm:text-4xl">{isPersonalManagerView ? 'My assigned bookings' : 'Confirmed bookings'}</h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">{isPersonalManagerView ? 'Only bookings assigned to your manager profile are shown here. Customer note and admin note are visible for operations.' : 'Assign a vehicle first. After assignment, booking moves to In Progress and only completion/payment can be updated.'}</p>
-          </div>
-          <Button type="button" onClick={refreshAll} variant="outline"><RefreshCw data-icon aria-hidden="true" />Refresh</Button>
+    <section className="w-full overflow-hidden px-4 py-5 sm:px-6 sm:py-7 lg:px-8 xl:px-10">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Today Overview</p>
+          <h1 className="mt-2 font-heading text-2xl font-semibold leading-tight text-foreground sm:text-3xl lg:text-4xl">Today operations</h1>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">Daily summary for {managerName(profile) || 'manager'} with today rides, progress and collections.</p>
         </div>
-
-        <div className="mt-6 grid gap-4 md:grid-cols-3">
-          <Metric title="Waiting Assignment" value={String(confirmed)} icon={CalendarDays} />
-          <Metric title="In Progress" value={String(inProgress)} icon={Ship} />
-          <Metric title="Cash With Manager" value={formatAed(managerCash)} icon={WalletCards} />
+        <div className="flex flex-wrap gap-2">
+          <Button asChild variant="outline" className="rounded-full bg-white"><Link href="/admin/my-rides">Open My Rides</Link></Button>
+          <Button type="button" variant="outline" onClick={refreshAll} className="rounded-full bg-white"><RefreshCw className="size-4" aria-hidden="true" />Refresh</Button>
         </div>
-
-        <Card className="mt-6 overflow-hidden rounded-[1.5rem] border-border/80 bg-white">
-          <CardHeader className="gap-4 border-b border-border/70 bg-[#F7FAFA] sm:flex-row sm:items-center sm:justify-between">
-            <CardTitle className="font-heading text-xl font-semibold">Manager booking list</CardTitle>
-            <div className="relative w-full sm:max-w-xs"><Search className="pointer-events-none absolute left-3 top-3 size-4 text-muted-foreground" /><Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search bookings..." className="h-10 rounded-full pl-9" /></div>
-          </CardHeader>
-          <CardContent className="p-0">
-            {error ? <p className="m-4 rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</p> : null}
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow><TableHead>Booking</TableHead><TableHead>Customer</TableHead><TableHead>Package</TableHead><TableHead>Date / Time</TableHead><TableHead>Notes</TableHead><TableHead>Vehicle</TableHead><TableHead>Total</TableHead><TableHead>Status</TableHead><TableHead>Action</TableHead></TableRow>
-                </TableHeader>
-                <TableBody>
-                  {loading ? <TableRow><TableCell colSpan={9} className="py-8 text-center text-sm text-muted-foreground">Loading confirmed bookings...</TableCell></TableRow> : null}
-                  {!loading && filtered.length === 0 ? <TableRow><TableCell colSpan={9} className="py-8 text-center text-sm text-muted-foreground">No assigned bookings found.</TableCell></TableRow> : null}
-                  {filtered.map((booking, index) => (
-                    <TableRow key={booking.id || `${booking.booking_code}-${index}`}>
-                      <TableCell className="font-bold text-primary-900">{booking.booking_code}</TableCell>
-                      <TableCell><div className="font-semibold text-foreground">{booking.customer_name || '-'}</div><div className="text-xs text-muted-foreground">{booking.customer_phone || '-'}</div></TableCell>
-                      <TableCell><div className="font-semibold text-foreground">{packageLabel(booking)}</div><div className="text-xs text-muted-foreground">{serviceDetail(booking)}</div></TableCell>
-                      <TableCell>{niceDate(booking.preferred_date)}<div className="text-xs text-muted-foreground">{booking.preferred_time || '-'}</div></TableCell>
-                      <TableCell><NotePreview title="Customer" value={booking.customer_notes} /><NotePreview title="Admin" value={booking.internal_note} /></TableCell>
-                      <TableCell><div className="font-semibold text-foreground">{booking.assigned_vehicle_code || '-'}</div><div className="text-xs text-muted-foreground">{booking.assigned_vehicle_name || ''}</div></TableCell>
-                      <TableCell>{formatAed(Number(booking.total_amount || 0))}</TableCell>
-                      <TableCell><span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-bold ${statusClass(booking.status)}`}>{booking.status || 'Confirmed'}</span></TableCell>
-                      <TableCell><div className="flex flex-wrap gap-2">{booking.status === 'Confirmed' ? <><Button type="button" size="sm" onClick={() => setAssigning(booking)}>Assign Vehicle</Button><Button type="button" size="sm" variant="outline" onClick={() => markNoShow(booking)}>No Show</Button></> : null}{booking.status === 'In Progress' ? <Button type="button" size="sm" variant="outline" onClick={() => setPaying(booking)}>Complete / Payment</Button> : null}{booking.status === 'Completed' ? <Button type="button" size="sm" variant="outline" onClick={() => setPaying(booking)}>View Payment Slip</Button> : null}</div></TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
       </div>
-      {assigning ? <AssignVehicleModal booking={assigning} fleet={fleet.filter((item) => !assigning.selected_package_capacity || Number(item.capacity || 0) === Number(assigning.selected_package_capacity))} onClose={() => setAssigning(null)} onAssign={assignVehicle} /> : null}
-      {paying ? <PaymentModal booking={paying} onClose={() => setPaying(null)} onSave={savePayment} readOnly={paying.status === 'Completed'} /> : null}
+
+      {error ? <p className="mt-5 rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</p> : null}
+      <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-6">
+        <MetricCard title="Today Rides" value={String(metrics.today)} icon={CalendarDays} />
+        <MetricCard title="In Progress" value={String(metrics.inProgress)} icon={Clock3} />
+        <MetricCard title="Completed Today" value={String(metrics.completedToday)} icon={CheckCircle2} />
+        <MetricCard title="No Show Today" value={String(metrics.noShowToday)} icon={AlertCircle} />
+        <MetricCard title="Cash in Hand" value={formatAed(metrics.cash)} icon={WalletCards} />
+        <MetricCard title="Card Payments" value={formatAed(metrics.card)} icon={CreditCard} />
+      </div>
+
+      <Card className="mt-5 overflow-hidden rounded-[1.5rem] border-border/80 bg-white">
+        <CardHeader className="gap-4 border-b border-border/70 bg-[#F7FAFA] px-4 py-4 lg:flex-row lg:items-center lg:justify-between">
+          <div><CardTitle className="font-heading text-lg font-semibold sm:text-xl">Today ride list</CardTitle><p className="mt-1 text-xs font-semibold text-muted-foreground">{loading ? 'Loading records...' : `${visibleToday.length} rides for ${niceDate(today)}`}</p></div>
+          <div className="relative w-full lg:max-w-sm"><Search className="pointer-events-none absolute left-3 top-3 size-4 text-muted-foreground" aria-hidden="true" /><Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search today's rides..." className="h-10 rounded-full bg-white pl-9" /></div>
+        </CardHeader>
+        <CardContent className="grid gap-3 p-4 xl:grid-cols-2">
+          {loading ? <div className="rounded-2xl border border-dashed border-border bg-[#F7FAFA] p-8 text-center text-sm font-semibold text-muted-foreground">Loading today rides...</div> : null}
+          {!loading && visibleToday.length === 0 ? <div className="rounded-2xl border border-dashed border-border bg-[#F7FAFA] p-8 text-center"><p className="font-heading text-lg font-semibold text-foreground">No rides for today</p><p className="mt-2 text-sm text-muted-foreground">Future bookings My Rides ke Upcoming tab me milengi.</p></div> : null}
+          {visibleToday.map((booking, index) => <RideSummaryCard key={String(booking.id || `${bookingCode(booking)}-${index}`)} booking={booking} />)}
+        </CardContent>
+      </Card>
     </section>
   );
 }
-
-function Metric({ title, value, icon: Icon }: { title: string; value: string; icon: typeof CalendarDays }) {
-  return <Card className="rounded-[1.35rem]"><CardContent className="flex items-center gap-4 p-4"><span className="flex size-11 items-center justify-center rounded-2xl bg-primary-50 text-primary"><Icon className="size-5" /></span><div><p className="text-xs font-semibold text-muted-foreground">{title}</p><p className="mt-1 font-heading text-2xl font-semibold text-foreground">{value}</p></div></CardContent></Card>;
-}
-
-function AssignVehicleModal({ booking, fleet, onClose, onAssign }: { booking: ManagerBooking; fleet: FleetOption[]; onClose: () => void; onAssign: (booking: ManagerBooking, vehicleId: string) => Promise<void> }) {
-  const [vehicleId, setVehicleId] = useState(fleet[0]?.id || '');
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
-  async function submit() { setSaving(true); setError(''); try { await onAssign(booking, vehicleId); } catch (saveError) { setError(saveError instanceof Error ? saveError.message : 'Failed to assign vehicle.'); } finally { setSaving(false); } }
-  return <div className="fixed inset-0 z-50 flex items-center justify-center bg-primary-900/35 p-4 backdrop-blur-sm"><div className="w-full max-w-xl rounded-[1.6rem] border border-white/80 bg-white shadow-[0_28px_80px_rgba(8,37,50,0.28)]"><div className="flex items-start justify-between gap-4 border-b border-border/70 bg-[#F7FAFA] px-5 py-4"><div><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Assign Vehicle</p><h2 className="mt-1 font-heading text-xl font-semibold text-foreground">{booking.booking_code}</h2></div><button type="button" onClick={onClose} className="flex size-9 items-center justify-center rounded-full border border-border bg-white text-muted-foreground"><X className="size-4" /></button></div><div className="grid gap-4 p-5">{error ? <p className="rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</p> : null}<InfoLine label="Package" value={packageLabel(booking)} /><InfoLine label="Customer Note" value={booking.customer_notes || 'No customer note.'} /><InfoLine label="Admin Note" value={booking.internal_note || 'No admin note.'} /><InfoLine label="Required Capacity" value={`${booking.selected_package_capacity || '-'} seater`} /><label className="grid gap-1.5 text-sm font-semibold text-foreground">Available Vehicle<select value={vehicleId} onChange={(event) => setVehicleId(event.target.value)} className="h-11 rounded-xl border border-border bg-white px-3 text-sm outline-none focus:border-primary"><option value="">Select vehicle</option>{fleet.map((vehicle) => <option key={vehicle.id} value={vehicle.id}>{vehicleLabel(vehicle)}</option>)}</select></label><p className="rounded-xl bg-primary-50 px-3 py-2 text-xs font-semibold leading-5 text-primary-900">After assigning, booking status will become In Progress and No Show will be locked.</p><Button type="button" onClick={submit} disabled={saving || !vehicleId}><Ship data-icon />{saving ? 'Assigning...' : 'Assign Vehicle & Start'}</Button></div></div></div>;
-}
-
-function PaymentModal({ booking, onClose, onSave, readOnly = false }: { booking: ManagerBooking; onClose: () => void; onSave: (booking: ManagerBooking, form: PaymentForm) => Promise<void>; readOnly?: boolean }) {
-  const [form, setForm] = useState<PaymentForm>({ paymentStatus: booking.payment_status || 'Paid', paymentMethod: booking.payment_method || '', receivedAmount: String(booking.payment_received_amount || booking.total_amount || '') });
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
-  async function submit() { setSaving(true); setError(''); try { await onSave(booking, form); } catch (saveError) { setError(saveError instanceof Error ? saveError.message : 'Failed to save payment.'); } finally { setSaving(false); } }
-  return <div className="fixed inset-0 z-50 flex items-center justify-center bg-primary-900/35 p-4 backdrop-blur-sm"><div className="w-full max-w-3xl rounded-[1.6rem] border border-white/80 bg-white shadow-[0_28px_80px_rgba(8,37,50,0.28)]"><div className="flex items-start justify-between gap-4 border-b border-border/70 bg-[#F7FAFA] px-5 py-4"><div><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">{readOnly ? 'Payment Slip' : 'Complete Booking'}</p><h2 className="mt-1 font-heading text-xl font-semibold text-foreground">{booking.booking_code}</h2></div><button type="button" onClick={onClose} className="flex size-9 items-center justify-center rounded-full border border-border bg-white text-muted-foreground"><X className="size-4" /></button></div><div className="grid gap-4 p-5 lg:grid-cols-[1fr_0.9fr]">{error ? <p className="rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 lg:col-span-2">{error}</p> : null}<div className="grid gap-3"><InfoLine label="Customer" value={booking.customer_name || '-'} /><InfoLine label="Package" value={packageLabel(booking)} /><InfoLine label="Customer Note" value={booking.customer_notes || 'No customer note.'} /><InfoLine label="Admin Note" value={booking.internal_note || 'No admin note.'} /><InfoLine label="Vehicle" value={`${booking.assigned_vehicle_code || '-'} ${booking.assigned_vehicle_name || ''}`} /><InfoLine label="Charge Amount" value={formatAed(Number(booking.total_amount || 0))} /></div>{readOnly ? <div className="grid gap-3 rounded-[1.25rem] border border-primary/15 bg-primary-50 p-4"><InfoLine label="Payment Status" value={booking.payment_status || '-'} /><InfoLine label="Payment Method" value={booking.payment_method || '-'} /><InfoLine label="Received Amount" value={formatAed(Number(booking.payment_received_amount || booking.total_amount || 0))} /><InfoLine label="Cash Handover" value={booking.cash_handover_status || 'not_applicable'} /><p className="rounded-xl bg-white px-3 py-2 text-xs font-semibold leading-5 text-primary-900">This payment is locked after completion. Admin can handle corrections or cash handover from the admin account.</p><Button type="button" variant="outline" onClick={onClose}>Close Slip</Button></div> : <div className="grid gap-3 rounded-[1.25rem] border border-border bg-[#F7FAFA] p-4"><SelectField label="Payment Status" value={form.paymentStatus} options={paymentStatuses} onChange={(paymentStatus) => setForm((current) => ({ ...current, paymentStatus }))} /><SelectField label="Payment Method" value={form.paymentMethod} options={paymentMethods} onChange={(paymentMethod) => setForm((current) => ({ ...current, paymentMethod }))} /><label className="grid gap-1.5 text-sm font-semibold text-foreground">Received Amount<input value={form.receivedAmount} onChange={(event) => setForm((current) => ({ ...current, receivedAmount: event.target.value }))} type="number" min="0" step="0.01" className="h-10 rounded-xl border border-border bg-white px-3 text-sm outline-none focus:border-primary" /></label>{form.paymentMethod === 'Cash' ? <p className="rounded-xl bg-gold/10 px-3 py-2 text-xs font-semibold leading-5 text-primary-900">Cash will stay in manager balance until admin marks it received.</p> : null}<Button type="button" onClick={submit} disabled={saving}><Save data-icon />{saving ? 'Saving...' : 'Complete & Save Payment'}</Button></div>}</div></div></div>;
-}
-
-function NotePreview({ title, value }: { title: string; value?: string | null }) {
-  const note = shortNote(value);
-  return <div className="max-w-[14rem] text-xs leading-5"><span className="font-bold text-muted-foreground">{title}: </span><span className="text-foreground">{note || '-'}</span></div>;
-}
-function InfoLine({ label, value }: { label: string; value: string }) { return <div className="rounded-xl border border-border/70 bg-white px-3 py-2"><p className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">{label}</p><p className="mt-1 whitespace-pre-wrap text-sm font-semibold leading-5 text-foreground">{value}</p></div>; }
-function SelectField({ label, value, options, onChange }: { label: string; value: string; options: string[]; onChange: (value: string) => void }) { return <label className="grid gap-1.5 text-sm font-semibold text-foreground">{label}<select value={value} onChange={(event) => onChange(event.target.value)} className="h-10 rounded-xl border border-border bg-white px-3 text-sm outline-none focus:border-primary">{options.map((option) => <option key={option} value={option}>{option || 'None'}</option>)}</select></label>; }
