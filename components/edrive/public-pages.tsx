@@ -158,12 +158,11 @@ function HomeHero() {
                 href={whatsappUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex min-h-14 w-full items-center justify-between gap-4 rounded-full border border-emerald-300/45 bg-[#25D366] px-5 text-sm font-bold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.32),0_18px_38px_rgba(37,211,102,0.22)] transition hover:-translate-y-0.5 hover:bg-[#1EBE5D] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.38),0_22px_44px_rgba(37,211,102,0.30)]"
+                className="inline-flex min-h-14 w-full items-center justify-center gap-3 rounded-full border border-emerald-300/45 bg-[#25D366] px-5 text-sm font-bold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.32),0_18px_38px_rgba(37,211,102,0.22)] transition hover:-translate-y-0.5 hover:bg-[#1EBE5D] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.38),0_22px_44px_rgba(37,211,102,0.30)]"
               >
-                <span className="inline-flex items-center gap-2"><MessageCircle className="size-5" aria-hidden="true" />WhatsApp Availability</span>
+                <span>WhatsApp Availability</span>
                 <ArrowRight className="size-4 shrink-0" aria-hidden="true" />
               </a>
-              <p className="mt-3 text-xs font-semibold text-white/68">Packages and prices are listed below.</p>
             </div>
           </div>
         </MotionReveal>
