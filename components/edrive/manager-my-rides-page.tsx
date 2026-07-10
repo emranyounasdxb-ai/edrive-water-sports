@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { CalendarDays, CheckCircle2, ClipboardCheck, Clock3, CreditCard, RefreshCw, Save, Search, Ship, WalletCards } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+import { CalendarDays, CheckCircle2, ClipboardCheck, Clock3, CreditCard, RefreshCw, Save, Search } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -43,14 +44,13 @@ type BookingRow = Record<string, unknown> & {
   assigned_manager_name?: string | null;
   assigned_vehicle_name?: string | null;
   b2b_agent_name?: string | null;
-  internal_note?: string | null;
 };
 
 type VehicleOption = { name: string; code: string; type: string; status: string };
 type ManagerProfile = { name: string; email: string; role: string; ready: boolean };
 
 const stageOptions = ['Assigned', 'Checked-In', 'In Progress', 'Completed', 'No Show'];
-const vehicleSelectClass = 'h-10 w-full rounded-xl border border-border bg-white px-3 text-sm font-semibold text-foreground shadow-sm outline-none transition focus:border-primary/50 focus:ring-2 focus:ring-primary/10';
+const selectClass = 'h-10 w-full rounded-xl border border-border bg-white px-3 text-sm font-semibold text-foreground shadow-sm outline-none transition focus:border-primary/50 focus:ring-2 focus:ring-primary/10';
 
 function text(value: unknown, fallback = '-') {
   const clean = String(value ?? '').trim();
@@ -126,9 +126,11 @@ async function loadManagerProfile(): Promise<ManagerProfile> {
   const authUser = sessionData.session?.user;
   const authEmail = authUser?.email || '';
   if (!authUser) return { name: '', email: '', role: 'admin', ready: true };
+
   const filter = authEmail ? `auth_user_id.eq.${authUser.id},email.eq.${authEmail}` : `auth_user_id.eq.${authUser.id}`;
   const { data } = await supabase.from('admin_users').select('full_name,email,role,status').or(filter).limit(1);
   const profile = (data || [])[0] as PortalProfile | undefined;
+
   return {
     name: profile?.full_name || authEmail,
     email: profile?.email || authEmail,
@@ -137,7 +139,7 @@ async function loadManagerProfile(): Promise<ManagerProfile> {
   };
 }
 
-function MetricCard({ title, value, icon: Icon }: { title: string; value: string; icon: typeof CalendarDays }) {
+function MetricCard({ title, value, icon: Icon }: { title: string; value: string; icon: LucideIcon }) {
   return (
     <Card className="rounded-[1.25rem] border-border/80 bg-white shadow-[0_12px_32px_rgba(8,37,50,0.055)]">
       <CardContent className="flex min-w-0 items-center gap-3 p-4">
@@ -152,7 +154,7 @@ function Detail({ label, value, sub }: { label: string; value: ReactNode; sub?: 
   return <div className="min-w-0 rounded-xl bg-[#F7FAFA] px-3 py-2"><p className="text-[9px] font-bold uppercase tracking-[0.14em] text-muted-foreground">{label}</p><div className="mt-1 break-words text-sm font-bold text-foreground">{value}</div>{sub ? <div className="mt-0.5 break-words text-xs text-muted-foreground">{sub}</div> : null}</div>;
 }
 
-function ManagerRideCard({ booking, vehicles, onSaved }: { booking: BookingRow; vehicles: VehicleOption[]; onSaved: () => Promise<void> }) {
+function RideCard({ booking, vehicles, onSaved }: { booking: BookingRow; vehicles: VehicleOption[]; onSaved: () => Promise<void> }) {
   const [vehicle, setVehicle] = useState(text(booking.assigned_vehicle_name, ''));
   const [stage, setStage] = useState(text(booking.manager_status, 'Assigned'));
   const [saving, setSaving] = useState(false);
@@ -189,7 +191,7 @@ function ManagerRideCard({ booking, vehicles, onSaved }: { booking: BookingRow; 
           <h3 className="mt-1 break-words font-heading text-base font-semibold text-foreground">{text(booking.customer_name, 'Guest')}</h3>
           <p className="mt-1 text-sm text-muted-foreground">{packageLabel(booking)}</p>
         </div>
-        <div className="flex flex-wrap gap-2 sm:justify-end"><span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-bold ${statusTone(stage)}`}>{stage}</span>{booking.b2b_agent_name ? <Badge variant="secondary">B2B · {booking.b2b_agent_name}</Badge> : <Badge variant="outline">Direct Sale</Badge>}</div>
+        <div className="flex flex-wrap gap-2 sm:justify-end"><span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-bold ${statusTone(stage)}`}>{stage}</span>{booking.b2b_agent_name ? <Badge variant="secondary">B2B · {booking.b2b_agent_name}</Badge> : <Badge variant="secondary">Direct Sale</Badge>}</div>
       </div>
       <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
         <Detail label="Schedule" value={dateLabel(booking.preferred_date)} sub={text(booking.preferred_time, 'Time pending')} />
@@ -199,8 +201,8 @@ function ManagerRideCard({ booking, vehicles, onSaved }: { booking: BookingRow; 
       </div>
       {error ? <p className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-xs font-semibold text-red-700">{error}</p> : null}
       <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
-        <label className="grid gap-1.5 text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">Vehicle<select value={vehicle} onChange={(event) => setVehicle(event.target.value)} className={vehicleSelectClass}><option value="">Select vehicle</option>{vehicleOptions.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
-        <label className="grid gap-1.5 text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">Ride Stage<select value={stage} onChange={(event) => setStage(event.target.value)} className={vehicleSelectClass}>{stageOptions.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
+        <label className="grid gap-1.5 text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">Vehicle<select value={vehicle} onChange={(event) => setVehicle(event.target.value)} className={selectClass}><option value="">Select vehicle</option>{vehicleOptions.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
+        <label className="grid gap-1.5 text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">Ride Stage<select value={stage} onChange={(event) => setStage(event.target.value)} className={selectClass}>{stageOptions.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
         <Button type="button" onClick={save} disabled={saving} className="rounded-full"><Save className="size-4" aria-hidden="true" />{saving ? 'Saving...' : 'Save Update'}</Button>
       </div>
     </div>
@@ -254,7 +256,7 @@ function ManagerAssignedRidesPage({ manager }: { manager: ManagerProfile }) {
         <div>
           <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">My Rides</p>
           <h1 className="mt-2 font-heading text-2xl font-semibold leading-tight text-foreground sm:text-3xl lg:text-4xl">Assigned confirmed rides</h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">Sirf woh confirmed bookings yahan show hoti hain jo admin ne {manager.name || manager.email} ko assign ki hain.</p>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">Only confirmed bookings assigned to {manager.name || manager.email} appear here.</p>
         </div>
         <Button type="button" variant="outline" onClick={loadData} className="w-fit rounded-full bg-white"><RefreshCw className="size-4" aria-hidden="true" />Refresh</Button>
       </div>
@@ -274,8 +276,8 @@ function ManagerAssignedRidesPage({ manager }: { manager: ManagerProfile }) {
         </CardHeader>
         <CardContent className="grid gap-3 p-4 xl:grid-cols-2">
           {loading ? <div className="rounded-2xl border border-dashed border-border bg-[#F7FAFA] p-8 text-center text-sm font-semibold text-muted-foreground">Loading assigned rides...</div> : null}
-          {!loading && visible.length === 0 ? <div className="rounded-2xl border border-dashed border-border bg-[#F7FAFA] p-8 text-center"><p className="font-heading text-lg font-semibold text-foreground">No assigned confirmed rides</p><p className="mt-2 text-sm text-muted-foreground">Admin confirmed booking assign karega to yahan show hogi.</p></div> : null}
-          {visible.map((booking, index) => <ManagerRideCard key={String(booking.id || `${bookingCode(booking)}-${index}`)} booking={booking} vehicles={vehicles} onSaved={loadData} />)}
+          {!loading && visible.length === 0 ? <div className="rounded-2xl border border-dashed border-border bg-[#F7FAFA] p-8 text-center"><p className="font-heading text-lg font-semibold text-foreground">No assigned confirmed rides</p><p className="mt-2 text-sm text-muted-foreground">Confirmed booking assign hogi to yahan show hogi.</p></div> : null}
+          {visible.map((booking, index) => <RideCard key={String(booking.id || `${bookingCode(booking)}-${index}`)} booking={booking} vehicles={vehicles} onSaved={loadData} />)}
         </CardContent>
       </Card>
     </section>
@@ -287,7 +289,7 @@ export function ManagerScopedAssignmentsPage() {
 
   useEffect(() => {
     let active = true;
-    loadManagerProfile().then((profile) => {
+    void loadManagerProfile().then((profile) => {
       if (active) setManager(profile);
     });
     return () => { active = false; };
