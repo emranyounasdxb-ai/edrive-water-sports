@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
-import { CalendarDays, CheckCircle2, ClipboardCheck, Clock3, CreditCard, RefreshCw, Save, Search, X } from 'lucide-react';
+import { AlertCircle, CalendarDays, CheckCircle2, ClipboardCheck, Clock3, CreditCard, RefreshCw, Save, Search, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -106,16 +106,28 @@ function isB2BBooking(booking: BookingRow) {
   return String(booking.payment_source || '').toLowerCase() === 'b2b' || Boolean(booking.b2b_agent_name);
 }
 
-function rideStage(booking: BookingRow) {
+function managerStage(booking: BookingRow) {
   const raw = text(booking.manager_status, 'Pending');
   return raw === 'Assigned' ? 'Pending' : raw;
 }
 
+function cardStatus(booking: BookingRow) {
+  const status = text(booking.status, 'Confirmed');
+  const stage = managerStage(booking);
+  if (status === 'Completed' || stage === 'Completed') return 'Completed';
+  if (status === 'No Show' || stage === 'No Show') return 'No Show';
+  if (stage === 'In Progress') return 'In Progress';
+  if (stage === 'Checked-In') return 'Checked-In';
+  if (status === 'Confirmed') return 'Confirmed';
+  return status || 'Confirmed';
+}
+
 function statusTone(status: unknown) {
-  const value = text(status, 'Pending').toLowerCase();
+  const value = text(status, 'Confirmed').toLowerCase();
   if (value.includes('complete') || value.includes('paid')) return 'border-emerald-200 bg-emerald-50 text-emerald-700';
   if (value.includes('no show') || value.includes('cancel')) return 'border-red-200 bg-red-50 text-red-700';
   if (value.includes('progress') || value.includes('check')) return 'border-primary/25 bg-primary-50 text-primary';
+  if (value.includes('confirm')) return 'border-emerald-200 bg-emerald-50 text-emerald-700';
   return 'border-gold/35 bg-gold/10 text-gold';
 }
 
@@ -126,8 +138,9 @@ function matchesManager(booking: BookingRow, manager: ManagerProfile) {
   return Boolean(assigned && (assigned === name || assigned === email));
 }
 
-function isConfirmedBooking(booking: BookingRow) {
-  return text(booking.status, '').toLowerCase() === 'confirmed' || text(booking.status, '').toLowerCase() === 'completed';
+function isVisibleBooking(booking: BookingRow) {
+  const status = text(booking.status, '').toLowerCase();
+  return ['confirmed', 'completed', 'no show'].includes(status);
 }
 
 function sortSchedule(a: BookingRow, b: BookingRow) {
@@ -241,9 +254,12 @@ function RideCard({ booking, vehicles, onSaved }: { booking: BookingRow; vehicle
   const [error, setError] = useState('');
   const [completionOpen, setCompletionOpen] = useState(false);
   const vehicleOptions = Array.from(new Set([vehicle, ...vehicles.map((item) => item.name || item.code)].filter(Boolean)));
-  const stage = rideStage(booking);
+  const stage = managerStage(booking);
+  const displayStatus = cardStatus(booking);
   const inProgress = stage === 'In Progress';
-  const completed = stage === 'Completed' || text(booking.status, '') === 'Completed';
+  const completed = displayStatus === 'Completed';
+  const noShow = displayStatus === 'No Show';
+  const canOperate = !completed && !noShow;
 
   async function startRide() {
     if (!vehicle.trim()) {
@@ -264,6 +280,26 @@ function RideCard({ booking, vehicles, onSaved }: { booking: BookingRow; vehicle
       await onSaved();
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : 'Unable to start ride.');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function markNoShow() {
+    setSaving(true);
+    setError('');
+    try {
+      const payload: Record<string, unknown> = {
+        status: 'No Show',
+        manager_status: 'No Show',
+        updated_at: new Date().toISOString()
+      };
+      const query = supabase.from(bookingRequestsTable).update(payload);
+      const result = booking.id ? await query.eq('id', booking.id) : await query.eq('booking_code', bookingCode(booking));
+      if (result.error) throw new Error(result.error.message);
+      await onSaved();
+    } catch (showError) {
+      setError(showError instanceof Error ? showError.message : 'Unable to mark no show.');
     } finally {
       setSaving(false);
     }
@@ -304,7 +340,7 @@ function RideCard({ booking, vehicles, onSaved }: { booking: BookingRow; vehicle
           <h3 className="mt-1 break-words font-heading text-base font-semibold text-foreground">{text(booking.customer_name, 'Guest')}</h3>
           <p className="mt-1 text-sm text-muted-foreground">{packageLabel(booking)}</p>
         </div>
-        <div className="flex flex-wrap gap-2 sm:justify-end"><span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-bold ${statusTone(stage)}`}>{stage}</span>{isB2BBooking(booking) ? <Badge variant="secondary">B2B · {text(booking.b2b_agent_name, 'Agent')}</Badge> : <Badge variant="secondary">Direct Sale</Badge>}</div>
+        <div className="flex flex-wrap gap-2 sm:justify-end"><span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-bold ${statusTone(displayStatus)}`}>{displayStatus}</span>{isB2BBooking(booking) ? <Badge variant="secondary">B2B · {text(booking.b2b_agent_name, 'Agent')}</Badge> : <Badge variant="secondary">Direct Sale</Badge>}</div>
       </div>
       <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
         <Detail label="Schedule" value={dateLabel(booking.preferred_date)} sub={text(booking.preferred_time, 'Time pending')} />
@@ -314,11 +350,13 @@ function RideCard({ booking, vehicles, onSaved }: { booking: BookingRow; vehicle
       </div>
       {error ? <p className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-xs font-semibold text-red-700">{error}</p> : null}
       <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
-        <label className="grid gap-1.5 text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">Vehicle<select value={vehicle} onChange={(event) => setVehicle(event.target.value)} disabled={completed} className={selectClass}><option value="">Select vehicle</option>{vehicleOptions.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
+        <label className="grid gap-1.5 text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">Vehicle<select value={vehicle} onChange={(event) => setVehicle(event.target.value)} disabled={!canOperate || inProgress} className={selectClass}><option value="">Select vehicle</option>{vehicleOptions.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
         <div className="flex flex-col gap-2 sm:flex-row">
-          {!completed && !inProgress ? <Button type="button" onClick={startRide} disabled={saving} className="rounded-full"><Save className="size-4" aria-hidden="true" />{saving ? 'Starting...' : 'Start Ride'}</Button> : null}
+          {canOperate && !inProgress ? <Button type="button" onClick={startRide} disabled={saving} className="rounded-full"><Save className="size-4" aria-hidden="true" />{saving ? 'Starting...' : 'Start Ride'}</Button> : null}
           {inProgress ? <Button type="button" onClick={() => setCompletionOpen(true)} className="rounded-full bg-emerald-600 hover:bg-emerald-700"><CheckCircle2 className="size-4" aria-hidden="true" />Complete Ride</Button> : null}
+          {canOperate ? <Button type="button" variant="outline" onClick={markNoShow} disabled={saving} className="rounded-full border-red-200 bg-red-50 text-red-700 hover:bg-red-100"><AlertCircle className="size-4" aria-hidden="true" />No Show</Button> : null}
           {completed ? <Button type="button" disabled className="rounded-full bg-emerald-600"><CheckCircle2 className="size-4" aria-hidden="true" />Completed</Button> : null}
+          {noShow ? <Button type="button" disabled variant="outline" className="rounded-full border-red-200 bg-red-50 text-red-700"><AlertCircle className="size-4" aria-hidden="true" />No Show</Button> : null}
         </div>
       </div>
       {completionOpen ? <PaymentModal booking={booking} onClose={() => setCompletionOpen(false)} onComplete={completeRide} /> : null}
@@ -354,15 +392,15 @@ function ManagerAssignedRidesPage({ manager }: { manager: ManagerProfile }) {
 
   useEffect(() => { void loadData(); }, []);
 
-  const scopedBookings = useMemo(() => bookings.filter((booking) => isConfirmedBooking(booking) && matchesManager(booking, manager)), [bookings, manager]);
+  const scopedBookings = useMemo(() => bookings.filter((booking) => isVisibleBooking(booking) && matchesManager(booking, manager)), [bookings, manager]);
   const visible = useMemo(() => {
     const term = query.trim().toLowerCase();
     return scopedBookings.filter((booking) => !term || [bookingCode(booking), booking.customer_name, booking.customer_phone, packageLabel(booking), booking.assigned_vehicle_name, booking.manager_status].some((value) => String(value || '').toLowerCase().includes(term))).sort(sortSchedule);
   }, [query, scopedBookings]);
 
   const metrics = useMemo(() => {
-    const active = scopedBookings.filter((booking) => ['Pending', 'Checked-In', 'In Progress'].includes(rideStage(booking))).length;
-    const completed = scopedBookings.filter((booking) => rideStage(booking) === 'Completed' || text(booking.status, '') === 'Completed').length;
+    const active = scopedBookings.filter((booking) => ['Confirmed', 'Checked-In', 'In Progress'].includes(cardStatus(booking))).length;
+    const completed = scopedBookings.filter((booking) => cardStatus(booking) === 'Completed').length;
     const pending = scopedBookings.reduce((sum, booking) => sum + pendingAmount(booking), 0);
     return { total: scopedBookings.length, active, completed, pending };
   }, [scopedBookings]);
@@ -388,7 +426,7 @@ function ManagerAssignedRidesPage({ manager }: { manager: ManagerProfile }) {
 
       <Card className="mt-5 overflow-hidden rounded-[1.5rem] border-border/80 bg-white">
         <CardHeader className="gap-4 border-b border-border/70 bg-[#F7FAFA] px-4 py-4 lg:flex-row lg:items-center lg:justify-between">
-          <div><CardTitle className="font-heading text-lg font-semibold sm:text-xl">My assigned ride list</CardTitle><p className="mt-1 text-xs font-semibold text-muted-foreground">{loading ? 'Loading records...' : `${visible.length} confirmed rides`}</p></div>
+          <div><CardTitle className="font-heading text-lg font-semibold sm:text-xl">My assigned ride list</CardTitle><p className="mt-1 text-xs font-semibold text-muted-foreground">{loading ? 'Loading records...' : `${visible.length} rides`}</p></div>
           <div className="relative w-full lg:max-w-sm"><Search className="pointer-events-none absolute left-3 top-3 size-4 text-muted-foreground" aria-hidden="true" /><Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search customer, ride, vehicle..." className="h-10 rounded-full bg-white pl-9" /></div>
         </CardHeader>
         <CardContent className="grid gap-3 p-4 xl:grid-cols-2">
