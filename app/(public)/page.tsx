@@ -1,6 +1,4 @@
 import type { Metadata } from 'next';
-import { HomeExpansionSections } from '@/components/edrive/home-expansion';
-import { LivePackageShowcase } from '@/components/edrive/live-package-showcase';
 import { HomePage } from '@/components/edrive/public-pages';
 
 export const metadata: Metadata = {
@@ -9,11 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default function Page() {
-  return (
-    <>
-      <HomePage />
-      <LivePackageShowcase title="Bookable Packages" text="Packages from the live booking system will appear here after the approved price list is added." limit={5} compact />
-      <HomeExpansionSections />
-    </>
-  );
+  return <HomePage />;
 }
