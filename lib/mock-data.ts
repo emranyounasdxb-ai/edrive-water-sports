@@ -53,12 +53,12 @@ export const adminNavItems = [
 ];
 
 export const managerNavItems = [
-  { href: '/admin/manager', label: 'Manager Dashboard', icon: 'LayoutDashboard' },
-  { href: '/admin/vehicle-assignment', label: 'Assignments', icon: 'ClipboardCheck' },
-  { href: '/admin/operations-schedule', label: 'Schedule', icon: 'CalendarDays' },
-  { href: '/admin/vehicles', label: 'Vehicle Status', icon: 'Ship' },
-  { href: '/admin/maintenance', label: 'Maintenance', icon: 'Settings' },
-  { href: '/admin/payments', label: 'Payment Updates', icon: 'CreditCard' }
+  { href: '/admin/manager', label: 'Today Overview', icon: 'LayoutDashboard' },
+  { href: '/admin/vehicle-assignment', label: 'My Rides', icon: 'ClipboardCheck' },
+  { href: '/admin/operations-schedule', label: 'Ride Schedule', icon: 'CalendarDays' },
+  { href: '/admin/vehicles', label: 'Fleet Status', icon: 'Ship' },
+  { href: '/admin/maintenance', label: 'Maintenance Notes', icon: 'Settings' },
+  { href: '/admin/payments', label: 'Collections', icon: 'CreditCard' }
 ];
 
 export const financeNavItems = [
