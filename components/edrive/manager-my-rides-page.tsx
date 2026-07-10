@@ -211,6 +211,33 @@ function matchesFilter(booking: BookingRow, filter: RideFilter) {
   return true;
 }
 
+function isVehicleAvailable(vehicle: VehicleOption) {
+  return text(vehicle.status, '').toLowerCase() === 'available';
+}
+
+function vehicleValue(vehicle: VehicleOption) {
+  return text(vehicle.name || vehicle.code, '');
+}
+
+function sameVehicle(vehicle: VehicleOption, selected: string) {
+  const value = selected.trim().toLowerCase();
+  return Boolean(value && [vehicle.name, vehicle.code].some((item) => text(item, '').toLowerCase() === value));
+}
+
+function findVehicle(vehicles: VehicleOption[], selected: string) {
+  return vehicles.find((item) => sameVehicle(item, selected));
+}
+
+async function updateVehicleStatus(vehicleName: string, status: 'available' | 'booked') {
+  const clean = vehicleName.trim();
+  if (!clean) return;
+  const payload = { status, updated_at: new Date().toISOString() };
+  const byName = await supabase.from('vehicles').update(payload).eq('vehicle_name', clean);
+  if (!byName.error) return;
+  const byCode = await supabase.from('vehicles').update(payload).eq('vehicle_code', clean);
+  if (byCode.error) throw new Error(byCode.error.message || byName.error.message);
+}
+
 async function loadManagerProfile(): Promise<ManagerProfile> {
   const { data: sessionData } = await supabase.auth.getSession();
   const authUser = sessionData.session?.user;
@@ -317,7 +344,14 @@ function RideCard({ booking, vehicles, onSaved }: { booking: BookingRow; vehicle
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [completionOpen, setCompletionOpen] = useState(false);
-  const vehicleOptions = Array.from(new Set([vehicle, ...vehicles.map((item) => item.name || item.code)].filter(Boolean)));
+  const assignedVehicle = text(booking.assigned_vehicle_name, '');
+  const availableVehicles = vehicles.filter(isVehicleAvailable);
+  const vehicleOptions = Array.from(new Set([
+    assignedVehicle,
+    ...availableVehicles.map(vehicleValue)
+  ].filter(Boolean)));
+  const selectedVehicle = findVehicle(vehicles, vehicle);
+  const selectedAvailable = Boolean(selectedVehicle && isVehicleAvailable(selectedVehicle));
   const displayStatus = cardStatus(booking);
   const inProgress = displayStatus === 'In Progress';
   const completed = displayStatus === 'Completed';
@@ -327,7 +361,12 @@ function RideCard({ booking, vehicles, onSaved }: { booking: BookingRow; vehicle
 
   async function startRide() {
     if (!vehicle.trim()) {
-      setError('Please select vehicle first.');
+      setError('Please select available vehicle first.');
+      return;
+    }
+    const selected = findVehicle(vehicles, vehicle);
+    if (!selected || !isVehicleAvailable(selected)) {
+      setError('This vehicle is not available. Please select another available vehicle.');
       return;
     }
     setSaving(true);
@@ -341,6 +380,7 @@ function RideCard({ booking, vehicles, onSaved }: { booking: BookingRow; vehicle
       const query = supabase.from(bookingRequestsTable).update(payload);
       const result = booking.id ? await query.eq('id', booking.id) : await query.eq('booking_code', bookingCode(booking));
       if (result.error) throw new Error(result.error.message);
+      await updateVehicleStatus(vehicle, 'booked');
       await onSaved();
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : 'Unable to start ride.');
@@ -366,6 +406,7 @@ function RideCard({ booking, vehicles, onSaved }: { booking: BookingRow; vehicle
       const query = supabase.from(bookingRequestsTable).update(payload);
       const result = booking.id ? await query.eq('id', booking.id) : await query.eq('booking_code', bookingCode(booking));
       if (result.error) throw new Error(result.error.message);
+      if (assignedVehicle || vehicle) await updateVehicleStatus(assignedVehicle || vehicle, 'available');
       await onSaved();
     } catch (showError) {
       setError(showError instanceof Error ? showError.message : 'Unable to mark no show.');
@@ -395,6 +436,7 @@ function RideCard({ booking, vehicles, onSaved }: { booking: BookingRow; vehicle
     const query = supabase.from(bookingRequestsTable).update(payload);
     const result = booking.id ? await query.eq('id', booking.id) : await query.eq('booking_code', bookingCode(booking));
     if (result.error) throw new Error(result.error.message);
+    if (assignedVehicle || vehicle) await updateVehicleStatus(assignedVehicle || vehicle, 'available');
     setCompletionOpen(false);
     await onSaved();
   }
@@ -412,14 +454,14 @@ function RideCard({ booking, vehicles, onSaved }: { booking: BookingRow; vehicle
       <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
         <Detail label="Schedule" value={dateLabel(booking.preferred_date)} sub={text(booking.preferred_time, 'Time pending')} />
         <Detail label="Ride" value={rideDetails(booking)} sub={text(booking.customer_phone || booking.customer_email, '')} />
-        <Detail label="Vehicle" value={vehicle || 'Not selected'} sub={inProgress || completed ? 'Assigned vehicle' : future ? 'Upcoming ride' : 'Select before ride'} />
+        <Detail label="Vehicle" value={vehicle || 'Not selected'} sub={inProgress || completed ? 'Assigned vehicle' : future ? 'Upcoming ride' : 'Only available vehicles'} />
         <Detail label="Payment" value={formatAed(totalAmount(booking))} sub={paymentSubText(booking)} />
       </div>
       {error ? <p className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-xs font-semibold text-red-700">{error}</p> : null}
       <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
-        <label className="grid gap-1.5 text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">Vehicle<select value={vehicle} onChange={(event) => setVehicle(event.target.value)} disabled={!actionAllowed || inProgress} className={selectClass}><option value="">Select vehicle</option>{vehicleOptions.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
+        <label className="grid gap-1.5 text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">Vehicle<select value={vehicle} onChange={(event) => setVehicle(event.target.value)} disabled={!actionAllowed || inProgress} className={selectClass}><option value="">Select available vehicle</option>{vehicleOptions.map((item) => <option key={item} value={item}>{item}</option>)}</select>{actionAllowed && !inProgress && vehicle && !selectedAvailable ? <span className="text-[11px] font-semibold normal-case tracking-normal text-red-700">Selected vehicle is not available.</span> : null}</label>
         <div className="flex flex-col gap-2 sm:flex-row">
-          {actionAllowed && !inProgress ? <Button type="button" onClick={startRide} disabled={saving} className="rounded-full"><Save className="size-4" aria-hidden="true" />{saving ? 'Starting...' : 'Start Ride'}</Button> : null}
+          {actionAllowed && !inProgress ? <Button type="button" onClick={startRide} disabled={saving || !vehicle || !selectedAvailable} className="rounded-full"><Save className="size-4" aria-hidden="true" />{saving ? 'Starting...' : 'Start Ride'}</Button> : null}
           {inProgress ? <Button type="button" onClick={() => setCompletionOpen(true)} className="rounded-full bg-emerald-600 hover:bg-emerald-700"><CheckCircle2 className="size-4" aria-hidden="true" />Complete Ride</Button> : null}
           {actionAllowed ? <Button type="button" variant="outline" onClick={markNoShow} disabled={saving} className="rounded-full border-red-200 bg-red-50 text-red-700 hover:bg-red-100"><AlertCircle className="size-4" aria-hidden="true" />No Show</Button> : null}
           {!actionAllowed && future ? <Button type="button" disabled variant="outline" className="rounded-full bg-white">Upcoming</Button> : null}
@@ -455,7 +497,7 @@ function ManagerAssignedRidesPage({ manager }: { manager: ManagerProfile }) {
     try {
       const [bookingResult, vehicleResult] = await Promise.all([
         supabase.from(bookingRequestsTable).select('*').order('preferred_date', { ascending: true }).limit(500),
-        supabase.from('vehicles').select('vehicle_code,vehicle_name,vehicle_type,status').order('vehicle_code', { ascending: true }).limit(200)
+        supabase.from('vehicles').select('vehicle_code,vehicle_name,vehicle_type,status').order('vehicle_code', { ascending: true }).limit(500)
       ]);
       if (bookingResult.error) throw new Error(bookingResult.error.message);
       setBookings((bookingResult.data || []) as BookingRow[]);
