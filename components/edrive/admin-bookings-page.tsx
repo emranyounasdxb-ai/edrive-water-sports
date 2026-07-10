@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { CalendarDays, ClipboardCheck, MessageCircle, RefreshCw, Save, Search, WalletCards, X } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+import { CalendarDays, ClipboardCheck, Eye, MessageCircle, RefreshCw, Save, Search, WalletCards, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -30,7 +31,6 @@ type BookingRow = {
   customer_name: string | null;
   customer_phone: string | null;
   customer_email: string | null;
-  customer_hotel_or_area?: string | null;
   customer_notes?: string | null;
   total_amount: number | string | null;
   payment_status: string | null;
@@ -56,7 +56,8 @@ type ManageValues = { status: string; assignedManagerName: string; internalNote:
 const bookingStatusOptions = ['Pending', 'Confirmed', 'Cancelled'];
 
 function asNumber(value: unknown) {
-  return Number(value || 0);
+  const number = Number(value || 0);
+  return Number.isFinite(number) ? number : 0;
 }
 
 function displayText(value: string | null | undefined, fallback = '-') {
@@ -76,10 +77,11 @@ function prettyKey(value: string | null | undefined) {
   return displayText(value).replace(/_/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
-function statusClass(status: string | null) {
+function statusClass(status: string | null | undefined) {
   if (status === 'Confirmed') return 'bg-emerald-50 text-emerald-700 border-emerald-200';
-  if (status === 'Cancelled' || status === 'No Show') return 'bg-red-50 text-red-700 border-red-200';
+  if (status === 'No Show' || status === 'Cancelled') return 'bg-red-50 text-red-700 border-red-200';
   if (status === 'Completed') return 'bg-primary-50 text-primary-900 border-primary/20';
+  if (status === 'In Progress') return 'bg-sky-50 text-sky-700 border-sky-200';
   return 'bg-gold/10 text-gold border-gold/35';
 }
 
@@ -113,9 +115,13 @@ function bookingTotal(booking: BookingRow) {
 function bookingPending(booking: BookingRow) {
   const pending = asNumber(booking.amount_pending_aed);
   if (pending > 0) return pending;
-  const total = bookingTotal(booking);
+  return Math.max(bookingTotal(booking) - asNumber(booking.amount_received_aed), 0);
+}
+
+function bookingReceived(booking: BookingRow) {
   const received = asNumber(booking.amount_received_aed);
-  return Math.max(total - received, 0);
+  if (received > 0) return received;
+  return Math.max(bookingTotal(booking) - bookingPending(booking), 0);
 }
 
 function paymentTypeLabel(booking: BookingRow) {
@@ -158,6 +164,20 @@ function managerStatusForBookingStatus(status: string, fallback: string | null |
   return fallback && fallback !== 'Assigned' ? fallback : 'Pending';
 }
 
+function managerStageLabel(booking: BookingRow) {
+  const stage = displayText(booking.manager_status, 'Pending');
+  return stage === 'Assigned' ? 'Pending' : stage;
+}
+
+function isAdminLocked(booking: BookingRow) {
+  const status = displayText(booking.status, 'Pending');
+  const stage = managerStageLabel(booking);
+  const hasManager = Boolean(displayText(booking.assigned_manager_name, ''));
+  if (['Completed', 'No Show', 'Cancelled'].includes(status)) return true;
+  if (['In Progress', 'Completed', 'No Show'].includes(stage)) return true;
+  return status === 'Confirmed' && hasManager;
+}
+
 export function AdminBookingsLivePage() {
   const [bookings, setBookings] = useState<BookingRow[]>([]);
   const [managers, setManagers] = useState<ManagerOption[]>([]);
@@ -194,6 +214,7 @@ export function AdminBookingsLivePage() {
   }
 
   async function saveBookingStatus(booking: BookingRow, values: ManageValues) {
+    if (isAdminLocked(booking)) throw new Error('This booking is already with the manager and is read-only for admin.');
     const assignedManagerName = values.assignedManagerName.trim();
     const now = new Date().toISOString();
     const payload: Record<string, unknown> = {
@@ -254,7 +275,7 @@ export function AdminBookingsLivePage() {
           <div>
             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Bookings</p>
             <h1 className="mt-2 font-heading text-3xl font-semibold text-foreground sm:text-4xl">Booking requests</h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">Manage direct sale and B2B bookings, confirm requests, and assign managers.</p>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">Confirm new requests and assign a manager. Assigned rides become read-only for admin.</p>
           </div>
           <Button type="button" onClick={refreshAll} variant="outline" className="w-fit rounded-full bg-white"><RefreshCw data-icon aria-hidden="true" />Refresh</Button>
         </div>
@@ -280,12 +301,7 @@ export function AdminBookingsLivePage() {
 
           <div className="flex gap-2 overflow-x-auto border-b border-border/70 bg-white px-4 py-3">
             {filterOptions.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => setActiveFilter(item.id)}
-                className={`whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-bold transition ${activeFilter === item.id ? 'border-primary bg-primary text-white' : 'border-border bg-white text-muted-foreground hover:border-primary/40 hover:text-primary-900'}`}
-              >
+              <button key={item.id} type="button" onClick={() => setActiveFilter(item.id)} className={`whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-bold transition ${activeFilter === item.id ? 'border-primary bg-primary text-white' : 'border-border bg-white text-muted-foreground hover:border-primary/40 hover:text-primary-900'}`}>
                 {item.label} <span className={activeFilter === item.id ? 'text-white/75' : 'text-muted-foreground'}>{item.count}</span>
               </button>
             ))}
@@ -311,40 +327,43 @@ export function AdminBookingsLivePage() {
                 <TableBody>
                   {loading ? <TableRow><TableCell colSpan={9} className="py-8 text-center text-sm text-muted-foreground">Loading bookings...</TableCell></TableRow> : null}
                   {!loading && filtered.length === 0 ? <TableRow><TableCell colSpan={9} className="py-8 text-center text-sm text-muted-foreground">No booking requests found.</TableCell></TableRow> : null}
-                  {filtered.map((booking, index) => (
-                    <TableRow key={booking.id || `${booking.booking_code}-${index}`} className="align-top hover:bg-[#F7FAFA]">
-                      <TableCell className="whitespace-nowrap py-4">
-                        <div className="font-mono text-[13px] font-bold text-primary-900">{booking.booking_code}</div>
-                        {booking.booking_number && booking.booking_number !== booking.booking_code ? <div className="text-xs text-muted-foreground">{booking.booking_number}</div> : null}
-                      </TableCell>
-                      <TableCell className="py-4">
-                        <div className="whitespace-nowrap font-semibold text-foreground">{booking.customer_name || '-'}</div>
-                        <div className="whitespace-nowrap text-xs text-muted-foreground">{booking.customer_phone || booking.customer_email || '-'}</div>
-                      </TableCell>
-                      <TableCell className="py-4">
-                        <div className="font-semibold text-foreground">{packageLabel(booking)}</div>
-                        <div className="text-xs text-muted-foreground">{serviceDetail(booking)}</div>
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap py-4">
-                        <div className="font-semibold text-foreground">{niceDate(booking.preferred_date)}</div>
-                        <div className="text-xs text-muted-foreground">{booking.preferred_time || '-'}</div>
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap py-4">
-                        <div className="font-semibold text-foreground">{formatAed(bookingTotal(booking))}</div>
-                        <div className="text-xs font-semibold text-muted-foreground">Pending {formatAed(bookingPending(booking))}</div>
-                      </TableCell>
-                      <TableCell className="py-4">
-                        <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-bold ${isB2BBooking(booking) ? 'border-primary/25 bg-primary-50 text-primary' : 'border-border bg-[#F4F7F8] text-muted-foreground'}`}>{paymentTypeLabel(booking)}</span>
-                        <div className="mt-1 max-w-[135px] truncate text-xs text-muted-foreground">{booking.b2b_agent_name || prettyKey(booking.payment_source || 'direct')}</div>
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap py-4"><span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-bold ${statusClass(booking.status)}`}>{booking.status || 'Pending'}</span></TableCell>
-                      <TableCell className="py-4">
-                        <div className="whitespace-nowrap font-semibold text-foreground">{booking.assigned_manager_name || 'Unassigned'}</div>
-                        <div className="whitespace-nowrap text-xs text-muted-foreground">{booking.manager_status || 'Pending'}</div>
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap py-4 text-right"><Button type="button" size="sm" variant="outline" className="rounded-full bg-white" onClick={() => setSelectedBooking(booking)}>Manage</Button></TableCell>
-                    </TableRow>
-                  ))}
+                  {filtered.map((booking, index) => {
+                    const locked = isAdminLocked(booking);
+                    return (
+                      <TableRow key={booking.id || `${booking.booking_code}-${index}`} className="align-top hover:bg-[#F7FAFA]">
+                        <TableCell className="whitespace-nowrap py-4">
+                          <div className="font-mono text-[13px] font-bold text-primary-900">{booking.booking_code}</div>
+                          {booking.booking_number && booking.booking_number !== booking.booking_code ? <div className="text-xs text-muted-foreground">{booking.booking_number}</div> : null}
+                        </TableCell>
+                        <TableCell className="py-4">
+                          <div className="whitespace-nowrap font-semibold text-foreground">{booking.customer_name || '-'}</div>
+                          <div className="whitespace-nowrap text-xs text-muted-foreground">{booking.customer_phone || booking.customer_email || '-'}</div>
+                        </TableCell>
+                        <TableCell className="py-4">
+                          <div className="font-semibold text-foreground">{packageLabel(booking)}</div>
+                          <div className="text-xs text-muted-foreground">{serviceDetail(booking)}</div>
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap py-4">
+                          <div className="font-semibold text-foreground">{niceDate(booking.preferred_date)}</div>
+                          <div className="text-xs text-muted-foreground">{booking.preferred_time || '-'}</div>
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap py-4">
+                          <div className="font-semibold text-foreground">{formatAed(bookingTotal(booking))}</div>
+                          <div className="text-xs font-semibold text-muted-foreground">Pending {formatAed(bookingPending(booking))}</div>
+                        </TableCell>
+                        <TableCell className="py-4">
+                          <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-bold ${isB2BBooking(booking) ? 'border-primary/25 bg-primary-50 text-primary' : 'border-border bg-[#F4F7F8] text-muted-foreground'}`}>{paymentTypeLabel(booking)}</span>
+                          <div className="mt-1 max-w-[135px] truncate text-xs text-muted-foreground">{booking.b2b_agent_name || prettyKey(booking.payment_source || 'direct')}</div>
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap py-4"><span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-bold ${statusClass(booking.status)}`}>{booking.status || 'Pending'}</span></TableCell>
+                        <TableCell className="py-4">
+                          <div className="whitespace-nowrap font-semibold text-foreground">{booking.assigned_manager_name || 'Unassigned'}</div>
+                          <div className="whitespace-nowrap text-xs text-muted-foreground">{managerStageLabel(booking)}</div>
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap py-4 text-right"><Button type="button" size="sm" variant="outline" className="rounded-full bg-white" onClick={() => setSelectedBooking(booking)}>{locked ? <Eye className="size-3.5" aria-hidden="true" /> : null}{locked ? 'View' : 'Manage'}</Button></TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>
@@ -356,11 +375,12 @@ export function AdminBookingsLivePage() {
   );
 }
 
-function Metric({ title, value, icon: Icon }: { title: string; value: string; icon: typeof CalendarDays }) {
+function Metric({ title, value, icon: Icon }: { title: string; value: string; icon: LucideIcon }) {
   return <Card className="rounded-[1.35rem] bg-white shadow-[0_12px_32px_rgba(8,37,50,0.06)]"><CardContent className="flex items-center gap-4 p-4"><span className="flex size-11 items-center justify-center rounded-2xl bg-primary-50 text-primary"><Icon className="size-5" aria-hidden="true" /></span><div><p className="text-xs font-semibold text-muted-foreground">{title}</p><p className="mt-1 font-heading text-2xl font-semibold text-foreground">{value}</p></div></CardContent></Card>;
 }
 
 function ManageBookingModal({ booking, managers, onClose, onSave }: { booking: BookingRow; managers: ManagerOption[]; onClose: () => void; onSave: (booking: BookingRow, values: ManageValues) => Promise<void> }) {
+  const locked = isAdminLocked(booking);
   const total = bookingTotal(booking);
   const [values, setValues] = useState<ManageValues>({ status: booking.status || 'Pending', assignedManagerName: booking.assigned_manager_name || '', internalNote: booking.internal_note || '' });
   const [saving, setSaving] = useState(false);
@@ -385,15 +405,16 @@ function ManageBookingModal({ booking, managers, onClose, onSave }: { booking: B
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-primary-900/35 p-3 backdrop-blur-sm">
       <div className="max-h-[85vh] w-full max-w-4xl overflow-hidden rounded-[1.35rem] border border-white/80 bg-white shadow-[0_28px_80px_rgba(8,37,50,0.28)]">
         <div className="flex items-start justify-between gap-4 border-b border-border/70 bg-[#F7FAFA] px-4 py-3">
-          <div className="min-w-0"><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Manage Booking</p><div className="mt-1 flex flex-wrap items-center gap-2"><h2 className="font-heading text-lg font-semibold text-foreground">{booking.booking_code}</h2><span className="rounded-full border border-primary/20 bg-primary-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-primary">{sourceLabel}</span>{booking.b2b_agent_name ? <span className="rounded-full border border-gold/30 bg-gold/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-gold">{booking.b2b_agent_name}</span> : null}</div></div>
+          <div className="min-w-0"><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">{locked ? 'View Booking' : 'Manage Booking'}</p><div className="mt-1 flex flex-wrap items-center gap-2"><h2 className="font-heading text-lg font-semibold text-foreground">{booking.booking_code}</h2><span className="rounded-full border border-primary/20 bg-primary-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-primary">{sourceLabel}</span>{booking.b2b_agent_name ? <span className="rounded-full border border-gold/30 bg-gold/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-gold">{booking.b2b_agent_name}</span> : null}</div></div>
           <button type="button" onClick={onClose} className="flex size-9 shrink-0 items-center justify-center rounded-full border border-border bg-white text-muted-foreground transition hover:text-primary"><X className="size-4" aria-hidden="true" /></button>
         </div>
 
         <div className="max-h-[calc(85vh-8.7rem)] overflow-y-auto p-4">
           {error ? <p className="mb-3 rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</p> : null}
+          {locked ? <p className="mb-3 rounded-xl border border-primary/15 bg-primary-50 px-4 py-3 text-sm font-semibold text-primary-900">This booking is already with manager. Admin can view status and payment details only.</p> : null}
           <div className="grid gap-4 lg:grid-cols-[0.95fr_1.05fr]">
             <div className="rounded-[1.15rem] border border-border bg-white p-4">
-              <div className="mb-3 flex items-center justify-between gap-3"><h3 className="font-heading text-base font-semibold text-foreground">Booking Summary</h3><span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-bold ${statusClass(values.status)}`}>{values.status}</span></div>
+              <div className="mb-3 flex items-center justify-between gap-3"><h3 className="font-heading text-base font-semibold text-foreground">Booking Summary</h3><span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-bold ${statusClass(booking.status)}`}>{booking.status || 'Pending'}</span></div>
               <div className="grid gap-1.5">
                 <InfoLine label="Customer" value={booking.customer_name || '-'} />
                 <InfoLine label="Phone" value={booking.customer_phone || '-'} />
@@ -408,26 +429,41 @@ function ManageBookingModal({ booking, managers, onClose, onSave }: { booking: B
             </div>
 
             <div className="rounded-[1.15rem] border border-border bg-[#F8FBFB] p-4">
-              <div className="grid gap-3 sm:grid-cols-2">
-                <label className="grid gap-1.5 text-sm font-semibold text-foreground">Booking Status<select value={values.status} onChange={(event) => setValues((current) => ({ ...current, status: event.target.value }))} className="h-11 rounded-xl border border-border bg-white px-3 text-sm font-semibold outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10">{bookingStatusOptions.map((status) => <option key={status}>{status}</option>)}</select></label>
-                <label className="grid gap-1.5 text-sm font-semibold text-foreground">Assigned Manager<select value={values.assignedManagerName} onChange={(event) => setValues((current) => ({ ...current, assignedManagerName: event.target.value }))} className="h-11 rounded-xl border border-border bg-white px-3 text-sm font-semibold outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10"><option value="">Select manager</option>{managerOptions.map((manager) => <option key={manager} value={manager}>{manager}</option>)}</select></label>
-                <div className="sm:col-span-2">
-                  <p className="mb-2 text-sm font-semibold text-foreground">Booking Type / Amount</p>
-                  <div className="grid grid-cols-2 gap-2 rounded-2xl border border-border bg-white p-2">
-                    <div className="rounded-xl bg-[#F7FAFA] px-3 py-3"><p className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">Type</p><p className="mt-2 text-sm font-bold text-foreground">{sourceLabel}</p></div>
-                    <div className="rounded-xl bg-primary-50 px-3 py-3"><p className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary">Amount</p><p className="mt-2 text-sm font-bold text-foreground">{formatAed(total)}</p></div>
-                  </div>
+              {locked ? (
+                <div className="grid gap-1.5">
+                  <InfoLine label="Booking Status" value={booking.status || 'Pending'} />
+                  <InfoLine label="Manager Stage" value={managerStageLabel(booking)} />
+                  <InfoLine label="Payment Status" value={booking.payment_status || 'Not Paid'} />
+                  <InfoLine label="Payment Method" value={booking.payment_method || (isB2BBooking(booking) ? 'B2B Invoice' : '-')} />
+                  <InfoLine label="Received" value={formatAed(bookingReceived(booking))} />
+                  <InfoLine label="Pending" value={formatAed(bookingPending(booking))} />
+                  <InfoLine label="Collection" value={prettyKey(booking.collection_status || 'Pending')} />
+                  <div className="mt-2 rounded-xl border border-border bg-white px-3 py-3"><p className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">Internal Note</p><p className="mt-2 whitespace-pre-wrap text-sm font-semibold text-foreground">{booking.internal_note || 'No internal note.'}</p></div>
                 </div>
-              </div>
-              <label className="mt-4 grid gap-1.5 text-sm font-semibold text-foreground">Internal Note<textarea value={values.internalNote} onChange={(event) => setValues((current) => ({ ...current, internalNote: event.target.value }))} className="min-h-32 rounded-xl border border-border bg-white p-3 text-sm outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10" /></label>
+              ) : (
+                <>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <label className="grid gap-1.5 text-sm font-semibold text-foreground">Booking Status<select value={values.status} onChange={(event) => setValues((current) => ({ ...current, status: event.target.value }))} className="h-11 rounded-xl border border-border bg-white px-3 text-sm font-semibold outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10">{bookingStatusOptions.map((status) => <option key={status}>{status}</option>)}</select></label>
+                    <label className="grid gap-1.5 text-sm font-semibold text-foreground">Assigned Manager<select value={values.assignedManagerName} onChange={(event) => setValues((current) => ({ ...current, assignedManagerName: event.target.value }))} className="h-11 rounded-xl border border-border bg-white px-3 text-sm font-semibold outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10"><option value="">Select manager</option>{managerOptions.map((manager) => <option key={manager} value={manager}>{manager}</option>)}</select></label>
+                    <div className="sm:col-span-2">
+                      <p className="mb-2 text-sm font-semibold text-foreground">Booking Type / Amount</p>
+                      <div className="grid grid-cols-2 gap-2 rounded-2xl border border-border bg-white p-2">
+                        <div className="rounded-xl bg-[#F7FAFA] px-3 py-3"><p className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">Type</p><p className="mt-2 text-sm font-bold text-foreground">{sourceLabel}</p></div>
+                        <div className="rounded-xl bg-primary-50 px-3 py-3"><p className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary">Amount</p><p className="mt-2 text-sm font-bold text-foreground">{formatAed(total)}</p></div>
+                      </div>
+                    </div>
+                  </div>
+                  <label className="mt-4 grid gap-1.5 text-sm font-semibold text-foreground">Internal Note<textarea value={values.internalNote} onChange={(event) => setValues((current) => ({ ...current, internalNote: event.target.value }))} className="min-h-32 rounded-xl border border-border bg-white p-3 text-sm outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10" /></label>
+                </>
+              )}
             </div>
           </div>
         </div>
         <div className="flex flex-col gap-3 border-t border-border/70 bg-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex flex-wrap gap-2 rounded-xl border border-primary/15 bg-primary-50 px-3 py-2 text-xs font-semibold text-foreground"><span>Total: {formatAed(total)}</span><span>·</span><span>Type: {sourceLabel}</span></div>
+          <div className="flex flex-wrap gap-2 rounded-xl border border-primary/15 bg-primary-50 px-3 py-2 text-xs font-semibold text-foreground"><span>Total: {formatAed(total)}</span><span>·</span><span>Type: {sourceLabel}</span><span>·</span><span>Pending: {formatAed(bookingPending(booking))}</span></div>
           <div className="flex flex-col gap-2 sm:flex-row">
             {whatsapp ? <Button asChild className="rounded-full bg-[#25D366] text-white hover:bg-[#1FB85A]"><a href={whatsapp} target="_blank" rel="noreferrer"><MessageCircle className="size-4" aria-hidden="true" />WhatsApp Customer</a></Button> : null}
-            <Button type="button" onClick={submit} disabled={saving} className="rounded-full"><Save className="size-4" aria-hidden="true" />{saving ? 'Saving...' : 'Save Changes'}</Button>
+            {locked ? <Button type="button" variant="outline" onClick={onClose} className="rounded-full bg-white">Close</Button> : <Button type="button" onClick={submit} disabled={saving} className="rounded-full"><Save className="size-4" aria-hidden="true" />{saving ? 'Saving...' : 'Save Changes'}</Button>}
           </div>
         </div>
       </div>
