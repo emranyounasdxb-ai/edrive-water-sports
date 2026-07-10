@@ -1,8 +1,8 @@
 export const companyInfo = {
   supportEmail: 'info@edrivedubai.ae',
   bookingEmail: 'booking@edrivedubai.ae',
-  landlineDisplay: '+971 4 611 3100',
-  landlineHref: '+97146113100',
+  landlineDisplay: '+971 4 611 3114',
+  landlineHref: '+97146113114',
   whatsappDisplay: '+971 56 416 5922',
   whatsappHref: '971564165922',
   locationName: 'Dubai Islands',
