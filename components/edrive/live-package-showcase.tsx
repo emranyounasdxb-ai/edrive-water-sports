@@ -38,6 +38,14 @@ type LivePackageGroup = {
   rates: LivePackage[];
 };
 
+type LivePackageShowcaseProps = {
+  title?: string;
+  text?: string;
+  limit?: number;
+  compact?: boolean;
+  categories?: string[];
+};
+
 function formatAed(value: number) {
   return `AED ${Number(value || 0).toLocaleString('en-AE', { maximumFractionDigits: 0 })}`;
 }
@@ -69,7 +77,7 @@ function groupDescription(group: LivePackageGroup) {
 
 function imageForLivePackage(group: LivePackageGroup, index = 0) {
   const seed = Number(group.display_order || index || 0);
-  return getLivePackageImage(group.category, seed);
+  return group.image_url || getLivePackageImage(group.category, seed);
 }
 
 function groupLivePackages(items: LivePackage[]) {
@@ -106,25 +114,35 @@ function groupLivePackages(items: LivePackage[]) {
     .sort((a, b) => a.display_order - b.display_order || a.capacity - b.capacity);
 }
 
-export function LivePackageShowcase({ title = 'Live Booking Packages', text = '', limit, compact = false }: { title?: string; text?: string; limit?: number; compact?: boolean }) {
+export function LivePackageShowcase({ title = 'Live Booking Packages', text = '', limit, compact = false, categories }: LivePackageShowcaseProps) {
   const [items, setItems] = useState<LivePackage[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let active = true;
+
     async function loadPackages() {
       setLoading(true);
-      const { data } = await supabase
+      let query = supabase
         .from('packages')
         .select('id,title,slug,category,duration_minutes,base_price,b2b_price,capacity,image_url,short_description,status,is_featured,display_order')
-        .eq('status', 'active')
+        .eq('status', 'active');
+
+      if (categories?.length) query = query.in('category', categories);
+
+      const { data } = await query
         .order('display_order', { ascending: true })
         .order('capacity', { ascending: true })
         .order('duration_minutes', { ascending: true });
+
+      if (!active) return;
       setItems(((data || []) as LivePackage[]).filter((item) => Number(item.base_price) > 0));
       setLoading(false);
     }
-    loadPackages();
-  }, []);
+
+    void loadPackages();
+    return () => { active = false; };
+  }, [categories?.join('|')]);
 
   const groups = useMemo(() => groupLivePackages(items), [items]);
   const visibleItems = typeof limit === 'number' ? groups.slice(0, limit) : groups;
