@@ -111,12 +111,20 @@ function managerStage(booking: BookingRow) {
   return raw === 'Assigned' ? 'Pending' : raw;
 }
 
+function workflowStage(booking: BookingRow) {
+  const workflow = text(booking.payment_workflow_status, '').toLowerCase();
+  const collection = text(booking.collection_status, '').toLowerCase();
+  if (workflow === 'ride in progress' || collection === 'ride_in_progress') return 'In Progress';
+  return '';
+}
+
 function cardStatus(booking: BookingRow) {
   const status = text(booking.status, 'Confirmed');
   const stage = managerStage(booking);
+  const workflow = workflowStage(booking);
   if (status === 'Completed' || stage === 'Completed') return 'Completed';
   if (status === 'No Show' || stage === 'No Show') return 'No Show';
-  if (stage === 'In Progress') return 'In Progress';
+  if (workflow) return workflow;
   if (stage === 'Checked-In') return 'Checked-In';
   if (status === 'Confirmed') return 'Confirmed';
   return status || 'Confirmed';
@@ -254,9 +262,8 @@ function RideCard({ booking, vehicles, onSaved }: { booking: BookingRow; vehicle
   const [error, setError] = useState('');
   const [completionOpen, setCompletionOpen] = useState(false);
   const vehicleOptions = Array.from(new Set([vehicle, ...vehicles.map((item) => item.name || item.code)].filter(Boolean)));
-  const stage = managerStage(booking);
   const displayStatus = cardStatus(booking);
-  const inProgress = stage === 'In Progress';
+  const inProgress = displayStatus === 'In Progress';
   const completed = displayStatus === 'Completed';
   const noShow = displayStatus === 'No Show';
   const canOperate = !completed && !noShow;
@@ -271,7 +278,8 @@ function RideCard({ booking, vehicles, onSaved }: { booking: BookingRow; vehicle
     try {
       const payload: Record<string, unknown> = {
         assigned_vehicle_name: vehicle,
-        manager_status: 'In Progress',
+        payment_workflow_status: 'Ride In Progress',
+        collection_status: 'ride_in_progress',
         updated_at: new Date().toISOString()
       };
       const query = supabase.from(bookingRequestsTable).update(payload);
@@ -292,6 +300,7 @@ function RideCard({ booking, vehicles, onSaved }: { booking: BookingRow; vehicle
       const payload: Record<string, unknown> = {
         status: 'No Show',
         manager_status: 'No Show',
+        payment_workflow_status: 'No Show',
         updated_at: new Date().toISOString()
       };
       const query = supabase.from(bookingRequestsTable).update(payload);
@@ -314,6 +323,7 @@ function RideCard({ booking, vehicles, onSaved }: { booking: BookingRow; vehicle
       status: 'Completed',
       manager_status: 'Completed',
       payment_method: values.method,
+      payment_workflow_status: values.method === 'B2B Invoice' ? 'B2B Invoice Generated' : 'Payment Collected',
       amount_received_aed: received,
       amount_pending_aed: pending,
       payment_status: values.method === 'B2B Invoice' ? 'Not Paid' : pending <= 0 ? 'Paid' : 'Partial Paid',
@@ -321,10 +331,7 @@ function RideCard({ booking, vehicles, onSaved }: { booking: BookingRow; vehicle
       internal_note: noteParts.join('\n'),
       updated_at: new Date().toISOString()
     };
-    if (values.method === 'B2B Invoice') {
-      payload.payment_source = 'b2b';
-      payload.payment_workflow_status = 'B2B Invoice Generated';
-    }
+    if (values.method === 'B2B Invoice') payload.payment_source = 'b2b';
     const query = supabase.from(bookingRequestsTable).update(payload);
     const result = booking.id ? await query.eq('id', booking.id) : await query.eq('booking_code', bookingCode(booking));
     if (result.error) throw new Error(result.error.message);
@@ -395,7 +402,7 @@ function ManagerAssignedRidesPage({ manager }: { manager: ManagerProfile }) {
   const scopedBookings = useMemo(() => bookings.filter((booking) => isVisibleBooking(booking) && matchesManager(booking, manager)), [bookings, manager]);
   const visible = useMemo(() => {
     const term = query.trim().toLowerCase();
-    return scopedBookings.filter((booking) => !term || [bookingCode(booking), booking.customer_name, booking.customer_phone, packageLabel(booking), booking.assigned_vehicle_name, booking.manager_status].some((value) => String(value || '').toLowerCase().includes(term))).sort(sortSchedule);
+    return scopedBookings.filter((booking) => !term || [bookingCode(booking), booking.customer_name, booking.customer_phone, packageLabel(booking), booking.assigned_vehicle_name, cardStatus(booking)].some((value) => String(value || '').toLowerCase().includes(term))).sort(sortSchedule);
   }, [query, scopedBookings]);
 
   const metrics = useMemo(() => {
