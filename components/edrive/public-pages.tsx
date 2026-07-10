@@ -7,14 +7,12 @@ import {
   Car,
   CheckCircle2,
   Crown,
-  LifeBuoy,
   Mail,
   MapPin,
   MessageCircle,
   Phone,
   ShieldCheck,
   Sparkles,
-  Users,
   Waves
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
