@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
-import { AlertCircle, CheckCircle2, ClipboardCheck, Clock3, CreditCard, RefreshCw, Save, Search, WalletCards, X } from 'lucide-react';
+import { AlertCircle, CalendarDays, CheckCircle2, ClipboardCheck, Clock3, CreditCard, RefreshCw, Save, Search, WalletCards, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -53,8 +53,18 @@ type BookingRow = Record<string, unknown> & {
 type VehicleOption = { name: string; code: string; type: string; status: string };
 type ManagerProfile = { name: string; email: string; role: string; ready: boolean };
 type CompletionValues = { method: 'Cash' | 'Card' | 'B2B Invoice'; amount: number; reference: string; note: string };
+type RideFilter = 'today' | 'tomorrow' | 'upcoming' | 'overdue' | 'completed' | 'no-show' | 'all';
 
 const selectClass = 'h-10 w-full rounded-xl border border-border bg-white px-3 text-sm font-semibold text-foreground shadow-sm outline-none transition focus:border-primary/50 focus:ring-2 focus:ring-primary/10';
+const filterLabels: Record<RideFilter, string> = {
+  today: 'Today',
+  tomorrow: 'Tomorrow',
+  upcoming: 'Upcoming',
+  overdue: 'Overdue',
+  completed: 'Completed',
+  'no-show': 'No Show',
+  all: 'All'
+};
 
 function text(value: unknown, fallback = '-') {
   const clean = String(value ?? '').trim();
@@ -64,6 +74,19 @@ function text(value: unknown, fallback = '-') {
 function numberValue(value: unknown) {
   const numeric = Number(value || 0);
   return Number.isFinite(numeric) ? numeric : 0;
+}
+
+function localDateKey(offsetDays = 0) {
+  const date = new Date();
+  date.setDate(date.getDate() + offsetDays);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function dateKey(value: unknown) {
+  return text(value, '').slice(0, 10);
 }
 
 function dateLabel(value: unknown) {
@@ -155,8 +178,37 @@ function isVisibleBooking(booking: BookingRow) {
   return ['confirmed', 'completed', 'no show'].includes(status);
 }
 
-function sortSchedule(a: BookingRow, b: BookingRow) {
-  return `${text(a.preferred_date, '9999-12-31')} ${text(a.preferred_time, '23:59')}`.localeCompare(`${text(b.preferred_date, '9999-12-31')} ${text(b.preferred_time, '23:59')}`);
+function scheduleSortValue(booking: BookingRow) {
+  const date = dateKey(booking.preferred_date) || '9999-12-31';
+  const time = text(booking.preferred_time, '23:59');
+  return `${date} ${time}`;
+}
+
+function isFutureBooking(booking: BookingRow) {
+  const rideDate = dateKey(booking.preferred_date);
+  return Boolean(rideDate && rideDate > localDateKey());
+}
+
+function canOperateBooking(booking: BookingRow) {
+  const status = cardStatus(booking);
+  if (status === 'Completed' || status === 'No Show') return false;
+  return !isFutureBooking(booking);
+}
+
+function matchesFilter(booking: BookingRow, filter: RideFilter) {
+  const status = cardStatus(booking);
+  const rideDate = dateKey(booking.preferred_date);
+  const today = localDateKey();
+  const tomorrow = localDateKey(1);
+  const active = status !== 'Completed' && status !== 'No Show';
+
+  if (filter === 'today') return active && rideDate === today;
+  if (filter === 'tomorrow') return active && rideDate === tomorrow;
+  if (filter === 'upcoming') return active && Boolean(rideDate) && rideDate > tomorrow;
+  if (filter === 'overdue') return active && Boolean(rideDate) && rideDate < today;
+  if (filter === 'completed') return status === 'Completed';
+  if (filter === 'no-show') return status === 'No Show';
+  return true;
 }
 
 async function loadManagerProfile(): Promise<ManagerProfile> {
@@ -182,7 +234,7 @@ function MetricCard({ title, value, icon: Icon }: { title: string; value: string
     <Card className="rounded-[1.25rem] border-border/80 bg-white shadow-[0_12px_32px_rgba(8,37,50,0.055)]">
       <CardContent className="flex min-w-0 items-center gap-3 p-4">
         <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-primary-50 text-primary"><Icon className="size-5" aria-hidden="true" /></span>
-        <div className="min-w-0"><p className="truncate text-xs font-semibold text-muted-foreground">{title}</p><p className="mt-1 font-heading text-xl font-semibold leading-tight text-foreground sm:text-2xl">{value}</p></div>
+        <div className="min-w-0"><p className="truncate text-xs font-semibold text-muted-foreground">{title}</p><p className="mt-1 break-words font-heading text-xl font-semibold leading-tight text-foreground sm:text-2xl">{value}</p></div>
       </CardContent>
     </Card>
   );
@@ -270,7 +322,8 @@ function RideCard({ booking, vehicles, onSaved }: { booking: BookingRow; vehicle
   const inProgress = displayStatus === 'In Progress';
   const completed = displayStatus === 'Completed';
   const noShow = displayStatus === 'No Show';
-  const canOperate = !completed && !noShow;
+  const actionAllowed = canOperateBooking(booking);
+  const future = isFutureBooking(booking);
 
   async function startRide() {
     if (!vehicle.trim()) {
@@ -354,26 +407,36 @@ function RideCard({ booking, vehicles, onSaved }: { booking: BookingRow; vehicle
           <h3 className="mt-1 break-words font-heading text-base font-semibold text-foreground">{text(booking.customer_name, 'Guest')}</h3>
           <p className="mt-1 text-sm text-muted-foreground">{packageLabel(booking)}</p>
         </div>
-        <div className="flex flex-wrap gap-2 sm:justify-end"><span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-bold ${statusTone(displayStatus)}`}>{displayStatus}</span>{isB2BBooking(booking) ? <Badge variant="secondary">B2B · {text(booking.b2b_agent_name, 'Agent')}</Badge> : <Badge variant="secondary">Direct Sale</Badge>}</div>
+        <div className="flex flex-wrap gap-2 sm:justify-end"><span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-bold ${statusTone(displayStatus)}`}>{displayStatus}</span>{future && actionAllowed ? <Badge variant="secondary">Upcoming</Badge> : null}{isB2BBooking(booking) ? <Badge variant="secondary">B2B · {text(booking.b2b_agent_name, 'Agent')}</Badge> : <Badge variant="secondary">Direct Sale</Badge>}</div>
       </div>
       <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
         <Detail label="Schedule" value={dateLabel(booking.preferred_date)} sub={text(booking.preferred_time, 'Time pending')} />
         <Detail label="Ride" value={rideDetails(booking)} sub={text(booking.customer_phone || booking.customer_email, '')} />
-        <Detail label="Vehicle" value={vehicle || 'Not selected'} sub={inProgress || completed ? 'Assigned vehicle' : 'Select before ride'} />
+        <Detail label="Vehicle" value={vehicle || 'Not selected'} sub={inProgress || completed ? 'Assigned vehicle' : future ? 'Upcoming ride' : 'Select before ride'} />
         <Detail label="Payment" value={formatAed(totalAmount(booking))} sub={paymentSubText(booking)} />
       </div>
       {error ? <p className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-xs font-semibold text-red-700">{error}</p> : null}
       <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
-        <label className="grid gap-1.5 text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">Vehicle<select value={vehicle} onChange={(event) => setVehicle(event.target.value)} disabled={!canOperate || inProgress} className={selectClass}><option value="">Select vehicle</option>{vehicleOptions.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
+        <label className="grid gap-1.5 text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">Vehicle<select value={vehicle} onChange={(event) => setVehicle(event.target.value)} disabled={!actionAllowed || inProgress} className={selectClass}><option value="">Select vehicle</option>{vehicleOptions.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
         <div className="flex flex-col gap-2 sm:flex-row">
-          {canOperate && !inProgress ? <Button type="button" onClick={startRide} disabled={saving} className="rounded-full"><Save className="size-4" aria-hidden="true" />{saving ? 'Starting...' : 'Start Ride'}</Button> : null}
+          {actionAllowed && !inProgress ? <Button type="button" onClick={startRide} disabled={saving} className="rounded-full"><Save className="size-4" aria-hidden="true" />{saving ? 'Starting...' : 'Start Ride'}</Button> : null}
           {inProgress ? <Button type="button" onClick={() => setCompletionOpen(true)} className="rounded-full bg-emerald-600 hover:bg-emerald-700"><CheckCircle2 className="size-4" aria-hidden="true" />Complete Ride</Button> : null}
-          {canOperate ? <Button type="button" variant="outline" onClick={markNoShow} disabled={saving} className="rounded-full border-red-200 bg-red-50 text-red-700 hover:bg-red-100"><AlertCircle className="size-4" aria-hidden="true" />No Show</Button> : null}
+          {actionAllowed ? <Button type="button" variant="outline" onClick={markNoShow} disabled={saving} className="rounded-full border-red-200 bg-red-50 text-red-700 hover:bg-red-100"><AlertCircle className="size-4" aria-hidden="true" />No Show</Button> : null}
+          {!actionAllowed && future ? <Button type="button" disabled variant="outline" className="rounded-full bg-white">Upcoming</Button> : null}
           {completed ? <Button type="button" disabled className="rounded-full bg-emerald-600"><CheckCircle2 className="size-4" aria-hidden="true" />Completed</Button> : null}
           {noShow ? <Button type="button" disabled variant="outline" className="rounded-full border-red-200 bg-red-50 text-red-700"><AlertCircle className="size-4" aria-hidden="true" />No Show</Button> : null}
         </div>
       </div>
       {completionOpen ? <PaymentModal booking={booking} onClose={() => setCompletionOpen(false)} onComplete={completeRide} /> : null}
+    </div>
+  );
+}
+
+function DateGroup({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="grid gap-3">
+      <div className="rounded-2xl border border-primary/15 bg-primary-50 px-4 py-2 text-xs font-bold uppercase tracking-[0.14em] text-primary-900">{label}</div>
+      <div className="grid gap-3 xl:grid-cols-2">{children}</div>
     </div>
   );
 }
@@ -384,6 +447,7 @@ function ManagerAssignedRidesPage({ manager }: { manager: ManagerProfile }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [query, setQuery] = useState('');
+  const [filter, setFilter] = useState<RideFilter>('today');
 
   async function loadData() {
     setLoading(true);
@@ -407,10 +471,32 @@ function ManagerAssignedRidesPage({ manager }: { manager: ManagerProfile }) {
   useEffect(() => { void loadData(); }, []);
 
   const scopedBookings = useMemo(() => bookings.filter((booking) => isVisibleBooking(booking) && matchesManager(booking, manager)), [bookings, manager]);
+  const counts = useMemo(() => ({
+    today: scopedBookings.filter((booking) => matchesFilter(booking, 'today')).length,
+    tomorrow: scopedBookings.filter((booking) => matchesFilter(booking, 'tomorrow')).length,
+    upcoming: scopedBookings.filter((booking) => matchesFilter(booking, 'upcoming')).length,
+    overdue: scopedBookings.filter((booking) => matchesFilter(booking, 'overdue')).length,
+    completed: scopedBookings.filter((booking) => matchesFilter(booking, 'completed')).length,
+    'no-show': scopedBookings.filter((booking) => matchesFilter(booking, 'no-show')).length,
+    all: scopedBookings.length
+  }), [scopedBookings]);
+
   const visible = useMemo(() => {
     const term = query.trim().toLowerCase();
-    return scopedBookings.filter((booking) => !term || [bookingCode(booking), booking.customer_name, booking.customer_phone, packageLabel(booking), booking.assigned_vehicle_name, booking.manager_status, booking.payment_method].some((value) => String(value || '').toLowerCase().includes(term))).sort(sortSchedule);
-  }, [query, scopedBookings]);
+    return scopedBookings
+      .filter((booking) => matchesFilter(booking, filter))
+      .filter((booking) => !term || [bookingCode(booking), booking.customer_name, booking.customer_phone, packageLabel(booking), booking.assigned_vehicle_name, booking.manager_status, booking.payment_method].some((value) => String(value || '').toLowerCase().includes(term)))
+      .sort((a, b) => scheduleSortValue(a).localeCompare(scheduleSortValue(b)));
+  }, [filter, query, scopedBookings]);
+
+  const groups = useMemo(() => {
+    const map = new Map<string, BookingRow[]>();
+    visible.forEach((booking) => {
+      const key = dateKey(booking.preferred_date) || 'No date';
+      map.set(key, [...(map.get(key) || []), booking]);
+    });
+    return Array.from(map.entries()).map(([key, records]) => ({ key, label: key === 'No date' ? 'No date selected' : dateLabel(key), records }));
+  }, [visible]);
 
   const metrics = useMemo(() => {
     const active = scopedBookings.filter((booking) => ['Confirmed', 'Checked-In', 'In Progress'].includes(cardStatus(booking))).length;
@@ -422,13 +508,15 @@ function ManagerAssignedRidesPage({ manager }: { manager: ManagerProfile }) {
     return { active, inProgress, completed, cash, card };
   }, [scopedBookings]);
 
+  const filterList: RideFilter[] = ['today', 'tomorrow', 'upcoming', 'overdue', 'completed', 'no-show', 'all'];
+
   return (
     <section className="w-full overflow-hidden px-4 py-5 sm:px-6 sm:py-7 lg:px-8 xl:px-10">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">My Rides</p>
-          <h1 className="mt-2 font-heading text-2xl font-semibold leading-tight text-foreground sm:text-3xl lg:text-4xl">Assigned confirmed rides</h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">Only confirmed bookings assigned to {manager.name || manager.email} appear here.</p>
+          <h1 className="mt-2 font-heading text-2xl font-semibold leading-tight text-foreground sm:text-3xl lg:text-4xl">Assigned rides by date</h1>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">Default view shows today only. Future rides stay in upcoming tabs until their booking date.</p>
         </div>
         <Button type="button" variant="outline" onClick={loadData} className="w-fit rounded-full bg-white"><RefreshCw className="size-4" aria-hidden="true" />Refresh</Button>
       </div>
@@ -444,13 +532,16 @@ function ManagerAssignedRidesPage({ manager }: { manager: ManagerProfile }) {
 
       <Card className="mt-5 overflow-hidden rounded-[1.5rem] border-border/80 bg-white">
         <CardHeader className="gap-4 border-b border-border/70 bg-[#F7FAFA] px-4 py-4 lg:flex-row lg:items-center lg:justify-between">
-          <div><CardTitle className="font-heading text-lg font-semibold sm:text-xl">My assigned ride list</CardTitle><p className="mt-1 text-xs font-semibold text-muted-foreground">{loading ? 'Loading records...' : `${visible.length} rides`}</p></div>
+          <div><CardTitle className="font-heading text-lg font-semibold sm:text-xl">{filterLabels[filter]} ride list</CardTitle><p className="mt-1 text-xs font-semibold text-muted-foreground">{loading ? 'Loading records...' : `${visible.length} rides`}</p></div>
           <div className="relative w-full lg:max-w-sm"><Search className="pointer-events-none absolute left-3 top-3 size-4 text-muted-foreground" aria-hidden="true" /><Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search customer, ride, vehicle..." className="h-10 rounded-full bg-white pl-9" /></div>
         </CardHeader>
-        <CardContent className="grid gap-3 p-4 xl:grid-cols-2">
+        <div className="flex gap-2 overflow-x-auto border-b border-border/70 bg-white px-4 py-3">
+          {filterList.map((item) => <button key={item} type="button" onClick={() => setFilter(item)} className={`whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-bold transition ${filter === item ? 'border-primary bg-primary text-white' : 'border-border bg-white text-muted-foreground hover:border-primary/40 hover:text-primary-900'}`}>{filterLabels[item]} <span className={filter === item ? 'text-white/75' : 'text-muted-foreground'}>{counts[item]}</span></button>)}
+        </div>
+        <CardContent className="grid gap-5 p-4">
           {loading ? <div className="rounded-2xl border border-dashed border-border bg-[#F7FAFA] p-8 text-center text-sm font-semibold text-muted-foreground">Loading assigned rides...</div> : null}
-          {!loading && visible.length === 0 ? <div className="rounded-2xl border border-dashed border-border bg-[#F7FAFA] p-8 text-center"><p className="font-heading text-lg font-semibold text-foreground">No assigned confirmed rides</p><p className="mt-2 text-sm text-muted-foreground">Confirmed booking assign hogi to yahan show hogi.</p></div> : null}
-          {visible.map((booking, index) => <RideCard key={String(booking.id || `${bookingCode(booking)}-${index}`)} booking={booking} vehicles={vehicles} onSaved={loadData} />)}
+          {!loading && visible.length === 0 ? <div className="rounded-2xl border border-dashed border-border bg-[#F7FAFA] p-8 text-center"><p className="font-heading text-lg font-semibold text-foreground">No rides in {filterLabels[filter]}</p><p className="mt-2 text-sm text-muted-foreground">Booking date ke hisab se rides yahan show hongi.</p></div> : null}
+          {groups.map((group) => <DateGroup key={group.key} label={group.label}>{group.records.map((booking, index) => <RideCard key={String(booking.id || `${bookingCode(booking)}-${index}`)} booking={booking} vehicles={vehicles} onSaved={loadData} />)}</DateGroup>)}
         </CardContent>
       </Card>
     </section>
