@@ -1,5 +1,10 @@
-import { AdminMaintenancePage } from '@/components/edrive/admin-pages';
+import type { Metadata } from 'next';
+import { AdminMaintenanceLivePage } from '@/components/edrive/admin-business-modules';
+
+export const metadata: Metadata = {
+  title: 'Maintenance'
+};
 
 export default function Page() {
-  return <AdminMaintenancePage />;
+  return <AdminMaintenanceLivePage />;
 }
