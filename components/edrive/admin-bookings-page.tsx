@@ -152,10 +152,10 @@ function adminStatusForBookingStatus(status: string, fallback: string | null | u
   return fallback || 'New';
 }
 
-function managerStatusForBookingStatus(status: string, managerName: string, fallback: string | null | undefined) {
+function managerStatusForBookingStatus(status: string, fallback: string | null | undefined) {
   if (status === 'Cancelled') return 'Cancelled';
-  if (status === 'Confirmed' && managerName) return 'Assigned';
-  return fallback || 'Pending';
+  if (status === 'Confirmed') return fallback && fallback !== 'Assigned' ? fallback : 'Pending';
+  return fallback && fallback !== 'Assigned' ? fallback : 'Pending';
 }
 
 export function AdminBookingsLivePage() {
@@ -199,7 +199,7 @@ export function AdminBookingsLivePage() {
     const payload: Record<string, unknown> = {
       status: values.status,
       admin_status: adminStatusForBookingStatus(values.status, booking.admin_status),
-      manager_status: managerStatusForBookingStatus(values.status, assignedManagerName, booking.manager_status),
+      manager_status: managerStatusForBookingStatus(values.status, booking.manager_status),
       assigned_manager_name: assignedManagerName || null,
       internal_note: values.internalNote.trim() || null,
       updated_at: now
@@ -400,28 +400,35 @@ function ManageBookingModal({ booking, managers, onClose, onSave }: { booking: B
                 <InfoLine label="Email" value={booking.customer_email || '-'} />
                 <InfoLine label="Package" value={packageLabel(booking)} />
                 <InfoLine label="Date / Time" value={`${niceDate(booking.preferred_date)} · ${booking.preferred_time || '-'}`} />
-                <InfoLine label="Party" value={`${booking.vehicle_quantity || 1} vehicle · ${booking.guest_count || '-'} guests`} />
-                <InfoLine label="Assigned Manager" value={values.assignedManagerName || 'Not assigned'} />
+                <InfoLine label="Party" value={`${booking.vehicle_quantity || 1} vehicle · ${booking.guest_count || booking.selected_package_capacity || 1} guests`} />
+                <InfoLine label="Assigned Manager" value={booking.assigned_manager_name || 'Not assigned'} />
                 <InfoLine label="Assigned Vehicle" value={booking.assigned_vehicle_name || 'Not assigned'} />
+                <InfoLine label="Customer / Agent Note" value={booking.customer_notes || 'No note added.'} />
               </div>
-              <ReadOnlyNote label="Customer / Agent Note" value={booking.customer_notes || ''} />
             </div>
 
-            <div className="grid gap-2.5 rounded-[1.15rem] border border-border bg-[#F7FAFA] p-3.5">
-              <div className="grid gap-2.5 md:grid-cols-2">
-                <SelectField label="Booking Status" value={values.status} options={bookingStatusOptions} onChange={(status) => setValues((current) => ({ ...current, status }))} />
-                <ManagerSelectField value={values.assignedManagerName} options={managerOptions} onChange={(assignedManagerName) => setValues((current) => ({ ...current, assignedManagerName }))} />
-                <BookingTypeAmountField typeLabel={sourceLabel} amount={formatAed(total)} />
+            <div className="rounded-[1.15rem] border border-border bg-[#F8FBFB] p-4">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="grid gap-1.5 text-sm font-semibold text-foreground">Booking Status<select value={values.status} onChange={(event) => setValues((current) => ({ ...current, status: event.target.value }))} className="h-11 rounded-xl border border-border bg-white px-3 text-sm font-semibold outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10">{bookingStatusOptions.map((status) => <option key={status}>{status}</option>)}</select></label>
+                <label className="grid gap-1.5 text-sm font-semibold text-foreground">Assigned Manager<select value={values.assignedManagerName} onChange={(event) => setValues((current) => ({ ...current, assignedManagerName: event.target.value }))} className="h-11 rounded-xl border border-border bg-white px-3 text-sm font-semibold outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10"><option value="">Select manager</option>{managerOptions.map((manager) => <option key={manager} value={manager}>{manager}</option>)}</select></label>
+                <div className="sm:col-span-2">
+                  <p className="mb-2 text-sm font-semibold text-foreground">Booking Type / Amount</p>
+                  <div className="grid grid-cols-2 gap-2 rounded-2xl border border-border bg-white p-2">
+                    <div className="rounded-xl bg-[#F7FAFA] px-3 py-3"><p className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">Type</p><p className="mt-2 text-sm font-bold text-foreground">{sourceLabel}</p></div>
+                    <div className="rounded-xl bg-primary-50 px-3 py-3"><p className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary">Amount</p><p className="mt-2 text-sm font-bold text-foreground">{formatAed(total)}</p></div>
+                  </div>
+                </div>
               </div>
-              <TextAreaField label="Internal Note" value={values.internalNote} onChange={(internalNote) => setValues((current) => ({ ...current, internalNote }))} />
-              {values.status === 'Confirmed' && !values.assignedManagerName ? <p className="rounded-xl bg-amber-50 px-3 py-2 text-xs font-semibold leading-5 text-amber-700">Confirmed booking manager dashboard par tab jayegi jab manager select hoga.</p> : null}
+              <label className="mt-4 grid gap-1.5 text-sm font-semibold text-foreground">Internal Note<textarea value={values.internalNote} onChange={(event) => setValues((current) => ({ ...current, internalNote: event.target.value }))} className="min-h-32 rounded-xl border border-border bg-white p-3 text-sm outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10" /></label>
             </div>
           </div>
         </div>
-
-        <div className="flex flex-col gap-3 border-t border-border/70 bg-white px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
-          <div className="rounded-xl border border-primary/15 bg-primary-50/80 px-3 py-2 text-xs text-primary-900"><span className="font-bold">Total:</span> {formatAed(total)} <span className="mx-2 text-muted-foreground">·</span> <span className="font-bold">Type:</span> {sourceLabel}</div>
-          <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">{whatsapp ? <Button asChild className="rounded-full border-[#25D366] bg-[#25D366] text-white hover:bg-[#1EBE5D] hover:text-white"><a href={whatsapp} target="_blank" rel="noopener noreferrer"><MessageCircle data-icon aria-hidden="true" />WhatsApp Customer</a></Button> : null}<Button type="button" onClick={submit} disabled={saving} className="rounded-full"><Save data-icon aria-hidden="true" />{saving ? 'Saving...' : 'Save Changes'}</Button></div>
+        <div className="flex flex-col gap-3 border-t border-border/70 bg-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-wrap gap-2 rounded-xl border border-primary/15 bg-primary-50 px-3 py-2 text-xs font-semibold text-foreground"><span>Total: {formatAed(total)}</span><span>·</span><span>Type: {sourceLabel}</span></div>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            {whatsapp ? <Button asChild className="rounded-full bg-[#25D366] text-white hover:bg-[#1FB85A]"><a href={whatsapp} target="_blank" rel="noreferrer"><MessageCircle className="size-4" aria-hidden="true" />WhatsApp Customer</a></Button> : null}
+            <Button type="button" onClick={submit} disabled={saving} className="rounded-full"><Save className="size-4" aria-hidden="true" />{saving ? 'Saving...' : 'Save Changes'}</Button>
+          </div>
         </div>
       </div>
     </div>
@@ -429,25 +436,5 @@ function ManageBookingModal({ booking, managers, onClose, onSave }: { booking: B
 }
 
 function InfoLine({ label, value }: { label: string; value: string }) {
-  return <div className="grid gap-1 rounded-xl border border-border/60 bg-[#F7FAFA] px-3 py-2 sm:grid-cols-[9rem_1fr]"><p className="whitespace-nowrap text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground">{label}</p><p className="text-sm font-semibold leading-5 text-foreground sm:text-right">{value}</p></div>;
-}
-
-function ReadOnlyNote({ label, value }: { label: string; value: string }) {
-  return <div className="mt-3 rounded-xl border border-border/70 bg-[#F7FAFA] px-3 py-2"><p className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">{label}</p><p className="mt-1 whitespace-pre-wrap text-sm font-semibold leading-5 text-foreground">{value || 'No note added.'}</p></div>;
-}
-
-function SelectField({ label, value, options, onChange }: { label: string; value: string; options: string[]; onChange: (value: string) => void }) {
-  return <label className="grid gap-1.5 text-sm font-semibold text-foreground">{label}<select value={value} onChange={(event) => onChange(event.target.value)} className="h-10 rounded-xl border border-border bg-white px-3 text-sm text-foreground outline-none focus:border-primary">{options.map((option) => <option key={option} value={option}>{option ? prettyKey(option) : 'None'}</option>)}</select></label>;
-}
-
-function ManagerSelectField({ value, options, onChange }: { value: string; options: string[]; onChange: (value: string) => void }) {
-  return <label className="grid gap-1.5 text-sm font-semibold text-foreground">Assigned Manager<select value={value} onChange={(event) => onChange(event.target.value)} className="h-10 rounded-xl border border-border bg-white px-3 text-sm text-foreground outline-none focus:border-primary"><option value="">Select manager</option>{options.map((option) => <option key={option} value={option}>{option}</option>)}</select></label>;
-}
-
-function BookingTypeAmountField({ typeLabel, amount }: { typeLabel: string; amount: string }) {
-  return <div className="grid gap-1.5 text-sm font-semibold text-foreground md:col-span-2"><span>Booking Type / Amount</span><div className="grid gap-2 rounded-xl border border-border bg-white p-2 sm:grid-cols-2"><div className="rounded-lg bg-[#F7FAFA] px-3 py-2"><p className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">Type</p><p className="mt-1 text-sm font-bold text-foreground">{typeLabel}</p></div><div className="rounded-lg bg-primary-50 px-3 py-2"><p className="text-[10px] font-bold uppercase tracking-[0.12em] text-primary">Amount</p><p className="mt-1 text-sm font-bold text-primary-900">{amount}</p></div></div></div>;
-}
-
-function TextAreaField({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
-  return <label className="grid gap-1.5 text-sm font-semibold text-foreground">{label}<textarea value={value} onChange={(event) => onChange(event.target.value)} rows={4} className="rounded-xl border border-border bg-white px-3 py-2 text-sm text-foreground outline-none focus:border-primary" /></label>;
+  return <div className="flex items-center justify-between gap-3 rounded-xl border border-primary-900/55 bg-[#F7FAFA] px-3 py-2"><span className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">{label}</span><span className="text-right text-sm font-bold text-foreground">{value}</span></div>;
 }
