@@ -26,6 +26,8 @@ type LivePackage = {
   display_order: number;
 };
 
+type PackageCardItem = LivePackage & { display_image_url: string };
+
 type LivePackageShowcaseProps = {
   title?: string;
   text?: string;
@@ -46,19 +48,25 @@ function categoryLabel(value: string) {
 }
 
 function serviceLabel(value: string) {
-  if (value === 'jet_car_rental') return 'Jet Car Rental';
-  if (value === 'jet_ski_rental') return 'Jet Ski Rental';
-  if (value === 'yacht_rental') return 'Yacht Rental';
-  return 'Water Sports Package';
+  if (value === 'jet_car_rental') return 'jet car ride';
+  if (value === 'jet_ski_rental') return 'jet ski ride';
+  if (value === 'yacht_rental') return 'yacht experience';
+  return 'water sports experience';
 }
 
 function defaultDescription(item: LivePackage) {
-  return `${serviceLabel(item.category)} for ${item.duration_minutes} minutes. Price and details are managed from the live package dashboard.`;
+  return `Enjoy a ${item.duration_minutes} minute ${serviceLabel(item.category)} with clear timing, guest support, and booking confirmation.`;
 }
 
-function imageForLivePackage(item: LivePackage, index = 0) {
-  const seed = Number(item.display_order || index || 0) + Number(item.duration_minutes || 0) + Number(item.capacity || 0);
-  return item.image_url || getLivePackageImage(item.category, seed);
+function fallbackImageForPackage(item: LivePackage, index = 0) {
+  const categoryOffset = item.category === 'jet_car_rental' ? 7 : 3;
+  const seed = index * 5 + Number(item.duration_minutes || 0) + Number(item.capacity || 0) * categoryOffset + Number(item.display_order || 0);
+  return getLivePackageImage(item.category, seed);
+}
+
+function imageForLivePackage(item: LivePackage, index = 0, repeatedImage = false) {
+  if (item.image_url && !repeatedImage) return item.image_url;
+  return fallbackImageForPackage(item, index);
 }
 
 function sortedPackages(items: LivePackage[]) {
@@ -72,7 +80,17 @@ function sortedPackages(items: LivePackage[]) {
   });
 }
 
-export function LivePackageShowcase({ title = 'Live Booking Packages', text = '', limit, compact = false, categories }: LivePackageShowcaseProps) {
+function withDisplayImages(items: LivePackage[]) {
+  const usedImages = new Map<string, number>();
+  return items.map((item, index) => {
+    const rawImage = String(item.image_url || '').trim();
+    const repeatedImage = rawImage ? (usedImages.get(rawImage) || 0) > 0 : false;
+    if (rawImage) usedImages.set(rawImage, (usedImages.get(rawImage) || 0) + 1);
+    return { ...item, display_image_url: imageForLivePackage(item, index, repeatedImage) };
+  });
+}
+
+export function LivePackageShowcase({ title = 'Ride Packages', text = '', limit, compact = false, categories }: LivePackageShowcaseProps) {
   const [items, setItems] = useState<LivePackage[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -103,7 +121,7 @@ export function LivePackageShowcase({ title = 'Live Booking Packages', text = ''
     return () => { active = false; };
   }, [categories?.join('|')]);
 
-  const visibleItems = useMemo(() => sortedPackages(items), [items]);
+  const visibleItems = useMemo(() => withDisplayImages(sortedPackages(items)), [items]);
 
   if (!loading && !visibleItems.length) return null;
 
@@ -114,7 +132,7 @@ export function LivePackageShowcase({ title = 'Live Booking Packages', text = ''
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <div className="mb-2 flex flex-wrap items-center gap-2">
-                <Badge className="rounded-full bg-primary px-2.5 py-1 text-[10px] text-white">Live prices</Badge>
+                <Badge className="rounded-full bg-primary px-2.5 py-1 text-[10px] text-white">Current prices</Badge>
                 <Badge className="rounded-full bg-white px-2.5 py-1 text-[10px] text-primary-900" variant="secondary">{loading ? 'Loading packages' : `${visibleItems.length} packages`}</Badge>
               </div>
               <h2 className="section-title">{title}</h2>
@@ -133,9 +151,9 @@ export function LivePackageShowcase({ title = 'Live Booking Packages', text = ''
   );
 }
 
-function LivePackageCard({ item, index }: { item: LivePackage; index: number }) {
+function LivePackageCard({ item }: { item: PackageCardItem; index: number }) {
   const [imageFailed, setImageFailed] = useState(false);
-  const imageSrc = imageForLivePackage(item, index);
+  const imageSrc = item.display_image_url;
   const bookingHref = `/booking?category=${encodeURIComponent(item.category)}&capacity=${encodeURIComponent(String(item.capacity || 2))}&duration=${encodeURIComponent(String(item.duration_minutes || 0))}`;
   const description = item.short_description || defaultDescription(item);
   const whatsappMessage = encodeURIComponent(`Hello eDrive, I am interested in this package: ${item.title}
@@ -171,7 +189,7 @@ Please confirm availability and the best timing.`);
             <span className="rounded-full bg-white px-2 py-0.5 text-[9px] font-bold text-primary-900">{item.duration_minutes} min</span>
           </div>
           <p className="flex items-center gap-1.5 text-[10.5px] text-muted-foreground"><Users className="size-3 text-primary" aria-hidden="true" />{item.capacity} seater</p>
-          <p className="flex items-center gap-1.5 text-[10.5px] text-muted-foreground"><Clock className="size-3 text-primary" aria-hidden="true" />Live price from backend</p>
+          <p className="flex items-center gap-1.5 text-[10.5px] text-muted-foreground"><Clock className="size-3 text-primary" aria-hidden="true" />Includes ride time and support</p>
         </div>
         <p className="mt-2 overflow-hidden text-[12px] leading-5 text-muted-foreground [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]">{description}</p>
         <div className="mt-auto grid gap-1.5 pt-3">
