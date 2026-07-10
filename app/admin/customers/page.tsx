@@ -1,10 +1,10 @@
 import type { Metadata } from 'next';
-import { AdminCustomersLivePage } from '@/components/edrive/admin-business-modules';
+import { AdminCustomersPage } from '@/components/edrive/admin-customers-page';
 
 export const metadata: Metadata = {
   title: 'Customers'
 };
 
 export default function Page() {
-  return <AdminCustomersLivePage />;
+  return <AdminCustomersPage />;
 }
