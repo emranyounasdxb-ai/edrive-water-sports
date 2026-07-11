@@ -3,8 +3,30 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import type { LucideIcon } from 'lucide-react';
-import { BadgePercent, BarChart3, Bell, CalendarDays, ChevronLeft, ChevronRight, ClipboardCheck, CreditCard, Home, LayoutDashboard, LogOut, Menu, MessageSquare, Package, Search, Settings, Ship, User, UserCog, UsersRound, X } from 'lucide-react';
-import { useEffect, useState, type ReactNode } from 'react';
+import {
+  BadgePercent,
+  BarChart3,
+  Bell,
+  CalendarDays,
+  ChevronLeft,
+  ChevronRight,
+  ClipboardCheck,
+  CreditCard,
+  Home,
+  LayoutDashboard,
+  LogOut,
+  Menu,
+  MessageSquare,
+  Package,
+  Search,
+  Settings,
+  Ship,
+  User,
+  UserCog,
+  UsersRound,
+  X
+} from 'lucide-react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { adminNavItems, managerNavItems } from '@/lib/mock-data';
@@ -14,8 +36,22 @@ import { LiveWeatherPill } from './admin/live-weather-pill';
 import { OperationsProvider } from './admin/operations-store';
 import { BrandMark } from './brand';
 
-const iconMap = { LayoutDashboard, CalendarDays, ClipboardCheck, CreditCard, Ship, Package, BadgePercent, BarChart3, UserCog, UsersRound, MessageSquare, Settings };
+const iconMap = {
+  LayoutDashboard,
+  CalendarDays,
+  ClipboardCheck,
+  CreditCard,
+  Ship,
+  Package,
+  BadgePercent,
+  BarChart3,
+  UserCog,
+  UsersRound,
+  MessageSquare,
+  Settings
+};
 
+type NavItem = { href: string; label: string; icon: string };
 type PortalUser = { name: string; email: string; role: string; roleLabel: string; avatarUrl: string };
 type AdminProfile = { full_name: string | null; email: string | null; role: string | null; status: string | null; avatar_url: string | null };
 
@@ -33,18 +69,39 @@ function isActiveStatus(status: string | null | undefined) {
 }
 
 function isManagerPathAllowed(pathname: string) {
-  return ['/admin/manager', '/admin/my-rides', '/admin/operations-schedule', '/admin/payments', '/admin/vehicles', '/admin/maintenance'].some((path) => pathname === path || pathname.startsWith(`${path}/`));
+  return ['/admin/manager', '/admin/my-rides', '/admin/operations-schedule', '/admin/payments'].some((path) => pathname === path || pathname.startsWith(`${path}/`));
 }
 
 function roleLabel(role: string) {
-  const labels: Record<string, string> = { super_admin: 'Super Admin', admin: 'Admin', booking_staff: 'Booking Staff', manager: 'Manager', finance: 'Finance', maintenance_staff: 'Maintenance Staff' };
+  const labels: Record<string, string> = {
+    super_admin: 'Super Admin',
+    admin: 'Admin',
+    booking_staff: 'Booking Staff',
+    manager: 'Manager',
+    finance: 'Finance',
+    maintenance_staff: 'Maintenance Staff'
+  };
   return labels[role] ?? 'Admin';
+}
+
+function bottomLabel(label: string) {
+  const map: Record<string, string> = {
+    'Today Overview': 'Today',
+    'Ride Schedule': 'Schedule'
+  };
+  return map[label] || label;
 }
 
 function ProfileAvatar({ src, size = 'md' }: { src?: string; size?: 'sm' | 'md' | 'lg' }) {
   const className = size === 'lg' ? 'size-14' : size === 'sm' ? 'size-8' : 'size-10';
   const iconSize = size === 'lg' ? 'size-6' : 'size-5';
-  return src ? <img src={src} alt="Profile" className={`${className} rounded-full border-2 border-white object-cover shadow-sm`} /> : <div className={`flex ${className} items-center justify-center rounded-full bg-[#F0E6D7] text-primary shadow-sm`}><User className={iconSize} aria-hidden="true" /></div>;
+  return src ? (
+    <img src={src} alt="Profile" className={`${className} rounded-full border-2 border-white object-cover shadow-sm`} />
+  ) : (
+    <div className={`flex ${className} items-center justify-center rounded-full bg-[#F0E6D7] text-primary shadow-sm`}>
+      <User className={iconSize} aria-hidden="true" />
+    </div>
+  );
 }
 
 export function AdminShell({ children }: { children: ReactNode }) {
@@ -99,20 +156,20 @@ export function AdminShell({ children }: { children: ReactNode }) {
         return;
       }
 
-      const nextUser = {
+      setUser({
         name: profile.full_name || authEmail || 'Admin',
         email: profile.email || authEmail || '',
         role: profile.role || 'admin',
         roleLabel: roleLabel(profile.role || 'admin'),
         avatarUrl: profile.avatar_url || ''
-      };
-
-      setUser(nextUser);
+      });
       setReady(true);
     }
 
     void loadUser();
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [isLoginPage, router]);
 
   useEffect(() => {
@@ -121,6 +178,12 @@ export function AdminShell({ children }: { children: ReactNode }) {
       router.replace('/admin/manager');
     }
   }, [currentPath, isLoginPage, ready, router, user]);
+
+  const navItems = useMemo(() => (user && isManagerRole(user.role) ? managerNavItems : adminNavItems) as NavItem[], [user]);
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    router.replace('/admin/login');
+  };
 
   if (isLoginPage) return <>{children}</>;
   if (!ready) return <div className="flex min-h-screen items-center justify-center bg-[#F4F7F8] text-sm font-semibold text-muted-foreground">Loading portal...</div>;
@@ -135,15 +198,12 @@ export function AdminShell({ children }: { children: ReactNode }) {
           <p className="mt-3 rounded-2xl bg-primary-50 p-3 text-xs font-semibold text-primary-900">Please check Supabase admin_users profile status and SELECT policy for authenticated users.</p>
           <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-center">
             <Button asChild variant="outline" className="rounded-full"><Link href="/admin/login">Back to login</Link></Button>
-            <Button type="button" className="rounded-full" onClick={async () => { await supabase.auth.signOut(); router.replace('/admin/login'); }}>Sign out</Button>
+            <Button type="button" className="rounded-full" onClick={handleLogout}>Sign out</Button>
           </div>
         </div>
       </div>
     );
   }
-
-  const navItems = isManagerRole(user.role) ? managerNavItems : adminNavItems;
-  const handleLogout = async () => { await supabase.auth.signOut(); router.replace('/admin/login'); };
 
   return (
     <OperationsProvider>
@@ -182,11 +242,20 @@ export function AdminShell({ children }: { children: ReactNode }) {
           </aside>
 
           <div className="min-w-0 flex-1">
-            <header className="sticky top-3 z-40 mx-4 rounded-[1.2rem] bg-white/88 shadow-[inset_0_1px_0_rgba(255,255,255,0.95),inset_0_-10px_24px_rgba(8,37,50,0.025),0_12px_28px_rgba(8,37,50,0.07)] ring-1 ring-white/80 backdrop-blur-xl">
-              <div className="flex h-[56px] items-center gap-3 px-3 sm:px-5 lg:px-6">
+            <header className="sticky top-2 z-40 mx-2 rounded-[1.15rem] bg-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.95),0_10px_24px_rgba(8,37,50,0.06)] ring-1 ring-white/80 backdrop-blur-xl sm:top-3 sm:mx-4">
+              <div className="flex h-[54px] items-center gap-2 px-2.5 sm:h-[56px] sm:px-5 lg:px-6">
+                <Button variant="outline" size="icon" className="size-10 rounded-2xl bg-white lg:hidden" onClick={() => setOpen((value) => !value)} aria-label="Toggle admin navigation">
+                  {open ? <X data-icon aria-hidden="true" /> : <Menu data-icon aria-hidden="true" />}
+                </Button>
+
                 <div className="flex min-w-0 items-center gap-2">
-                  <Button variant="outline" size="icon" className="lg:hidden" onClick={() => setOpen((value) => !value)} aria-label="Toggle admin navigation">{open ? <X data-icon aria-hidden="true" /> : <Menu data-icon aria-hidden="true" />}</Button>
-                  <div className="hidden items-center gap-2 rounded-full bg-[#F4F7F8] px-3 py-1.5 text-xs font-semibold text-muted-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_6px_16px_rgba(8,37,50,0.045)] sm:flex"><Home className="size-4 text-primary" aria-hidden="true" />{isManagerRole(user.role) ? 'Manager Operations' : 'Admin Operations'}</div>
+                  <div className="hidden items-center gap-2 rounded-full bg-[#F4F7F8] px-3 py-1.5 text-xs font-semibold text-muted-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_6px_16px_rgba(8,37,50,0.045)] sm:flex">
+                    <Home className="size-4 text-primary" aria-hidden="true" />{isManagerRole(user.role) ? 'Manager Operations' : 'Admin Operations'}
+                  </div>
+                  <div className="min-w-0 sm:hidden">
+                    <p className="truncate text-xs font-bold text-primary">{isManagerRole(user.role) ? 'Manager' : 'Admin'}</p>
+                    <p className="truncate text-[11px] font-semibold text-muted-foreground">{user.name}</p>
+                  </div>
                 </div>
 
                 <div className="hidden h-9 w-full max-w-[32rem] items-center gap-2 rounded-2xl border border-white/80 bg-white/92 px-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.95),0_8px_20px_rgba(8,37,50,0.045)] md:flex">
@@ -195,27 +264,78 @@ export function AdminShell({ children }: { children: ReactNode }) {
                   <span className="rounded-lg border border-border px-2 py-0.5 text-xs text-muted-foreground">/</span>
                 </div>
 
-                <div className="ml-auto flex shrink-0 items-center gap-2">
-                  <LiveWeatherPill />
-                  <IconButtonWithBadge icon={Bell} count="0" />
-                  <IconButtonWithBadge icon={MessageSquare} count="0" />
-                  <Button asChild size="sm" className="rounded-full px-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_8px_18px_rgba(8,37,50,0.18)]"><Link href="/" prefetch>View Site</Link></Button>
+                <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
+                  <div className="hidden sm:block"><LiveWeatherPill /></div>
+                  <div className="hidden sm:flex sm:gap-2">
+                    <IconButtonWithBadge icon={Bell} count="0" />
+                    <IconButtonWithBadge icon={MessageSquare} count="0" />
+                  </div>
+                  <Button asChild size="sm" className="hidden rounded-full px-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_8px_18px_rgba(8,37,50,0.18)] sm:inline-flex"><Link href="/" prefetch>View Site</Link></Button>
+                  <button type="button" onClick={handleLogout} className="flex size-10 items-center justify-center rounded-2xl border border-border bg-white text-muted-foreground shadow-sm sm:hidden" aria-label="Logout"><LogOut className="size-4" aria-hidden="true" /></button>
                 </div>
               </div>
-              {open ? <div className="rounded-b-[1.5rem] bg-white p-4 lg:hidden"><AdminNav currentPath={currentPath} navItems={navItems} onNavigate={() => setOpen(false)} /><Button type="button" variant="outline" className="mt-4 w-full" onClick={handleLogout}><LogOut className="size-4" aria-hidden="true" />Logout</Button></div> : null}
+
+              {open ? (
+                <div className="rounded-b-[1.5rem] bg-white p-3 lg:hidden">
+                  <AdminNav currentPath={currentPath} navItems={navItems} onNavigate={() => setOpen(false)} />
+                  <Button type="button" variant="outline" className="mt-3 w-full rounded-2xl" onClick={handleLogout}><LogOut className="size-4" aria-hidden="true" />Logout</Button>
+                </div>
+              ) : null}
             </header>
-            <main className="px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</main>
+
+            <main className="px-2 pb-28 pt-3 sm:px-4 sm:pb-28 sm:pt-5 lg:px-8 lg:pb-8 lg:pt-8">{children}</main>
           </div>
         </div>
+
+        <MobileBottomNav currentPath={currentPath} navItems={navItems} />
       </div>
     </OperationsProvider>
   );
 }
 
-function IconButtonWithBadge({ icon: Icon, count }: { icon: LucideIcon; count: string }) {
-  return <button className="relative flex size-9 items-center justify-center rounded-full bg-white text-muted-foreground shadow-[0_8px_18px_rgba(8,37,50,0.06),inset_0_1px_0_rgba(255,255,255,0.9)] transition hover:text-primary" type="button"><Icon className="size-4" aria-hidden="true" /><span className="absolute -right-0.5 -top-0.5 flex size-4 items-center justify-center rounded-full bg-primary text-[9px] font-bold text-white">{count}</span></button>;
+function IconButtonWithBadge({ icon: Icon, count }: { icon: LucideIcon; count?: string }) {
+  return (
+    <button type="button" className="relative flex size-9 items-center justify-center rounded-full bg-white text-muted-foreground shadow-sm ring-1 ring-border/70 transition hover:text-primary">
+      <Icon className="size-4" aria-hidden="true" />
+      {count ? <span className="absolute -right-1 -top-1 flex size-4 items-center justify-center rounded-full bg-primary text-[9px] font-bold text-white">{count}</span> : null}
+    </button>
+  );
 }
 
-function AdminNav({ currentPath, navItems, onNavigate, collapsed = false }: { currentPath: string; navItems: typeof adminNavItems; onNavigate?: () => void; collapsed?: boolean }) {
-  return <nav className={cn('flex flex-col', collapsed ? 'gap-0.5' : 'gap-0.5')}>{navItems.map((item) => { const Icon = iconMap[item.icon as keyof typeof iconMap] ?? LayoutDashboard; const active = currentPath === normalizePath(item.href.split('?')[0]); return <Link key={item.href} href={item.href} prefetch onClick={onNavigate} title={collapsed ? item.label : undefined} className={cn('flex items-center rounded-xl text-sm font-semibold text-muted-foreground transition hover:bg-primary-50 hover:text-primary-900', collapsed ? 'justify-center px-2 py-1.5' : 'gap-2.5 px-2.5 py-1.5', active && 'bg-primary-100 text-primary-900 shadow-[0px_-3px_0px_0px_rgba(14,124,134,0.08)_inset,0px_2px_0px_0px_rgba(255,255,255,0.65)_inset,0px_8px_18px_rgba(8,37,50,0.07)]')}><span className={cn('flex size-7 shrink-0 items-center justify-center rounded-lg bg-white text-muted-foreground shadow-sm', active && 'bg-[#DDF4F6] text-primary')}><Icon className="size-3.5" aria-hidden="true" /></span>{!collapsed ? <span className="truncate">{item.label}</span> : null}</Link>; })}</nav>;
+function AdminNav({ currentPath, navItems, onNavigate, collapsed = false }: { currentPath: string; navItems: NavItem[]; onNavigate?: () => void; collapsed?: boolean }) {
+  return (
+    <nav className={cn('flex flex-col', collapsed ? 'gap-0.5' : 'gap-0.5')}>
+      {navItems.map((item) => {
+        const Icon = iconMap[item.icon as keyof typeof iconMap] ?? LayoutDashboard;
+        const itemPath = normalizePath(item.href.split('?')[0]);
+        const active = currentPath === itemPath;
+        return (
+          <Link key={item.href} href={item.href} prefetch onClick={onNavigate} title={collapsed ? item.label : undefined} className={cn('flex items-center rounded-xl text-sm font-semibold text-muted-foreground transition hover:bg-primary-50 hover:text-primary-900', collapsed ? 'justify-center px-2 py-1.5' : 'gap-2.5 px-2.5 py-1.5', active && 'bg-primary-100 text-primary-900 shadow-[0px_-3px_0px_0px_rgba(14,124,134,0.08)_inset,0px_2px_0px_0px_rgba(255,255,255,0.65)_inset,0px_8px_18px_rgba(8,37,50,0.07)]')}>
+            <span className={cn('flex size-7 shrink-0 items-center justify-center rounded-lg bg-white text-muted-foreground shadow-sm', active && 'bg-[#DDF4F6] text-primary')}><Icon className="size-3.5" aria-hidden="true" /></span>
+            {!collapsed ? <span className="truncate">{item.label}</span> : null}
+          </Link>
+        );
+      })}
+    </nav>
+  );
+}
+
+function MobileBottomNav({ currentPath, navItems }: { currentPath: string; navItems: NavItem[] }) {
+  return (
+    <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-white/70 bg-white/92 px-2 pb-[calc(env(safe-area-inset-bottom)+0.45rem)] pt-2 shadow-[0_-16px_38px_rgba(8,37,50,0.12)] backdrop-blur-xl lg:hidden">
+      <div className="mx-auto flex max-w-xl items-center justify-around gap-1 rounded-[1.4rem] bg-[#F4F7F8] p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.95)]">
+        {navItems.map((item) => {
+          const Icon = iconMap[item.icon as keyof typeof iconMap] ?? LayoutDashboard;
+          const itemPath = normalizePath(item.href.split('?')[0]);
+          const active = currentPath === itemPath;
+          return (
+            <Link key={item.href} href={item.href} prefetch className={cn('flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-[1rem] px-1 py-2 text-[10px] font-bold text-muted-foreground transition', active && 'bg-white text-primary-900 shadow-[0_8px_20px_rgba(8,37,50,0.10)]')}>
+              <Icon className={cn('size-4', active ? 'text-primary' : 'text-muted-foreground')} aria-hidden="true" />
+              <span className="max-w-full truncate leading-none">{bottomLabel(item.label)}</span>
+            </Link>
+          );
+        })}
+      </div>
+    </nav>
+  );
 }
