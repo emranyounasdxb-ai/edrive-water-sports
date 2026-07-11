@@ -1,0 +1,16 @@
+img[src*="/images/edrive/fleet/"].size-12 {
+  width: 5.25rem !important;
+  height: 3.5rem !important;
+  object-fit: contain !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+@media (max-width: 768px) {
+  img[src*="/images/edrive/fleet/"].size-12 {
+    width: 4.5rem !important;
+    height: 3.2rem !important;
+  }
+}
