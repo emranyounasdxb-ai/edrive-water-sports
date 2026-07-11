@@ -11,6 +11,7 @@ import { bookingRequestsTable } from '@/lib/booking-records';
 import { supabase } from '@/lib/supabase-client';
 
 type PaymentFilter = 'all' | 'manager_cash' | 'manager_card' | 'b2b_due' | 'direct_due' | 'not_due' | 'collected' | 'no_collection';
+type SourceType = 'manager' | 'b2b_agent' | 'direct_customer';
 
 type BookingRow = Record<string, unknown> & {
   id?: string | null;
@@ -44,8 +45,8 @@ type BookingRow = Record<string, unknown> & {
   created_at?: string | null;
 };
 
-type PaymentForm = { amount: string; method: string; note: string };
 type GroupSummary = { name: string; bookings: number; cash: number; card: number; due: number; total: number };
+type ReceiveTarget = { type: SourceType; title: string; name: string; bookings: BookingRow[] };
 
 function asText(value: unknown, fallback = '') {
   const clean = String(value ?? '').trim();
@@ -94,6 +95,12 @@ function isB2B(booking: BookingRow) {
   return asText(booking.payment_source).toLowerCase() === 'b2b' || Boolean(booking.b2b_agent_name) || asText(booking.payment_method).toLowerCase() === 'b2b invoice';
 }
 
+function isAdminReceived(booking: BookingRow) {
+  const status = asText(booking.collection_status).toLowerCase();
+  const workflow = asText(booking.payment_workflow_status).toLowerCase();
+  return status === 'company_received' || workflow.includes('received by admin') || workflow.includes('company received');
+}
+
 function isManagerHandled(booking: BookingRow) {
   return Boolean(booking.assigned_manager_name) || Boolean(booking.assigned_vehicle_name) || ['ride in progress', 'collected by manager'].some((value) => asText(booking.payment_workflow_status).toLowerCase().includes(value));
 }
@@ -129,11 +136,11 @@ function paymentMethodLabel(booking: BookingRow) {
 }
 
 function isManagerCash(booking: BookingRow) {
-  return !isNoShow(booking) && isCompleted(booking) && isManagerHandled(booking) && paymentMethodLabel(booking).toLowerCase() === 'cash' && bookingReceived(booking) > 0;
+  return !isAdminReceived(booking) && !isNoShow(booking) && isCompleted(booking) && isManagerHandled(booking) && paymentMethodLabel(booking).toLowerCase() === 'cash' && bookingReceived(booking) > 0;
 }
 
 function isManagerCard(booking: BookingRow) {
-  return !isNoShow(booking) && isCompleted(booking) && isManagerHandled(booking) && paymentMethodLabel(booking).toLowerCase() === 'card' && bookingReceived(booking) > 0;
+  return !isAdminReceived(booking) && !isNoShow(booking) && isCompleted(booking) && isManagerHandled(booking) && paymentMethodLabel(booking).toLowerCase() === 'card' && bookingReceived(booking) > 0;
 }
 
 function isB2BDue(booking: BookingRow) {
@@ -159,7 +166,7 @@ function collectionStage(booking: BookingRow) {
   if (isB2BDue(booking)) return 'B2B Agent Due';
   if (isDirectDue(booking)) return 'Direct Customer Due';
   if (isNotDue(booking)) return 'Upcoming / Not Due';
-  if (isFullyCollected(booking)) return 'Collected';
+  if (isFullyCollected(booking)) return 'Company Received';
   if (isB2B(booking) && bookingPending(booking) <= 0 && bookingTotal(booking) > 0) return 'B2B Paid';
   return asText(booking.payment_status, 'Pending Review');
 }
@@ -170,7 +177,7 @@ function collectFrom(booking: BookingRow) {
   if (isB2B(booking)) return b2bAgentName(booking);
   if (isDirectDue(booking)) return asText(booking.customer_name, 'Customer');
   if (isNotDue(booking)) return 'Not due yet';
-  return 'Already collected';
+  return 'Company account';
 }
 
 function handledBy(booking: BookingRow) {
@@ -189,12 +196,29 @@ function lockReason(booking: BookingRow) {
   return 'Closed';
 }
 
-function isEditableByAdmin(booking: BookingRow) {
-  if (isNoShow(booking)) return false;
-  if (isB2B(booking)) return false;
-  if (isManagerHandled(booking)) return false;
-  if (isNotDue(booking)) return false;
-  return bookingTotal(booking) > 0 && bookingPending(booking) > 0;
+function canReceive(booking: BookingRow) {
+  return isManagerCash(booking) || isManagerCard(booking) || isB2BDue(booking) || isDirectDue(booking);
+}
+
+function receiveTypeForBooking(booking: BookingRow): SourceType {
+  if (isB2BDue(booking)) return 'b2b_agent';
+  if (isDirectDue(booking)) return 'direct_customer';
+  return 'manager';
+}
+
+function receivableAmount(booking: BookingRow, type: SourceType) {
+  if (type === 'manager') return bookingReceived(booking);
+  return bookingPending(booking);
+}
+
+function sourceLabel(type: SourceType) {
+  if (type === 'b2b_agent') return 'B2B Agent';
+  if (type === 'direct_customer') return 'Customer';
+  return 'Manager';
+}
+
+function appendNote(existing: unknown, line: string) {
+  return [asText(existing), line].filter(Boolean).join('\n');
 }
 
 function statusTone(label: string) {
@@ -202,7 +226,7 @@ function statusTone(label: string) {
   if (value.includes('cash with manager') || value.includes('due')) return 'border-red-200 bg-red-50 text-red-700';
   if (value.includes('card')) return 'border-blue-200 bg-blue-50 text-blue-700';
   if (value.includes('b2b')) return 'border-primary/25 bg-primary-50 text-primary';
-  if (value.includes('collected') || value.includes('paid')) return 'border-emerald-200 bg-emerald-50 text-emerald-700';
+  if (value.includes('company') || value.includes('collected') || value.includes('paid')) return 'border-emerald-200 bg-emerald-50 text-emerald-700';
   if (value.includes('no collection') || value.includes('no show')) return 'border-slate-200 bg-slate-50 text-slate-600';
   return 'border-gold/35 bg-gold/10 text-gold';
 }
@@ -252,74 +276,173 @@ function PaymentDetailsModal({ booking, onClose }: { booking: BookingRow; onClos
   );
 }
 
-function PaymentUpdateModal({ booking, onClose, onSaved }: { booking: BookingRow; onClose: () => void; onSaved: () => Promise<void> }) {
-  const [form, setForm] = useState<PaymentForm>({ amount: String(bookingPending(booking) || bookingTotal(booking)), method: 'Cash', note: '' });
+function generateReceiptNumber() {
+  const date = localDateValue(new Date()).replaceAll('-', '');
+  return `RC-${date}-${String(Date.now()).slice(-6)}`;
+}
+
+function defaultReceiptMethod(target: ReceiveTarget) {
+  if (target.type === 'b2b_agent') return 'Bank Transfer';
+  if (target.type === 'direct_customer') return 'Cash';
+  const hasCash = target.bookings.some(isManagerCash);
+  const hasCard = target.bookings.some(isManagerCard);
+  if (hasCash && hasCard) return 'Mixed Handover';
+  if (hasCard) return 'Card Settlement';
+  return 'Cash Handover';
+}
+
+function PaymentReceiveModal({ target, onClose, onSaved }: { target: ReceiveTarget; onClose: () => void; onSaved: () => Promise<void> }) {
+  const totalDue = target.bookings.reduce((sum, booking) => sum + receivableAmount(booking, target.type), 0);
+  const [amount, setAmount] = useState(String(totalDue));
+  const [method, setMethod] = useState(defaultReceiptMethod(target));
+  const [reference, setReference] = useState('');
+  const [note, setNote] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const amountNumber = Number(amount || 0);
 
   async function submit() {
-    const amount = Number(form.amount || 0);
-    const total = bookingTotal(booking);
-    if (!Number.isFinite(amount) || amount < 0) {
-      setError('Valid received amount required.');
+    setError('');
+    if (!Number.isFinite(amountNumber) || amountNumber <= 0) {
+      setError('Enter valid received amount.');
       return;
     }
-    if (!form.method) {
-      setError('Payment method required.');
+    if (amountNumber > totalDue) {
+      setError('Received amount cannot be higher than due amount.');
       return;
     }
-
-    const received = Math.min(amount, total);
-    const pending = Math.max(total - received, 0);
-    const noteParts = [booking.internal_note, form.note].filter(Boolean).map(String);
-    const payload: Record<string, unknown> = {
-      amount_received_aed: received,
-      amount_pending_aed: pending,
-      payment_method: form.method,
-      payment_status: pending <= 0 ? 'Paid' : received > 0 ? 'Partial Paid' : 'Not Paid',
-      collection_status: pending <= 0 ? 'collected' : received > 0 ? 'partial_collection' : 'pending_collection',
-      payment_workflow_status: 'Admin Payment Updated',
-      internal_note: noteParts.join('\n'),
-      updated_at: new Date().toISOString()
-    };
+    if (target.type === 'manager' && Math.round(amountNumber * 100) !== Math.round(totalDue * 100)) {
+      setError('Manager handover must be received in full for selected records. Receive individual records if needed.');
+      return;
+    }
 
     setSaving(true);
-    setError('');
-    const query = supabase.from(bookingRequestsTable).update(payload);
-    const result = booking.id ? await query.eq('id', booking.id) : await query.eq('booking_code', bookingCode(booking));
-    setSaving(false);
-    if (result.error) {
-      setError(result.error.message);
-      return;
+    try {
+      const receiptNumber = generateReceiptNumber();
+      const { data: sessionData } = await supabase.auth.getSession();
+      const receivedBy = sessionData.session?.user?.email || 'Admin';
+      const receiptPayload = {
+        receipt_number: receiptNumber,
+        source_type: target.type,
+        source_name: target.name,
+        received_amount: amountNumber,
+        payment_method: method,
+        reference_no: reference.trim() || null,
+        note: note.trim() || null,
+        received_by: receivedBy,
+        received_at: new Date().toISOString()
+      };
+      const receiptResult = await supabase.from('payment_receipts').insert(receiptPayload).select('id').single();
+      if (receiptResult.error) throw receiptResult.error;
+      const receiptId = receiptResult.data?.id as string;
+      let remaining = amountNumber;
+      const allocations = target.bookings.map((booking) => {
+        const before = receivableAmount(booking, target.type);
+        const allocated = Math.min(before, remaining);
+        remaining = Math.max(remaining - allocated, 0);
+        return { booking, before, allocated, after: Math.max(before - allocated, 0) };
+      }).filter((item) => item.allocated > 0);
+      const allocationPayload = allocations.map((item) => ({
+        receipt_id: receiptId,
+        booking_request_id: asText(item.booking.id) || null,
+        booking_code: bookingCode(item.booking),
+        allocated_amount: item.allocated,
+        balance_before: item.before,
+        balance_after: item.after
+      }));
+      const allocationResult = await supabase.from('payment_receipt_allocations').insert(allocationPayload).select('id,booking_code');
+      if (allocationResult.error) throw allocationResult.error;
+      const ledgerRows = allocations.flatMap((item) => {
+        const allocationId = (allocationResult.data || []).find((row: { id: string; booking_code: string }) => row.booking_code === bookingCode(item.booking))?.id || null;
+        const base = {
+          receipt_id: receiptId,
+          allocation_id: allocationId,
+          booking_request_id: asText(item.booking.id) || null,
+          booking_code: bookingCode(item.booking),
+          amount: item.allocated,
+          narration: `${receiptNumber} · ${sourceLabel(target.type)} payment received`
+        };
+        return [
+          { ...base, account_type: target.type, account_name: target.name, entry_type: 'source_out' },
+          { ...base, account_type: 'company', account_name: 'Company Account', entry_type: 'company_in' }
+        ];
+      });
+      const ledgerResult = await supabase.from('payment_ledger_entries').insert(ledgerRows);
+      if (ledgerResult.error) throw ledgerResult.error;
+
+      for (const item of allocations) {
+        const booking = item.booking;
+        const existingNote = appendNote(booking.internal_note, `${receiptNumber}: ${formatAed(item.allocated)} received by admin from ${target.name}.`);
+        let payload: Record<string, unknown>;
+        if (target.type === 'manager') {
+          payload = {
+            payment_status: 'Paid',
+            collection_status: 'company_received',
+            payment_workflow_status: 'Received By Admin',
+            internal_note: existingNote,
+            updated_at: new Date().toISOString()
+          };
+        } else {
+          const newReceived = bookingReceived(booking) + item.allocated;
+          const newPending = Math.max(bookingPending(booking) - item.allocated, 0);
+          payload = {
+            amount_received_aed: newReceived,
+            amount_pending_aed: newPending,
+            payment_status: newPending <= 0 ? 'Paid' : 'Partial Paid',
+            collection_status: newPending <= 0 ? 'collected' : 'partial_collection',
+            payment_workflow_status: target.type === 'b2b_agent' ? (newPending <= 0 ? 'B2B Paid' : 'B2B Payment Received') : (newPending <= 0 ? 'Direct Payment Collected' : 'Direct Partial Payment'),
+            internal_note: existingNote,
+            updated_at: new Date().toISOString()
+          };
+        }
+        const updateQuery = supabase.from(bookingRequestsTable).update(payload);
+        const updateResult = booking.id ? await updateQuery.eq('id', booking.id) : await updateQuery.eq('booking_code', bookingCode(booking));
+        if (updateResult.error) throw updateResult.error;
+      }
+
+      await onSaved();
+      onClose();
+    } catch (saveError) {
+      const message = saveError instanceof Error ? saveError.message : 'Unable to receive payment.';
+      setError(message.includes('payment_receipts') || message.includes('payment_receipt_allocations') || message.includes('payment_ledger_entries') ? 'Payment receiving tables are missing. Run supabase/payment-receiving.sql in Supabase first.' : message);
+    } finally {
+      setSaving(false);
     }
-    await onSaved();
-    onClose();
   }
 
   return (
-    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-xl overflow-hidden rounded-[1.5rem] border border-border bg-white shadow-[0_28px_90px_rgba(8,37,50,0.24)]">
+    <div className="fixed inset-0 z-[90] flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm">
+      <div className="max-h-[88vh] w-full max-w-2xl overflow-hidden rounded-[1.5rem] border border-border bg-white shadow-[0_28px_90px_rgba(8,37,50,0.24)]">
         <div className="flex items-start justify-between gap-4 border-b border-border/70 bg-[#F7FAFA] p-5">
-          <div><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Update Direct Payment</p><h2 className="mt-1 font-heading text-xl font-semibold text-foreground">{bookingCode(booking)}</h2><p className="mt-1 text-sm text-muted-foreground">Balance {formatAed(bookingPending(booking))}</p></div>
+          <div><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Receive Payment</p><h2 className="mt-1 font-heading text-xl font-semibold text-foreground">{target.title}</h2><p className="mt-1 text-sm text-muted-foreground">{target.bookings.length} booking{target.bookings.length === 1 ? '' : 's'} · Due {formatAed(totalDue)}</p></div>
           <button type="button" onClick={onClose} className="flex size-9 shrink-0 items-center justify-center rounded-full bg-white text-muted-foreground shadow-sm hover:text-foreground" aria-label="Close"><X className="size-4" aria-hidden="true" /></button>
         </div>
-        <div className="grid gap-4 p-5">
-          <label className="grid gap-1.5 text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">Amount Received<Input value={form.amount} onChange={(event) => setForm((current) => ({ ...current, amount: event.target.value }))} type="number" min="0" step="0.01" className="h-10 rounded-xl bg-white" /></label>
-          <label className="grid gap-1.5 text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">Payment Method<select value={form.method} onChange={(event) => setForm((current) => ({ ...current, method: event.target.value }))} className="h-10 rounded-xl border border-border bg-white px-3 text-sm font-semibold text-foreground"><option value="Cash">Cash</option><option value="Card">Card</option></select></label>
-          <label className="grid gap-1.5 text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">Admin Note<Input value={form.note} onChange={(event) => setForm((current) => ({ ...current, note: event.target.value }))} className="h-10 rounded-xl bg-white" /></label>
+        <div className="grid max-h-[calc(88vh-9rem)] gap-4 overflow-y-auto p-5">
+          <div className="grid gap-3 sm:grid-cols-2"><Detail label="Receive From" value={target.name} sub={sourceLabel(target.type)} /><Detail label="Amount Due" value={formatAed(totalDue)} sub={target.type === 'manager' ? 'Manager handover is full amount.' : 'Partial payment allowed.'} /></div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="grid gap-1.5 text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">Amount Received<Input value={amount} onChange={(event) => setAmount(event.target.value)} type="number" min="0" max={totalDue} step="0.01" className="h-10 rounded-xl bg-white" /></label>
+            <label className="grid gap-1.5 text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">Payment Method<select value={method} onChange={(event) => setMethod(event.target.value)} className="h-10 rounded-xl border border-border bg-white px-3 text-sm font-semibold text-foreground"><option value="Cash Handover">Cash Handover</option><option value="Cash">Cash</option><option value="Bank Transfer">Bank Transfer</option><option value="Card Settlement">Card Settlement</option><option value="Mixed Handover">Mixed Handover</option><option value="Cheque">Cheque</option></select></label>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2"><label className="grid gap-1.5 text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">Reference No<Input value={reference} onChange={(event) => setReference(event.target.value)} className="h-10 rounded-xl bg-white" placeholder="Transfer, cheque, card ref" /></label><label className="grid gap-1.5 text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">Admin Note<Input value={note} onChange={(event) => setNote(event.target.value)} className="h-10 rounded-xl bg-white" /></label></div>
+          <div className="rounded-[1.15rem] border border-border bg-white p-3"><p className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">Allocation preview</p><div className="mt-2 grid gap-2">{target.bookings.slice(0, 6).map((booking) => <div key={bookingCode(booking)} className="flex items-center justify-between gap-3 rounded-xl bg-[#F7FAFA] px-3 py-2 text-xs"><span className="min-w-0 break-words font-semibold text-foreground">{bookingCode(booking)}</span><span className="shrink-0 font-bold text-primary">{formatAed(receivableAmount(booking, target.type))}</span></div>)}</div>{target.bookings.length > 6 ? <p className="mt-2 text-xs font-semibold text-muted-foreground">+ {target.bookings.length - 6} more records</p> : null}</div>
           {error ? <p className="rounded-xl bg-red-50 px-3 py-2 text-xs font-semibold text-red-700">{error}</p> : null}
         </div>
-        <div className="flex justify-end gap-2 border-t border-border/70 p-5"><Button type="button" variant="outline" onClick={onClose} className="rounded-full bg-white">Cancel</Button><Button type="button" onClick={submit} disabled={saving} className="rounded-full"><Save className="size-4" aria-hidden="true" />{saving ? 'Saving...' : 'Save Payment'}</Button></div>
+        <div className="flex flex-col-reverse justify-end gap-2 border-t border-border/70 p-5 sm:flex-row"><Button type="button" variant="outline" onClick={onClose} className="rounded-full bg-white">Cancel</Button><Button type="button" onClick={submit} disabled={saving || !amountNumber || amountNumber <= 0} className="rounded-full"><Save className="size-4" aria-hidden="true" />{saving ? 'Saving...' : 'Save Receipt & Receive'}</Button></div>
       </div>
     </div>
   );
 }
 
-function PaymentRow({ booking, onView, onUpdate }: { booking: BookingRow; onView: () => void; onUpdate: () => void }) {
-  const editable = isEditableByAdmin(booking);
+function targetForBooking(booking: BookingRow): ReceiveTarget {
+  const type = receiveTypeForBooking(booking);
+  const name = type === 'b2b_agent' ? b2bAgentName(booking) : type === 'direct_customer' ? asText(booking.customer_name, 'Customer') : managerName(booking);
+  return { type, name, title: `${sourceLabel(type)} · ${name}`, bookings: [booking] };
+}
+
+function PaymentRow({ booking, onView, onReceive }: { booking: BookingRow; onView: () => void; onReceive: () => void }) {
   const stage = collectionStage(booking);
   return (
-    <div className="grid gap-3 border-b border-border/70 px-4 py-3 last:border-b-0 lg:grid-cols-[1.1fr_0.9fr_1fr_0.9fr_0.75fr_0.75fr_0.75fr_1fr_0.75fr] lg:items-center">
+    <div className="grid gap-3 border-b border-border/70 px-4 py-3 last:border-b-0 lg:grid-cols-[1.1fr_0.9fr_1fr_0.9fr_0.75fr_0.75fr_0.75fr_1fr_0.9fr] lg:items-center">
       <div className="min-w-0"><p className="break-words text-xs font-bold uppercase tracking-[0.12em] text-primary">{bookingCode(booking)}</p><p className="mt-1 break-words font-heading text-sm font-semibold text-foreground">{packageLabel(booking)}</p><p className="mt-0.5 text-xs text-muted-foreground">{niceDate(booking.preferred_date)} · {asText(booking.preferred_time, '-')}</p></div>
       <div className="min-w-0"><p className="break-words text-sm font-bold text-foreground">{asText(booking.customer_name, 'Guest')}</p><p className="break-words text-xs text-muted-foreground">{asText(booking.customer_phone || booking.customer_email, '-')}</p></div>
       <div className="min-w-0"><p className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">Collect from</p><p className="mt-1 break-words text-sm font-bold text-foreground">{collectFrom(booking)}</p><Badge>{isB2B(booking) ? 'B2B' : isManagerHandled(booking) ? 'Manager' : 'Direct'}</Badge></div>
@@ -328,7 +451,7 @@ function PaymentRow({ booking, onView, onUpdate }: { booking: BookingRow; onView
       <div className="text-sm font-bold text-emerald-700">{formatAed(bookingReceived(booking))}</div>
       <div className={`text-sm font-bold ${bookingPending(booking) > 0 && !isNotDue(booking) ? 'text-red-700' : 'text-emerald-700'}`}>{formatAed(bookingPending(booking))}</div>
       <div><Badge>{stage}</Badge><p className="mt-1 text-[11px] font-semibold text-muted-foreground">{paymentMethodLabel(booking)}</p></div>
-      <div className="flex flex-wrap gap-2 lg:justify-end"><Button type="button" size="sm" variant="outline" onClick={onView} className="rounded-full bg-white"><Eye className="size-4" aria-hidden="true" />View</Button>{editable ? <Button type="button" size="sm" onClick={onUpdate} className="rounded-full"><Save className="size-4" aria-hidden="true" />Update</Button> : null}</div>
+      <div className="flex flex-wrap gap-2 lg:justify-end"><Button type="button" size="sm" variant="outline" onClick={onView} className="rounded-full bg-white"><Eye className="size-4" aria-hidden="true" />View</Button>{canReceive(booking) ? <Button type="button" size="sm" onClick={onReceive} className="rounded-full"><Save className="size-4" aria-hidden="true" />Receive</Button> : null}</div>
     </div>
   );
 }
@@ -360,7 +483,7 @@ function buildB2BGroups(bookings: BookingRow[]) {
   return Array.from(groups.values()).sort((a, b) => b.due - a.due);
 }
 
-function MiniGroupCard({ title, empty, groups, type }: { title: string; empty: string; groups: GroupSummary[]; type: 'manager' | 'b2b' }) {
+function MiniGroupCard({ title, empty, groups, type, onReceive }: { title: string; empty: string; groups: GroupSummary[]; type: 'manager' | 'b2b'; onReceive: (group: GroupSummary) => void }) {
   return (
     <Card className="overflow-hidden rounded-[1.35rem] border-border/80 bg-white shadow-[0_12px_28px_rgba(8,37,50,0.045)]">
       <CardHeader className="border-b border-border/70 bg-[#F7FAFA] px-4 py-3"><CardTitle className="font-heading text-base font-semibold">{title}</CardTitle></CardHeader>
@@ -369,6 +492,7 @@ function MiniGroupCard({ title, empty, groups, type }: { title: string; empty: s
           <div key={group.name} className="rounded-xl border border-border/70 bg-white px-3 py-2 shadow-sm">
             <div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="break-words text-sm font-bold text-foreground">{group.name}</p><p className="mt-0.5 text-xs font-semibold text-muted-foreground">{group.bookings} booking{group.bookings === 1 ? '' : 's'}</p></div><p className="shrink-0 text-sm font-bold text-primary">{formatAed(type === 'manager' ? group.total : group.due)}</p></div>
             {type === 'manager' ? <p className="mt-1 text-[11px] font-semibold text-muted-foreground">Cash {formatAed(group.cash)} · Card {formatAed(group.card)}</p> : <p className="mt-1 text-[11px] font-semibold text-muted-foreground">Invoice total {formatAed(group.total)}</p>}
+            <Button type="button" size="sm" onClick={() => onReceive(group)} className="mt-2 w-full rounded-full"><Save className="size-4" aria-hidden="true" />Receive Payment</Button>
           </div>
         ))}
       </CardContent>
@@ -383,7 +507,7 @@ export function AdminPaymentsPage() {
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<PaymentFilter>('all');
   const [viewBooking, setViewBooking] = useState<BookingRow | null>(null);
-  const [updateBooking, setUpdateBooking] = useState<BookingRow | null>(null);
+  const [receiveTarget, setReceiveTarget] = useState<ReceiveTarget | null>(null);
 
   async function refresh() {
     setLoading(true);
@@ -425,6 +549,16 @@ export function AdminPaymentsPage() {
   const managerGroups = buildManagerGroups(bookings);
   const b2bGroups = buildB2BGroups(bookings);
 
+  function openManagerGroup(group: GroupSummary) {
+    const groupBookings = bookings.filter((booking) => managerName(booking) === group.name && (isManagerCash(booking) || isManagerCard(booking)));
+    setReceiveTarget({ type: 'manager', name: group.name, title: `Manager · ${group.name}`, bookings: groupBookings });
+  }
+
+  function openB2BGroup(group: GroupSummary) {
+    const groupBookings = bookings.filter((booking) => b2bAgentName(booking) === group.name && isB2BDue(booking));
+    setReceiveTarget({ type: 'b2b_agent', name: group.name, title: `B2B Agent · ${group.name}`, bookings: groupBookings });
+  }
+
   const filterOptions: Array<{ id: PaymentFilter; label: string; count: number }> = [
     { id: 'all', label: 'All', count: bookings.length },
     { id: 'manager_cash', label: 'Manager Cash', count: bookings.filter(isManagerCash).length },
@@ -432,18 +566,18 @@ export function AdminPaymentsPage() {
     { id: 'b2b_due', label: 'B2B Due', count: bookings.filter(isB2BDue).length },
     { id: 'direct_due', label: 'Direct Due', count: bookings.filter(isDirectDue).length },
     { id: 'not_due', label: 'Upcoming / Not Due', count: bookings.filter(isNotDue).length },
-    { id: 'collected', label: 'Collected', count: bookings.filter(isFullyCollected).length },
+    { id: 'collected', label: 'Company Received', count: bookings.filter(isFullyCollected).length },
     { id: 'no_collection', label: 'No Collection', count: bookings.filter(isNoShow).length }
   ];
 
   return (
     <section className="w-full overflow-hidden px-4 py-5 sm:px-6 sm:py-7 lg:px-8 xl:px-10">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between"><div><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Payments</p><h1 className="mt-2 font-heading text-2xl font-semibold leading-tight text-foreground sm:text-3xl lg:text-4xl">Payment control center</h1><p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">See exactly who needs to pay: managers, B2B agents, direct customers, and upcoming bookings that are not due yet.</p></div><Button type="button" variant="outline" onClick={refresh} className="w-fit rounded-full bg-white"><RefreshCw className="size-4" aria-hidden="true" />Refresh</Button></div>
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between"><div><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Payments</p><h1 className="mt-2 font-heading text-2xl font-semibold leading-tight text-foreground sm:text-3xl lg:text-4xl">Payment control center</h1><p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">Receive manager handovers, B2B agent payments, and direct customer balances into the company account.</p></div><Button type="button" variant="outline" onClick={refresh} className="w-fit rounded-full bg-white"><RefreshCw className="size-4" aria-hidden="true" />Refresh</Button></div>
       {error ? <p className="mt-5 rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</p> : null}
 
       <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
         <MetricCard title="Ready To Collect" value={formatAed(readyToCollect)} helper="Manager cash + B2B due + direct due" icon={CheckCircle2} />
-        <MetricCard title="Cash With Managers" value={formatAed(cashWithManagers)} helper="Collect cash handover from managers" icon={WalletCards} />
+        <MetricCard title="Cash With Managers" value={formatAed(cashWithManagers)} helper="Receive handover from managers" icon={WalletCards} />
         <MetricCard title="B2B Agent Due" value={formatAed(b2bDue)} helper="Receivable from B2B agents" icon={Building2} />
         <MetricCard title="Direct Customer Due" value={formatAed(directDue)} helper="Completed direct rides with balance" icon={UserRound} />
         <MetricCard title="Card Collected" value={formatAed(managerCard)} helper="Verify card/reference payments" icon={CreditCard} />
@@ -451,8 +585,8 @@ export function AdminPaymentsPage() {
       </div>
 
       <div className="mt-5 grid gap-4 xl:grid-cols-2">
-        <MiniGroupCard title="Collect from managers" empty="No manager cash/card collections right now." groups={managerGroups} type="manager" />
-        <MiniGroupCard title="Collect from B2B agents" empty="No B2B agent balance due right now." groups={b2bGroups} type="b2b" />
+        <MiniGroupCard title="Collect from managers" empty="No manager cash/card collections right now." groups={managerGroups} type="manager" onReceive={openManagerGroup} />
+        <MiniGroupCard title="Collect from B2B agents" empty="No B2B agent balance due right now." groups={b2bGroups} type="b2b" onReceive={openB2BGroup} />
       </div>
 
       <Card className="mt-5 overflow-hidden rounded-[1.5rem] border-border/80 bg-white">
@@ -461,11 +595,11 @@ export function AdminPaymentsPage() {
         <CardContent className="p-0">
           {loading ? <div className="p-4"><div className="rounded-[1.25rem] border border-dashed border-border bg-[#F7FAFA] px-4 py-8 text-center text-sm font-semibold text-muted-foreground">Loading payments...</div></div> : null}
           {!loading && filtered.length === 0 ? <div className="p-4"><div className="rounded-[1.25rem] border border-dashed border-border bg-[#F7FAFA] px-4 py-8 text-center"><p className="font-heading text-lg font-semibold text-foreground">No payment records found</p><p className="mt-2 text-sm text-muted-foreground">Try another search or filter.</p></div></div> : null}
-          {!loading && filtered.length > 0 ? <><div className="hidden border-b border-border/70 bg-[#F7FAFA] px-4 py-3 text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground lg:grid lg:grid-cols-[1.1fr_0.9fr_1fr_0.9fr_0.75fr_0.75fr_0.75fr_1fr_0.75fr]"><span>Booking</span><span>Customer</span><span>Collect From</span><span>Handled By</span><span>Total</span><span>Received</span><span>Balance</span><span>Stage</span><span className="text-right">Action</span></div><div>{filtered.map((booking) => <PaymentRow key={String(booking.id || bookingCode(booking))} booking={booking} onView={() => setViewBooking(booking)} onUpdate={() => setUpdateBooking(booking)} />)}</div></> : null}
+          {!loading && filtered.length > 0 ? <><div className="hidden border-b border-border/70 bg-[#F7FAFA] px-4 py-3 text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground lg:grid lg:grid-cols-[1.1fr_0.9fr_1fr_0.9fr_0.75fr_0.75fr_0.75fr_1fr_0.9fr]"><span>Booking</span><span>Customer</span><span>Collect From</span><span>Handled By</span><span>Total</span><span>Received</span><span>Balance</span><span>Stage</span><span className="text-right">Action</span></div><div>{filtered.map((booking) => <PaymentRow key={String(booking.id || bookingCode(booking))} booking={booking} onView={() => setViewBooking(booking)} onReceive={() => setReceiveTarget(targetForBooking(booking))} />)}</div></> : null}
         </CardContent>
       </Card>
       {viewBooking ? <PaymentDetailsModal booking={viewBooking} onClose={() => setViewBooking(null)} /> : null}
-      {updateBooking ? <PaymentUpdateModal booking={updateBooking} onClose={() => setUpdateBooking(null)} onSaved={refresh} /> : null}
+      {receiveTarget ? <PaymentReceiveModal target={receiveTarget} onClose={() => setReceiveTarget(null)} onSaved={refresh} /> : null}
     </section>
   );
 }
