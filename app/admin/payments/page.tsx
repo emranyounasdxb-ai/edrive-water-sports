@@ -1,10 +1,10 @@
 import type { Metadata } from 'next';
-import { AdminPaymentsPage } from '@/components/edrive/admin-payments-page';
+import { PaymentsRoutePage } from '@/components/edrive/payments-route-page';
 
 export const metadata: Metadata = {
   title: 'Payments'
 };
 
 export default function Page() {
-  return <AdminPaymentsPage />;
+  return <PaymentsRoutePage />;
 }
