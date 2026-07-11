@@ -55,6 +55,35 @@ function hasPackageParams() {
   return Boolean(params.get('category') && Number(params.get('capacity') || 0));
 }
 
+function localDateValue(date = new Date()) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function timeToMinutes(value: string) {
+  const match = value.trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (!match) return Number.NaN;
+  const hoursRaw = Number(match[1]);
+  const minutes = Number(match[2]);
+  const period = match[3].toUpperCase();
+  const hours = period === 'PM' && hoursRaw !== 12 ? hoursRaw + 12 : period === 'AM' && hoursRaw === 12 ? 0 : hoursRaw;
+  return hours * 60 + minutes;
+}
+
+function isPastSameDayTime(selectedDate: string, selectedTime: string, now = new Date()) {
+  if (!selectedDate || !selectedTime || selectedDate !== localDateValue(now)) return false;
+  const slotMinutes = timeToMinutes(selectedTime);
+  if (!Number.isFinite(slotMinutes)) return false;
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+  return slotMinutes <= currentMinutes;
+}
+
+function isSelectableBookingTime(selectedDate: string, selectedTime: string, now = new Date()) {
+  return Boolean(selectedDate && selectedTime && !isPastSameDayTime(selectedDate, selectedTime, now));
+}
+
 function experienceTypeFromCategory(category: string): BookingDraft['experienceType'] {
   return category === 'jet_car_rental' ? 'jet-car-rental' : 'jet-ski-rental';
 }
@@ -146,6 +175,7 @@ export function BookingWizard() {
   const [ready, setReady] = useState(false);
   const [packageQueryMode, setPackageQueryMode] = useState(() => hasPackageParams());
   const [packageGroups, setPackageGroups] = useState<PackageGroup[]>([]);
+  const [now, setNow] = useState(() => new Date());
 
   const experience = getExperience(draft.experienceType);
   const isSales = experience.serviceType === 'sales_inquiry';
@@ -168,6 +198,11 @@ export function BookingWizard() {
   function selectPackageGroup(group: PackageGroup) {
     setDraft(draftFromPackageGroup(group));
   }
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(new Date()), 60 * 1000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -213,10 +248,10 @@ export function BookingWizard() {
     if (step === 0) return Boolean(draft.selectedPackageRates?.length);
     if (step === 1) return Boolean(draft.selectedPackageRates?.length && draft.durationMinutes > 0);
     if (step === 2) return !capacityExceeded && draft.vehicleQuantity > 0 && draft.guestCount > 0;
-    if (step === 3) return Boolean(draft.preferredDate && draft.preferredTime);
+    if (step === 3) return isSelectableBookingTime(draft.preferredDate, draft.preferredTime, now);
     if (step === 4) return Boolean(draft.customerName.trim() && draft.customerPhone.trim() && (!draft.customerEmail || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(draft.customerEmail)));
     return true;
-  }, [capacityExceeded, draft, step]);
+  }, [capacityExceeded, draft, now, step]);
 
   function submitRequest() {
     const totals = getBookingTotals(draft);
@@ -336,7 +371,7 @@ export function BookingWizard() {
               {step === 0 && !packageFlow ? <PackageSelectionStep groups={packageGroups} selectedSlug={draft.selectedPackageSlug || ''} onSelect={selectPackageGroup} /> : null}
               {step === 1 ? <DurationStep draft={draft} onUpdate={updateDraft} /> : null}
               {step === 2 ? <PartyStep draft={draft} capacity={capacity} capacityPerVehicle={capacityPerVehicle} exceeded={capacityExceeded} onUpdate={updateDraft} /> : null}
-              {step === 3 ? <ScheduleStep draft={draft} onUpdate={updateDraft} /> : null}
+              {step === 3 ? <ScheduleStep draft={draft} now={now} onUpdate={updateDraft} /> : null}
               {step === 4 ? <ContactStep draft={draft} onUpdate={updateDraft} /> : null}
               {step === 5 ? <ReviewStep draft={draft} /> : null}
 
@@ -436,7 +471,7 @@ function Counter({ label, helper, value, min, max, onChange }: { label: string; 
   return <div className="rounded-[1.25rem] border border-border bg-white p-4"><div className="flex items-center justify-between gap-4"><div><p className="font-semibold text-foreground">{label}</p><p className="mt-1 text-xs text-muted-foreground">{helper}</p></div><div className="flex items-center gap-3"><button type="button" disabled={value <= min} onClick={() => onChange(value - 1)} className="flex size-8 items-center justify-center rounded-full border border-border bg-background text-primary transition hover:bg-primary-50 disabled:opacity-35" aria-label={`Decrease ${label}`}><Minus className="size-4" /></button><span className="w-6 text-center text-base font-bold text-foreground">{value}</span><button type="button" disabled={value >= max} onClick={() => onChange(value + 1)} className="flex size-8 items-center justify-center rounded-full border border-border bg-background text-primary transition hover:bg-primary-50 disabled:opacity-35" aria-label={`Increase ${label}`}><Plus className="size-4" /></button></div></div></div>;
 }
 
-function ScheduleStep({ draft, onUpdate }: { draft: BookingDraft; onUpdate: (values: Partial<BookingDraft>) => void }) {
+function ScheduleStep({ draft, now, onUpdate }: { draft: BookingDraft; now: Date; onUpdate: (values: Partial<BookingDraft>) => void }) {
   const today = useMemo(() => new Date(), []);
   const [visibleMonth, setVisibleMonth] = useState(() => new Date(today.getFullYear(), today.getMonth(), 1));
   const year = visibleMonth.getFullYear();
@@ -444,8 +479,47 @@ function ScheduleStep({ draft, onUpdate }: { draft: BookingDraft; onUpdate: (val
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const startDay = new Date(year, month, 1).getDay();
   const minMonth = new Date(today.getFullYear(), today.getMonth(), 1).getTime();
+  const selectedDateIsToday = draft.preferredDate === localDateValue(now);
+  const availableToday = timeSlots.some((time) => isSelectableBookingTime(draft.preferredDate, time, now));
 
-  return <div className="grid gap-4 xl:grid-cols-[1fr_0.92fr]"><div className="rounded-[1.25rem] border border-border bg-white p-4"><div className="mb-3 flex items-center justify-between"><button type="button" aria-label="Previous month" disabled={visibleMonth.getTime() <= minMonth} onClick={() => setVisibleMonth(new Date(year, month - 1, 1))} className="flex size-8 items-center justify-center rounded-full border border-border text-primary disabled:opacity-30"><ChevronLeft className="size-4" /></button><p className="font-semibold text-foreground">{visibleMonth.toLocaleDateString('en-AE', { month: 'long', year: 'numeric' })}</p><button type="button" aria-label="Next month" onClick={() => setVisibleMonth(new Date(year, month + 1, 1))} className="flex size-8 items-center justify-center rounded-full border border-border text-primary"><ChevronRight className="size-4" /></button></div><div className="grid grid-cols-7 gap-1 text-center text-[10px] font-bold uppercase text-muted-foreground">{['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => <span key={day} className="py-1">{day}</span>)}</div><div className="mt-1 grid grid-cols-7 gap-1">{Array.from({ length: startDay }).map((_, index) => <span key={`blank-${index}`} />)}{Array.from({ length: daysInMonth }, (_, index) => index + 1).map((day) => { const date = new Date(year, month, day); const iso = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`; const disabled = date < new Date(today.getFullYear(), today.getMonth(), today.getDate()); const selected = draft.preferredDate === iso; return <button key={iso} type="button" disabled={disabled} onClick={() => onUpdate({ preferredDate: iso })} className={cn('aspect-square rounded-lg text-xs font-semibold transition', selected ? 'bg-primary text-white shadow-sm' : 'hover:bg-primary-50', disabled && 'cursor-not-allowed text-muted-foreground/35 hover:bg-transparent')}>{day}</button>; })}</div></div><div><div className="mb-3 flex items-center gap-2"><Clock3 className="size-4 text-primary" aria-hidden="true" /><p className="font-semibold text-foreground">Preferred time</p></div><div className="grid max-h-[300px] grid-cols-2 gap-2 overflow-y-auto pr-1">{timeSlots.map((time) => <button key={time} type="button" onClick={() => onUpdate({ preferredTime: time })} className={cn('rounded-xl border px-3 py-2 text-sm font-semibold transition', draft.preferredTime === time ? 'border-primary bg-primary text-white' : 'border-border bg-white text-foreground hover:border-primary/40')}>{time}</button>)}</div></div></div>;
+  function selectDate(iso: string) {
+    const nextTime = draft.preferredTime && isSelectableBookingTime(iso, draft.preferredTime, now) ? draft.preferredTime : '';
+    onUpdate({ preferredDate: iso, preferredTime: nextTime });
+  }
+
+  return (
+    <div className="grid gap-4 xl:grid-cols-[1fr_0.92fr]">
+      <div className="rounded-[1.25rem] border border-border bg-white p-4">
+        <div className="mb-3 flex items-center justify-between">
+          <button type="button" aria-label="Previous month" disabled={visibleMonth.getTime() <= minMonth} onClick={() => setVisibleMonth(new Date(year, month - 1, 1))} className="flex size-8 items-center justify-center rounded-full border border-border text-primary disabled:opacity-30"><ChevronLeft className="size-4" /></button>
+          <p className="font-semibold text-foreground">{visibleMonth.toLocaleDateString('en-AE', { month: 'long', year: 'numeric' })}</p>
+          <button type="button" aria-label="Next month" onClick={() => setVisibleMonth(new Date(year, month + 1, 1))} className="flex size-8 items-center justify-center rounded-full border border-border text-primary"><ChevronRight className="size-4" /></button>
+        </div>
+        <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-bold uppercase text-muted-foreground">{['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => <span key={day} className="py-1">{day}</span>)}</div>
+        <div className="mt-1 grid grid-cols-7 gap-1">
+          {Array.from({ length: startDay }).map((_, index) => <span key={`blank-${index}`} />)}
+          {Array.from({ length: daysInMonth }, (_, index) => index + 1).map((day) => {
+            const date = new Date(year, month, day);
+            const iso = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            const disabled = date < new Date(today.getFullYear(), today.getMonth(), today.getDate());
+            const selected = draft.preferredDate === iso;
+            return <button key={iso} type="button" disabled={disabled} onClick={() => selectDate(iso)} className={cn('aspect-square rounded-lg text-xs font-semibold transition', selected ? 'bg-primary text-white shadow-sm' : 'hover:bg-primary-50', disabled && 'cursor-not-allowed text-muted-foreground/35 hover:bg-transparent')}>{day}</button>;
+          })}
+        </div>
+      </div>
+      <div>
+        <div className="mb-3 flex items-center gap-2"><Clock3 className="size-4 text-primary" aria-hidden="true" /><p className="font-semibold text-foreground">Preferred time</p></div>
+        {selectedDateIsToday ? <p className="mb-3 rounded-xl bg-primary-50 px-3 py-2 text-xs font-semibold leading-5 text-primary-900">Past time slots are disabled for today. Please choose an upcoming time.</p> : null}
+        <div className="grid max-h-[300px] grid-cols-2 gap-2 overflow-y-auto pr-1">
+          {timeSlots.map((time) => {
+            const disabled = !isSelectableBookingTime(draft.preferredDate, time, now);
+            return <button key={time} type="button" disabled={disabled} onClick={() => onUpdate({ preferredTime: time })} className={cn('rounded-xl border px-3 py-2 text-sm font-semibold transition', draft.preferredTime === time ? 'border-primary bg-primary text-white' : 'border-border bg-white text-foreground hover:border-primary/40', disabled && 'cursor-not-allowed border-border bg-slate-50 text-muted-foreground/45 line-through hover:border-border')}>{time}</button>;
+          })}
+        </div>
+        {selectedDateIsToday && !availableToday ? <p className="mt-3 rounded-xl bg-amber-50 px-3 py-2 text-xs font-semibold leading-5 text-amber-800">All slots for today have passed. Please select tomorrow or another date.</p> : null}
+      </div>
+    </div>
+  );
 }
 
 function ContactStep({ draft, onUpdate }: { draft: BookingDraft; onUpdate: (values: Partial<BookingDraft>) => void }) {
