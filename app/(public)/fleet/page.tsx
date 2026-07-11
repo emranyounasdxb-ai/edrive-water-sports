@@ -3,15 +3,15 @@ import { LivePackageShowcase } from '@/components/edrive/live-package-showcase';
 import { FleetPage } from '@/components/edrive/public-pages';
 
 export const metadata: Metadata = {
-  title: 'Premium Water Sports Fleet',
-  description: 'Explore eDrive Water Sports jet ski and jet car fleet options for Dubai Islands water sports, guided rides, VIP experiences, and family-friendly packages.'
+  title: 'Jet Ski & Jet Car Fleet Dubai | eDrive Water Sports',
+  description: 'Explore eDrive Water Sports premium jet ski and jet car fleet at Dubai Islands with ride options for tourists, residents, families, couples, and VIP guests.'
 };
 
 export default function Page() {
   return (
     <>
       <FleetPage />
-      <LivePackageShowcase title="Live Fleet Packages" text="Only active packages from the admin package dashboard are shown here. New package updates appear live on the website." />
+      <LivePackageShowcase title="Fleet Ride Packages" text="Compare premium jet ski and jet car ride options with clear durations, seating capacity, and Dubai Islands booking support." />
     </>
   );
 }
