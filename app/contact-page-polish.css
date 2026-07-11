@@ -1,20 +1,16 @@
 main.pt-\[86px\] > section.relative.isolate:first-child:has(+ section.container-x.grid) {
-  min-height: 460px !important;
+  min-height: 440px !important;
   background-position: center 56% !important;
 }
 
 main.pt-\[86px\] > section.relative.isolate:first-child:has(+ section.container-x.grid) > .container-x.relative {
-  min-height: 460px !important;
+  min-height: 440px !important;
   padding-top: 104px !important;
-  padding-bottom: 44px !important;
-}
-
-main.pt-\[86px\] > section.relative.isolate:first-child:has(+ section.container-x.grid) .mt-7 a:nth-child(n + 2) {
-  display: none !important;
+  padding-bottom: 38px !important;
 }
 
 main.pt-\[86px\] > section.relative.isolate:first-child:has(+ section.container-x.grid) .mt-7 {
-  margin-top: 1.35rem !important;
+  display: none !important;
 }
 
 main.pt-\[86px\] > section.relative.isolate:first-child:has(+ section.container-x.grid) h1 {
@@ -22,24 +18,85 @@ main.pt-\[86px\] > section.relative.isolate:first-child:has(+ section.container-
 }
 
 main.pt-\[86px\] > section.relative.isolate:first-child + section.container-x.grid {
-  grid-template-columns: minmax(20rem, 0.9fr) minmax(28rem, 1.1fr) !important;
-  gap: 1.7rem !important;
-  padding-top: 2.6rem !important;
-  padding-bottom: 3.4rem !important;
+  grid-template-columns: minmax(22rem, 0.95fr) minmax(28rem, 1.05fr) !important;
+  align-items: start;
+  gap: 1.45rem !important;
+  padding-top: 2.3rem !important;
+  padding-bottom: 3rem !important;
 }
 
 main.pt-\[86px\] > section.relative.isolate:first-child + section.container-x.grid > div:first-child {
-  gap: 0.72rem !important;
+  display: grid;
+  gap: 0.82rem !important;
+  align-self: start;
+  padding-top: 0.1rem;
+}
+
+main.pt-\[86px\] > section.relative.isolate:first-child + section.container-x.grid > div:first-child a {
+  display: block;
+  border-radius: 1.35rem;
+  overflow: hidden;
+}
+
+main.pt-\[86px\] > section.relative.isolate:first-child + section.container-x.grid > div:first-child .premium-card-hover {
+  border: 1px solid rgba(8, 37, 50, 0.08) !important;
+  background: rgba(255, 255, 255, 0.95) !important;
+  box-shadow: 0 12px 30px rgba(8, 37, 50, 0.07), inset 0 1px 0 rgba(255, 255, 255, 0.95) !important;
+}
+
+main.pt-\[86px\] > section.relative.isolate:first-child + section.container-x.grid > div:first-child .premium-card-hover::before,
+main.pt-\[86px\] > section.relative.isolate:first-child + section.container-x.grid > div:first-child .premium-card-hover::after {
+  display: none !important;
+}
+
+main.pt-\[86px\] > section.relative.isolate:first-child + section.container-x.grid > div:first-child a:first-child .premium-card-hover {
+  position: relative;
+  overflow: hidden;
+  border-color: rgba(37, 211, 102, 0.42) !important;
+  background: linear-gradient(135deg, #25d366 0%, #20bd64 48%, #0b7d60 100%) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.34), inset 0 -10px 22px rgba(0, 82, 50, 0.18), 0 16px 38px rgba(37, 211, 102, 0.24) !important;
+}
+
+main.pt-\[86px\] > section.relative.isolate:first-child + section.container-x.grid > div:first-child a:first-child .premium-card-hover [data-icon] {
+  color: #ffffff !important;
+}
+
+main.pt-\[86px\] > section.relative.isolate:first-child + section.container-x.grid > div:first-child a:first-child .premium-card-hover span {
+  background: rgba(255, 255, 255, 0.16) !important;
+  color: #ffffff !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22);
+}
+
+main.pt-\[86px\] > section.relative.isolate:first-child + section.container-x.grid > div:first-child a:first-child .premium-card-hover p {
+  color: rgba(255, 255, 255, 0.82) !important;
+}
+
+main.pt-\[86px\] > section.relative.isolate:first-child + section.container-x.grid > div:first-child a:first-child .premium-card-hover p:last-child {
+  color: #ffffff !important;
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+main.pt-\[86px\] > section.relative.isolate:first-child + section.container-x.grid > div:first-child a:first-child .premium-card-hover p:first-child::after {
+  content: ' direct booking';
+  font-weight: 700;
+  opacity: 0.86;
 }
 
 main.pt-\[86px\] > section.relative.isolate:first-child + section.container-x.grid .premium-card-hover [data-icon] {
-  width: 1.15rem;
-  height: 1.15rem;
+  width: 1.12rem;
+  height: 1.12rem;
 }
 
 main.pt-\[86px\] > section.relative.isolate:first-child + section.container-x.grid .premium-card-hover > div,
 main.pt-\[86px\] > section.relative.isolate:first-child + section.container-x.grid .premium-card-hover [class*='CardContent'] {
-  min-height: 4.8rem;
+  min-height: 4.65rem;
+}
+
+main.pt-\[86px\] > section.relative.isolate:first-child + section.container-x.grid form,
+main.pt-\[86px\] > section.relative.isolate:first-child + section.container-x.grid > div:last-child {
+  align-self: start;
 }
 
 footer .waterline a[href='/booking'] {
@@ -54,18 +111,18 @@ footer .waterline a[href='/booking'] {
 
 @media (max-width: 640px) {
   main.pt-\[86px\] > section.relative.isolate:first-child:has(+ section.container-x.grid) {
-    min-height: 500px !important;
+    min-height: 460px !important;
     background-position: 62% center !important;
   }
 
   main.pt-\[86px\] > section.relative.isolate:first-child:has(+ section.container-x.grid) > .container-x.relative {
-    min-height: 500px !important;
-    padding-top: 100px !important;
-    padding-bottom: 34px !important;
+    min-height: 460px !important;
+    padding-top: 98px !important;
+    padding-bottom: 30px !important;
   }
 
   main.pt-\[86px\] > section.relative.isolate:first-child + section.container-x.grid {
-    padding-top: 1.45rem !important;
-    padding-bottom: 2.35rem !important;
+    padding-top: 1.35rem !important;
+    padding-bottom: 2.2rem !important;
   }
 }
