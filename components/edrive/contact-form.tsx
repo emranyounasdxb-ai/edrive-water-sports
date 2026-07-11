@@ -12,13 +12,16 @@ export function ContactForm() {
 
   return (
     <Card className="shadow-premium">
-      <CardHeader className="border-b border-border"><CardTitle>Send an inquiry</CardTitle><CardDescription>Tell us what you are planning and how you would like us to contact you.</CardDescription></CardHeader>
+      <CardHeader className="border-b border-border">
+        <CardTitle>Send an inquiry</CardTitle>
+        <CardDescription>Tell us what you are planning and how you would like us to contact you.</CardDescription>
+      </CardHeader>
       <CardContent className="pt-6">
         {sent ? (
           <div className="flex flex-col items-center gap-4 rounded-lg border border-primary/20 bg-primary-50 p-8 text-center">
             <span className="flex size-14 items-center justify-center rounded-full bg-white text-primary shadow-glass"><CheckCircle2 className="size-7" aria-hidden="true" /></span>
-            <h3 className="font-heading text-2xl font-semibold text-foreground">Inquiry prepared</h3>
-            <p className="max-w-md text-sm leading-7 text-muted-foreground">This preview confirms the message details and success state without sending data to a server.</p>
+            <h3 className="font-heading text-2xl font-semibold text-foreground">Inquiry ready</h3>
+            <p className="max-w-md text-sm leading-7 text-muted-foreground">Thank you. For urgent same-day bookings, WhatsApp our team directly for faster confirmation.</p>
             <Button variant="outline" onClick={() => setSent(false)}>Write another message</Button>
           </div>
         ) : (
@@ -27,7 +30,7 @@ export function ContactForm() {
             <div className="grid gap-4 md:grid-cols-2"><label className="grid gap-2 text-sm font-semibold text-foreground">Email <span className="font-normal text-muted-foreground">(optional)</span><Input type="email" placeholder="you@example.com" /></label><label className="grid gap-2 text-sm font-semibold text-foreground">Preferred date <span className="font-normal text-muted-foreground">(optional)</span><Input type="date" /></label></div>
             <label className="grid gap-2 text-sm font-semibold text-foreground">Inquiry type<select className="h-11 rounded-md border border-input bg-white px-3 text-sm text-foreground shadow-sm outline-none transition focus:border-primary/60 focus:ring-2 focus:ring-ring/25"><option>Jet Ski Rental</option><option>Jet Car Rental</option><option>Membership</option><option>Sales Inquiry</option><option>General Question</option></select></label>
             <label className="grid gap-2 text-sm font-semibold text-foreground">Message<Textarea required placeholder="Tell us the package, date, guests, or question you have for the eDrive team." /></label>
-            <Button type="submit" size="lg" className="w-full sm:w-fit"><Send data-icon aria-hidden="true" />Review inquiry</Button>
+            <Button type="submit" size="lg" className="w-full sm:w-fit"><Send data-icon aria-hidden="true" />Send Inquiry</Button>
           </form>
         )}
       </CardContent>
