@@ -302,7 +302,7 @@ export function BookingWizard() {
         <div className="mx-auto max-w-6xl">
           <div className="premium-surface rounded-[1.65rem] p-5 text-center">
             <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-primary">Preparing Booking</p>
-            <h2 className="mt-2 font-heading text-xl font-semibold text-foreground">Loading live packages...</h2>
+            <h2 className="mt-2 font-heading text-xl font-semibold text-foreground">Preparing your ride options...</h2>
           </div>
         </div>
       </section>
@@ -388,12 +388,12 @@ function WizardProgress({ currentStep, packageFlow, onStepSelect }: { currentSte
 
 function PackageSelectionStep({ groups, selectedSlug, onSelect }: { groups: PackageGroup[]; selectedSlug: string; onSelect: (group: PackageGroup) => void }) {
   if (!groups.length) {
-    return <div className="rounded-[1.25rem] border border-amber-200 bg-amber-50 p-4 text-sm font-semibold leading-6 text-amber-800">No active packages are available right now. Please add active packages from the admin package dashboard.</div>;
+    return <div className="rounded-[1.25rem] border border-amber-200 bg-amber-50 p-4 text-sm font-semibold leading-6 text-amber-800">No ride packages are available right now. Please contact the eDrive team on WhatsApp for the latest options.</div>;
   }
 
   return (
     <div>
-      <p className="mb-3 text-sm leading-6 text-muted-foreground">Select from live packages managed in the admin dashboard. Future package changes will appear here automatically.</p>
+      <p className="mb-3 text-sm leading-6 text-muted-foreground">Choose your preferred ride package below. Our team will confirm availability before your experience.</p>
       <div className="grid gap-3 sm:grid-cols-2">
         {groups.map((group) => {
           const active = group.slug === selectedSlug;
@@ -420,7 +420,7 @@ function PackageSelectionStep({ groups, selectedSlug, onSelect }: { groups: Pack
 function DurationStep({ draft, onUpdate }: { draft: BookingDraft; onUpdate: (values: Partial<BookingDraft>) => void }) {
   const experience = getExperience(draft.experienceType);
   const packages: BookingRateOption[] = draft.selectedPackageRates || [];
-  if (!packages.length) return <div className="rounded-[1.25rem] border border-amber-200 bg-amber-50 p-4 text-sm font-semibold leading-6 text-amber-800">Please select an active package first. Package prices come only from the admin package dashboard.</div>;
+  if (!packages.length) return <div className="rounded-[1.25rem] border border-amber-200 bg-amber-50 p-4 text-sm font-semibold leading-6 text-amber-800">Please select a ride package first. Contact the team if you need help choosing an option.</div>;
   return <div><p className="mb-3 text-sm leading-6 text-muted-foreground">Choose duration for {draft.selectedPackageName || experience.title}. Prices shown are per vehicle.</p><div className="grid gap-3 md:grid-cols-3">{packages.map((item) => <ChoiceButton key={item.minutes} active={draft.durationMinutes === item.minutes} onClick={() => onUpdate({ durationMinutes: item.minutes, selectedPackagePrice: item.price, selectedPackageB2BPrice: item.b2bPrice, selectedPackageCapacity: item.capacity })} title={formatDuration(item.minutes)} detail={formatAed(item.price)} />)}</div></div>;
 }
 
