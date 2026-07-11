@@ -78,3 +78,8 @@ export const bookings: Array<Record<string, never>> = [];
 export const dashboardStats: Array<Record<string, never>> = [];
 export const inventoryItems: Array<Record<string, never>> = [];
 export const coupons: Array<Record<string, never>> = [];
+export const reports = {
+  revenue: [] as Array<Record<string, never>>,
+  activities: [] as Array<Record<string, never>>,
+  locations: [] as Array<Record<string, never>>
+};
