@@ -1,18 +1,16 @@
 'use client';
 
-import Link from 'next/link';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { AlertCircle, CalendarDays, CheckCircle2, Clock3, CreditCard, RefreshCw, Search, WalletCards } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { formatAed } from '@/lib/booking-data';
 import { bookingRequestsTable } from '@/lib/booking-records';
 import { supabase } from '@/lib/supabase-client';
 
-type ManagerBooking = Record<string, unknown> & {
+ type ManagerBooking = Record<string, unknown> & {
   id?: string | null;
   booking_code?: string | null;
   booking_number?: string | null;
@@ -41,8 +39,7 @@ type ManagerBooking = Record<string, unknown> & {
 };
 
 type ManagerProfile = { full_name: string | null; email: string | null; role: string | null; status: string | null };
-
-type Metric = { title: string; value: string; icon: LucideIcon };
+type Metric = { title: string; value: string; icon: LucideIcon; tone?: 'default' | 'success' | 'warning' };
 
 function asText(value: unknown, fallback = '-') {
   const text = String(value ?? '').trim();
@@ -71,6 +68,19 @@ function niceDate(value: unknown) {
   const text = asText(value, '');
   if (!text) return 'No date';
   return new Intl.DateTimeFormat('en-AE', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(text.includes('T') ? text : `${text}T12:00:00`));
+}
+
+function shortDate(value: unknown) {
+  const text = asText(value, '');
+  if (!text) return 'Today';
+  return new Intl.DateTimeFormat('en-AE', { day: '2-digit', month: 'short' }).format(new Date(text.includes('T') ? text : `${text}T12:00:00`));
+}
+
+function greeting() {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Good morning';
+  if (hour < 18) return 'Good afternoon';
+  return 'Good evening';
 }
 
 function bookingCode(booking: ManagerBooking) {
@@ -137,6 +147,10 @@ function managerName(profile: ManagerProfile | null) {
   return profile?.full_name || profile?.email || '';
 }
 
+function firstName(profile: ManagerProfile | null) {
+  return asText(managerName(profile), 'Manager').split(' ')[0] || 'Manager';
+}
+
 function matchesManager(booking: ManagerBooking, profile: ManagerProfile | null) {
   if (!isManagerProfile(profile)) return true;
   const assigned = String(booking.assigned_manager_name || '').trim().toLowerCase();
@@ -151,12 +165,13 @@ function scheduleSortValue(booking: ManagerBooking) {
   return `${date} ${time}`;
 }
 
-function MetricCard({ title, value, icon: Icon }: Metric) {
+function MetricCard({ title, value, icon: Icon, tone = 'default' }: Metric) {
+  const toneClass = tone === 'success' ? 'bg-emerald-50 text-emerald-700' : tone === 'warning' ? 'bg-red-50 text-red-700' : 'bg-primary-50 text-primary';
   return (
-    <Card className="rounded-[1.25rem] border-border/80 bg-white shadow-[0_12px_32px_rgba(8,37,50,0.055)]">
-      <CardContent className="flex min-w-0 items-center gap-3 p-4">
-        <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-primary-50 text-primary"><Icon className="size-5" aria-hidden="true" /></span>
-        <div className="min-w-0"><p className="truncate text-xs font-semibold text-muted-foreground">{title}</p><p className="mt-1 break-words font-heading text-xl font-semibold leading-tight text-foreground sm:text-2xl">{value}</p></div>
+    <Card className="rounded-[1.25rem] border-border/80 bg-white shadow-[0_10px_24px_rgba(8,37,50,0.055)]">
+      <CardContent className="flex min-w-0 items-center gap-2.5 p-3 sm:gap-3 sm:p-4">
+        <span className={`flex size-9 shrink-0 items-center justify-center rounded-2xl ${toneClass} sm:size-10`}><Icon className="size-4 sm:size-5" aria-hidden="true" /></span>
+        <div className="min-w-0"><p className="truncate text-[11px] font-bold text-muted-foreground sm:text-xs">{title}</p><p className="mt-0.5 break-words font-heading text-lg font-semibold leading-tight text-foreground sm:text-xl xl:text-2xl">{value}</p></div>
       </CardContent>
     </Card>
   );
@@ -169,20 +184,23 @@ function Detail({ label, value, sub }: { label: string; value: ReactNode; sub?: 
 function RideSummaryCard({ booking }: { booking: ManagerBooking }) {
   const status = rideStatus(booking);
   return (
-    <div className="rounded-[1.25rem] border border-border bg-white p-4 shadow-[0_12px_30px_rgba(8,37,50,0.055)]">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+    <div className="rounded-[1.15rem] border border-border bg-white p-3 shadow-[0_10px_24px_rgba(8,37,50,0.05)] sm:p-4">
+      <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary">{bookingCode(booking)}</p>
-          <h3 className="mt-1 break-words font-heading text-base font-semibold text-foreground">{asText(booking.customer_name, 'Guest')}</h3>
-          <p className="mt-1 text-sm text-muted-foreground">{packageLabel(booking)}</p>
+          <p className="text-xs font-bold text-primary">{asText(booking.preferred_time, 'Time pending')}</p>
+          <h3 className="mt-1 break-words font-heading text-base font-semibold leading-tight text-foreground">{packageLabel(booking)}</h3>
+          <p className="mt-1 text-sm font-semibold text-muted-foreground">{asText(booking.customer_name, 'Guest')}</p>
         </div>
-        <div className="flex flex-wrap gap-2 sm:justify-end"><span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-bold ${statusTone(status)}`}>{status}</span><Badge variant="secondary">{sourceLabel(booking)}</Badge></div>
+        <span className={`shrink-0 rounded-full border px-2.5 py-1 text-[11px] font-bold ${statusTone(status)}`}>{status}</span>
       </div>
-      <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-        <Detail label="Time" value={asText(booking.preferred_time, 'Time pending')} sub={niceDate(booking.preferred_date)} />
+      <div className="mt-3 grid grid-cols-2 gap-2">
         <Detail label="Ride" value={serviceDetail(booking)} sub={asText(booking.customer_phone || booking.customer_email, '')} />
-        <Detail label="Vehicle" value={asText(booking.assigned_vehicle_name, 'Not selected')} sub={status === 'Confirmed' ? 'Select from My Rides' : 'Ride progress'} />
-        <Detail label="Payment" value={formatAed(totalAmount(booking))} sub={status === 'Completed' ? `Received ${formatAed(receivedAmount(booking))}` : status === 'No Show' ? 'No collection' : 'Pending collection'} />
+        <Detail label="Payment" value={formatAed(totalAmount(booking))} sub={status === 'Completed' ? `Received ${formatAed(receivedAmount(booking))}` : status === 'No Show' ? 'No collection' : 'Pending'} />
+      </div>
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <Badge variant="secondary">{sourceLabel(booking)}</Badge>
+        <Badge variant="outline">{asText(booking.assigned_vehicle_name, 'Vehicle not selected')}</Badge>
+        <span className="ml-auto text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">{bookingCode(booking)}</span>
       </div>
     </div>
   );
@@ -246,37 +264,35 @@ export function ManagerBookingsPage() {
   }, [items, todayItems]);
 
   return (
-    <section className="w-full overflow-hidden px-4 py-5 sm:px-6 sm:py-7 lg:px-8 xl:px-10">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Today Overview</p>
-          <h1 className="mt-2 font-heading text-2xl font-semibold leading-tight text-foreground sm:text-3xl lg:text-4xl">Today operations</h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">Daily summary for {managerName(profile) || 'manager'} with today rides, progress and collections.</p>
+    <section className="w-full overflow-hidden px-1 py-1 sm:px-4 sm:py-4 lg:px-8 lg:py-8">
+      <div className="flex items-start justify-between gap-3 rounded-[1.35rem] border border-white/70 bg-white/72 p-4 shadow-[0_14px_32px_rgba(8,37,50,0.055)] backdrop-blur-xl sm:p-5">
+        <div className="min-w-0">
+          <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-primary">Today · {shortDate(today)}</p>
+          <h1 className="mt-1 font-heading text-2xl font-semibold leading-tight text-foreground sm:text-3xl">{greeting()}, {firstName(profile)}</h1>
+          <p className="mt-1 text-sm font-semibold text-muted-foreground">{metrics.today} rides today</p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button asChild variant="outline" className="rounded-full bg-white"><Link href="/admin/my-rides">Open My Rides</Link></Button>
-          <Button type="button" variant="outline" onClick={refreshAll} className="rounded-full bg-white"><RefreshCw className="size-4" aria-hidden="true" />Refresh</Button>
-        </div>
+        <button type="button" onClick={refreshAll} className="flex size-11 shrink-0 items-center justify-center rounded-2xl border border-border bg-white text-primary shadow-sm" aria-label="Refresh today overview"><RefreshCw className="size-4" aria-hidden="true" /></button>
       </div>
 
-      {error ? <p className="mt-5 rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</p> : null}
-      <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-6">
-        <MetricCard title="Today Rides" value={String(metrics.today)} icon={CalendarDays} />
-        <MetricCard title="In Progress" value={String(metrics.inProgress)} icon={Clock3} />
-        <MetricCard title="Completed Today" value={String(metrics.completedToday)} icon={CheckCircle2} />
-        <MetricCard title="No Show Today" value={String(metrics.noShowToday)} icon={AlertCircle} />
-        <MetricCard title="Cash in Hand" value={formatAed(metrics.cash)} icon={WalletCards} />
-        <MetricCard title="Card Payments" value={formatAed(metrics.card)} icon={CreditCard} />
+      {error ? <p className="mt-3 rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</p> : null}
+
+      <div className="mt-3 grid grid-cols-2 gap-2.5 sm:grid-cols-3 xl:grid-cols-6">
+        <MetricCard title="Today" value={String(metrics.today)} icon={CalendarDays} />
+        <MetricCard title="Progress" value={String(metrics.inProgress)} icon={Clock3} />
+        <MetricCard title="Done" value={String(metrics.completedToday)} icon={CheckCircle2} tone="success" />
+        <MetricCard title="No Show" value={String(metrics.noShowToday)} icon={AlertCircle} tone="warning" />
+        <MetricCard title="Cash" value={formatAed(metrics.cash)} icon={WalletCards} tone="success" />
+        <MetricCard title="Card" value={formatAed(metrics.card)} icon={CreditCard} />
       </div>
 
-      <Card className="mt-5 overflow-hidden rounded-[1.5rem] border-border/80 bg-white">
-        <CardHeader className="gap-4 border-b border-border/70 bg-[#F7FAFA] px-4 py-4 lg:flex-row lg:items-center lg:justify-between">
-          <div><CardTitle className="font-heading text-lg font-semibold sm:text-xl">Today ride list</CardTitle><p className="mt-1 text-xs font-semibold text-muted-foreground">{loading ? 'Loading records...' : `${visibleToday.length} rides for ${niceDate(today)}`}</p></div>
-          <div className="relative w-full lg:max-w-sm"><Search className="pointer-events-none absolute left-3 top-3 size-4 text-muted-foreground" aria-hidden="true" /><Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search today's rides..." className="h-10 rounded-full bg-white pl-9" /></div>
+      <Card className="mt-3 overflow-hidden rounded-[1.35rem] border-border/80 bg-white shadow-[0_12px_28px_rgba(8,37,50,0.05)]">
+        <CardHeader className="gap-3 border-b border-border/70 bg-[#F7FAFA] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+          <div><CardTitle className="font-heading text-xl font-semibold sm:text-2xl">Today rides</CardTitle><p className="mt-0.5 text-xs font-semibold text-muted-foreground">{loading ? 'Loading...' : `${visibleToday.length} rides · ${niceDate(today)}`}</p></div>
+          {todayItems.length > 0 ? <div className="relative w-full sm:max-w-xs"><Search className="pointer-events-none absolute left-3 top-3 size-4 text-muted-foreground" aria-hidden="true" /><Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search rides..." className="h-10 rounded-full bg-white pl-9" /></div> : null}
         </CardHeader>
-        <CardContent className="grid gap-3 p-4 xl:grid-cols-2">
-          {loading ? <div className="rounded-2xl border border-dashed border-border bg-[#F7FAFA] p-8 text-center text-sm font-semibold text-muted-foreground">Loading today rides...</div> : null}
-          {!loading && visibleToday.length === 0 ? <div className="rounded-2xl border border-dashed border-border bg-[#F7FAFA] p-8 text-center"><p className="font-heading text-lg font-semibold text-foreground">No rides for today</p><p className="mt-2 text-sm text-muted-foreground">Future bookings My Rides ke Upcoming tab me milengi.</p></div> : null}
+        <CardContent className="grid gap-3 p-3 sm:p-4 xl:grid-cols-2">
+          {loading ? <div className="rounded-2xl border border-dashed border-border bg-[#F7FAFA] p-6 text-center text-sm font-semibold text-muted-foreground">Loading today rides...</div> : null}
+          {!loading && visibleToday.length === 0 ? <div className="rounded-2xl border border-dashed border-border bg-[#F7FAFA] px-4 py-6 text-center"><p className="font-heading text-lg font-semibold text-foreground">No rides today</p><p className="mt-1 text-sm leading-5 text-muted-foreground">Future rides My Rides ke Upcoming tab me milengi.</p></div> : null}
           {visibleToday.map((booking, index) => <RideSummaryCard key={String(booking.id || `${bookingCode(booking)}-${index}`)} booking={booking} />)}
         </CardContent>
       </Card>
