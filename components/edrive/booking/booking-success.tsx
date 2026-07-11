@@ -37,7 +37,7 @@ export function BookingSuccess({ request, onAnother }: { request: BookingRequest
 
       if (!fullResult.error) {
         setSaveStatus('saved');
-        setSaveMessage('Saved to booking dashboard');
+        setSaveMessage('Request received successfully');
         return;
       }
 
@@ -47,7 +47,7 @@ export function BookingSuccess({ request, onAnother }: { request: BookingRequest
         if (!active) return;
         if (!fallbackResult.error) {
           setSaveStatus('saved');
-          setSaveMessage('Saved to booking dashboard');
+          setSaveMessage('Request received successfully');
           return;
         }
         setSaveMessage(fallbackResult.error.message || firstError);
@@ -73,9 +73,9 @@ export function BookingSuccess({ request, onAnother }: { request: BookingRequest
           <p className="mt-3 text-[10px] font-bold uppercase tracking-[0.24em] text-primary">Pending Confirmation</p>
           <h1 className="mt-1 font-heading text-3xl font-semibold leading-tight text-foreground sm:text-4xl">Booking Request Sent</h1>
           <p className="mx-auto mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">Thank you, {request.customerName}. Our booking team will check availability and contact you shortly.</p>
-          {saveStatus === 'saving' ? <p className="mx-auto mt-3 w-fit rounded-full bg-primary-50 px-3 py-1 text-xs font-bold text-primary-900">Saving to booking dashboard...</p> : null}
-          {saveStatus === 'saved' ? <p className="mx-auto mt-3 w-fit rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">{saveMessage || 'Saved to booking dashboard'}</p> : null}
-          {saveStatus === 'failed' ? <p className="mx-auto mt-3 w-fit rounded-full bg-red-50 px-3 py-1 text-xs font-bold text-red-700">Database save failed: {saveMessage || 'Please contact the team with this reference.'}</p> : null}
+          {saveStatus === 'saving' ? <p className="mx-auto mt-3 w-fit rounded-full bg-primary-50 px-3 py-1 text-xs font-bold text-primary-900">Sending your request...</p> : null}
+          {saveStatus === 'saved' ? <p className="mx-auto mt-3 w-fit rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">{saveMessage || 'Request received successfully'}</p> : null}
+          {saveStatus === 'failed' ? <p className="mx-auto mt-3 w-fit rounded-full bg-red-50 px-3 py-1 text-xs font-bold text-red-700">We could not save the request automatically. Please WhatsApp the team with this reference.</p> : null}
         </div>
 
         <div className="mt-6 grid gap-5 xl:grid-cols-[minmax(0,1fr)_18.5rem]">
