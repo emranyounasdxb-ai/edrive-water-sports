@@ -11,10 +11,19 @@ import { supabase } from '@/lib/supabase-client';
 const locations = ['Dubai', 'Jumeirah', 'Dubai Marina', 'Dubai Harbour', 'Dubai Islands', 'Fishing Harbour'];
 const typeMap: Record<string, string> = { 'Jet Car': 'jet_car', 'Jet Ski': 'jet_ski' };
 const statusMap: Record<string, string> = { Available: 'available', Booked: 'booked', Maintenance: 'maintenance', Inactive: 'inactive', 'For Sale': 'for_sale' };
+const fleetBasePath = '/images/edrive/fleet';
+const jetCarImageOptions = Array.from({ length: 12 }, (_, index) => {
+  const number = String(index + 1).padStart(2, '0');
+  return { label: `Jet Car ${number}`, value: `${fleetBasePath}/jc-${number}.webp` };
+});
+const jetSkiImageOptions = Array.from({ length: 4 }, (_, index) => {
+  const number = String(index + 1).padStart(2, '0');
+  return { label: `Jet Ski ${number}`, value: `${fleetBasePath}/js-${number}.webp` };
+});
 const fleetImageOptions = [
   { label: 'No image', value: '' },
-  { label: 'Jet Car 4 Seater', value: '/images/fleet/jet-car-4-seater.webp' },
-  { label: 'Jet Ski 2 Seater', value: '/images/fleet/jet-ski-2-seater.webp' }
+  ...jetCarImageOptions,
+  ...jetSkiImageOptions
 ];
 const reverse = (map: Record<string, string>, value?: string) => Object.keys(map).find((key) => map[key] === value) || value || '';
 
@@ -56,7 +65,7 @@ const emptyFleet: FleetFormValues = {
   color: '',
   installationDate: '',
   expiryDate: '',
-  imageUrl: '/images/fleet/jet-car-4-seater.webp',
+  imageUrl: `${fleetBasePath}/jc-01.webp`,
   notes: '',
   sortOrder: '100'
 };
@@ -65,20 +74,48 @@ const toText = (value: unknown) => String(value ?? '');
 const toNumberText = (value: unknown) => value === null || value === undefined || value === '' ? '' : String(Number(value));
 const slugify = (value: string) => value.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
-function defaultImage(type: string) {
-  if (type === 'Jet Ski') return '/images/fleet/jet-ski-2-seater.webp';
-  if (type === 'Jet Car') return '/images/fleet/jet-car-4-seater.webp';
+function imagePathFromCode(code: string, name: string, type: string) {
+  const source = `${code} ${name}`.toLowerCase();
+  const jetCarMatch = source.match(/(?:jc|jet\s*car)\D*(\d{1,2})/);
+  const jetSkiMatch = source.match(/(?:js|jet\s*ski)\D*(\d{1,2})/);
+
+  if (type === 'Jet Ski') {
+    const number = Math.min(Math.max(Number(jetSkiMatch?.[1] || 1), 1), 4);
+    return `${fleetBasePath}/js-${String(number).padStart(2, '0')}.webp`;
+  }
+
+  if (type === 'Jet Car') {
+    const number = Math.min(Math.max(Number(jetCarMatch?.[1] || 1), 1), 12);
+    return `${fleetBasePath}/jc-${String(number).padStart(2, '0')}.webp`;
+  }
+
   return '';
 }
 
+function defaultImage(type: string) {
+  return imagePathFromCode('', '', type);
+}
+
+function isLegacyFleetImage(value: string) {
+  return !value || value.includes('/images/fleet/') || value.includes('/images/edrive/packages/');
+}
+
+function resolveFleetImage(imageUrl: string, code: string, name: string, type: string) {
+  if (!isLegacyFleetImage(imageUrl)) return imageUrl;
+  return imagePathFromCode(code, name, type) || defaultImage(type);
+}
+
 function mapFleet(row: Record<string, unknown>): FleetRecord {
-  const type = reverse(typeMap, toText(row.type));
-  const imageUrl = toText(row.main_image_url) || toText(row.primary_image_url) || defaultImage(type);
+  const type = reverse(typeMap, toText(row.type || row.vehicle_type));
+  const code = toText(row.vehicle_code);
+  const name = toText(row.name || row.vehicle_name);
+  const storedImageUrl = toText(row.main_image_url) || toText(row.primary_image_url);
+  const imageUrl = resolveFleetImage(storedImageUrl, code, name, type);
 
   return {
     id: toText(row.id),
-    code: toText(row.vehicle_code),
-    name: toText(row.name),
+    code,
+    name,
     type,
     location: toText(row.location || 'Dubai'),
     capacity: toNumberText(row.capacity || 2),
@@ -114,7 +151,7 @@ export default function Page() {
 
     const { data, error: queryError } = await supabase
       .from('vehicles')
-      .select('id,vehicle_code,name,type,location,capacity,status,brand,model,year,reg_no,device_imei,color,date_of_installation,expiry_date,primary_image_url,main_image_url,notes,sort_order')
+      .select('id,vehicle_code,name,vehicle_name,type,vehicle_type,location,capacity,status,brand,model,year,reg_no,device_imei,color,date_of_installation,expiry_date,primary_image_url,main_image_url,notes,sort_order')
       .order('sort_order', { ascending: true })
       .order('vehicle_code', { ascending: true });
 
@@ -151,9 +188,9 @@ export default function Page() {
   async function saveFleet(values: FleetFormValues) {
     setError('');
 
-    const imageUrl = values.imageUrl.trim() || defaultImage(values.type);
     const code = values.code.trim();
     const name = values.name.trim() || code;
+    const imageUrl = values.imageUrl.trim() || imagePathFromCode(code, name, values.type) || defaultImage(values.type);
     const slug = slugify(code || name);
     const dbStatus = statusMap[values.status] || 'available';
     const dbType = typeMap[values.type] || 'jet_car';
@@ -417,7 +454,7 @@ function FleetModal({ initialValues, onClose, onSubmit }: { initialValues?: Flee
       ...current,
       type: value,
       capacity: value === 'Jet Ski' ? '2' : '4',
-      imageUrl: current.imageUrl || defaultImage(value)
+      imageUrl: isLegacyFleetImage(current.imageUrl) ? imagePathFromCode(current.code, current.name, value) : current.imageUrl
     }));
   }
 
@@ -446,7 +483,7 @@ function FleetModal({ initialValues, onClose, onSubmit }: { initialValues?: Flee
               </div>
             </label>
 
-            <FormInput label="Custom Image Path" value={values.imageUrl} placeholder="/images/fleet/jet-car-4-seater.webp" onChange={(value) => updateField('imageUrl', value)} />
+            <FormInput label="Custom Image Path" value={values.imageUrl} placeholder="/images/edrive/fleet/jc-01.webp" onChange={(value) => updateField('imageUrl', value)} />
             <FormInput label="Vehicle Code" value={values.code} required placeholder="JC-01 / JS-01" onChange={(value) => updateField('code', value)} />
             <FormInput label="Vehicle Name" value={values.name} required placeholder="Jet Car 01" onChange={(value) => updateField('name', value)} />
             <SelectInput label="Vehicle Type" value={values.type} options={Object.keys(typeMap)} required onChange={updateType} />
