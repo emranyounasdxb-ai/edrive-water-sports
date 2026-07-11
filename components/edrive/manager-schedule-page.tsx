@@ -4,8 +4,7 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { CalendarDays, CheckCircle2, Clock3, RefreshCw, Search, WalletCards } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { formatAed } from '@/lib/booking-data';
 import { bookingRequestsTable } from '@/lib/booking-records';
@@ -13,7 +12,6 @@ import { supabase } from '@/lib/supabase-client';
 import { AdminOperationsSchedulePage } from './admin-operations-modules';
 
 type ManagerProfile = { name: string; email: string; role: string; ready: boolean };
-
 type BookingRow = Record<string, unknown> & {
   id?: string | null;
   booking_code?: string | null;
@@ -23,6 +21,8 @@ type BookingRow = Record<string, unknown> & {
   selected_package_name?: string | null;
   selected_package_category?: string | null;
   selected_package_capacity?: number | string | null;
+  selected_package_price?: number | string | null;
+  selected_package_b2b_price?: number | string | null;
   service_type?: string | null;
   experience_type?: string | null;
   duration_minutes?: number | string | null;
@@ -41,11 +41,10 @@ type BookingRow = Record<string, unknown> & {
   assigned_vehicle_name?: string | null;
   b2b_agent_name?: string | null;
 };
-
 type PortalProfile = { full_name: string | null; email: string | null; role: string | null; status: string | null };
-type Metric = { title: string; value: string; icon: LucideIcon };
+type ScheduleFilter = 'today' | 'tomorrow' | 'week' | 'selected';
 
-type ScheduleFilter = 'today' | 'tomorrow' | 'week' | 'all';
+const filterLabels: Record<ScheduleFilter, string> = { today: 'Today', tomorrow: 'Tomorrow', week: 'Week', selected: 'Date' };
 
 function asText(value: unknown, fallback = '-') {
   const text = String(value ?? '').trim();
@@ -76,12 +75,18 @@ function niceDate(value: unknown) {
   return new Intl.DateTimeFormat('en-AE', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(text.includes('T') ? text : `${text}T12:00:00`));
 }
 
+function shortDate(value: unknown) {
+  const text = asText(value, '');
+  if (!text) return 'Date';
+  return new Intl.DateTimeFormat('en-AE', { day: '2-digit', month: 'short' }).format(new Date(text.includes('T') ? text : `${text}T12:00:00`));
+}
+
 function bookingCode(booking: BookingRow) {
   return asText(booking.booking_code || booking.booking_number || booking.id, 'Booking');
 }
 
 function packageLabel(booking: BookingRow) {
-  return asText(booking.selected_package_name || booking.selected_package_category || booking.experience_type || booking.service_type, 'Package');
+  return asText(booking.selected_package_name || booking.selected_package_category || booking.experience_type || booking.service_type, 'Ride package');
 }
 
 function rideDetails(booking: BookingRow) {
@@ -152,13 +157,11 @@ async function loadManagerProfile(): Promise<ManagerProfile> {
   return { name: profile?.full_name || authEmail, email: profile?.email || authEmail, role: profile?.role || 'admin', ready: true };
 }
 
-function MetricCard({ title, value, icon: Icon }: Metric) {
+function MetricCard({ title, value, icon: Icon, tone = 'default' }: { title: string; value: string; icon: LucideIcon; tone?: 'default' | 'success' }) {
+  const toneClass = tone === 'success' ? 'bg-emerald-50 text-emerald-700' : 'bg-primary-50 text-primary';
   return (
-    <Card className="rounded-[1.25rem] border-border/80 bg-white shadow-[0_12px_32px_rgba(8,37,50,0.055)]">
-      <CardContent className="flex min-w-0 items-center gap-3 p-4">
-        <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-primary-50 text-primary"><Icon className="size-5" aria-hidden="true" /></span>
-        <div className="min-w-0"><p className="truncate text-xs font-semibold text-muted-foreground">{title}</p><p className="mt-1 break-words font-heading text-xl font-semibold leading-tight text-foreground sm:text-2xl">{value}</p></div>
-      </CardContent>
+    <Card className="rounded-[1.25rem] border-border/80 bg-white shadow-[0_10px_24px_rgba(8,37,50,0.055)]">
+      <CardContent className="flex min-w-0 items-center gap-2.5 p-3 sm:gap-3 sm:p-4"><span className={`flex size-9 shrink-0 items-center justify-center rounded-2xl ${toneClass} sm:size-10`}><Icon className="size-4 sm:size-5" aria-hidden="true" /></span><div className="min-w-0"><p className="truncate text-[11px] font-bold text-muted-foreground sm:text-xs">{title}</p><p className="mt-0.5 break-words font-heading text-lg font-semibold leading-tight text-foreground sm:text-xl xl:text-2xl">{value}</p></div></CardContent>
     </Card>
   );
 }
@@ -170,21 +173,10 @@ function Detail({ label, value, sub }: { label: string; value: ReactNode; sub?: 
 function ScheduleCard({ booking }: { booking: BookingRow }) {
   const status = rideStatus(booking);
   return (
-    <div className="rounded-[1.25rem] border border-border bg-white p-4 shadow-[0_12px_30px_rgba(8,37,50,0.055)]">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0">
-          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary">{bookingCode(booking)}</p>
-          <h3 className="mt-1 break-words font-heading text-base font-semibold text-foreground">{asText(booking.customer_name, 'Guest')}</h3>
-          <p className="mt-1 text-sm text-muted-foreground">{packageLabel(booking)}</p>
-        </div>
-        <div className="flex flex-wrap gap-2 sm:justify-end"><span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-bold ${statusTone(status)}`}>{status}</span><Badge variant="secondary">{sourceLabel(booking)}</Badge></div>
-      </div>
-      <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-        <Detail label="Date / Time" value={niceDate(booking.preferred_date)} sub={asText(booking.preferred_time, 'Time pending')} />
-        <Detail label="Ride" value={rideDetails(booking)} sub={asText(booking.customer_phone || booking.customer_email, '')} />
-        <Detail label="Vehicle" value={asText(booking.assigned_vehicle_name, 'Not selected')} sub="Schedule view" />
-        <Detail label="Amount" value={formatAed(totalAmount(booking))} sub={status === 'Completed' ? `Received ${formatAed(receivedAmount(booking))}` : status === 'No Show' ? 'No collection' : 'Pending collection'} />
-      </div>
+    <div className="rounded-[1.15rem] border border-border bg-white p-3 shadow-[0_10px_24px_rgba(8,37,50,0.05)] sm:p-4">
+      <div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="text-xs font-bold text-primary">{asText(booking.preferred_time, 'Time pending')}</p><h3 className="mt-1 break-words font-heading text-base font-semibold leading-tight text-foreground">{packageLabel(booking)}</h3><p className="mt-1 text-sm font-semibold text-muted-foreground">{asText(booking.customer_name, 'Guest')}</p></div><span className={`shrink-0 rounded-full border px-2.5 py-1 text-[11px] font-bold ${statusTone(status)}`}>{status}</span></div>
+      <div className="mt-3 grid grid-cols-2 gap-2"><Detail label="Date" value={shortDate(booking.preferred_date)} sub={niceDate(booking.preferred_date)} /><Detail label="Amount" value={formatAed(totalAmount(booking))} sub={status === 'Completed' ? `Received ${formatAed(receivedAmount(booking))}` : status === 'No Show' ? 'No collection' : 'Pending'} /><Detail label="Ride" value={rideDetails(booking)} sub={asText(booking.customer_phone || booking.customer_email, '')} /><Detail label="Vehicle" value={asText(booking.assigned_vehicle_name, 'Not selected')} sub="Schedule view" /></div>
+      <div className="mt-3 flex flex-wrap items-center gap-2"><Badge variant="secondary">{sourceLabel(booking)}</Badge><span className="ml-auto text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">{bookingCode(booking)}</span></div>
     </div>
   );
 }
@@ -212,21 +204,6 @@ function ManagerSchedule({ manager }: { manager: ManagerProfile }) {
 
   useEffect(() => { void loadData(); }, []);
 
-  const visible = useMemo(() => {
-    const term = query.trim().toLowerCase();
-    return bookings
-      .filter((booking) => {
-        const rideDate = dateKey(booking.preferred_date);
-        if (filter === 'today') return rideDate === localDateKey();
-        if (filter === 'tomorrow') return rideDate === localDateKey(1);
-        if (filter === 'week') return withinNextWeek(booking);
-        if (selectedDate) return rideDate === selectedDate;
-        return true;
-      })
-      .filter((booking) => !term || [bookingCode(booking), booking.customer_name, booking.customer_phone, packageLabel(booking), booking.assigned_vehicle_name].some((value) => String(value || '').toLowerCase().includes(term)))
-      .sort((a, b) => scheduleSortValue(a).localeCompare(scheduleSortValue(b)));
-  }, [bookings, filter, query, selectedDate]);
-
   const metrics = useMemo(() => {
     const today = bookings.filter((booking) => dateKey(booking.preferred_date) === localDateKey()).length;
     const tomorrow = bookings.filter((booking) => dateKey(booking.preferred_date) === localDateKey(1)).length;
@@ -235,62 +212,41 @@ function ManagerSchedule({ manager }: { manager: ManagerProfile }) {
     return { today, tomorrow, week, completed };
   }, [bookings]);
 
+  const filterCounts = useMemo(() => ({ today: metrics.today, tomorrow: metrics.tomorrow, week: metrics.week, selected: bookings.filter((booking) => dateKey(booking.preferred_date) === selectedDate).length }), [bookings, metrics, selectedDate]);
+
+  const visible = useMemo(() => {
+    const term = query.trim().toLowerCase();
+    return bookings
+      .filter((booking) => {
+        const rideDate = dateKey(booking.preferred_date);
+        if (filter === 'today') return rideDate === localDateKey();
+        if (filter === 'tomorrow') return rideDate === localDateKey(1);
+        if (filter === 'week') return withinNextWeek(booking);
+        return rideDate === selectedDate;
+      })
+      .filter((booking) => !term || [bookingCode(booking), booking.customer_name, booking.customer_phone, packageLabel(booking), booking.assigned_vehicle_name].some((value) => String(value || '').toLowerCase().includes(term)))
+      .sort((a, b) => scheduleSortValue(a).localeCompare(scheduleSortValue(b)));
+  }, [bookings, filter, query, selectedDate]);
+
+  const filterList: ScheduleFilter[] = ['today', 'tomorrow', 'week', 'selected'];
+
   return (
-    <section className="w-full overflow-hidden px-4 py-5 sm:px-6 sm:py-7 lg:px-8 xl:px-10">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Ride Schedule</p>
-          <h1 className="mt-2 font-heading text-2xl font-semibold leading-tight text-foreground sm:text-3xl lg:text-4xl">Schedule planning</h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">Read-only date and week view for rides assigned to {manager.name || manager.email}.</p>
-        </div>
-        <Button type="button" variant="outline" onClick={loadData} className="w-fit rounded-full bg-white"><RefreshCw className="size-4" aria-hidden="true" />Refresh</Button>
-      </div>
-
-      {error ? <p className="mt-5 rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</p> : null}
-      <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <MetricCard title="Today" value={String(metrics.today)} icon={CalendarDays} />
-        <MetricCard title="Tomorrow" value={String(metrics.tomorrow)} icon={Clock3} />
-        <MetricCard title="This Week" value={String(metrics.week)} icon={WalletCards} />
-        <MetricCard title="Completed" value={String(metrics.completed)} icon={CheckCircle2} />
-      </div>
-
-      <Card className="mt-5 overflow-hidden rounded-[1.5rem] border-border/80 bg-white">
-        <CardHeader className="gap-4 border-b border-border/70 bg-[#F7FAFA] px-4 py-4 lg:flex-row lg:items-center lg:justify-between">
-          <div><CardTitle className="font-heading text-lg font-semibold sm:text-xl">Schedule list</CardTitle><p className="mt-1 text-xs font-semibold text-muted-foreground">{loading ? 'Loading records...' : `${visible.length} rides`}</p></div>
-          <div className="flex w-full flex-col gap-2 sm:flex-row lg:max-w-3xl">
-            <Input type="date" value={selectedDate} onChange={(event) => { setSelectedDate(event.target.value); setFilter('all'); }} className="h-10 rounded-xl bg-white text-sm font-semibold" />
-            <div className="relative w-full"><Search className="pointer-events-none absolute left-3 top-3 size-4 text-muted-foreground" aria-hidden="true" /><Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search schedule..." className="h-10 rounded-xl bg-white pl-9" /></div>
-          </div>
-        </CardHeader>
-        <div className="flex gap-2 overflow-x-auto border-b border-border/70 bg-white px-4 py-3">
-          {[
-            ['today', 'Today', metrics.today],
-            ['tomorrow', 'Tomorrow', metrics.tomorrow],
-            ['week', 'This Week', metrics.week],
-            ['all', 'Selected Date', visible.length]
-          ].map(([id, label, count]) => <button key={String(id)} type="button" onClick={() => setFilter(id as ScheduleFilter)} className={`whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-bold transition ${filter === id ? 'border-primary bg-primary text-white' : 'border-border bg-white text-muted-foreground hover:border-primary/40 hover:text-primary-900'}`}>{label} <span className={filter === id ? 'text-white/75' : 'text-muted-foreground'}>{count}</span></button>)}
-        </div>
-        <CardContent className="grid gap-3 p-4 xl:grid-cols-2">
-          {loading ? <div className="rounded-2xl border border-dashed border-border bg-[#F7FAFA] p-8 text-center text-sm font-semibold text-muted-foreground">Loading schedule...</div> : null}
-          {!loading && visible.length === 0 ? <div className="rounded-2xl border border-dashed border-border bg-[#F7FAFA] p-8 text-center"><p className="font-heading text-lg font-semibold text-foreground">No rides found</p><p className="mt-2 text-sm text-muted-foreground">Try another date or filter.</p></div> : null}
-          {visible.map((booking, index) => <ScheduleCard key={String(booking.id || `${bookingCode(booking)}-${index}`)} booking={booking} />)}
-        </CardContent>
-      </Card>
+    <section className="w-full overflow-hidden px-1 py-1 sm:px-4 sm:py-4 lg:px-8 lg:py-8">
+      <div className="flex items-start justify-between gap-3 rounded-[1.35rem] border border-white/70 bg-white/72 p-4 shadow-[0_14px_32px_rgba(8,37,50,0.055)] backdrop-blur-xl sm:p-5"><div className="min-w-0"><p className="text-[10px] font-bold uppercase tracking-[0.22em] text-primary">Schedule</p><h1 className="mt-1 font-heading text-2xl font-semibold leading-tight text-foreground sm:text-3xl">Ride plan</h1><p className="mt-1 text-sm font-semibold text-muted-foreground">{metrics.today} today · {metrics.week} this week</p></div><button type="button" onClick={loadData} className="flex size-11 shrink-0 items-center justify-center rounded-2xl border border-border bg-white text-primary shadow-sm" aria-label="Refresh schedule"><RefreshCw className="size-4" aria-hidden="true" /></button></div>
+      {error ? <p className="mt-3 rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</p> : null}
+      <div className="mt-3 grid grid-cols-2 gap-2.5 sm:grid-cols-4"><MetricCard title="Today" value={String(metrics.today)} icon={CalendarDays} /><MetricCard title="Tomorrow" value={String(metrics.tomorrow)} icon={Clock3} /><MetricCard title="Week" value={String(metrics.week)} icon={WalletCards} /><MetricCard title="Done" value={String(metrics.completed)} icon={CheckCircle2} tone="success" /></div>
+      <Card className="mt-3 overflow-hidden rounded-[1.35rem] border-border/80 bg-white shadow-[0_12px_28px_rgba(8,37,50,0.05)]"><CardContent className="p-3 sm:p-4"><div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><h2 className="font-heading text-xl font-semibold text-foreground">{filterLabels[filter]} rides</h2><p className="mt-0.5 text-xs font-semibold text-muted-foreground">{loading ? 'Loading...' : `${visible.length} rides`}</p></div><div className="grid w-full gap-2 sm:max-w-md sm:grid-cols-[10.5rem_1fr]"><Input type="date" value={selectedDate} onChange={(event) => { setSelectedDate(event.target.value); setFilter('selected'); }} className="h-10 rounded-full bg-white text-sm font-semibold" /><div className="relative"><Search className="pointer-events-none absolute left-3 top-3 size-4 text-muted-foreground" aria-hidden="true" /><Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search rides..." className="h-10 rounded-full bg-white pl-9" /></div></div></div><div className="mt-3 flex flex-wrap gap-2 border-y border-border/70 py-3">{filterList.map((item) => <button key={item} type="button" onClick={() => setFilter(item)} className={`rounded-full border px-3 py-2 text-xs font-bold transition ${filter === item ? 'border-primary bg-primary text-white shadow-sm' : 'border-border bg-white text-muted-foreground'}`}>{filterLabels[item]} <span className={filter === item ? 'text-white/80' : 'text-muted-foreground'}>{filterCounts[item]}</span></button>)}</div><div className="mt-3 grid gap-3 xl:grid-cols-2">{loading ? <div className="rounded-2xl border border-dashed border-border bg-[#F7FAFA] p-6 text-center text-sm font-semibold text-muted-foreground">Loading schedule...</div> : null}{!loading && visible.length === 0 ? <div className="rounded-2xl border border-dashed border-border bg-[#F7FAFA] px-4 py-6 text-center"><p className="font-heading text-lg font-semibold text-foreground">No rides found</p><p className="mt-1 text-sm leading-5 text-muted-foreground">Date ya filter change karke check karen.</p></div> : null}{visible.map((booking, index) => <ScheduleCard key={String(booking.id || `${bookingCode(booking)}-${index}`)} booking={booking} />)}</div></CardContent></Card>
     </section>
   );
 }
 
 export function ManagerScopedSchedulePage() {
   const [manager, setManager] = useState<ManagerProfile>({ name: '', email: '', role: 'admin', ready: false });
-
   useEffect(() => {
     let active = true;
-    void loadManagerProfile().then((profile) => {
-      if (active) setManager(profile);
-    });
+    void loadManagerProfile().then((profile) => { if (active) setManager(profile); });
     return () => { active = false; };
   }, []);
-
   if (!manager.ready) return <div className="p-6 text-sm font-semibold text-muted-foreground">Loading access...</div>;
   if (manager.role === 'manager') return <ManagerSchedule manager={manager} />;
   return <AdminOperationsSchedulePage />;
