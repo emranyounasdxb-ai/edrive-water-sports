@@ -1,6 +1,7 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
 import { Inter, Poppins } from 'next/font/google';
+import { PwaRegister } from '@/components/edrive/pwa-register';
 import './globals.css';
 import './contact-cta.css';
 import './hero-cta.css';
@@ -24,7 +25,17 @@ export const metadata: Metadata = {
     template: '%s | eDrive Water Sports'
   },
   description: 'Premium jet ski rental Dubai, jet car rental Dubai, water sports packages, fleet, membership, sales, and contact for eDrive Water Sports at Dubai Islands Marina.',
-  metadataBase: new URL('https://edrivewatersports.ae'),
+  metadataBase: new URL('https://edrivedubai.ae'),
+  manifest: '/manifest.webmanifest',
+  applicationName: 'eDrive Water Sports',
+  appleWebApp: {
+    capable: true,
+    title: 'eDrive',
+    statusBarStyle: 'default'
+  },
+  formatDetection: {
+    telephone: false
+  },
   icons: {
     icon: [
       { url: '/brand/favicon.ico' },
@@ -36,7 +47,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'eDrive Water Sports',
     description: 'Premium jet ski and jet car experiences from Dubai Island Marina.',
-    url: 'https://edrivewatersports.ae',
+    url: 'https://edrivedubai.ae',
     siteName: 'eDrive Water Sports',
     images: [{ url: '/brand/og-image.png', width: 1200, height: 630, alt: 'eDrive Water Sports' }],
     type: 'website'
@@ -49,10 +60,21 @@ export const metadata: Metadata = {
   }
 };
 
+export const viewport: Viewport = {
+  themeColor: '#082532',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  viewportFit: 'cover'
+};
+
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
-      <body className={`${inter.variable} ${poppins.variable}`}>{children}</body>
+      <body className={`${inter.variable} ${poppins.variable}`}>
+        <PwaRegister />
+        {children}
+      </body>
     </html>
   );
 }
