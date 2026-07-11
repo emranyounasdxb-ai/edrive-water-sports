@@ -105,6 +105,50 @@ main > section.relative.isolate .max-w-2xl > .mt-8.flex.max-w-xl > a:last-child 
   filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.24));
 }
 
+main.pt-\[86px\] > section.relative.isolate:first-child {
+  margin-top: -86px;
+  min-height: 520px !important;
+  background-image: url('/images/edrive/dubai-waterfront-hero.png');
+  background-size: cover;
+  background-position: center 58%;
+}
+
+main.pt-\[86px\] > section.relative.isolate:first-child > img {
+  opacity: 0 !important;
+}
+
+main.pt-\[86px\] > section.relative.isolate:first-child > .container-x.relative {
+  min-height: 520px !important;
+  align-items: center !important;
+  padding-top: 110px !important;
+  padding-bottom: 48px !important;
+}
+
+@media (min-width: 768px) {
+  main.pt-\[86px\] > section.relative.isolate:first-child {
+    min-height: 560px !important;
+    background-position: center 55%;
+  }
+
+  main.pt-\[86px\] > section.relative.isolate:first-child > .container-x.relative {
+    min-height: 560px !important;
+    padding-top: 116px !important;
+    padding-bottom: 56px !important;
+  }
+}
+
+@media (min-width: 1280px) {
+  main.pt-\[86px\] > section.relative.isolate:first-child {
+    min-height: 590px !important;
+  }
+
+  main.pt-\[86px\] > section.relative.isolate:first-child > .container-x.relative {
+    min-height: 590px !important;
+    padding-top: 118px !important;
+    padding-bottom: 58px !important;
+  }
+}
+
 @media (max-width: 640px) {
   main > section.relative.isolate .max-w-2xl > .mt-8.flex.max-w-xl > a {
     min-height: 3.35rem;
@@ -115,5 +159,16 @@ main > section.relative.isolate .max-w-2xl > .mt-8.flex.max-w-xl > a:last-child 
     white-space: normal;
     font-size: 0.74rem;
     line-height: 1.12;
+  }
+
+  main.pt-\[86px\] > section.relative.isolate:first-child {
+    min-height: 540px !important;
+    background-position: 64% center;
+  }
+
+  main.pt-\[86px\] > section.relative.isolate:first-child > .container-x.relative {
+    min-height: 540px !important;
+    padding-top: 104px !important;
+    padding-bottom: 36px !important;
   }
 }
