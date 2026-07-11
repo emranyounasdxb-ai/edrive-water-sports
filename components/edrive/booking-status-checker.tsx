@@ -84,7 +84,7 @@ export function BookingStatusChecker() {
           <div>
             <span className="inline-flex items-center gap-2 rounded-full bg-primary-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-primary"><FileSearch className="size-3.5" aria-hidden="true" />Booking Status</span>
             <h1 className="mt-4 max-w-3xl font-heading text-4xl font-semibold leading-[0.98] tracking-[-0.03em] text-foreground sm:text-5xl">Check Your Booking Status</h1>
-            <p className="mt-4 max-w-xl text-sm leading-7 text-muted-foreground">Enter your booking reference number to view the live booking status from the booking system.</p>
+            <p className="mt-4 max-w-xl text-sm leading-7 text-muted-foreground">Enter your booking reference number to view your latest request details and confirmation status.</p>
           </div>
 
           <form onSubmit={(event) => { event.preventDefault(); void searchBooking(); }} className="premium-surface rounded-[1.65rem] p-5">
@@ -137,7 +137,7 @@ function TicketResult({ request }: { request: BookingRequest }) {
               </div>
               <p className="mt-4 text-[9px] font-bold uppercase tracking-[0.25em] text-gold">Booking Reference</p>
               <h2 className="mt-2 font-heading text-3xl font-semibold leading-none tracking-[-0.035em] sm:text-4xl lg:text-[2.6rem]">{request.bookingCode}</h2>
-              <p className="mt-2.5 text-xs text-white/84">Live booking status and request details</p>
+              <p className="mt-2.5 text-xs text-white/84">Booking status and request details</p>
             </div>
             <span className={cn('relative z-10 w-fit rounded-full border px-3.5 py-1.5 text-[9px] font-bold uppercase tracking-[0.2em] shadow-[inset_0_1px_0_rgba(255,255,255,0.24),0_5px_14px_rgba(0,0,0,0.14)]', statusTone(status))}><span className="mr-1.5 inline-block size-1.5 rounded-full bg-current align-middle" />{status}</span>
           </div>
@@ -188,7 +188,7 @@ function TicketResult({ request }: { request: BookingRequest }) {
           </div>
 
           <a href={bookingLink} target="_blank" rel="noopener noreferrer" className="group block">
-            <p className="text-[8px] font-bold uppercase tracking-[0.22em] text-primary-900/80">Live Booking QR<br />Scan to open</p>
+            <p className="text-[8px] font-bold uppercase tracking-[0.22em] text-primary-900/80">Booking QR<br />Scan to open</p>
             <span className="mx-auto mt-2.5 block rounded-2xl border border-border bg-white p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.96),inset_0_-4px_9px_rgba(8,37,50,0.03),0_8px_18px_rgba(8,37,50,0.09)] transition group-hover:-translate-y-0.5">
               <img src={qrSrc} alt={`QR code for booking ${request.bookingCode}`} className="size-20 rounded-xl" />
             </span>
@@ -211,13 +211,13 @@ function TicketInfo({ icon: Icon, label, value, danger = false }: { icon: Elemen
 }
 
 function LoadingCard() {
-  return <div className="premium-surface mx-auto max-w-2xl rounded-[1.75rem] p-6 text-center"><Loader2 className="mx-auto size-10 animate-spin text-primary" aria-hidden="true" /><h2 className="mt-4 font-heading text-2xl font-semibold text-foreground">Searching booking system</h2><p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-muted-foreground">Please wait while we check your latest booking status.</p></div>;
+  return <div className="premium-surface mx-auto max-w-2xl rounded-[1.75rem] p-6 text-center"><Loader2 className="mx-auto size-10 animate-spin text-primary" aria-hidden="true" /><h2 className="mt-4 font-heading text-2xl font-semibold text-foreground">Checking your booking</h2><p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-muted-foreground">Please wait while we check your latest booking details.</p></div>;
 }
 
 function NotFound({ reference, whatsappMessage }: { reference: string; whatsappMessage: string }) {
-  return <div className="premium-surface mx-auto max-w-2xl rounded-[1.75rem] p-6 text-center"><FileSearch className="mx-auto size-10 text-primary" aria-hidden="true" /><h2 className="mt-4 font-heading text-2xl font-semibold text-foreground">Booking not found</h2><p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-muted-foreground">We could not find {reference || 'this reference'} in the booking system. Please check the reference number or contact the eDrive team on WhatsApp.</p><Button asChild className="mt-5 rounded-full"><a href={`${whatsappUrl}?text=${whatsappMessage}`} target="_blank" rel="noopener noreferrer"><MessageCircle data-icon aria-hidden="true" />Ask WhatsApp</a></Button></div>;
+  return <div className="premium-surface mx-auto max-w-2xl rounded-[1.75rem] p-6 text-center"><FileSearch className="mx-auto size-10 text-primary" aria-hidden="true" /><h2 className="mt-4 font-heading text-2xl font-semibold text-foreground">Booking not found</h2><p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-muted-foreground">We could not find {reference || 'this reference'}. Please check the reference number or contact the eDrive team on WhatsApp.</p><Button asChild className="mt-5 rounded-full"><a href={`${whatsappUrl}?text=${whatsappMessage}`} target="_blank" rel="noopener noreferrer"><MessageCircle data-icon aria-hidden="true" />Ask WhatsApp</a></Button></div>;
 }
 
 function EmptyPreview() {
-  return <div className="premium-surface mx-auto max-w-3xl rounded-[1.75rem] p-6 text-center"><QrCode className="mx-auto size-10 text-primary" aria-hidden="true" /><h2 className="mt-4 font-heading text-2xl font-semibold text-foreground">Enter a booking reference</h2><p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-muted-foreground">Your digital ticket will appear here after your booking reference is found in the eDrive booking system.</p></div>;
+  return <div className="premium-surface mx-auto max-w-3xl rounded-[1.75rem] p-6 text-center"><QrCode className="mx-auto size-10 text-primary" aria-hidden="true" /><h2 className="mt-4 font-heading text-2xl font-semibold text-foreground">Enter a booking reference</h2><p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-muted-foreground">Your digital ticket will appear here after your booking reference is found.</p></div>;
 }
