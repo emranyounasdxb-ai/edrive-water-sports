@@ -113,15 +113,79 @@ main.pt-\[86px\] > section.relative.isolate:first-child {
   background-position: center 58%;
 }
 
+main.pt-\[86px\] > section.relative.isolate:first-child::before,
+main.pt-\[86px\] > section.relative.isolate:first-child::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+main.pt-\[86px\] > section.relative.isolate:first-child::before {
+  z-index: 1;
+  background: linear-gradient(90deg, rgba(5, 27, 39, 0.96) 0%, rgba(5, 35, 48, 0.86) 36%, rgba(5, 35, 48, 0.38) 62%, rgba(5, 35, 48, 0.06) 88%);
+}
+
+main.pt-\[86px\] > section.relative.isolate:first-child::after {
+  z-index: 2;
+  background: linear-gradient(180deg, rgba(4, 23, 33, 0.32) 0%, rgba(4, 23, 33, 0.06) 42%, rgba(4, 23, 33, 0.28) 100%);
+}
+
 main.pt-\[86px\] > section.relative.isolate:first-child > img {
   opacity: 0 !important;
 }
 
+main.pt-\[86px\] > section.relative.isolate:first-child > div:not(.container-x) {
+  opacity: 0 !important;
+}
+
 main.pt-\[86px\] > section.relative.isolate:first-child > .container-x.relative {
+  z-index: 3;
   min-height: 520px !important;
   align-items: center !important;
   padding-top: 110px !important;
   padding-bottom: 48px !important;
+}
+
+main.pt-\[86px\] > section.relative.isolate:first-child h1,
+main.pt-\[86px\] > section.relative.isolate:first-child p {
+  text-shadow: 0 3px 18px rgba(0, 0, 0, 0.38);
+}
+
+main.pt-\[86px\] > section.relative.isolate:first-child + section.container-x.grid {
+  align-items: start;
+  gap: 2rem !important;
+  padding-top: 4rem !important;
+  padding-bottom: 4.5rem !important;
+}
+
+main.pt-\[86px\] > section.relative.isolate:first-child + section.container-x.grid > div:first-child {
+  display: grid;
+  gap: 0.85rem;
+  align-self: start;
+  padding-top: 0.2rem;
+}
+
+main.pt-\[86px\] > section.relative.isolate:first-child + section.container-x.grid > div:first-child a {
+  display: block;
+  border-radius: 1.35rem;
+  overflow: hidden;
+}
+
+main.pt-\[86px\] > section.relative.isolate:first-child + section.container-x.grid > div:first-child .premium-card-hover {
+  border: 1px solid rgba(8, 37, 50, 0.08) !important;
+  background: rgba(255, 255, 255, 0.92) !important;
+  box-shadow: 0 14px 36px rgba(8, 37, 50, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.94) !important;
+}
+
+main.pt-\[86px\] > section.relative.isolate:first-child + section.container-x.grid > div:first-child .premium-card-hover::before,
+main.pt-\[86px\] > section.relative.isolate:first-child + section.container-x.grid > div:first-child .premium-card-hover::after {
+  display: none !important;
+}
+
+main.pt-\[86px\] > section.relative.isolate:first-child + section.container-x.grid form,
+main.pt-\[86px\] > section.relative.isolate:first-child + section.container-x.grid > div:last-child {
+  align-self: start;
 }
 
 @media (min-width: 768px) {
@@ -166,9 +230,18 @@ main.pt-\[86px\] > section.relative.isolate:first-child > .container-x.relative 
     background-position: 64% center;
   }
 
+  main.pt-\[86px\] > section.relative.isolate:first-child::before {
+    background: linear-gradient(90deg, rgba(5, 27, 39, 0.94) 0%, rgba(5, 35, 48, 0.82) 54%, rgba(5, 35, 48, 0.22) 100%);
+  }
+
   main.pt-\[86px\] > section.relative.isolate:first-child > .container-x.relative {
     min-height: 540px !important;
     padding-top: 104px !important;
     padding-bottom: 36px !important;
+  }
+
+  main.pt-\[86px\] > section.relative.isolate:first-child + section.container-x.grid {
+    padding-top: 2rem !important;
+    padding-bottom: 2.5rem !important;
   }
 }
