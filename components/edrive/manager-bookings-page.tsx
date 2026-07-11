@@ -10,7 +10,7 @@ import { formatAed } from '@/lib/booking-data';
 import { bookingRequestsTable } from '@/lib/booking-records';
 import { supabase } from '@/lib/supabase-client';
 
- type ManagerBooking = Record<string, unknown> & {
+type ManagerBooking = Record<string, unknown> & {
   id?: string | null;
   booking_code?: string | null;
   booking_number?: string | null;
@@ -19,6 +19,8 @@ import { supabase } from '@/lib/supabase-client';
   selected_package_name?: string | null;
   selected_package_category?: string | null;
   selected_package_capacity?: number | string | null;
+  selected_package_price?: number | string | null;
+  selected_package_b2b_price?: number | string | null;
   experience_type?: string | null;
   service_type?: string | null;
   duration_minutes?: number | string | null;
@@ -199,7 +201,7 @@ function RideSummaryCard({ booking }: { booking: ManagerBooking }) {
       </div>
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <Badge variant="secondary">{sourceLabel(booking)}</Badge>
-        <Badge variant="outline">{asText(booking.assigned_vehicle_name, 'Vehicle not selected')}</Badge>
+        <Badge variant="secondary">{asText(booking.assigned_vehicle_name, 'Vehicle not selected')}</Badge>
         <span className="ml-auto text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">{bookingCode(booking)}</span>
       </div>
     </div>
