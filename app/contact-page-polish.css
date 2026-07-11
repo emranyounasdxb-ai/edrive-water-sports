@@ -1,0 +1,71 @@
+main.pt-\[86px\] > section.relative.isolate:first-child:has(+ section.container-x.grid) {
+  min-height: 460px !important;
+  background-position: center 56% !important;
+}
+
+main.pt-\[86px\] > section.relative.isolate:first-child:has(+ section.container-x.grid) > .container-x.relative {
+  min-height: 460px !important;
+  padding-top: 104px !important;
+  padding-bottom: 44px !important;
+}
+
+main.pt-\[86px\] > section.relative.isolate:first-child:has(+ section.container-x.grid) .mt-7 a:nth-child(n + 2) {
+  display: none !important;
+}
+
+main.pt-\[86px\] > section.relative.isolate:first-child:has(+ section.container-x.grid) .mt-7 {
+  margin-top: 1.35rem !important;
+}
+
+main.pt-\[86px\] > section.relative.isolate:first-child:has(+ section.container-x.grid) h1 {
+  max-width: 42rem;
+}
+
+main.pt-\[86px\] > section.relative.isolate:first-child + section.container-x.grid {
+  grid-template-columns: minmax(20rem, 0.9fr) minmax(28rem, 1.1fr) !important;
+  gap: 1.7rem !important;
+  padding-top: 2.6rem !important;
+  padding-bottom: 3.4rem !important;
+}
+
+main.pt-\[86px\] > section.relative.isolate:first-child + section.container-x.grid > div:first-child {
+  gap: 0.72rem !important;
+}
+
+main.pt-\[86px\] > section.relative.isolate:first-child + section.container-x.grid .premium-card-hover [data-icon] {
+  width: 1.15rem;
+  height: 1.15rem;
+}
+
+main.pt-\[86px\] > section.relative.isolate:first-child + section.container-x.grid .premium-card-hover > div,
+main.pt-\[86px\] > section.relative.isolate:first-child + section.container-x.grid .premium-card-hover [class*='CardContent'] {
+  min-height: 4.8rem;
+}
+
+footer .waterline a[href='/booking'] {
+  display: none !important;
+}
+
+@media (max-width: 1023px) {
+  main.pt-\[86px\] > section.relative.isolate:first-child + section.container-x.grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 640px) {
+  main.pt-\[86px\] > section.relative.isolate:first-child:has(+ section.container-x.grid) {
+    min-height: 500px !important;
+    background-position: 62% center !important;
+  }
+
+  main.pt-\[86px\] > section.relative.isolate:first-child:has(+ section.container-x.grid) > .container-x.relative {
+    min-height: 500px !important;
+    padding-top: 100px !important;
+    padding-bottom: 34px !important;
+  }
+
+  main.pt-\[86px\] > section.relative.isolate:first-child + section.container-x.grid {
+    padding-top: 1.45rem !important;
+    padding-bottom: 2.35rem !important;
+  }
+}
