@@ -53,11 +53,9 @@ export const adminNavItems = [
 ];
 
 export const managerNavItems = [
-  { href: '/admin/manager', label: 'Today Overview', icon: 'LayoutDashboard' },
+  { href: '/admin/manager', label: 'Today', icon: 'LayoutDashboard' },
   { href: '/admin/my-rides', label: 'My Rides', icon: 'ClipboardCheck' },
-  { href: '/admin/operations-schedule', label: 'Ride Schedule', icon: 'CalendarDays' },
-  { href: '/admin/vehicles', label: 'Fleet Status', icon: 'Ship' },
-  { href: '/admin/maintenance', label: 'Maintenance Notes', icon: 'Settings' },
+  { href: '/admin/operations-schedule', label: 'Schedule', icon: 'CalendarDays' },
   { href: '/admin/payments', label: 'Collections', icon: 'CreditCard' }
 ];
 
