@@ -64,11 +64,11 @@ export const financeNavItems = [
   { href: '/admin/reports', label: 'Reports', icon: 'BarChart3' }
 ];
 
-export const fleetHeroImage = '/images/edrive/packages/jet-ski/jet-ski-package-31.webp';
-export const fleetShowcaseImage = '/images/edrive/packages/jet-car/jet-car-package-12.webp';
+export const fleetHeroImage = '/images/edrive/fleet/jc-01.webp';
+export const fleetShowcaseImage = '/images/edrive/fleet/jc-02.webp';
 export const dubaiWaterfrontImage = '/images/edrive/dubai-waterfront-hero.png';
-export const jetSkiLightImage = '/images/edrive/packages/jet-ski/jet-ski-package-22.webp';
-export const jetCarLightImage = '/images/edrive/packages/jet-car/jet-car-package-06.webp';
+export const jetSkiLightImage = '/images/edrive/fleet/js-01.webp';
+export const jetCarLightImage = '/images/edrive/fleet/jc-03.webp';
 
 export const vehicles: VehicleItem[] = [];
 export const salesListings: VehicleItem[] = [];
@@ -78,8 +78,3 @@ export const bookings: Array<Record<string, never>> = [];
 export const dashboardStats: Array<Record<string, never>> = [];
 export const inventoryItems: Array<Record<string, never>> = [];
 export const coupons: Array<Record<string, never>> = [];
-export const reports = {
-  revenue: [] as Array<Record<string, never>>,
-  activities: [] as Array<Record<string, never>>,
-  locations: [] as Array<Record<string, never>>
-};
