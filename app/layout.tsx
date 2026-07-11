@@ -5,6 +5,7 @@ import { PwaRegister } from '@/components/edrive/pwa-register';
 import './globals.css';
 import './contact-cta.css';
 import './hero-cta.css';
+import './contact-page-polish.css';
 import './manager-app-polish.css';
 
 const inter = Inter({
