@@ -1,8 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import type { LucideIcon } from 'lucide-react';
-import { CalendarDays, CheckCircle2, ChevronDown, ChevronUp, CreditCard, FileText, RefreshCw, Search, WalletCards } from 'lucide-react';
+import { ChevronDown, ChevronUp, RefreshCw, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -155,16 +154,8 @@ function filterMatches(booking: BookingRow, filter: CollectionFilter) {
   return type !== 'no collection';
 }
 
-function SummaryCard({ title, value, icon: Icon, tone = 'default' }: { title: string; value: string; icon: LucideIcon; tone?: 'default' | 'success' }) {
-  const toneClass = tone === 'success' ? 'bg-emerald-50 text-emerald-700' : 'bg-primary-50 text-primary';
-  return (
-    <Card className="rounded-[1.25rem] border-border/80 bg-white shadow-[0_10px_24px_rgba(8,37,50,0.055)]">
-      <CardContent className="flex min-w-0 items-center gap-2.5 p-3 sm:gap-3 sm:p-4">
-        <span className={`flex size-9 shrink-0 items-center justify-center rounded-2xl ${toneClass} sm:size-10`}><Icon className="size-4 sm:size-5" aria-hidden="true" /></span>
-        <div className="min-w-0"><p className="truncate text-[11px] font-bold text-muted-foreground sm:text-xs">{title}</p><p className="mt-0.5 break-words font-heading text-lg font-semibold leading-tight text-foreground sm:text-xl xl:text-2xl">{value}</p></div>
-      </CardContent>
-    </Card>
-  );
+function CompactStat({ label, value, tone = 'default' }: { label: string; value: string; tone?: 'default' | 'good' }) {
+  return <span className="inline-flex items-baseline gap-1.5 text-xs font-bold text-muted-foreground"><span>{label}</span><span className={`font-heading text-base ${tone === 'good' ? 'text-emerald-700' : 'text-foreground'}`}>{value}</span></span>;
 }
 
 function Detail({ label, value }: { label: string; value: ReactNode }) {
@@ -186,10 +177,18 @@ function CollectionCard({ booking, expanded, onToggle }: { booking: BookingRow; 
   return (
     <div className="rounded-[1.15rem] border border-border bg-white p-3 shadow-[0_10px_24px_rgba(8,37,50,0.05)] sm:p-4">
       <button type="button" onClick={onToggle} className="flex w-full items-start justify-between gap-3 text-left">
-        <div className="min-w-0"><p className="text-xs font-bold text-primary">{niceDate(booking.preferred_date)} · {asText(booking.preferred_time, '-')}</p><h3 className="mt-1 break-words font-heading text-base font-semibold leading-tight text-foreground">{packageLabel(booking)}</h3><p className="mt-1 text-sm font-semibold text-muted-foreground">{asText(booking.customer_name, 'Guest')}</p></div>
+        <div className="min-w-0">
+          <p className="text-xs font-bold text-primary">{niceDate(booking.preferred_date)} · {asText(booking.preferred_time, '-')}</p>
+          <h3 className="mt-1 break-words font-heading text-base font-semibold leading-tight text-foreground">{packageLabel(booking)}</h3>
+          <p className="mt-1 text-sm font-semibold text-muted-foreground">{asText(booking.customer_name, 'Guest')}</p>
+        </div>
         <span className={`shrink-0 rounded-full border px-2.5 py-1 text-[11px] font-bold ${toneFor(booking)}`}>{type}</span>
       </button>
-      <div className="mt-3 grid grid-cols-3 gap-2 rounded-2xl bg-[#F7FAFA] p-2.5"><div><p className="text-[10px] font-bold text-muted-foreground">Total</p><p className="text-sm font-bold text-foreground">{formatAed(totalAmount(booking))}</p></div><div><p className="text-[10px] font-bold text-muted-foreground">Received</p><p className="text-sm font-bold text-emerald-700">{formatAed(received)}</p></div><div><p className="text-[10px] font-bold text-muted-foreground">Balance</p><p className={pending > 0 ? 'text-sm font-bold text-red-700' : 'text-sm font-bold text-emerald-700'}>{formatAed(pending)}</p></div></div>
+      <div className="mt-3 grid grid-cols-3 gap-2 rounded-2xl bg-[#F7FAFA] p-2.5">
+        <div><p className="text-[10px] font-bold text-muted-foreground">Total</p><p className="text-sm font-bold text-foreground">{formatAed(totalAmount(booking))}</p></div>
+        <div><p className="text-[10px] font-bold text-muted-foreground">Received</p><p className="text-sm font-bold text-emerald-700">{formatAed(received)}</p></div>
+        <div><p className="text-[10px] font-bold text-muted-foreground">Balance</p><p className={pending > 0 ? 'text-sm font-bold text-red-700' : 'text-sm font-bold text-emerald-700'}>{formatAed(pending)}</p></div>
+      </div>
       <Button type="button" variant="outline" onClick={onToggle} className="mt-3 w-full rounded-2xl bg-white">{expanded ? <ChevronUp className="size-4" aria-hidden="true" /> : <ChevronDown className="size-4" aria-hidden="true" />}{expanded ? 'Hide Details' : 'View Details'}</Button>
       {expanded ? <div className="mt-3 grid gap-2 sm:grid-cols-2"><Detail label="Booking" value={bookingCode(booking)} /><Detail label="Phone" value={asText(booking.customer_phone || booking.customer_email, '-')} /><Detail label="Vehicle" value={asText(booking.assigned_vehicle_name, '-')} /><Detail label="Ride" value={rideLine(booking)} /><Detail label="Status" value={statusLabel(booking)} /><Detail label="Agent" value={asText(booking.b2b_agent_name, isB2B(booking) ? 'B2B Agent' : 'Direct')} />{booking.internal_note ? <div className="sm:col-span-2"><Detail label="Note" value={<span className="whitespace-pre-wrap">{booking.internal_note}</span>} /></div> : null}</div> : null}
     </div>
@@ -241,11 +240,14 @@ export function ManagerCollectionsPage({ manager }: { manager: ManagerIdentity }
   const counts = useMemo(() => Object.fromEntries(filters.map((item) => [item.id, managerRecords.filter((booking) => filterMatches(booking, item.id)).length])) as Record<CollectionFilter, number>, [managerRecords]);
 
   return (
-    <section className="w-full overflow-hidden px-1 py-1 sm:px-4 sm:py-4 lg:px-8 lg:py-8">
-      <div className="flex items-start justify-between gap-3 rounded-[1.35rem] border border-white/70 bg-white/72 p-4 shadow-[0_14px_32px_rgba(8,37,50,0.055)] backdrop-blur-xl sm:p-5"><div className="min-w-0"><p className="text-[10px] font-bold uppercase tracking-[0.22em] text-primary">Collections</p><h1 className="mt-1 font-heading text-2xl font-semibold leading-tight text-foreground sm:text-3xl">My collections</h1><p className="mt-1 text-sm font-semibold text-muted-foreground">Cash, card and B2B records</p></div><button type="button" onClick={loadCollections} className="flex size-11 shrink-0 items-center justify-center rounded-2xl border border-border bg-white text-primary shadow-sm" aria-label="Refresh collections"><RefreshCw className="size-4" aria-hidden="true" /></button></div>
+    <section className="w-full overflow-hidden px-1 py-1 pb-28 sm:px-4 sm:py-4 lg:px-8 lg:py-8">
+      <div className="flex items-start justify-between gap-3 rounded-[1.2rem] border border-white/70 bg-white/72 p-3.5 shadow-[0_12px_28px_rgba(8,37,50,0.05)] backdrop-blur-xl sm:p-5">
+        <div className="min-w-0"><p className="text-[10px] font-bold uppercase tracking-[0.22em] text-primary">Collections</p><h1 className="mt-1 font-heading text-2xl font-semibold leading-tight text-foreground sm:text-3xl">My collections</h1><p className="mt-1 text-sm font-semibold text-muted-foreground">Cash, card and B2B records</p></div>
+        <button type="button" onClick={loadCollections} className="flex size-10 shrink-0 items-center justify-center rounded-2xl border border-border bg-white text-primary shadow-sm" aria-label="Refresh collections"><RefreshCw className="size-4" aria-hidden="true" /></button>
+      </div>
       {error ? <p className="mt-3 rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</p> : null}
-      <div className="mt-3 grid grid-cols-2 gap-2.5 sm:grid-cols-4"><SummaryCard title="Cash" value={formatAed(metrics.cash)} icon={WalletCards} tone="success" /><SummaryCard title="Card" value={formatAed(metrics.card)} icon={CreditCard} /><SummaryCard title="B2B" value={formatAed(metrics.b2b)} icon={FileText} /><SummaryCard title="Today Done" value={String(metrics.todayDone)} icon={CheckCircle2} tone="success" /></div>
-      <Card className="mt-3 overflow-hidden rounded-[1.35rem] border-border/80 bg-white shadow-[0_12px_28px_rgba(8,37,50,0.05)]"><CardContent className="p-3 sm:p-4"><div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><h2 className="font-heading text-xl font-semibold text-foreground">Records</h2><p className="mt-0.5 text-xs font-semibold text-muted-foreground">{loading ? 'Loading...' : `${visible.length} of ${managerRecords.length}`}</p></div>{managerRecords.length > 0 ? <div className="relative w-full sm:max-w-xs"><Search className="pointer-events-none absolute left-3 top-3 size-4 text-muted-foreground" aria-hidden="true" /><Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search records..." className="h-10 rounded-full bg-white pl-9" /></div> : null}</div><div className="mt-3 flex flex-wrap gap-2 border-y border-border/70 py-3">{filters.map((item) => <button key={item.id} type="button" onClick={() => setFilter(item.id)} className={`rounded-full border px-3 py-2 text-xs font-bold transition ${filter === item.id ? 'border-primary bg-primary text-white shadow-sm' : 'border-border bg-white text-muted-foreground'}`}>{item.label} <span className={filter === item.id ? 'text-white/80' : 'text-muted-foreground'}>{counts[item.id]}</span></button>)}</div><div className="mt-3 grid gap-3">{loading ? <div className="rounded-2xl border border-dashed border-border bg-[#F7FAFA] p-6 text-center text-sm font-semibold text-muted-foreground">Loading collections...</div> : null}{!loading && visible.length === 0 ? <div className="rounded-2xl border border-dashed border-border bg-[#F7FAFA] px-4 py-6 text-center"><CalendarDays className="mx-auto mb-2 size-6 text-primary" aria-hidden="true" /><p className="font-heading text-lg font-semibold text-foreground">No records found</p><p className="mt-1 text-sm leading-5 text-muted-foreground">Completed rides ke baad records yahan show honge.</p></div> : null}{!loading && visible.map((booking, index) => { const key = String(booking.id || `${bookingCode(booking)}-${index}`); return <CollectionCard key={key} booking={booking} expanded={expanded === key} onToggle={() => setExpanded((current) => current === key ? '' : key)} />; })}</div></CardContent></Card>
+      <div className="mt-3 rounded-[1.15rem] border border-border/70 bg-white/70 px-3 py-2.5 shadow-[0_8px_20px_rgba(8,37,50,0.035)]"><div className="flex flex-wrap gap-x-4 gap-y-1.5"><CompactStat label="Cash" value={formatAed(metrics.cash)} tone="good" /><CompactStat label="Card" value={formatAed(metrics.card)} /><CompactStat label="B2B" value={formatAed(metrics.b2b)} /><CompactStat label="Today Done" value={String(metrics.todayDone)} tone="good" /></div></div>
+      <Card className="mt-3 overflow-hidden rounded-[1.35rem] border-border/80 bg-white shadow-[0_12px_28px_rgba(8,37,50,0.05)]"><CardContent className="p-3 sm:p-4"><div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><h2 className="font-heading text-xl font-semibold text-foreground">Records</h2><p className="mt-0.5 text-xs font-semibold text-muted-foreground">{loading ? 'Loading...' : `${visible.length} of ${managerRecords.length}`}</p></div>{managerRecords.length > 0 ? <div className="relative w-full sm:max-w-sm"><Search className="pointer-events-none absolute left-3 top-3 size-4 text-muted-foreground" aria-hidden="true" /><Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search records..." className="h-10 rounded-full bg-white pl-9" /></div> : null}</div><div className="mt-3 flex flex-wrap gap-2 border-y border-border/70 py-3">{filters.map((item) => <button key={item.id} type="button" onClick={() => setFilter(item.id)} className={`rounded-full border px-3 py-2 text-xs font-bold transition ${filter === item.id ? 'border-primary bg-primary text-white shadow-sm' : 'border-border bg-white text-muted-foreground'}`}>{item.label} <span className={filter === item.id ? 'text-white/80' : 'text-muted-foreground'}>{counts[item.id]}</span></button>)}</div><div className="mt-3 grid gap-3">{loading ? <div className="rounded-2xl border border-dashed border-border bg-[#F7FAFA] px-4 py-5 text-center text-sm font-semibold text-muted-foreground">Loading collections...</div> : null}{!loading && visible.length === 0 ? <div className="rounded-2xl border border-dashed border-border bg-[#F7FAFA] px-4 py-5 text-center"><p className="font-heading text-base font-semibold text-foreground">No records found</p><p className="mt-1 text-sm text-muted-foreground">Completed rides ke baad records yahan show honge.</p></div> : null}{!loading && visible.map((booking, index) => { const key = String(booking.id || `${bookingCode(booking)}-${index}`); return <CollectionCard key={key} booking={booking} expanded={expanded === key} onToggle={() => setExpanded((current) => current === key ? '' : key)} />; })}</div></CardContent></Card>
     </section>
   );
 }
