@@ -38,16 +38,16 @@ type HeroAction = {
 const serviceCards = [
   {
     icon: Waves,
-    title: 'Jet Ski Experiences',
-    text: 'Premium jet ski rides with clear duration options, safety briefing, and fast booking confirmation.',
+    title: 'Jet Ski Rentals',
+    text: 'Premium jet ski rental in Dubai with clear duration options, safety briefing, and fast booking support from Dubai Islands.',
     image: jetSkiLightImage,
     href: '/jet-ski-rentals',
     cta: 'View Jet Ski Packages'
   },
   {
     icon: Car,
-    title: 'Jet Car Experiences',
-    text: 'Luxury jet car rides for couples, families, photos, birthdays, and premium Dubai water moments.',
+    title: 'Jet Car Rentals',
+    text: 'Luxury jet car rides for couples, families, birthdays, photos, and unforgettable Dubai water sports moments.',
     image: jetCarLightImage,
     href: '/jet-car-rentals',
     cta: 'View Jet Car Packages'
@@ -55,7 +55,7 @@ const serviceCards = [
   {
     icon: Crown,
     title: 'VIP Marine Support',
-    text: 'Private timing, group planning, and elevated guest support for special bookings and VIP requests.',
+    text: 'Personal ride planning, priority support, and elevated service for groups, special occasions, and VIP guests.',
     image: fleetShowcaseImage,
     href: '/contact',
     cta: 'Request VIP Support'
@@ -63,32 +63,32 @@ const serviceCards = [
 ];
 
 const whyChoose = [
-  { icon: MapPin, title: 'Dubai Islands', text: `Plan your ride from ${companyInfo.locationName} with clear arrival guidance.` },
-  { icon: ShieldCheck, title: 'Safety First', text: 'Every ride is supported with safety basics, team guidance, and a clear booking flow.' },
-  { icon: MessageCircle, title: 'Fast Support', text: 'WhatsApp, phone, and email support are available for questions and confirmations.' },
-  { icon: CalendarCheck, title: 'Easy Booking', text: 'Choose your ride type, date, time, guests, and submit the request in minutes.' }
+  { icon: MapPin, title: 'Dubai Islands Location', text: `Start your ride from ${companyInfo.locationName} with clear arrival guidance and team support.` },
+  { icon: ShieldCheck, title: 'Safety First', text: 'Every experience includes a safety briefing, life jacket support, and guidance from the eDrive team.' },
+  { icon: MessageCircle, title: 'Fast WhatsApp Support', text: 'Get quick help with availability, timing, ride options, and special requests before you arrive.' },
+  { icon: CalendarCheck, title: 'Easy Booking', text: 'Choose your ride, duration, date, time, and guest count, then submit your request in minutes.' }
 ];
 
 const bookingSteps = [
-  { icon: Sparkles, title: 'Choose package', text: 'Select your ride, duration, and preferred experience.' },
-  { icon: CalendarCheck, title: 'Pick date and time', text: 'Share your preferred slot and guest count in the booking form.' },
-  { icon: MessageCircle, title: 'Team confirms', text: 'The eDrive team confirms availability and final booking details.' }
+  { icon: Sparkles, title: 'Choose your ride', text: 'Select jet ski, jet car, VIP support, or a package that matches your group and timing.' },
+  { icon: CalendarCheck, title: 'Pick date and time', text: 'Share your preferred slot, guest count, and any celebration or group details.' },
+  { icon: MessageCircle, title: 'Team confirms', text: 'Our team checks availability and confirms the final details before your water sports experience.' }
 ];
 
 const membershipTiers = [
   {
     name: 'Explorer Member',
-    bestFor: 'Tourists, occasional riders, first-time customers',
+    bestFor: 'Tourists, occasional riders, and first-time customers',
     benefits: ['Member-only offers', 'Priority WhatsApp support', 'Birthday discount', 'Ride recommendations']
   },
   {
     name: 'Premium Member',
-    bestFor: 'Dubai residents, repeat riders, couples, small groups',
+    bestFor: 'Dubai residents, repeat riders, couples, and small groups',
     benefits: ['Better booking support', 'Priority slots', 'Weekday offers', 'Friends/family add-on support']
   },
   {
     name: 'VIP Marine Member',
-    bestFor: 'VIP customers, private groups, luxury clients',
+    bestFor: 'VIP customers, private groups, and luxury clients',
     benefits: ['VIP planning', 'Priority sunset slots', 'Custom ride support', 'Dedicated contact flow']
   }
 ];
@@ -99,15 +99,15 @@ export function HomePage() {
       <HomeHero />
 
       <LivePackageShowcase
-        title="Bookable Packages"
-        text="Choose your ride, duration, and price. New packages and price changes appear automatically when updated by eDrive."
+        title="Dubai Water Sports Packages"
+        text="Choose from premium jet ski and jet car ride options with clear pricing, flexible durations, and fast booking support from Dubai Islands."
         limit={6}
         compact
       />
 
       <section className="bg-[#f4f5f5]">
         <div className={cn('container-x', sectionPad)}>
-          <SectionHeader title="Premium Water Sports Experiences" text="Choose jet ski, jet car, or VIP marine support with clear package options and fast team confirmation." />
+          <SectionHeader title="Premium Water Sports Experiences" text="Plan jet ski rentals, jet car rides, VIP marine support, and special Dubai water sports moments with eDrive." />
           <div className="mt-7 grid gap-5 md:grid-cols-3">
             {serviceCards.map((item) => <ServiceCard key={item.title} {...item} />)}
           </div>
@@ -116,7 +116,7 @@ export function HomePage() {
 
       <section className="border-y border-border bg-white/70">
         <div className={cn('container-x', sectionPad)}>
-          <SectionHeader title="Why Choose eDrive" text="A clean booking experience for Dubai jet ski and jet car guests, focused on real packages, support, and confirmed availability." />
+          <SectionHeader title="Why Choose eDrive" text="A premium Dubai water sports experience built around clear packages, safety support, smooth booking, and guest-focused service." />
           <FeatureGrid items={whyChoose} className="mt-7 lg:grid-cols-4" />
         </div>
       </section>
@@ -126,7 +126,7 @@ export function HomePage() {
           <div>
             <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-primary">How it works</p>
             <h2 className="mt-3 section-title">From package choice to confirmed water time</h2>
-            <p className="mt-3 text-sm leading-7 text-muted-foreground sm:text-base">Choose your package, share your preferred time, and our team will confirm availability before your ride.</p>
+            <p className="mt-3 text-sm leading-7 text-muted-foreground sm:text-base">Choose your ride, share your preferred timing, and our team will confirm availability before you arrive.</p>
           </div>
           <FeatureGrid items={bookingSteps} className="lg:grid-cols-3" />
         </div>
@@ -149,10 +149,10 @@ function HomeHero() {
           <div className="max-w-2xl">
             <p className="mb-4 text-xs font-bold uppercase tracking-[0.24em] text-accent-300">eDrive Water Sports</p>
             <h1 className="font-heading text-4xl font-semibold leading-[1.03] text-white sm:text-5xl lg:text-[3.45rem]">
-              Premium Water Sports
+              Jet Ski & Jet Car
               <span className="mt-1 block text-primary-300">Dubai Islands</span>
             </h1>
-            <p className="mt-5 max-w-xl text-base leading-7 text-white/82 sm:text-lg">Jet ski and jet car packages with clear pricing, flexible timing, and fast team confirmation.</p>
+            <p className="mt-5 max-w-xl text-base leading-7 text-white/82 sm:text-lg">Book premium jet ski rentals, luxury jet car rides, and Dubai water sports experiences with clear pricing and fast support.</p>
             <div className="mt-8 flex">
               <a
                 href={whatsappUrl}
@@ -175,8 +175,8 @@ export function FleetPage() {
   return (
     <>
       <PublicHero
-        title="Explore Our Premium Water Sports Fleet"
-        text="Choose from premium jet ski and jet car ride types designed for unforgettable Dubai water experiences."
+        title="Premium Jet Ski & Jet Car Fleet Dubai"
+        text="Explore eDrive Water Sports ride options for jet ski rentals, luxury jet car experiences, family rides, group bookings, and VIP marine moments."
         image={fleetHeroImage}
         imageAlt="Premium eDrive jet ski and jet car fleet in Dubai"
         actions={[
@@ -186,7 +186,7 @@ export function FleetPage() {
       />
 
       <section className={cn('container-x', sectionPad)}>
-        <SectionHeader title="Ride Types" text="Choose the ride style that matches your group, timing, and Dubai water experience." />
+        <SectionHeader title="Ride Types" text="Choose the ride style that matches your group size, preferred timing, and Dubai water sports experience." />
         <div className="mt-7 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
           {serviceCards.map((item) => <ServiceCard key={item.title} {...item} />)}
         </div>
@@ -194,7 +194,7 @@ export function FleetPage() {
 
       <section className="border-y border-border bg-white/70">
         <div className={cn('container-x', sectionPad)}>
-          <SectionHeader title="Fleet Support" text="Every ride is supported by the eDrive team with briefing, safety basics, arrival guidance, and booking confirmation." />
+          <SectionHeader title="Fleet Support" text="Every ride is prepared with team assistance, safety briefing, clear arrival guidance, and booking confirmation before your experience." />
           <FeatureGrid items={whyChoose} className="mt-7 lg:grid-cols-4" />
         </div>
       </section>
@@ -207,7 +207,7 @@ export function MembershipPage() {
     <>
       <PublicHero
         title="eDrive Water Sports Membership"
-        text="Enjoy priority support, special offers, and better ride planning for repeat customers, residents, groups, and VIP guests."
+        text="Get priority support, special offers, and better ride planning for repeat customers, Dubai residents, couples, groups, and VIP guests."
         image={dubaiWaterfrontImage}
         imageAlt="eDrive Water Sports membership in Dubai"
         actions={[
@@ -218,7 +218,7 @@ export function MembershipPage() {
       />
 
       <section className={cn('container-x', sectionPad)}>
-        <SectionHeader title="Membership Tiers" text="Choose the lead tier that best matches your ride style. The team will confirm current benefits directly." />
+        <SectionHeader title="Membership Tiers" text="Choose the support level that matches your ride style and our team will confirm the latest available benefits directly." />
         <div className="mt-7 grid gap-5 lg:grid-cols-3">
           {membershipTiers.map((tier) => <MembershipTierCard key={tier.name} tier={tier} />)}
         </div>
@@ -231,8 +231,8 @@ export function BookingPage() {
   return (
     <>
       <section className="container-x pt-8 text-center sm:pt-10">
-        <h1 className="mx-auto max-w-3xl font-heading text-4xl font-semibold leading-tight text-foreground sm:text-5xl">Plan your time on the water</h1>
-        <p className="mx-auto mt-3 max-w-2xl text-sm leading-7 text-muted-foreground sm:text-base">Share your preferred date, time, guests, and ride notes. The eDrive team will confirm availability and final details.</p>
+        <h1 className="mx-auto max-w-3xl font-heading text-4xl font-semibold leading-tight text-foreground sm:text-5xl">Book Your Dubai Water Sports Experience</h1>
+        <p className="mx-auto mt-3 max-w-2xl text-sm leading-7 text-muted-foreground sm:text-base">Choose your jet ski or jet car package, preferred date, time, guests, and contact details. Our team will confirm availability and final ride instructions.</p>
       </section>
       <BookingForm />
     </>
@@ -251,7 +251,7 @@ export function ContactPage() {
     <>
       <PublicHero
         title="Contact eDrive Water Sports Dubai"
-        text={`Visit eDrive Water Sports at ${companyInfo.locationName} or contact our team for bookings, availability, membership, and guest support.`}
+        text={`Visit eDrive Water Sports at ${companyInfo.locationName} or contact our team for jet ski rentals, jet car rides, packages, membership, and guest support.`}
         image={jetCarLightImage}
         imageAlt="Contact eDrive Water Sports Dubai"
         actions={[
@@ -377,7 +377,7 @@ function HomeContactStrip() {
           <div>
             <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-accent-300">Need help choosing?</p>
             <h2 className="mt-2 font-heading text-2xl font-semibold">Talk to eDrive before you book.</h2>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-white/70">Tell us your date, number of guests, and whether you prefer jet ski, jet car, combo, family, VIP, or special group support.</p>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-white/70">Tell us your date, number of guests, and whether you prefer a jet ski rental, jet car ride, family package, combo ride, or VIP experience.</p>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row">
             <Button asChild className="rounded-full bg-emerald-500 hover:bg-emerald-600"><a href={whatsappUrl} target="_blank" rel="noopener noreferrer"><MessageCircle data-icon aria-hidden="true" />Chat on WhatsApp</a></Button>
