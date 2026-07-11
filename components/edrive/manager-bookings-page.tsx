@@ -1,8 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import type { LucideIcon } from 'lucide-react';
-import { AlertCircle, CalendarDays, CheckCircle2, Clock3, CreditCard, RefreshCw, Search, WalletCards } from 'lucide-react';
+import { RefreshCw, Search } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -41,7 +40,6 @@ type ManagerBooking = Record<string, unknown> & {
 };
 
 type ManagerProfile = { full_name: string | null; email: string | null; role: string | null; status: string | null };
-type Metric = { title: string; value: string; icon: LucideIcon; tone?: 'default' | 'success' | 'warning' };
 
 function asText(value: unknown, fallback = '-') {
   const text = String(value ?? '').trim();
@@ -167,20 +165,13 @@ function scheduleSortValue(booking: ManagerBooking) {
   return `${date} ${time}`;
 }
 
-function MetricCard({ title, value, icon: Icon, tone = 'default' }: Metric) {
-  const toneClass = tone === 'success' ? 'bg-emerald-50 text-emerald-700' : tone === 'warning' ? 'bg-red-50 text-red-700' : 'bg-primary-50 text-primary';
-  return (
-    <Card className="rounded-[1.25rem] border-border/80 bg-white shadow-[0_10px_24px_rgba(8,37,50,0.055)]">
-      <CardContent className="flex min-w-0 items-center gap-2.5 p-3 sm:gap-3 sm:p-4">
-        <span className={`flex size-9 shrink-0 items-center justify-center rounded-2xl ${toneClass} sm:size-10`}><Icon className="size-4 sm:size-5" aria-hidden="true" /></span>
-        <div className="min-w-0"><p className="truncate text-[11px] font-bold text-muted-foreground sm:text-xs">{title}</p><p className="mt-0.5 break-words font-heading text-lg font-semibold leading-tight text-foreground sm:text-xl xl:text-2xl">{value}</p></div>
-      </CardContent>
-    </Card>
-  );
-}
-
 function Detail({ label, value, sub }: { label: string; value: ReactNode; sub?: ReactNode }) {
   return <div className="min-w-0 rounded-xl bg-[#F7FAFA] px-3 py-2"><p className="text-[9px] font-bold uppercase tracking-[0.14em] text-muted-foreground">{label}</p><div className="mt-1 break-words text-sm font-bold text-foreground">{value}</div>{sub ? <div className="mt-0.5 break-words text-xs text-muted-foreground">{sub}</div> : null}</div>;
+}
+
+function CompactStat({ label, value, tone = 'default' }: { label: string; value: string; tone?: 'default' | 'good' | 'bad' }) {
+  const toneClass = tone === 'good' ? 'text-emerald-700' : tone === 'bad' ? 'text-red-700' : 'text-foreground';
+  return <span className="inline-flex items-baseline gap-1.5 text-xs font-bold text-muted-foreground"><span>{label}</span><span className={`font-heading text-base ${toneClass}`}>{value}</span></span>;
 }
 
 function RideSummaryCard({ booking }: { booking: ManagerBooking }) {
@@ -266,25 +257,27 @@ export function ManagerBookingsPage() {
   }, [items, todayItems]);
 
   return (
-    <section className="w-full overflow-hidden px-1 py-1 sm:px-4 sm:py-4 lg:px-8 lg:py-8">
-      <div className="flex items-start justify-between gap-3 rounded-[1.35rem] border border-white/70 bg-white/72 p-4 shadow-[0_14px_32px_rgba(8,37,50,0.055)] backdrop-blur-xl sm:p-5">
+    <section className="w-full overflow-hidden px-1 py-1 pb-28 sm:px-4 sm:py-4 lg:px-8 lg:py-8">
+      <div className="flex items-start justify-between gap-3 rounded-[1.2rem] border border-white/70 bg-white/72 p-3.5 shadow-[0_12px_28px_rgba(8,37,50,0.05)] backdrop-blur-xl sm:p-5">
         <div className="min-w-0">
           <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-primary">Today · {shortDate(today)}</p>
           <h1 className="mt-1 font-heading text-2xl font-semibold leading-tight text-foreground sm:text-3xl">{greeting()}, {firstName(profile)}</h1>
           <p className="mt-1 text-sm font-semibold text-muted-foreground">{metrics.today} rides today</p>
         </div>
-        <button type="button" onClick={refreshAll} className="flex size-11 shrink-0 items-center justify-center rounded-2xl border border-border bg-white text-primary shadow-sm" aria-label="Refresh today overview"><RefreshCw className="size-4" aria-hidden="true" /></button>
+        <button type="button" onClick={refreshAll} className="flex size-10 shrink-0 items-center justify-center rounded-2xl border border-border bg-white text-primary shadow-sm" aria-label="Refresh today overview"><RefreshCw className="size-4" aria-hidden="true" /></button>
       </div>
 
       {error ? <p className="mt-3 rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</p> : null}
 
-      <div className="mt-3 grid grid-cols-2 gap-2.5 sm:grid-cols-3 xl:grid-cols-6">
-        <MetricCard title="Today" value={String(metrics.today)} icon={CalendarDays} />
-        <MetricCard title="Progress" value={String(metrics.inProgress)} icon={Clock3} />
-        <MetricCard title="Done" value={String(metrics.completedToday)} icon={CheckCircle2} tone="success" />
-        <MetricCard title="No Show" value={String(metrics.noShowToday)} icon={AlertCircle} tone="warning" />
-        <MetricCard title="Cash" value={formatAed(metrics.cash)} icon={WalletCards} tone="success" />
-        <MetricCard title="Card" value={formatAed(metrics.card)} icon={CreditCard} />
+      <div className="mt-3 rounded-[1.15rem] border border-border/70 bg-white/70 px-3 py-2.5 shadow-[0_8px_20px_rgba(8,37,50,0.035)]">
+        <div className="flex flex-wrap gap-x-4 gap-y-1.5">
+          <CompactStat label="Today" value={String(metrics.today)} />
+          <CompactStat label="Progress" value={String(metrics.inProgress)} />
+          <CompactStat label="Done" value={String(metrics.completedToday)} tone="good" />
+          <CompactStat label="No Show" value={String(metrics.noShowToday)} tone="bad" />
+          <CompactStat label="Cash" value={formatAed(metrics.cash)} tone="good" />
+          <CompactStat label="Card" value={formatAed(metrics.card)} />
+        </div>
       </div>
 
       <Card className="mt-3 overflow-hidden rounded-[1.35rem] border-border/80 bg-white shadow-[0_12px_28px_rgba(8,37,50,0.05)]">
@@ -293,8 +286,8 @@ export function ManagerBookingsPage() {
           {todayItems.length > 0 ? <div className="relative w-full sm:max-w-xs"><Search className="pointer-events-none absolute left-3 top-3 size-4 text-muted-foreground" aria-hidden="true" /><Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search rides..." className="h-10 rounded-full bg-white pl-9" /></div> : null}
         </CardHeader>
         <CardContent className="grid gap-3 p-3 sm:p-4 xl:grid-cols-2">
-          {loading ? <div className="rounded-2xl border border-dashed border-border bg-[#F7FAFA] p-6 text-center text-sm font-semibold text-muted-foreground">Loading today rides...</div> : null}
-          {!loading && visibleToday.length === 0 ? <div className="rounded-2xl border border-dashed border-border bg-[#F7FAFA] px-4 py-6 text-center"><p className="font-heading text-lg font-semibold text-foreground">No rides today</p><p className="mt-1 text-sm leading-5 text-muted-foreground">Future rides My Rides ke Upcoming tab me milengi.</p></div> : null}
+          {loading ? <div className="rounded-2xl border border-dashed border-border bg-[#F7FAFA] px-4 py-5 text-center text-sm font-semibold text-muted-foreground">Loading today rides...</div> : null}
+          {!loading && visibleToday.length === 0 ? <div className="rounded-2xl border border-dashed border-border bg-[#F7FAFA] px-4 py-5 text-center"><p className="font-heading text-base font-semibold text-foreground">No rides today</p><p className="mt-1 text-sm leading-5 text-muted-foreground">Future rides Upcoming tab me show hongi.</p></div> : null}
           {visibleToday.map((booking, index) => <RideSummaryCard key={String(booking.id || `${bookingCode(booking)}-${index}`)} booking={booking} />)}
         </CardContent>
       </Card>
