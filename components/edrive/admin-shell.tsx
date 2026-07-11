@@ -205,6 +205,8 @@ export function AdminShell({ children }: { children: ReactNode }) {
     );
   }
 
+  const isManager = isManagerRole(user.role);
+
   return (
     <OperationsProvider>
       <div className="min-h-screen bg-[#F4F7F8] text-foreground">
@@ -212,7 +214,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
           <aside className={cn('sticky top-0 hidden h-screen shrink-0 overflow-hidden bg-white/82 p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.95),inset_-10px_0_24px_rgba(8,37,50,0.025),12px_0_35px_rgba(8,37,50,0.055)] ring-1 ring-white/80 backdrop-blur-xl transition-all duration-300 lg:block', collapsed ? 'w-[5.4rem]' : 'w-[15.25rem]')}>
             <div className="flex h-full flex-col">
               <div className={cn('mb-2 flex items-center gap-2', collapsed ? 'justify-center' : 'justify-between px-2')}>
-                <Link href={isManagerRole(user.role) ? '/admin/manager' : '/admin'} prefetch className={cn('block transition', collapsed ? 'flex size-11 items-center justify-center rounded-2xl bg-primary-50 text-sm font-black text-primary shadow-sm' : 'min-w-0 scale-[0.88] origin-left')}>
+                <Link href={isManager ? '/admin/manager' : '/admin'} prefetch className={cn('block transition', collapsed ? 'flex size-11 items-center justify-center rounded-2xl bg-primary-50 text-sm font-black text-primary shadow-sm' : 'min-w-0 scale-[0.88] origin-left')}>
                   {collapsed ? 'eD' : <BrandMark />}
                 </Link>
                 <button type="button" onClick={() => setCollapsed((value) => !value)} className="hidden size-8 shrink-0 items-center justify-center rounded-full border border-border bg-white text-muted-foreground shadow-sm transition hover:border-primary/35 hover:text-primary lg:flex" aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}>
@@ -248,12 +250,13 @@ export function AdminShell({ children }: { children: ReactNode }) {
                   {open ? <X data-icon aria-hidden="true" /> : <Menu data-icon aria-hidden="true" />}
                 </Button>
 
-                <div className="flex min-w-0 items-center gap-2">
+                <div className="flex min-w-0 items-center gap-2.5">
                   <div className="hidden items-center gap-2 rounded-full bg-[#F4F7F8] px-3 py-1.5 text-xs font-semibold text-muted-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_6px_16px_rgba(8,37,50,0.045)] sm:flex">
-                    <Home className="size-4 text-primary" aria-hidden="true" />{isManagerRole(user.role) ? 'Manager Operations' : 'Admin Operations'}
+                    <Home className="size-4 text-primary" aria-hidden="true" />{isManager ? 'Manager Operations' : 'Admin Operations'}
                   </div>
+                  <div className="manager-mobile-avatar sm:hidden"><ProfileAvatar src={user.avatarUrl} size="sm" /></div>
                   <div className="min-w-0 sm:hidden">
-                    <p className="truncate text-xs font-bold text-primary">{isManagerRole(user.role) ? 'Manager' : 'Admin'}</p>
+                    <p className="truncate text-xs font-bold text-primary">{isManager ? 'Manager' : 'Admin'}</p>
                     <p className="truncate text-[11px] font-semibold text-muted-foreground">{user.name}</p>
                   </div>
                 </div>
@@ -283,11 +286,11 @@ export function AdminShell({ children }: { children: ReactNode }) {
               ) : null}
             </header>
 
-            <main className="px-2 pb-28 pt-3 sm:px-4 sm:pb-28 sm:pt-5 lg:px-8 lg:pb-8 lg:pt-8">{children}</main>
+            <main className={cn('px-2 pb-28 pt-3 sm:px-4 sm:pb-28 sm:pt-5 lg:px-8 lg:pb-8 lg:pt-8', isManager && 'manager-mobile-app')}>{children}</main>
           </div>
         </div>
 
-        <MobileBottomNav currentPath={currentPath} navItems={navItems} />
+        <MobileBottomNav currentPath={currentPath} navItems={navItems} isManager={isManager} />
       </div>
     </OperationsProvider>
   );
@@ -320,9 +323,9 @@ function AdminNav({ currentPath, navItems, onNavigate, collapsed = false }: { cu
   );
 }
 
-function MobileBottomNav({ currentPath, navItems }: { currentPath: string; navItems: NavItem[] }) {
+function MobileBottomNav({ currentPath, navItems, isManager }: { currentPath: string; navItems: NavItem[]; isManager: boolean }) {
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-white/70 bg-white/92 px-2 pb-[calc(env(safe-area-inset-bottom)+0.45rem)] pt-2 shadow-[0_-16px_38px_rgba(8,37,50,0.12)] backdrop-blur-xl lg:hidden">
+    <nav className={cn('fixed inset-x-0 bottom-0 z-50 border-t border-white/70 bg-white/92 px-2 pb-[calc(env(safe-area-inset-bottom)+0.45rem)] pt-2 shadow-[0_-16px_38px_rgba(8,37,50,0.12)] backdrop-blur-xl lg:hidden', isManager && 'manager-bottom-nav')}>
       <div className="mx-auto flex max-w-xl items-center justify-around gap-1 rounded-[1.4rem] bg-[#F4F7F8] p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.95)]">
         {navItems.map((item) => {
           const Icon = iconMap[item.icon as keyof typeof iconMap] ?? LayoutDashboard;
