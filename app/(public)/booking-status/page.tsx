@@ -1,11 +1,11 @@
 import type { Metadata } from 'next';
-import { BookingStatusChecker } from '@/components/edrive/booking-status-checker';
+import { PublicBookingTracker } from '@/components/edrive/public-booking-tracker';
 
 export const metadata: Metadata = {
   title: 'Check Booking Status',
-  description: 'Check your eDrive Water Sports booking request status using your booking reference number.'
+  description: 'Securely check your eDrive Water Sports booking status using your booking code and contact details.'
 };
 
 export default function Page() {
-  return <BookingStatusChecker />;
+  return <PublicBookingTracker />;
 }
