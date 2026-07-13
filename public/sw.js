@@ -1,5 +1,5 @@
-const CACHE_NAME = 'edrive-app-shell-v1';
-const APP_SHELL = ['/', '/admin/', '/manifest.webmanifest'];
+const CACHE_NAME = 'edrive-public-shell-v2';
+const APP_SHELL = ['/', '/manifest.webmanifest'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -19,6 +19,13 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
+
+  const url = new URL(event.request.url);
+  if (url.origin === self.location.origin && url.pathname.startsWith('/admin/')) {
+    event.respondWith(fetch(event.request, { cache: 'no-store' }));
+    return;
+  }
+
   event.respondWith(
     fetch(event.request).catch(() => caches.match(event.request).then((cached) => cached || caches.match('/')))
   );
