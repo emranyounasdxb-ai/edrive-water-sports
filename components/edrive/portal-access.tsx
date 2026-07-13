@@ -101,9 +101,10 @@ export function usePortalAccess() {
 }
 
 const mutationWords = [
-  'add ', 'create ', 'edit', 'save', 'update', 'delete', 'remove', 'deactivate', 'activate', 'suspend', 'reset',
-  'manage', 'confirm', 'assign', 'reassign', 'receive', 'settle', 'handover', 'start ride', 'complete ride', 'no show',
-  'make available', 'mark maintenance', 'maintenance', 'approve', 'reject', 'publish', 'archive', 'change status'
+  'add ', 'create ', 'edit', 'save', 'update', 'delete', 'remove', 'deactivate', 'activate', 'suspend',
+  'manage', 'confirm & assign', 'confirm booking', 'assign manager', 'reassign manager', 'receive payment',
+  'save receipt', 'receive settlement', 'cash handover', 'start ride', 'complete ride', 'mark no show',
+  'make available', 'mark maintenance', 'approve', 'reject', 'publish', 'archive', 'change status', 'send reset'
 ];
 
 function isMutationControl(target: HTMLElement) {
