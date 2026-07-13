@@ -51,9 +51,60 @@ const iconMap = {
   Settings
 };
 
+const countryCodeByNationality: Record<string, string> = {
+  UAE: 'AE',
+  'United Arab Emirates': 'AE',
+  Pakistan: 'PK',
+  India: 'IN',
+  Philippines: 'PH',
+  Nepal: 'NP',
+  'Sri Lanka': 'LK',
+  Bangladesh: 'BD',
+  Indonesia: 'ID',
+  Algeria: 'DZ',
+  Egypt: 'EG',
+  Jordan: 'JO',
+  Syria: 'SY',
+  Lebanon: 'LB',
+  Morocco: 'MA',
+  Kenya: 'KE',
+  Uganda: 'UG',
+  Ghana: 'GH',
+  Nigeria: 'NG',
+  Ethiopia: 'ET',
+  Tanzania: 'TZ',
+  'United Kingdom': 'GB',
+  'United States': 'US'
+};
+
+const countryAliasByCode: Record<string, string> = {
+  AE: 'UAE',
+  PK: 'Pakistan',
+  IN: 'India',
+  PH: 'Philippines',
+  NP: 'Nepal',
+  LK: 'Sri Lanka',
+  BD: 'Bangladesh',
+  ID: 'Indonesia',
+  DZ: 'Algeria',
+  EG: 'Egypt',
+  JO: 'Jordan',
+  SY: 'Syria',
+  LB: 'Lebanon',
+  MA: 'Morocco',
+  KE: 'Kenya',
+  UG: 'Uganda',
+  GH: 'Ghana',
+  NG: 'Nigeria',
+  ET: 'Ethiopia',
+  TZ: 'Tanzania',
+  GB: 'United Kingdom',
+  US: 'United States'
+};
+
 type NavItem = { href: string; label: string; icon: string };
-type PortalUser = { name: string; email: string; role: string; roleLabel: string; avatarUrl: string };
-type AdminProfile = { full_name: string | null; email: string | null; role: string | null; status: string | null; avatar_url: string | null };
+type PortalUser = { name: string; email: string; role: string; roleLabel: string; avatarUrl: string; nationality: string };
+type AdminProfile = { full_name: string | null; email: string | null; role: string | null; status: string | null; avatar_url: string | null; nationality: string | null };
 
 function normalizePath(pathname: string) {
   if (!pathname || pathname === '/') return '/';
@@ -90,6 +141,31 @@ function bottomLabel(label: string) {
     'Ride Schedule': 'Schedule'
   };
   return map[label] || label;
+}
+
+function countryCode(value: string) {
+  const clean = value.trim();
+  if (!clean) return '';
+  const upper = clean.toUpperCase();
+  if (upper.length === 2) return upper;
+  return countryCodeByNationality[clean] || '';
+}
+
+function countryLabel(value: string) {
+  const code = countryCode(value);
+  return countryAliasByCode[code] || value;
+}
+
+function ProfileFlag({ nationality, compact = false }: { nationality?: string; compact?: boolean }) {
+  const code = countryCode(nationality || '');
+  if (!code) return null;
+  const label = countryLabel(nationality || code);
+  return (
+    <span title={label} className={cn('inline-flex items-center gap-1 rounded-full border border-white/80 bg-white px-1.5 py-1 text-[10px] font-bold text-muted-foreground shadow-sm', compact && 'px-1 py-0.5')}>
+      <img src={`https://flagcdn.com/w40/${code.toLowerCase()}.png`} alt={`${label} flag`} className="h-3.5 w-5 rounded-[0.2rem] object-cover" loading="lazy" />
+      {!compact ? <span className="max-w-[5.5rem] truncate">{label}</span> : null}
+    </span>
+  );
 }
 
 function ProfileAvatar({ src, size = 'md' }: { src?: string; size?: 'sm' | 'md' | 'lg' }) {
@@ -134,7 +210,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
 
       const authEmail = authUser.email || '';
       const queryFilter = authEmail ? `auth_user_id.eq.${authUser.id},email.eq.${authEmail}` : `auth_user_id.eq.${authUser.id}`;
-      const { data: profiles, error } = await supabase.from('admin_users').select('full_name,email,role,status,avatar_url').or(queryFilter).limit(1);
+      const { data: profiles, error } = await supabase.from('admin_users').select('full_name,email,role,status,avatar_url,nationality').or(queryFilter).limit(1);
       if (!active) return;
 
       if (error) {
@@ -161,7 +237,8 @@ export function AdminShell({ children }: { children: ReactNode }) {
         email: profile.email || authEmail || '',
         role: profile.role || 'admin',
         roleLabel: roleLabel(profile.role || 'admin'),
-        avatarUrl: profile.avatar_url || ''
+        avatarUrl: profile.avatar_url || '',
+        nationality: profile.nationality || ''
       });
       setReady(true);
     }
@@ -229,14 +306,14 @@ export function AdminShell({ children }: { children: ReactNode }) {
                   <div className="rounded-[1rem] bg-[linear-gradient(135deg,#EAF8FA,#FFFFFF_50%,#F4E7C7)] p-3 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]">
                     <div className="mx-auto w-fit"><ProfileAvatar src={user.avatarUrl} size="lg" /></div>
                     <p className="mt-2 truncate text-sm font-bold text-foreground">{user.name}</p>
-                    <p className="mt-0.5 text-xs font-semibold text-primary">{user.roleLabel}</p>
+                    <div className="mt-1 flex items-center justify-center gap-1.5"><p className="text-xs font-semibold text-primary">{user.roleLabel}</p><ProfileFlag nationality={user.nationality} compact /></div>
                     <p className="mt-0.5 truncate text-[11px] text-muted-foreground">{user.email}</p>
                   </div>
                   <Button type="button" size="sm" variant="outline" onClick={handleLogout} className="mt-2 w-full rounded-full bg-white text-xs"><LogOut className="size-3.5" aria-hidden="true" />Logout</Button>
                 </div>
               ) : (
                 <div className="mt-auto flex flex-col items-center gap-2 pb-1">
-                  <ProfileAvatar src={user.avatarUrl} size="sm" />
+                  <div className="relative"><ProfileAvatar src={user.avatarUrl} size="sm" /><span className="absolute -bottom-1 -right-2"><ProfileFlag nationality={user.nationality} compact /></span></div>
                   <button type="button" onClick={handleLogout} className="flex size-8 items-center justify-center rounded-full border border-border bg-white text-muted-foreground shadow-sm hover:text-primary" aria-label="Logout"><LogOut className="size-4" aria-hidden="true" /></button>
                 </div>
               )}
@@ -254,7 +331,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
                   <div className="hidden items-center gap-2 rounded-full bg-[#F4F7F8] px-3 py-1.5 text-xs font-semibold text-muted-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_6px_16px_rgba(8,37,50,0.045)] sm:flex">
                     <Home className="size-4 text-primary" aria-hidden="true" />{isManager ? 'Manager Operations' : 'Admin Operations'}
                   </div>
-                  <div className="manager-mobile-avatar sm:hidden"><ProfileAvatar src={user.avatarUrl} size="sm" /></div>
+                  <div className="manager-mobile-avatar relative sm:hidden"><ProfileAvatar src={user.avatarUrl} size="sm" /><span className="absolute -bottom-1 -right-2"><ProfileFlag nationality={user.nationality} compact /></span></div>
                   <div className="min-w-0 sm:hidden">
                     <p className="truncate text-xs font-bold text-primary">{isManager ? 'Manager' : 'Admin'}</p>
                     <p className="truncate text-[11px] font-semibold text-muted-foreground">{user.name}</p>
