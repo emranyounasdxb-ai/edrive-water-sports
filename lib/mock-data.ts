@@ -29,6 +29,17 @@ export type TestimonialItem = {
   rating: number;
 };
 
+export type AdminNavRole = 'super_admin' | 'admin' | 'booking_staff' | 'finance' | 'maintenance_staff';
+export type AdminNavItem = {
+  href: string;
+  label: string;
+  icon: string;
+  section?: string;
+  roles?: AdminNavRole[];
+};
+
+const allPortalRoles: AdminNavRole[] = ['super_admin', 'admin', 'booking_staff', 'finance', 'maintenance_staff'];
+
 export const publicNavItems = [
   { href: '/', label: 'Home' },
   { href: '/fleet', label: 'Fleet' },
@@ -36,20 +47,20 @@ export const publicNavItems = [
   { href: '/contact', label: 'Contact' }
 ];
 
-export const adminNavItems = [
-  { href: '/admin', label: 'Dashboard', icon: 'LayoutDashboard', section: 'Overview' },
-  { href: '/admin/bookings', label: 'Bookings', icon: 'CalendarDays', section: 'Operations' },
-  { href: '/admin/operations-schedule', label: 'Schedule', icon: 'CalendarDays', section: 'Operations' },
-  { href: '/admin/customers', label: 'Customers', icon: 'UsersRound', section: 'Operations' },
-  { href: '/admin/b2b-agents', label: 'B2B Agents', icon: 'UsersRound', section: 'Partners & Sales' },
-  { href: '/admin/packages', label: 'Packages', icon: 'Package', section: 'Partners & Sales' },
-  { href: '/admin/vehicles', label: 'Fleet', icon: 'Ship', section: 'Assets' },
-  { href: '/admin/maintenance', label: 'Maintenance', icon: 'Settings', section: 'Assets' },
-  { href: '/admin/payments', label: 'Payments', icon: 'CreditCard', section: 'Finance' },
-  { href: '/admin/reports', label: 'Reports', icon: 'BarChart3', section: 'Finance' },
-  { href: '/admin/staff-management', label: 'Team & Access', icon: 'UserCog', section: 'Team & System' },
-  { href: '/admin/audit-log', label: 'Audit Log', icon: 'ClipboardCheck', section: 'Team & System' },
-  { href: '/admin/system-settings', label: 'Settings', icon: 'Settings', section: 'Team & System' }
+export const adminNavItems: AdminNavItem[] = [
+  { href: '/admin', label: 'Dashboard', icon: 'LayoutDashboard', section: 'Overview', roles: allPortalRoles },
+  { href: '/admin/bookings', label: 'Bookings', icon: 'CalendarDays', section: 'Operations', roles: ['super_admin', 'admin', 'booking_staff'] },
+  { href: '/admin/operations-schedule', label: 'Schedule', icon: 'CalendarDays', section: 'Operations', roles: allPortalRoles },
+  { href: '/admin/customers', label: 'Customers', icon: 'UsersRound', section: 'Operations', roles: ['super_admin', 'admin', 'booking_staff', 'finance'] },
+  { href: '/admin/b2b-agents', label: 'B2B Agents', icon: 'UsersRound', section: 'Partners & Sales', roles: ['super_admin'] },
+  { href: '/admin/packages', label: 'Packages', icon: 'Package', section: 'Partners & Sales', roles: ['super_admin', 'admin', 'booking_staff'] },
+  { href: '/admin/vehicles', label: 'Fleet', icon: 'Ship', section: 'Assets', roles: ['super_admin', 'admin', 'maintenance_staff'] },
+  { href: '/admin/maintenance', label: 'Maintenance', icon: 'Settings', section: 'Assets', roles: ['super_admin', 'maintenance_staff'] },
+  { href: '/admin/payments', label: 'Payments', icon: 'CreditCard', section: 'Finance', roles: ['super_admin', 'admin', 'finance'] },
+  { href: '/admin/reports', label: 'Reports', icon: 'BarChart3', section: 'Finance', roles: ['super_admin', 'admin', 'finance'] },
+  { href: '/admin/staff-management', label: 'Team & Access', icon: 'UserCog', section: 'Team & System', roles: ['super_admin'] },
+  { href: '/admin/audit-log', label: 'Audit Log', icon: 'ClipboardCheck', section: 'Team & System', roles: ['super_admin', 'admin', 'finance'] },
+  { href: '/admin/system-settings', label: 'Settings', icon: 'Settings', section: 'Team & System', roles: ['super_admin'] }
 ];
 
 export const managerNavItems = [
