@@ -120,9 +120,14 @@
     padding-bottom: 0.55rem !important;
   }
 
-  .manager-mobile-avatar img,
-  .manager-mobile-avatar div {
+  .manager-mobile-avatar > img,
+  .manager-mobile-avatar > div {
     width: 2.55rem !important;
     height: 2.55rem !important;
+  }
+
+  .manager-mobile-avatar span img {
+    width: 1.25rem !important;
+    height: 0.86rem !important;
   }
 }
