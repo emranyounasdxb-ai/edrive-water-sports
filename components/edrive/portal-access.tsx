@@ -53,6 +53,13 @@ export function portalRoleLabel(role: string) {
   return labels[role] || 'Portal User';
 }
 
+function legacyRoleLabel(role: string) {
+  if (role === 'booking_staff') return 'Booking Staff';
+  if (role === 'manager') return 'Manager';
+  if (role === 'admin') return 'Admin';
+  return portalRoleLabel(role);
+}
+
 export function PortalAccessProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [role, setRole] = useState('');
@@ -83,6 +90,24 @@ export function PortalAccessProvider({ children }: { children: ReactNode }) {
     return () => { active = false; };
   }, []);
 
+  useEffect(() => {
+    if (loading || !role) return;
+    const oldLabel = legacyRoleLabel(role);
+    const newLabel = portalRoleLabel(role);
+    if (oldLabel === newLabel) return;
+
+    const syncLabels = () => {
+      document.querySelectorAll('p.text-primary').forEach((element) => {
+        if (element.textContent?.trim() === oldLabel) element.textContent = newLabel;
+      });
+    };
+
+    syncLabels();
+    const observer = new MutationObserver(syncLabels);
+    observer.observe(document.body, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, [loading, role]);
+
   const value = useMemo<PortalAccessValue>(() => ({
     role,
     status,
@@ -107,12 +132,16 @@ const mutationWords = [
   'make available', 'mark maintenance', 'approve', 'reject', 'publish', 'archive', 'change status', 'send reset'
 ];
 
+const exactMutationLabels = new Set([
+  'receive', 'maintenance', 'available', 'booked', 'for sale', 'reset', 'confirm', 'assign', 'reassign', 'no show'
+]);
+
 function isMutationControl(target: HTMLElement) {
   const control = target.closest('button, input[type="submit"], input[type="button"], [role="button"]') as HTMLElement | null;
   if (!control) return false;
   if (control.dataset.readonlyAllow === 'true') return false;
-  const label = `${control.textContent || ''} ${control.getAttribute('aria-label') || ''} ${control.getAttribute('title') || ''}`.trim().toLowerCase();
-  return mutationWords.some((word) => label.includes(word));
+  const label = `${control.textContent || ''} ${control.getAttribute('aria-label') || ''} ${control.getAttribute('title') || ''}`.trim().toLowerCase().replace(/\s+/g, ' ');
+  return exactMutationLabels.has(label) || mutationWords.some((word) => label.includes(word));
 }
 
 export function PortalRoleBoundary({ children }: { children: ReactNode }) {
