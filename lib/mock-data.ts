@@ -37,19 +37,18 @@ export const publicNavItems = [
 ];
 
 export const adminNavItems = [
-  { href: '/admin', label: 'Dashboard', icon: 'LayoutDashboard' },
-  { href: '/admin/staff-management', label: 'Staff', icon: 'UserCog' },
-  { href: '/admin/b2b-agents', label: 'B2B Agents', icon: 'UsersRound' },
-  { href: '/admin/packages', label: 'Packages', icon: 'Package' },
-  { href: '/admin/vehicles', label: 'Fleet', icon: 'Ship' },
-  { href: '/admin/bookings', label: 'Bookings', icon: 'CalendarDays' },
-  { href: '/admin/operations-schedule', label: 'Schedule', icon: 'CalendarDays' },
-  { href: '/admin/vehicle-assignment', label: 'Assignments', icon: 'ClipboardCheck' },
-  { href: '/admin/payments', label: 'Payments', icon: 'CreditCard' },
-  { href: '/admin/customers', label: 'Customers', icon: 'UsersRound' },
-  { href: '/admin/maintenance', label: 'Maintenance', icon: 'Settings' },
-  { href: '/admin/reports', label: 'Reports', icon: 'BarChart3' },
-  { href: '/admin/system-settings', label: 'Settings', icon: 'Settings' }
+  { href: '/admin', label: 'Dashboard', icon: 'LayoutDashboard', section: 'Overview' },
+  { href: '/admin/bookings', label: 'Bookings', icon: 'CalendarDays', section: 'Operations' },
+  { href: '/admin/operations-schedule', label: 'Schedule', icon: 'CalendarDays', section: 'Operations' },
+  { href: '/admin/customers', label: 'Customers', icon: 'UsersRound', section: 'Operations' },
+  { href: '/admin/b2b-agents', label: 'B2B Agents', icon: 'UsersRound', section: 'Partners & Sales' },
+  { href: '/admin/packages', label: 'Packages', icon: 'Package', section: 'Partners & Sales' },
+  { href: '/admin/vehicles', label: 'Fleet', icon: 'Ship', section: 'Assets' },
+  { href: '/admin/maintenance', label: 'Maintenance', icon: 'Settings', section: 'Assets' },
+  { href: '/admin/payments', label: 'Payments', icon: 'CreditCard', section: 'Finance' },
+  { href: '/admin/reports', label: 'Reports', icon: 'BarChart3', section: 'Finance' },
+  { href: '/admin/staff-management', label: 'Team & Access', icon: 'UserCog', section: 'Team & System' },
+  { href: '/admin/system-settings', label: 'Settings', icon: 'Settings', section: 'Team & System' }
 ];
 
 export const managerNavItems = [
