@@ -32,8 +32,7 @@ function normalizePath(pathname: string) {
 
 function canMutatePath(role: string, pathname: string) {
   const path = normalizePath(pathname);
-  if (role === 'super_admin') return true;
-  if (role === 'admin') return false;
+  if (role === 'super_admin' || role === 'admin') return true;
   if (role === 'booking_staff') return path === '/admin/bookings' || path.startsWith('/admin/bookings/');
   if (role === 'finance') return path === '/admin/payments' || path.startsWith('/admin/payments/');
   if (role === 'maintenance_staff') return path === '/admin/vehicles' || path.startsWith('/admin/vehicles/') || path === '/admin/maintenance' || path.startsWith('/admin/maintenance/');
@@ -44,7 +43,7 @@ function canMutatePath(role: string, pathname: string) {
 export function portalRoleLabel(role: string) {
   const labels: Record<string, string> = {
     super_admin: 'Super Admin',
-    admin: 'Admin · Read Only',
+    admin: 'Admin',
     booking_staff: 'Booking Manager',
     manager: 'Ride Manager',
     finance: 'Finance',
@@ -146,26 +145,26 @@ function isMutationControl(target: HTMLElement) {
 
 export function PortalRoleBoundary({ children }: { children: ReactNode }) {
   const { loading, role, canMutateCurrentPage } = usePortalAccess();
-  const readOnly = !loading && Boolean(role) && !canMutateCurrentPage;
+  const restricted = !loading && Boolean(role) && !canMutateCurrentPage;
 
   function blockClick(event: MouseEvent<HTMLDivElement>) {
-    if (!readOnly || !isMutationControl(event.target as HTMLElement)) return;
+    if (!restricted || !isMutationControl(event.target as HTMLElement)) return;
     event.preventDefault();
     event.stopPropagation();
   }
 
   function blockSubmit(event: FormEvent<HTMLDivElement>) {
-    if (!readOnly) return;
+    if (!restricted) return;
     event.preventDefault();
     event.stopPropagation();
   }
 
   return (
     <div onClickCapture={blockClick} onSubmitCapture={blockSubmit}>
-      {readOnly ? (
+      {restricted ? (
         <div className="mb-4 flex items-start gap-3 rounded-2xl border border-primary/15 bg-primary-50 px-4 py-3 text-sm text-primary-900">
           <ShieldCheck className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-          <div><p className="font-bold">Read-only access</p><p className="mt-0.5 text-xs font-semibold leading-5 text-primary-900/75">You can view, search, filter and open records on this page. Operational changes are restricted for {portalRoleLabel(role)}.</p></div>
+          <div><p className="font-bold">Role-based access</p><p className="mt-0.5 text-xs font-semibold leading-5 text-primary-900/75">Available actions on this page are based on the {portalRoleLabel(role)} role.</p></div>
         </div>
       ) : null}
       {children}
