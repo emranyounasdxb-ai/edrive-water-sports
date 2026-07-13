@@ -102,7 +102,7 @@ const countryAliasByCode: Record<string, string> = {
   US: 'United States'
 };
 
-type NavItem = { href: string; label: string; icon: string };
+type NavItem = { href: string; label: string; icon: string; section?: string };
 type PortalUser = { name: string; email: string; role: string; roleLabel: string; avatarUrl: string; nationality: string };
 type AdminProfile = { full_name: string | null; email: string | null; role: string | null; status: string | null; avatar_url: string | null; nationality: string | null };
 
@@ -394,17 +394,24 @@ function IconButtonWithBadge({ icon: Icon, count }: { icon: LucideIcon; count?: 
 }
 
 function AdminNav({ currentPath, navItems, onNavigate, collapsed = false }: { currentPath: string; navItems: NavItem[]; onNavigate?: () => void; collapsed?: boolean }) {
+  let previousSection = '';
   return (
-    <nav className={cn('flex flex-col', collapsed ? 'gap-0.5' : 'gap-0.5')}>
+    <nav className={cn('flex min-h-0 flex-col overflow-y-auto', collapsed ? 'gap-0.5' : 'gap-0.5 pr-1')}>
       {navItems.map((item) => {
         const Icon = iconMap[item.icon as keyof typeof iconMap] ?? LayoutDashboard;
         const itemPath = normalizePath(item.href.split('?')[0]);
         const active = currentPath === itemPath;
+        const showSection = Boolean(item.section && item.section !== previousSection);
+        previousSection = item.section || previousSection;
         return (
-          <Link key={item.href} href={item.href} prefetch onClick={onNavigate} title={collapsed ? item.label : undefined} className={cn('flex items-center rounded-xl text-sm font-semibold text-muted-foreground transition hover:bg-primary-50 hover:text-primary-900', collapsed ? 'justify-center px-2 py-1.5' : 'gap-2.5 px-2.5 py-1.5', active && 'bg-primary-100 text-primary-900 shadow-[0px_-3px_0px_0px_rgba(14,124,134,0.08)_inset,0px_2px_0px_0px_rgba(255,255,255,0.65)_inset,0px_8px_18px_rgba(8,37,50,0.07)]')}>
-            <span className={cn('flex size-7 shrink-0 items-center justify-center rounded-lg bg-white text-muted-foreground shadow-sm', active && 'bg-[#DDF4F6] text-primary')}><Icon className="size-3.5" aria-hidden="true" /></span>
-            {!collapsed ? <span className="truncate">{item.label}</span> : null}
-          </Link>
+          <div key={item.href}>
+            {showSection && !collapsed ? <p className="mb-1 mt-3 px-2.5 text-[9px] font-black uppercase tracking-[0.18em] text-muted-foreground/75 first:mt-0">{item.section}</p> : null}
+            {showSection && collapsed && previousSection !== item.section ? <div className="my-1 h-px bg-border/70" /> : null}
+            <Link href={item.href} prefetch onClick={onNavigate} title={collapsed ? item.label : undefined} className={cn('flex items-center rounded-xl text-sm font-semibold text-muted-foreground transition hover:bg-primary-50 hover:text-primary-900', collapsed ? 'justify-center px-2 py-1.5' : 'gap-2.5 px-2.5 py-1.5', active && 'bg-primary-100 text-primary-900 shadow-[0px_-3px_0px_0px_rgba(14,124,134,0.08)_inset,0px_2px_0px_0px_rgba(255,255,255,0.65)_inset,0px_8px_18px_rgba(8,37,50,0.07)]')}>
+              <span className={cn('flex size-7 shrink-0 items-center justify-center rounded-lg bg-white text-muted-foreground shadow-sm', active && 'bg-[#DDF4F6] text-primary')}><Icon className="size-3.5" aria-hidden="true" /></span>
+              {!collapsed ? <span className="truncate">{item.label}</span> : null}
+            </Link>
+          </div>
         );
       })}
     </nav>
