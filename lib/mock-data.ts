@@ -48,6 +48,7 @@ export const adminNavItems = [
   { href: '/admin/payments', label: 'Payments', icon: 'CreditCard', section: 'Finance' },
   { href: '/admin/reports', label: 'Reports', icon: 'BarChart3', section: 'Finance' },
   { href: '/admin/staff-management', label: 'Team & Access', icon: 'UserCog', section: 'Team & System' },
+  { href: '/admin/audit-log', label: 'Audit Log', icon: 'ClipboardCheck', section: 'Team & System' },
   { href: '/admin/system-settings', label: 'Settings', icon: 'Settings', section: 'Team & System' }
 ];
 
