@@ -153,8 +153,8 @@ export function SidebarAccordion() {
     run();
 
     const handleClick = (event: MouseEvent) => {
-      const target = event.target as HTMLElement | null;
-      const header = target?.closest<HTMLElement>('[data-sidebar-section]');
+      if (!(event.target instanceof Element)) return;
+      const header = event.target.closest<HTMLElement>('[data-sidebar-section]');
       if (!header) return;
       event.preventDefault();
       toggleSection(header);
@@ -162,8 +162,8 @@ export function SidebarAccordion() {
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key !== 'Enter' && event.key !== ' ') return;
-      const target = event.target as HTMLElement | null;
-      const header = target?.closest<HTMLElement>('[data-sidebar-section]');
+      if (!(event.target instanceof Element)) return;
+      const header = event.target.closest<HTMLElement>('[data-sidebar-section]');
       if (!header) return;
       event.preventDefault();
       toggleSection(header);
