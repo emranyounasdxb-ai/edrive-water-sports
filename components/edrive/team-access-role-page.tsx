@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { recordAuditLog } from '@/lib/audit-log';
-import { countryFlag, countryOptionsForValue } from '@/lib/country-options';
+import { countryFlagUrl, countryOptionsForValue } from '@/lib/country-options';
 import { supabase } from '@/lib/supabase-client';
 import { portalRoleLabel, usePortalAccess } from './portal-access';
 
@@ -83,6 +83,16 @@ function statusTone(status: string | null) {
   if (status === 'active') return 'border-emerald-200 bg-emerald-50 text-emerald-700';
   if (status === 'suspended') return 'border-red-200 bg-red-50 text-red-700';
   return 'border-slate-200 bg-slate-50 text-slate-600';
+}
+
+function CountryFlagBadge({ nationality }: { nationality: string | null | undefined }) {
+  const src = countryFlagUrl(nationality, 40);
+  if (!src) return null;
+  return (
+    <span className="inline-flex h-[14px] w-[20px] shrink-0 items-center overflow-hidden rounded-[3px] border border-border/80 bg-white shadow-sm" title={`${nationality} flag`}>
+      <img src={src} alt={`${nationality} flag`} className="h-full w-full object-cover" loading="lazy" />
+    </span>
+  );
 }
 
 function TeamModal({ row, saving, error, onClose, onSave }: { row: TeamRow | null; saving: boolean; error: string; onClose: () => void; onSave: (form: TeamForm) => Promise<void> }) {
@@ -236,7 +246,18 @@ export function TeamAccessRolePage() {
         <CardContent className="grid gap-3 p-4">
           {!visible.length ? <div className="rounded-2xl border border-dashed border-border bg-[#F7FAFA] px-4 py-8 text-center text-sm font-semibold text-muted-foreground">No matching profiles.</div> : visible.map((row) => (
             <div key={row.id} className="grid gap-3 rounded-2xl border border-border p-4 lg:grid-cols-[1.2fr_0.8fr_1.5fr_auto] lg:items-center">
-              <div className="flex items-center gap-3">{row.avatar_url ? <img src={row.avatar_url} alt={row.full_name || 'Profile'} className="size-11 rounded-2xl object-cover" /> : <span className="flex size-11 items-center justify-center rounded-2xl bg-primary-50 text-primary"><UserRound className="size-5" /></span>}<div className="min-w-0"><p className="truncate font-heading text-base font-semibold">{titleCase(row.full_name) || 'Unnamed user'}</p><p className="truncate text-xs text-muted-foreground">{row.email || '-'}</p><p className="mt-1 text-[11px] text-muted-foreground">{row.phone || 'No phone'} · {row.nationality ? `${countryFlag(row.nationality)} ${row.nationality}` : 'No nationality'}</p></div></div>
+              <div className="flex items-center gap-3">
+                {row.avatar_url ? <img src={row.avatar_url} alt={row.full_name || 'Profile'} className="size-11 rounded-2xl object-cover" /> : <span className="flex size-11 items-center justify-center rounded-2xl bg-primary-50 text-primary"><UserRound className="size-5" /></span>}
+                <div className="min-w-0">
+                  <p className="truncate font-heading text-base font-semibold">{titleCase(row.full_name) || 'Unnamed user'}</p>
+                  <p className="truncate text-xs text-muted-foreground">{row.email || '-'}</p>
+                  <div className="mt-1 flex min-w-0 flex-wrap items-center gap-1 text-[11px] text-muted-foreground">
+                    <span>{row.phone || 'No phone'}</span>
+                    <span>·</span>
+                    {row.nationality ? <><CountryFlagBadge nationality={row.nationality} /><span>{row.nationality}</span></> : <span>No nationality</span>}
+                  </div>
+                </div>
+              </div>
               <div><p className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">Role</p><p className="mt-1 text-sm font-bold">{portalRoleLabel(row.role || '')}</p><span className={`mt-2 inline-flex rounded-full border px-2.5 py-1 text-[10px] font-bold ${statusTone(row.status)}`}>{titleCase(row.status)}</span></div>
               <div><p className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">Portal Access</p><div className="mt-2 flex flex-wrap gap-1.5">{(accessByRole[row.role || ''] || ['No access assigned']).slice(0, 6).map((item) => <span key={item} className="rounded-full bg-[#F4F7F8] px-2.5 py-1 text-[10px] font-bold text-muted-foreground">{item}</span>)}</div></div>
               {isSuperAdmin ? <div className="flex flex-wrap gap-2 lg:justify-end"><Button type="button" size="sm" variant="outline" onClick={() => { setEditing(row); setModalOpen(true); }} className="rounded-full"><Pencil className="size-3.5" />Edit</Button><Button type="button" size="sm" variant="outline" onClick={() => sendReset(row)} className="rounded-full"><KeyRound className="size-3.5" />Reset</Button></div> : <span className="rounded-full border border-primary/15 bg-primary-50 px-3 py-1.5 text-xs font-bold text-primary">Admin Access</span>}
