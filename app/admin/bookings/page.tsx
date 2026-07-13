@@ -1,10 +1,10 @@
 import type { Metadata } from 'next';
-import { AdminBookingsLivePage } from '@/components/edrive/admin-bookings-page';
+import { AdminBookingWorkflowPage } from '@/components/edrive/admin-booking-workflow-page';
 
 export const metadata: Metadata = {
   title: 'Bookings'
 };
 
 export default function Page() {
-  return <AdminBookingsLivePage />;
+  return <AdminBookingWorkflowPage />;
 }
