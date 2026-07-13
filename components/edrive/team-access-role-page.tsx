@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { recordAuditLog } from '@/lib/audit-log';
+import { countryFlag, countryOptionsForValue } from '@/lib/country-options';
 import { supabase } from '@/lib/supabase-client';
 import { portalRoleLabel, usePortalAccess } from './portal-access';
 
@@ -98,6 +99,8 @@ function TeamModal({ row, saving, error, onClose, onSave }: { row: TeamRow | nul
     notes: row.notes || ''
   } : emptyForm);
 
+  const nationalityOptions = useMemo(() => countryOptionsForValue(form.nationality), [form.nationality]);
+
   function change(key: keyof TeamForm, value: string) {
     setForm((current) => ({ ...current, [key]: value }));
   }
@@ -122,7 +125,7 @@ function TeamModal({ row, saving, error, onClose, onSave }: { row: TeamRow | nul
             <label className="grid gap-1.5 text-sm font-semibold">Full Name<Input value={form.fullName} onChange={(event) => change('fullName', event.target.value)} required className="h-11 rounded-xl" /></label>
             <label className="grid gap-1.5 text-sm font-semibold">Email<Input type="email" value={form.email} onChange={(event) => change('email', event.target.value)} required className="h-11 rounded-xl" /></label>
             <label className="grid gap-1.5 text-sm font-semibold">Phone<Input value={form.phone} onChange={(event) => change('phone', event.target.value)} className="h-11 rounded-xl" /></label>
-            <label className="grid gap-1.5 text-sm font-semibold">Nationality<Input value={form.nationality} onChange={(event) => change('nationality', event.target.value)} className="h-11 rounded-xl" /></label>
+            <label className="grid gap-1.5 text-sm font-semibold">Nationality<select value={form.nationality} onChange={(event) => change('nationality', event.target.value)} required className="h-11 rounded-xl border border-border bg-white px-3 text-sm font-semibold"><option value="">Select nationality</option>{nationalityOptions.map((option) => <option key={`${option.code}-${option.value}`} value={option.value}>{option.label}</option>)}</select></label>
             <label className="grid gap-1.5 text-sm font-semibold">Role<select value={form.role} onChange={(event) => change('role', event.target.value)} className="h-11 rounded-xl border border-border bg-white px-3 text-sm font-semibold">{roleOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
             <label className="grid gap-1.5 text-sm font-semibold">Status<select value={form.status} onChange={(event) => change('status', event.target.value)} className="h-11 rounded-xl border border-border bg-white px-3 text-sm font-semibold">{statusOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
             <label className="grid gap-1.5 text-sm font-semibold">Department<Input value={form.department} onChange={(event) => change('department', event.target.value)} className="h-11 rounded-xl" /></label>
@@ -186,7 +189,7 @@ export function TeamAccessRolePage() {
       };
       const result = editing ? await supabase.from('admin_users').update(payload).eq('id', editing.id) : await supabase.from('admin_users').insert(payload);
       if (result.error) throw new Error(result.error.message);
-      await recordAuditLog({ module: 'team', action: editing ? 'team_access_updated' : 'team_profile_created', entityType: 'admin_user', entityId: editing?.id || form.authUserId, entityLabel: form.fullName, summary: `${form.fullName} was assigned ${portalRoleLabel(form.role)} access.`, metadata: { role: form.role, status: form.status } });
+      await recordAuditLog({ module: 'team', action: editing ? 'team_access_updated' : 'team_profile_created', entityType: 'admin_user', entityId: editing?.id || form.authUserId, entityLabel: form.fullName, summary: `${form.fullName} was assigned ${portalRoleLabel(form.role)} access.`, metadata: { role: form.role, status: form.status, nationality: form.nationality } });
       setModalOpen(false);
       setEditing(null);
       setNotice('Team access saved.');
@@ -233,7 +236,7 @@ export function TeamAccessRolePage() {
         <CardContent className="grid gap-3 p-4">
           {!visible.length ? <div className="rounded-2xl border border-dashed border-border bg-[#F7FAFA] px-4 py-8 text-center text-sm font-semibold text-muted-foreground">No matching profiles.</div> : visible.map((row) => (
             <div key={row.id} className="grid gap-3 rounded-2xl border border-border p-4 lg:grid-cols-[1.2fr_0.8fr_1.5fr_auto] lg:items-center">
-              <div className="flex items-center gap-3">{row.avatar_url ? <img src={row.avatar_url} alt={row.full_name || 'Profile'} className="size-11 rounded-2xl object-cover" /> : <span className="flex size-11 items-center justify-center rounded-2xl bg-primary-50 text-primary"><UserRound className="size-5" /></span>}<div className="min-w-0"><p className="truncate font-heading text-base font-semibold">{titleCase(row.full_name) || 'Unnamed user'}</p><p className="truncate text-xs text-muted-foreground">{row.email || '-'}</p><p className="mt-1 text-[11px] text-muted-foreground">{row.phone || 'No phone'} · {row.nationality || 'No nationality'}</p></div></div>
+              <div className="flex items-center gap-3">{row.avatar_url ? <img src={row.avatar_url} alt={row.full_name || 'Profile'} className="size-11 rounded-2xl object-cover" /> : <span className="flex size-11 items-center justify-center rounded-2xl bg-primary-50 text-primary"><UserRound className="size-5" /></span>}<div className="min-w-0"><p className="truncate font-heading text-base font-semibold">{titleCase(row.full_name) || 'Unnamed user'}</p><p className="truncate text-xs text-muted-foreground">{row.email || '-'}</p><p className="mt-1 text-[11px] text-muted-foreground">{row.phone || 'No phone'} · {row.nationality ? `${countryFlag(row.nationality)} ${row.nationality}` : 'No nationality'}</p></div></div>
               <div><p className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">Role</p><p className="mt-1 text-sm font-bold">{portalRoleLabel(row.role || '')}</p><span className={`mt-2 inline-flex rounded-full border px-2.5 py-1 text-[10px] font-bold ${statusTone(row.status)}`}>{titleCase(row.status)}</span></div>
               <div><p className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">Portal Access</p><div className="mt-2 flex flex-wrap gap-1.5">{(accessByRole[row.role || ''] || ['No access assigned']).slice(0, 6).map((item) => <span key={item} className="rounded-full bg-[#F4F7F8] px-2.5 py-1 text-[10px] font-bold text-muted-foreground">{item}</span>)}</div></div>
               {isSuperAdmin ? <div className="flex flex-wrap gap-2 lg:justify-end"><Button type="button" size="sm" variant="outline" onClick={() => { setEditing(row); setModalOpen(true); }} className="rounded-full"><Pencil className="size-3.5" />Edit</Button><Button type="button" size="sm" variant="outline" onClick={() => sendReset(row)} className="rounded-full"><KeyRound className="size-3.5" />Reset</Button></div> : <span className="rounded-full border border-primary/15 bg-primary-50 px-3 py-1.5 text-xs font-bold text-primary">Admin Access</span>}
