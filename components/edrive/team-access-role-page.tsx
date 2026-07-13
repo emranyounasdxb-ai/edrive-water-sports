@@ -11,7 +11,7 @@ import { portalRoleLabel, usePortalAccess } from './portal-access';
 
 const roleOptions = [
   { value: 'super_admin', label: 'Super Admin' },
-  { value: 'admin', label: 'Admin · Full Read Only' },
+  { value: 'admin', label: 'Admin' },
   { value: 'booking_staff', label: 'Booking Manager' },
   { value: 'manager', label: 'Ride Manager' },
   { value: 'finance', label: 'Finance' },
@@ -26,8 +26,8 @@ const statusOptions = [
 
 const accessByRole: Record<string, string[]> = {
   super_admin: ['Full portal control', 'Bookings', 'Payments', 'Team & Access', 'Settings'],
-  admin: ['All modules read-only', 'Reports', 'Audit Log', 'Workflow Check', 'Team directory'],
-  booking_staff: ['Booking dashboard', 'Bookings', 'Schedule', 'Customers', 'Packages & Fleet read-only', 'Booking Activity'],
+  admin: ['All portal modules', 'Booking operations', 'Payments', 'Reports', 'Audit Log', 'Workflow Check'],
+  booking_staff: ['Booking dashboard', 'Bookings', 'Schedule', 'Customers', 'Packages & Fleet reference', 'Booking Activity'],
   manager: ['Today', 'My Rides', 'Schedule', 'Collections'],
   finance: ['Dashboard', 'Customers', 'Payments', 'Reports', 'Audit Log'],
   maintenance_staff: ['Dashboard', 'Schedule', 'Fleet', 'Maintenance']
@@ -206,12 +206,12 @@ export function TeamAccessRolePage() {
   }
 
   if (roleLoading || loading) return <div className="p-6 text-sm font-semibold text-muted-foreground">Loading team access...</div>;
-  if (!isSuperAdmin && !isReadOnlyAdmin) return <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-sm font-semibold text-red-700">This page is available to Super Admin and read-only Admin accounts.</div>;
+  if (!isSuperAdmin && !isReadOnlyAdmin) return <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-sm font-semibold text-red-700">This page is available to Super Admin and Admin accounts.</div>;
 
   return (
     <section className="w-full overflow-hidden px-1 py-1 sm:px-2">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Team & Access</p><h1 className="mt-2 font-heading text-3xl font-semibold text-foreground sm:text-4xl">Portal users and permissions</h1><p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">{isSuperAdmin ? 'Manage linked accounts, roles and access status.' : 'Full team directory and permission visibility in read-only mode.'}</p></div>
+        <div><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Team & Access</p><h1 className="mt-2 font-heading text-3xl font-semibold text-foreground sm:text-4xl">Portal users and permissions</h1><p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">{isSuperAdmin ? 'Manage linked accounts, roles and access status.' : 'View the complete team directory and assigned portal permissions.'}</p></div>
         <div className="flex gap-2"><Button type="button" variant="outline" onClick={load} data-readonly-allow="true" className="rounded-full bg-white"><RefreshCw className="size-4" />Refresh</Button>{isSuperAdmin ? <Button type="button" onClick={() => { setEditing(null); setModalOpen(true); }} className="rounded-full"><Plus className="size-4" />Add Profile</Button> : null}</div>
       </div>
 
@@ -236,7 +236,7 @@ export function TeamAccessRolePage() {
               <div className="flex items-center gap-3">{row.avatar_url ? <img src={row.avatar_url} alt={row.full_name || 'Profile'} className="size-11 rounded-2xl object-cover" /> : <span className="flex size-11 items-center justify-center rounded-2xl bg-primary-50 text-primary"><UserRound className="size-5" /></span>}<div className="min-w-0"><p className="truncate font-heading text-base font-semibold">{titleCase(row.full_name) || 'Unnamed user'}</p><p className="truncate text-xs text-muted-foreground">{row.email || '-'}</p><p className="mt-1 text-[11px] text-muted-foreground">{row.phone || 'No phone'} · {row.nationality || 'No nationality'}</p></div></div>
               <div><p className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">Role</p><p className="mt-1 text-sm font-bold">{portalRoleLabel(row.role || '')}</p><span className={`mt-2 inline-flex rounded-full border px-2.5 py-1 text-[10px] font-bold ${statusTone(row.status)}`}>{titleCase(row.status)}</span></div>
               <div><p className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">Portal Access</p><div className="mt-2 flex flex-wrap gap-1.5">{(accessByRole[row.role || ''] || ['No access assigned']).slice(0, 6).map((item) => <span key={item} className="rounded-full bg-[#F4F7F8] px-2.5 py-1 text-[10px] font-bold text-muted-foreground">{item}</span>)}</div></div>
-              {isSuperAdmin ? <div className="flex flex-wrap gap-2 lg:justify-end"><Button type="button" size="sm" variant="outline" onClick={() => { setEditing(row); setModalOpen(true); }} className="rounded-full"><Pencil className="size-3.5" />Edit</Button><Button type="button" size="sm" variant="outline" onClick={() => sendReset(row)} className="rounded-full"><KeyRound className="size-3.5" />Reset</Button></div> : <span className="rounded-full border border-primary/15 bg-primary-50 px-3 py-1.5 text-xs font-bold text-primary">Read Only</span>}
+              {isSuperAdmin ? <div className="flex flex-wrap gap-2 lg:justify-end"><Button type="button" size="sm" variant="outline" onClick={() => { setEditing(row); setModalOpen(true); }} className="rounded-full"><Pencil className="size-3.5" />Edit</Button><Button type="button" size="sm" variant="outline" onClick={() => sendReset(row)} className="rounded-full"><KeyRound className="size-3.5" />Reset</Button></div> : <span className="rounded-full border border-primary/15 bg-primary-50 px-3 py-1.5 text-xs font-bold text-primary">Admin Access</span>}
             </div>
           ))}
         </CardContent>
