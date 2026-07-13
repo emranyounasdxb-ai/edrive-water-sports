@@ -19,9 +19,14 @@ function round(value: number) {
   return Math.round(Number(value || 0));
 }
 
-function formatTime(value: number) {
+function formatDubaiTime(value: number) {
   if (!value) return 'Live';
-  return new Intl.DateTimeFormat('en-AE', { hour: '2-digit', minute: '2-digit' }).format(new Date(value));
+  return new Intl.DateTimeFormat('en-AE', {
+    timeZone: 'Asia/Dubai',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true
+  }).format(new Date(value));
 }
 
 function readCachedWeather() {
@@ -50,6 +55,7 @@ export function LiveWeatherPill() {
   const [weather, setWeather] = useState<WeatherState | null>(null);
   const [loading, setLoading] = useState(true);
   const [issue, setIssue] = useState('');
+  const [clockTime, setClockTime] = useState(0);
 
   const apiKey = process.env.NEXT_PUBLIC_OPENWEATHER_API_KEY;
 
@@ -103,8 +109,14 @@ export function LiveWeatherPill() {
 
   useEffect(() => {
     loadWeather();
-    const interval = window.setInterval(() => loadWeather(true), cacheMinutes * 60 * 1000);
-    return () => window.clearInterval(interval);
+    const weatherInterval = window.setInterval(() => loadWeather(true), cacheMinutes * 60 * 1000);
+    return () => window.clearInterval(weatherInterval);
+  }, []);
+
+  useEffect(() => {
+    setClockTime(Date.now());
+    const clockInterval = window.setInterval(() => setClockTime(Date.now()), 15 * 1000);
+    return () => window.clearInterval(clockInterval);
   }, []);
 
   const subtitle = useMemo(() => {
@@ -128,7 +140,7 @@ export function LiveWeatherPill() {
         <p className="flex items-center gap-1 font-bold text-foreground">
           Dubai
           {weather ? <span className="text-gold-deep">{round(weather.temp)}°C</span> : <Sun className="size-3.5 text-gold" aria-hidden="true" />}
-          <span className="ml-auto text-[10px] font-semibold text-muted-foreground">{weather ? formatTime(weather.updatedAt) : 'Live'}</span>
+          <span className="ml-auto text-[10px] font-semibold text-muted-foreground">{formatDubaiTime(clockTime)}</span>
         </p>
         <p className="mt-0.5 flex items-center gap-1 truncate">
           {weather ? <><Wind className="size-3" aria-hidden="true" /><Droplets className="ml-1 size-3" aria-hidden="true" /></> : null}
