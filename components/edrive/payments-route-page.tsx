@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { AdminPaymentsPage } from './admin-payments-page';
+import { AdminPaymentsControlCenter } from './admin-payments-control-center';
 import { ManagerCollectionsPage, type ManagerIdentity } from './manager-collections-page';
 import { supabase } from '@/lib/supabase-client';
 
@@ -45,5 +45,5 @@ export function PaymentsRoutePage() {
 
   if (loading) return <div className="p-6 text-sm font-semibold text-muted-foreground">Loading payments...</div>;
   if (role === 'manager') return <ManagerCollectionsPage manager={manager} />;
-  return <AdminPaymentsPage />;
+  return <AdminPaymentsControlCenter />;
 }
