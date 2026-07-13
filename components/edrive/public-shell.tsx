@@ -2,13 +2,11 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useEffect, useState, type FormEvent } from 'react';
-import { Instagram, Loader2, LockKeyhole, Mail, MapPin, Menu, Phone, Search, TicketCheck, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Instagram, LockKeyhole, Mail, MapPin, Menu, Phone, TicketCheck, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { companyInfo } from '@/lib/company-info';
-import { bookingRequestsTable } from '@/lib/booking-records';
 import { publicNavItems } from '@/lib/mock-data';
-import { supabase } from '@/lib/supabase-client';
 import { cn } from '@/lib/utils';
 import { BrandMark } from './brand';
 
@@ -34,10 +32,6 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
   const currentPath = normalizePath(pathname);
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const [statusModalOpen, setStatusModalOpen] = useState(false);
-  const [statusReference, setStatusReference] = useState('');
-  const [statusError, setStatusError] = useState('');
-  const [statusLoading, setStatusLoading] = useState(false);
 
   useEffect(() => {
     const updateHeader = () => setScrolled(window.scrollY > 32);
@@ -45,33 +39,6 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
     window.addEventListener('scroll', updateHeader, { passive: true });
     return () => window.removeEventListener('scroll', updateHeader);
   }, []);
-
-  async function handleStatusSearch(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const code = statusReference.trim().toUpperCase();
-    if (!code) {
-      setStatusError('Please enter your booking reference number.');
-      return;
-    }
-
-    setStatusLoading(true);
-    setStatusError('');
-    const { data, error } = await supabase.from(bookingRequestsTable).select('booking_code').eq('booking_code', code).maybeSingle();
-    setStatusLoading(false);
-
-    if (error || !data) {
-      setStatusError('Booking number not found. Please check and enter it again.');
-      return;
-    }
-
-    window.location.href = `/booking-status?ref=${encodeURIComponent(code)}`;
-  }
-
-  function openStatusModal() {
-    setOpen(false);
-    setStatusModalOpen(true);
-    setStatusError('');
-  }
 
   return (
     <div className="min-h-screen overflow-hidden bg-background">
@@ -113,10 +80,10 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
             </div>
 
             <div className="z-10 ml-auto hidden shrink-0 items-center gap-2 md:flex">
-              <button type="button" onClick={openStatusModal} className={cn('hidden lg:inline-flex', myBookingActionClass)}>
+              <Link href="/my-booking" className={cn('hidden lg:inline-flex', myBookingActionClass)}>
                 <TicketCheck className="size-3.5" aria-hidden="true" />
                 <span>My Booking</span>
-              </button>
+              </Link>
               <Link href="/admin" className={staffActionClass}>
                 <LockKeyhole className="size-3.5" aria-hidden="true" />
                 <span>Staff Login</span>
@@ -147,10 +114,10 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
                 );
               })}
               <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                <button type="button" className={myBookingActionClass} onClick={openStatusModal}>
+                <Link href="/my-booking" className={myBookingActionClass} onClick={() => setOpen(false)}>
                   <TicketCheck className="size-3.5" aria-hidden="true" />
                   <span>My Booking</span>
-                </button>
+                </Link>
                 <Link href="/admin" onClick={() => setOpen(false)} className={staffActionClass}>
                   <LockKeyhole className="size-3.5" aria-hidden="true" />
                   <span>Staff Login</span>
@@ -161,51 +128,8 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
         ) : null}
       </header>
 
-      {statusModalOpen ? (
-        <BookingStatusModal
-          reference={statusReference}
-          error={statusError}
-          loading={statusLoading}
-          onReferenceChange={setStatusReference}
-          onClose={() => setStatusModalOpen(false)}
-          onSubmit={handleStatusSearch}
-        />
-      ) : null}
-
       <main className="pt-[86px]">{children}</main>
       <PublicFooter />
-    </div>
-  );
-}
-
-function BookingStatusModal({ reference, error, loading, onReferenceChange, onClose, onSubmit }: { reference: string; error: string; loading: boolean; onReferenceChange: (value: string) => void; onClose: () => void; onSubmit: (event: FormEvent<HTMLFormElement>) => void }) {
-  return (
-    <div className="fixed inset-0 z-[120] flex items-center justify-center bg-primary-950/45 px-4 backdrop-blur-sm">
-      <div className="w-full max-w-md overflow-hidden rounded-[1.75rem] border border-white/80 bg-white shadow-[0_28px_85px_rgba(8,37,50,0.28)]">
-        <div className="flex items-start justify-between gap-4 border-b border-border bg-primary-50 px-5 py-4">
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Booking Status</p>
-            <h2 className="mt-1 font-heading text-2xl font-semibold text-foreground">Check your booking</h2>
-          </div>
-          <button type="button" onClick={onClose} className="flex size-9 shrink-0 items-center justify-center rounded-full border border-border bg-white text-muted-foreground transition hover:text-primary" aria-label="Close status checker">
-            <X className="size-4" aria-hidden="true" />
-          </button>
-        </div>
-        <form onSubmit={onSubmit} className="p-5">
-          <label className="grid gap-2 text-sm font-semibold text-foreground">
-            Booking reference number
-            <span className="relative">
-              <Search className="pointer-events-none absolute left-4 top-3.5 size-4 text-muted-foreground" aria-hidden="true" />
-              <input value={reference} onChange={(event) => onReferenceChange(event.target.value.toUpperCase())} placeholder="ED-20260707-007" className="h-12 w-full rounded-2xl border border-border bg-white pl-11 pr-4 text-sm font-bold uppercase text-foreground outline-none transition focus:border-primary" />
-            </span>
-          </label>
-          {error ? <p className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-xs font-semibold leading-5 text-red-700">{error}</p> : <p className="mt-3 text-xs leading-5 text-muted-foreground">Enter the reference number shown on your booking confirmation page.</p>}
-          <Button type="submit" disabled={loading} className="mt-5 w-full rounded-full">
-            {loading ? <Loader2 data-icon className="animate-spin" aria-hidden="true" /> : <Search data-icon aria-hidden="true" />}
-            {loading ? 'Checking...' : 'Search Booking'}
-          </Button>
-        </form>
-      </div>
     </div>
   );
 }
@@ -229,6 +153,7 @@ function PublicFooter() {
             <Link key={item.href} href={item.href} className="text-sm text-muted-foreground transition hover:text-primary">{item.label}</Link>
           ))}
           <Link href="/booking" className="text-sm text-muted-foreground transition hover:text-primary">Book Ride</Link>
+          <Link href="/my-booking" className="text-sm text-muted-foreground transition hover:text-primary">Track My Booking</Link>
         </div>
         <div className="flex flex-col gap-4">
           <h3 className="text-sm font-semibold text-foreground">Contact</h3>
