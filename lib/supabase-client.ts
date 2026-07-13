@@ -29,8 +29,14 @@ async function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit = {}
   }
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+const client = createClient(supabaseUrl, supabaseAnonKey, {
   global: {
     fetch: fetchWithTimeout
   }
 });
+
+type FlexibleSupabaseClient = Omit<typeof client, 'from'> & {
+  from: (...args: Parameters<typeof client.from>) => any;
+};
+
+export const supabase = client as FlexibleSupabaseClient;
