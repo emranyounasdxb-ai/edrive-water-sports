@@ -63,7 +63,12 @@ export function LiveWeatherPill() {
     }
 
     if (!apiKey) {
-      setIssue('API key missing');
+      if (cached) {
+        setWeather(cached);
+        setIssue('');
+      } else {
+        setIssue('Weather unavailable');
+      }
       setLoading(false);
       return;
     }
@@ -85,7 +90,12 @@ export function LiveWeatherPill() {
       setWeather(nextWeather);
       writeCachedWeather(nextWeather);
     } catch {
-      setIssue('Weather offline');
+      if (cached) {
+        setWeather(cached);
+        setIssue('');
+      } else {
+        setIssue('Weather unavailable');
+      }
     } finally {
       setLoading(false);
     }
