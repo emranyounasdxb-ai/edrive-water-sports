@@ -8,6 +8,7 @@ import {
   BarChart3,
   Bell,
   CalendarDays,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   ClipboardCheck,
@@ -49,6 +50,14 @@ const iconMap = {
   UsersRound,
   MessageSquare,
   Settings
+};
+
+const sectionIconMap: Record<string, LucideIcon> = {
+  'Booking Operations': CalendarDays,
+  'Partners & Sales': UsersRound,
+  Assets: Ship,
+  Finance: CreditCard,
+  'Team & System': Settings
 };
 
 const countryCodeByNationality: Record<string, string> = {
@@ -103,6 +112,7 @@ const countryAliasByCode: Record<string, string> = {
 };
 
 type NavItem = { href: string; label: string; icon: string; section?: string; roles?: AdminNavRole[] };
+type NavGroup = { section: string; items: NavItem[] };
 type PortalUser = { name: string; email: string; role: string; roleLabel: string; avatarUrl: string; nationality: string };
 type AdminProfile = { full_name: string | null; email: string | null; role: string | null; status: string | null; avatar_url: string | null; nationality: string | null };
 
@@ -146,8 +156,8 @@ function roleLabel(role: string) {
   const labels: Record<string, string> = {
     super_admin: 'Super Admin',
     admin: 'Admin',
-    booking_staff: 'Booking Staff',
-    manager: 'Manager',
+    booking_staff: 'Booking Manager',
+    manager: 'Ride Manager',
     finance: 'Finance',
     maintenance_staff: 'Maintenance Staff'
   };
@@ -173,6 +183,33 @@ function countryCode(value: string) {
 function countryLabel(value: string) {
   const code = countryCode(value);
   return countryAliasByCode[code] || value;
+}
+
+function buildNavigation(items: NavItem[]) {
+  const directItems: NavItem[] = [];
+  const groups: NavGroup[] = [];
+  const groupMap = new Map<string, NavGroup>();
+
+  items.forEach((item) => {
+    if (!item.section) {
+      directItems.push(item);
+      return;
+    }
+
+    let group = groupMap.get(item.section);
+    if (!group) {
+      group = { section: item.section, items: [] };
+      groupMap.set(item.section, group);
+      groups.push(group);
+    }
+    group.items.push(item);
+  });
+
+  return { directItems, groups };
+}
+
+function activeSectionForPath(items: NavItem[], currentPath: string) {
+  return items.find((item) => item.section && matchesPath(currentPath, item.href))?.section || '';
 }
 
 function ProfileFlag({ nationality, compact = false }: { nationality?: string; compact?: boolean }) {
@@ -204,6 +241,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
   const currentPath = normalizePath(pathname);
   const [open, setOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
+  const [openSection, setOpenSection] = useState('');
   const [user, setUser] = useState<PortalUser | null>(null);
   const [ready, setReady] = useState(false);
   const [accessIssue, setAccessIssue] = useState('');
@@ -273,6 +311,12 @@ export function AdminShell({ children }: { children: ReactNode }) {
     return adminNavItems.filter((item) => canUseNavItem(user.role, item)) as NavItem[];
   }, [user]);
 
+  const activeSection = useMemo(() => activeSectionForPath(navItems, currentPath), [currentPath, navItems]);
+
+  useEffect(() => {
+    setOpenSection(activeSection);
+  }, [activeSection]);
+
   useEffect(() => {
     if (!ready || !user || isLoginPage) return;
 
@@ -294,6 +338,15 @@ export function AdminShell({ children }: { children: ReactNode }) {
     await supabase.auth.signOut();
     router.replace('/admin/login');
   };
+
+  function toggleSection(section: string) {
+    setOpenSection((current) => current === section ? '' : section);
+  }
+
+  function expandSection(section: string) {
+    setCollapsed(false);
+    setOpenSection(section);
+  }
 
   if (isLoginPage) return <>{children}</>;
   if (!ready) return <div className="flex min-h-screen items-center justify-center bg-[#F4F7F8] text-sm font-semibold text-muted-foreground">Loading portal...</div>;
@@ -323,16 +376,23 @@ export function AdminShell({ children }: { children: ReactNode }) {
         <div className="flex min-h-screen items-start">
           <aside className={cn('sticky top-0 hidden h-screen shrink-0 overflow-hidden bg-white/82 p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.95),inset_-10px_0_24px_rgba(8,37,50,0.025),12px_0_35px_rgba(8,37,50,0.055)] ring-1 ring-white/80 backdrop-blur-xl transition-all duration-300 lg:block', collapsed ? 'w-[5.4rem]' : 'w-[15.25rem]')}>
             <div className="flex h-full flex-col">
-              <div className={cn('mb-2 flex items-center gap-2', collapsed ? 'justify-center' : 'justify-between px-2')}>
-                <Link href={isManager ? '/admin/manager' : navItems[0]?.href || '/admin'} prefetch className={cn('block transition', collapsed ? 'flex size-11 items-center justify-center rounded-2xl bg-primary-50 text-sm font-black text-primary shadow-sm' : 'min-w-0 scale-[0.88] origin-left')}>
+              <div className={cn('mb-3 flex items-center gap-2', collapsed ? 'justify-center' : 'justify-between px-2')}>
+                <Link href={isManager ? '/admin/manager' : '/admin'} prefetch className={cn('block transition', collapsed ? 'flex size-11 items-center justify-center rounded-2xl bg-primary-50 text-sm font-black text-primary shadow-sm' : 'min-w-0 scale-[0.88] origin-left')}>
                   {collapsed ? 'eD' : <BrandMark />}
                 </Link>
-                <button type="button" onClick={() => setCollapsed((value) => !value)} className="hidden size-8 shrink-0 items-center justify-center rounded-full border border-border bg-white text-muted-foreground shadow-sm transition hover:border-primary/35 hover:text-primary lg:flex" aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}>
+                <button type="button" onClick={() => setCollapsed((value) => !value)} className="hidden size-8 shrink-0 items-center justify-center rounded-full border border-border bg-white text-muted-foreground shadow-sm transition hover:border-primary/35 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 lg:flex" aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}>
                   {collapsed ? <ChevronRight className="size-4" aria-hidden="true" /> : <ChevronLeft className="size-4" aria-hidden="true" />}
                 </button>
               </div>
 
-              <AdminNav currentPath={currentPath} navItems={navItems} collapsed={collapsed} />
+              <AdminNav
+                currentPath={currentPath}
+                navItems={navItems}
+                collapsed={collapsed}
+                openSection={openSection}
+                onToggleSection={toggleSection}
+                onExpandSection={expandSection}
+              />
 
               {!collapsed ? (
                 <div className="premium-surface mt-auto overflow-hidden rounded-[1.2rem] p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.95),0_10px_24px_rgba(8,37,50,0.07)]">
@@ -393,7 +453,14 @@ export function AdminShell({ children }: { children: ReactNode }) {
 
               {open ? (
                 <div className="max-h-[70vh] overflow-y-auto rounded-b-[1.5rem] bg-white p-3 lg:hidden">
-                  <AdminNav currentPath={currentPath} navItems={navItems} onNavigate={() => setOpen(false)} />
+                  <AdminNav
+                    currentPath={currentPath}
+                    navItems={navItems}
+                    openSection={openSection}
+                    onToggleSection={toggleSection}
+                    onExpandSection={(section) => setOpenSection(section)}
+                    onNavigate={() => setOpen(false)}
+                  />
                   <Button type="button" variant="outline" className="mt-3 w-full rounded-2xl" onClick={handleLogout}><LogOut className="size-4" aria-hidden="true" />Logout</Button>
                 </div>
               ) : null}
@@ -418,25 +485,111 @@ function IconButtonWithBadge({ icon: Icon, count }: { icon: LucideIcon; count?: 
   );
 }
 
-function AdminNav({ currentPath, navItems, onNavigate, collapsed = false }: { currentPath: string; navItems: NavItem[]; onNavigate?: () => void; collapsed?: boolean }) {
-  let previousSection = '';
+function AdminNav({
+  currentPath,
+  navItems,
+  onNavigate,
+  collapsed = false,
+  openSection,
+  onToggleSection,
+  onExpandSection
+}: {
+  currentPath: string;
+  navItems: NavItem[];
+  onNavigate?: () => void;
+  collapsed?: boolean;
+  openSection: string;
+  onToggleSection: (section: string) => void;
+  onExpandSection: (section: string) => void;
+}) {
+  const { directItems, groups } = buildNavigation(navItems);
+
   return (
-    <nav className={cn('flex min-h-0 flex-col overflow-y-auto', collapsed ? 'gap-0.5' : 'gap-0.5 pr-1')}>
-      {navItems.map((item) => {
+    <nav className={cn('flex min-h-0 flex-1 flex-col overflow-y-auto', collapsed ? 'gap-1 px-1' : 'gap-1 pr-1')}>
+      {directItems.map((item) => {
         const Icon = iconMap[item.icon as keyof typeof iconMap] ?? LayoutDashboard;
-        const itemPath = normalizePath(item.href.split('?')[0]);
-        const active = currentPath === itemPath || (itemPath !== '/admin' && currentPath.startsWith(`${itemPath}/`));
-        const showSection = Boolean(item.section && item.section !== previousSection);
-        const section = item.section || '';
-        previousSection = section || previousSection;
+        const active = matchesPath(currentPath, item.href);
         return (
-          <div key={item.href}>
-            {showSection && !collapsed ? <p className="mb-1 mt-3 px-2.5 text-[9px] font-black uppercase tracking-[0.18em] text-muted-foreground/75 first:mt-0">{section}</p> : null}
-            {showSection && collapsed ? <div className="my-1 h-px bg-border/70" /> : null}
-            <Link href={item.href} prefetch onClick={onNavigate} title={collapsed ? item.label : undefined} className={cn('flex items-center rounded-xl text-sm font-semibold text-muted-foreground transition hover:bg-primary-50 hover:text-primary-900', collapsed ? 'justify-center px-2 py-1.5' : 'gap-2.5 px-2.5 py-1.5', active && 'bg-primary-100 text-primary-900 shadow-[0px_-3px_0px_0px_rgba(14,124,134,0.08)_inset,0px_2px_0px_0px_rgba(255,255,255,0.65)_inset,0px_8px_18px_rgba(8,37,50,0.07)]')}>
-              <span className={cn('flex size-7 shrink-0 items-center justify-center rounded-lg bg-white text-muted-foreground shadow-sm', active && 'bg-[#DDF4F6] text-primary')}><Icon className="size-3.5" aria-hidden="true" /></span>
-              {!collapsed ? <span className="truncate">{item.label}</span> : null}
-            </Link>
+          <Link
+            key={item.href}
+            href={item.href}
+            prefetch
+            onClick={onNavigate}
+            title={collapsed ? item.label : undefined}
+            className={cn(
+              'flex items-center rounded-xl font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20',
+              collapsed ? 'justify-center px-2 py-2.5' : 'gap-2.5 px-2.5 py-2 text-sm',
+              active ? 'bg-primary-100 text-primary-900 shadow-[0_8px_18px_rgba(8,37,50,0.07)]' : 'text-muted-foreground hover:bg-primary-50 hover:text-primary-900'
+            )}
+          >
+            <span className={cn('flex size-8 shrink-0 items-center justify-center rounded-xl bg-white text-muted-foreground shadow-sm', active && 'bg-[#DDF4F6] text-primary')}><Icon className="size-4" aria-hidden="true" /></span>
+            {!collapsed ? <span className="truncate">{item.label}</span> : null}
+          </Link>
+        );
+      })}
+
+      {groups.map((group) => {
+        const SectionIcon = sectionIconMap[group.section] ?? Settings;
+        const sectionActive = group.items.some((item) => matchesPath(currentPath, item.href));
+        const sectionOpen = openSection === group.section;
+
+        if (collapsed) {
+          return (
+            <button
+              key={group.section}
+              type="button"
+              title={group.section}
+              aria-label={`Open ${group.section}`}
+              onClick={() => onExpandSection(group.section)}
+              className={cn(
+                'flex items-center justify-center rounded-xl px-2 py-2.5 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20',
+                sectionActive ? 'bg-primary-100 text-primary shadow-[0_8px_18px_rgba(8,37,50,0.07)]' : 'text-muted-foreground hover:bg-primary-50 hover:text-primary-900'
+              )}
+            >
+              <span className={cn('flex size-8 items-center justify-center rounded-xl bg-white shadow-sm', sectionActive && 'bg-[#DDF4F6]')}><SectionIcon className="size-4" aria-hidden="true" /></span>
+            </button>
+          );
+        }
+
+        return (
+          <div key={group.section} className="grid gap-1">
+            <button
+              type="button"
+              aria-expanded={sectionOpen}
+              onClick={() => onToggleSection(group.section)}
+              className={cn(
+                'flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20',
+                sectionOpen || sectionActive ? 'bg-primary-50 text-primary-900' : 'text-muted-foreground hover:bg-primary-50 hover:text-primary-900'
+              )}
+            >
+              <span className={cn('flex size-8 shrink-0 items-center justify-center rounded-xl bg-white text-muted-foreground shadow-sm', (sectionOpen || sectionActive) && 'bg-[#DDF4F6] text-primary')}><SectionIcon className="size-4" aria-hidden="true" /></span>
+              <span className="min-w-0 flex-1 truncate">{group.section}</span>
+              <ChevronDown className={cn('size-4 shrink-0 transition-transform duration-200', sectionOpen && 'rotate-180')} aria-hidden="true" />
+            </button>
+
+            {sectionOpen ? (
+              <div className="grid gap-1 pl-4">
+                {group.items.map((item) => {
+                  const Icon = iconMap[item.icon as keyof typeof iconMap] ?? LayoutDashboard;
+                  const active = matchesPath(currentPath, item.href);
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      prefetch
+                      onClick={onNavigate}
+                      className={cn(
+                        'flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20',
+                        active ? 'bg-primary-100 text-primary-900 shadow-[0_8px_18px_rgba(8,37,50,0.07)]' : 'text-muted-foreground hover:bg-primary-50 hover:text-primary-900'
+                      )}
+                    >
+                      <span className={cn('flex size-7 shrink-0 items-center justify-center rounded-lg bg-white text-muted-foreground shadow-sm', active && 'bg-[#DDF4F6] text-primary')}><Icon className="size-3.5" aria-hidden="true" /></span>
+                      <span className="truncate">{item.label}</span>
+                    </Link>
+                  );
+                })}
+              </div>
+            ) : null}
           </div>
         );
       })}
