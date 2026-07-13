@@ -42,8 +42,8 @@ using (
     select 1
     from public.admin_users au
     where au.auth_user_id::text = auth.uid()::text
-      and lower(coalesce(au.status, '')) = 'active'
-      and lower(coalesce(au.role, '')) in ('super_admin', 'admin', 'finance')
+      and lower(coalesce(au.status::text, '')) = 'active'
+      and lower(coalesce(au.role::text, '')) in ('super_admin', 'admin', 'finance')
   )
 );
 
@@ -66,7 +66,7 @@ begin
     select
       coalesce(nullif(au.full_name, ''), nullif(au.email, ''), 'Portal User'),
       au.email,
-      au.role
+      au.role::text
     into v_actor_name, v_actor_email, v_actor_role
     from public.admin_users au
     where au.auth_user_id::text = v_actor_id::text
@@ -85,7 +85,7 @@ begin
     v_actor_role := coalesce(v_actor_role, 'authenticated');
   end if;
 
-  v_booking_label := coalesce(nullif(new.booking_code, ''), nullif(new.booking_number, ''), new.id::text, 'Booking');
+  v_booking_label := coalesce(nullif(new.booking_code::text, ''), nullif(new.booking_number::text, ''), new.id::text, 'Booking');
   v_booking_id := coalesce(new.id::text, v_booking_label);
 
   if tg_op = 'INSERT' then
@@ -110,7 +110,8 @@ begin
     return new;
   end if;
 
-  if new.status is distinct from old.status and lower(coalesce(new.status, '')) = 'confirmed' then
+  if new.status is distinct from old.status
+     and lower(coalesce(new.status::text, '')) = 'confirmed' then
     insert into public.audit_logs (
       module, action, entity_type, entity_id, entity_label,
       actor_user_id, actor_name, actor_email, actor_role,
@@ -144,7 +145,7 @@ begin
   end if;
 
   if new.payment_workflow_status is distinct from old.payment_workflow_status
-     and lower(coalesce(new.payment_workflow_status, '')) = 'ride in progress' then
+     and lower(coalesce(new.payment_workflow_status::text, '')) = 'ride in progress' then
     insert into public.audit_logs (
       module, action, entity_type, entity_id, entity_label,
       actor_user_id, actor_name, actor_email, actor_role,
@@ -163,7 +164,8 @@ begin
     v_logged := true;
   end if;
 
-  if new.status is distinct from old.status and lower(coalesce(new.status, '')) = 'completed' then
+  if new.status is distinct from old.status
+     and lower(coalesce(new.status::text, '')) = 'completed' then
     insert into public.audit_logs (
       module, action, entity_type, entity_id, entity_label,
       actor_user_id, actor_name, actor_email, actor_role,
@@ -184,7 +186,8 @@ begin
     v_logged := true;
   end if;
 
-  if new.status is distinct from old.status and lower(coalesce(new.status, '')) = 'no show' then
+  if new.status is distinct from old.status
+     and lower(coalesce(new.status::text, '')) = 'no show' then
     insert into public.audit_logs (
       module, action, entity_type, entity_id, entity_label,
       actor_user_id, actor_name, actor_email, actor_role,
@@ -205,10 +208,10 @@ begin
 
   if (
     new.collection_status is distinct from old.collection_status
-    and lower(coalesce(new.collection_status, '')) = 'company_received'
+    and lower(coalesce(new.collection_status::text, '')) = 'company_received'
   ) or (
     new.payment_workflow_status is distinct from old.payment_workflow_status
-    and lower(coalesce(new.payment_workflow_status, '')) = 'received by admin'
+    and lower(coalesce(new.payment_workflow_status::text, '')) = 'received by admin'
   ) then
     insert into public.audit_logs (
       module, action, entity_type, entity_id, entity_label,
@@ -277,7 +280,7 @@ begin
     select
       coalesce(nullif(au.full_name, ''), nullif(au.email, ''), 'Portal User'),
       au.email,
-      au.role
+      au.role::text
     into v_actor_name, v_actor_email, v_actor_role
     from public.admin_users au
     where au.auth_user_id::text = v_actor_id::text
