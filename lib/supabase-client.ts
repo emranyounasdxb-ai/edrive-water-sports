@@ -71,4 +71,4 @@ type FlexibleSupabaseClient = Omit<typeof client, 'from'> & {
   from: (...args: Parameters<typeof client.from>) => FlexibleQuery;
 };
 
-export const supabase = client as FlexibleSupabaseClient;
+export const supabase = client as unknown as FlexibleSupabaseClient;
