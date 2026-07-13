@@ -60,6 +60,7 @@ export const adminNavItems: AdminNavItem[] = [
   { href: '/admin/reports', label: 'Reports', icon: 'BarChart3', section: 'Finance', roles: ['super_admin', 'admin', 'finance'] },
   { href: '/admin/staff-management', label: 'Team & Access', icon: 'UserCog', section: 'Team & System', roles: ['super_admin'] },
   { href: '/admin/audit-log', label: 'Audit Log', icon: 'ClipboardCheck', section: 'Team & System', roles: ['super_admin', 'admin', 'finance'] },
+  { href: '/admin/workflow-check', label: 'Workflow Check', icon: 'ShieldCheck', section: 'Team & System', roles: ['super_admin', 'admin', 'finance'] },
   { href: '/admin/system-settings', label: 'Settings', icon: 'Settings', section: 'Team & System', roles: ['super_admin'] }
 ];
 
