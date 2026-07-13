@@ -1,12 +1,18 @@
 'use client';
 
 import { AdminB2BAgentsCleanPage } from './admin-b2b-agents-page';
+import { B2BAgentCountryForm } from './b2b-agent-country-form';
 
 export function AdminB2BAgentsPolishedPage() {
   return (
     <div className="b2b-agents-polished">
+      <B2BAgentCountryForm />
       <AdminB2BAgentsCleanPage />
       <style jsx global>{`
+        .b2b-country-form[data-visible='true'] + section > div > div[class*='mt-5'][class*='grid-cols-1'] + div[class*='mt-5'] {
+          display: none !important;
+        }
+
         .b2b-agents-polished table tbody td:first-child button:hover div:first-child {
           color: hsl(var(--primary));
           text-decoration: underline;
@@ -19,7 +25,8 @@ export function AdminB2BAgentsPolishedPage() {
         }
 
         .b2b-agents-polished table tbody td:last-child > div > button:nth-child(2),
-        .b2b-agents-polished table tbody td:last-child > div > button:nth-child(3) {
+        .b2b-agents-polished table tbody td:last-child > div > button:nth-child(3),
+        .b2b-agents-polished table tbody td:last-child > div > button:nth-child(4) {
           display: none !important;
         }
 
@@ -46,7 +53,8 @@ export function AdminB2BAgentsPolishedPage() {
         }
 
         .b2b-agents-polished [class*="md:hidden"] [class*="mt-4"][class*="grid"][class*="gap-2"] > button:nth-child(2),
-        .b2b-agents-polished [class*="md:hidden"] [class*="mt-4"][class*="grid"][class*="gap-2"] > button:nth-child(3) {
+        .b2b-agents-polished [class*="md:hidden"] [class*="mt-4"][class*="grid"][class*="gap-2"] > button:nth-child(3),
+        .b2b-agents-polished [class*="md:hidden"] [class*="mt-4"][class*="grid"][class*="gap-2"] > button:nth-child(4) {
           display: none !important;
         }
 
