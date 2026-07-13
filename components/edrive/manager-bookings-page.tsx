@@ -46,6 +46,15 @@ function asText(value: unknown, fallback = '-') {
   return text || fallback;
 }
 
+function displayName(value: string) {
+  return value
+    .trim()
+    .replace(/\s+/g, ' ')
+    .split(' ')
+    .map((part) => part ? `${part.charAt(0).toUpperCase()}${part.slice(1)}` : '')
+    .join(' ');
+}
+
 function asNumber(value: unknown) {
   const numberValue = Number(value || 0);
   return Number.isFinite(numberValue) ? numberValue : 0;
@@ -148,7 +157,8 @@ function managerName(profile: ManagerProfile | null) {
 }
 
 function firstName(profile: ManagerProfile | null) {
-  return asText(managerName(profile), 'Manager').split(' ')[0] || 'Manager';
+  const first = asText(managerName(profile), 'Manager').split(' ')[0] || 'Manager';
+  return displayName(first);
 }
 
 function matchesManager(booking: ManagerBooking, profile: ManagerProfile | null) {
@@ -282,12 +292,12 @@ export function ManagerBookingsPage() {
 
       <Card className="mt-3 overflow-hidden rounded-[1.35rem] border-border/80 bg-white shadow-[0_12px_28px_rgba(8,37,50,0.05)]">
         <CardHeader className="gap-3 border-b border-border/70 bg-[#F7FAFA] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-          <div><CardTitle className="font-heading text-xl font-semibold sm:text-2xl">Today rides</CardTitle><p className="mt-0.5 text-xs font-semibold text-muted-foreground">{loading ? 'Loading...' : `${visibleToday.length} rides · ${niceDate(today)}`}</p></div>
+          <div><CardTitle className="font-heading text-xl font-semibold sm:text-2xl">Today&apos;s rides</CardTitle><p className="mt-0.5 text-xs font-semibold text-muted-foreground">{loading ? 'Loading...' : `${visibleToday.length} rides · ${niceDate(today)}`}</p></div>
           {todayItems.length > 0 ? <div className="relative w-full sm:max-w-xs"><Search className="pointer-events-none absolute left-3 top-3 size-4 text-muted-foreground" aria-hidden="true" /><Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search rides..." className="h-10 rounded-full bg-white pl-9" /></div> : null}
         </CardHeader>
         <CardContent className="grid gap-3 p-3 sm:p-4 xl:grid-cols-2">
-          {loading ? <div className="rounded-2xl border border-dashed border-border bg-[#F7FAFA] px-4 py-5 text-center text-sm font-semibold text-muted-foreground">Loading today rides...</div> : null}
-          {!loading && visibleToday.length === 0 ? <div className="rounded-2xl border border-dashed border-border bg-[#F7FAFA] px-4 py-5 text-center"><p className="font-heading text-base font-semibold text-foreground">No rides today</p><p className="mt-1 text-sm leading-5 text-muted-foreground">Future rides Upcoming tab me show hongi.</p></div> : null}
+          {loading ? <div className="rounded-2xl border border-dashed border-border bg-[#F7FAFA] px-4 py-5 text-center text-sm font-semibold text-muted-foreground">Loading today&apos;s rides...</div> : null}
+          {!loading && visibleToday.length === 0 ? <div className="rounded-2xl border border-dashed border-border bg-[#F7FAFA] px-4 py-5 text-center"><p className="font-heading text-base font-semibold text-foreground">No rides scheduled for today</p><p className="mt-1 text-sm leading-5 text-muted-foreground">Future assignments are available under My Rides.</p></div> : null}
           {visibleToday.map((booking, index) => <RideSummaryCard key={String(booking.id || `${bookingCode(booking)}-${index}`)} booking={booking} />)}
         </CardContent>
       </Card>
