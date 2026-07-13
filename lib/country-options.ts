@@ -45,6 +45,15 @@ const fallbackNames: Record<string, string> = {
   XK: 'Kosovo'
 };
 
+const countryAliases: Record<string, string> = {
+  UAE: 'AE',
+  'UNITED ARAB EMIRATES': 'AE',
+  UK: 'GB',
+  'GREAT BRITAIN': 'GB',
+  USA: 'US',
+  'UNITED STATES OF AMERICA': 'US'
+};
+
 function flagFromCode(code: string) {
   if (code.length !== 2) return '🌍';
   return code.toUpperCase().replace(/./g, (letter) => String.fromCodePoint(127397 + letter.charCodeAt(0)));
@@ -75,13 +84,28 @@ export const countryOptions: CountryOption[] = [
 
 export function countryOptionsForValue(currentValue: string | null | undefined) {
   const current = String(currentValue || '').trim();
-  if (!current || countryOptions.some((option) => option.value === current)) return countryOptions;
+  if (!current || countryOptions.some((option) => option.value.toLowerCase() === current.toLowerCase())) return countryOptions;
   return [{ code: 'CURRENT', value: current, label: `🌍 ${current}` }, ...countryOptions];
 }
 
-export function countryFlag(value: string | null | undefined) {
+export function countryCodeForValue(value: string | null | undefined) {
   const clean = String(value || '').trim();
-  if (!clean) return '🌍';
-  if (clean === 'United Arab Emirates') return '🇦🇪';
-  return countryOptions.find((option) => option.value === clean)?.label.split(' ')[0] || '🌍';
+  if (!clean) return '';
+
+  const upper = clean.toUpperCase();
+  if (countryCodes.includes(upper)) return upper;
+  if (countryAliases[upper]) return countryAliases[upper];
+
+  const match = countryOptions.find((option) => option.code !== 'OTHER' && option.value.toLowerCase() === clean.toLowerCase());
+  return match?.code || '';
+}
+
+export function countryFlagUrl(value: string | null | undefined, width = 40) {
+  const code = countryCodeForValue(value);
+  return code ? `https://flagcdn.com/w${width}/${code.toLowerCase()}.png` : '';
+}
+
+export function countryFlag(value: string | null | undefined) {
+  const code = countryCodeForValue(value);
+  return code ? flagFromCode(code) : '🌍';
 }
