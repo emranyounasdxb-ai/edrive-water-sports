@@ -29,7 +29,7 @@ import {
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { adminNavItems, managerNavItems } from '@/lib/mock-data';
+import { adminNavItems, managerNavItems, type AdminNavItem, type AdminNavRole } from '@/lib/mock-data';
 import { supabase } from '@/lib/supabase-client';
 import { cn } from '@/lib/utils';
 import { LiveWeatherPill } from './admin/live-weather-pill';
@@ -102,7 +102,7 @@ const countryAliasByCode: Record<string, string> = {
   US: 'United States'
 };
 
-type NavItem = { href: string; label: string; icon: string; section?: string };
+type NavItem = { href: string; label: string; icon: string; section?: string; roles?: AdminNavRole[] };
 type PortalUser = { name: string; email: string; role: string; roleLabel: string; avatarUrl: string; nationality: string };
 type AdminProfile = { full_name: string | null; email: string | null; role: string | null; status: string | null; avatar_url: string | null; nationality: string | null };
 
@@ -126,6 +126,16 @@ function isManagerRole(role: string) {
 
 function isActiveStatus(status: string | null | undefined) {
   return String(status || '').trim().toLowerCase() === 'active';
+}
+
+function matchesPath(pathname: string, href: string) {
+  const path = normalizePath(href.split('?')[0]);
+  if (path === '/admin') return pathname === '/admin';
+  return pathname === path || pathname.startsWith(`${path}/`);
+}
+
+function canUseNavItem(role: string, item: AdminNavItem) {
+  return !item.roles?.length || item.roles.includes(role as AdminNavRole);
 }
 
 function isManagerPathAllowed(pathname: string) {
@@ -257,14 +267,29 @@ export function AdminShell({ children }: { children: ReactNode }) {
     };
   }, [isLoginPage, router]);
 
+  const navItems = useMemo(() => {
+    if (!user) return [] as NavItem[];
+    if (isManagerRole(user.role)) return managerNavItems as NavItem[];
+    return adminNavItems.filter((item) => canUseNavItem(user.role, item)) as NavItem[];
+  }, [user]);
+
   useEffect(() => {
     if (!ready || !user || isLoginPage) return;
-    if (isManagerRole(user.role) && !isManagerPathAllowed(currentPath)) {
-      router.replace('/admin/manager');
-    }
-  }, [currentPath, isLoginPage, ready, router, user]);
 
-  const navItems = useMemo(() => (user && isManagerRole(user.role) ? managerNavItems : adminNavItems) as NavItem[], [user]);
+    if (isManagerRole(user.role)) {
+      if (!isManagerPathAllowed(currentPath)) router.replace('/admin/manager');
+      return;
+    }
+
+    const restrictedItem = adminNavItems.find((item) => matchesPath(currentPath, item.href));
+    const specialRestricted = currentPath.startsWith('/admin/staff-password') || currentPath.startsWith('/admin/vehicle-assignment');
+    const specialAllowed = user.role === 'super_admin' || (currentPath.startsWith('/admin/vehicle-assignment') && user.role === 'admin');
+
+    if ((restrictedItem && !canUseNavItem(user.role, restrictedItem)) || (specialRestricted && !specialAllowed)) {
+      router.replace(navItems[0]?.href || '/admin');
+    }
+  }, [currentPath, isLoginPage, navItems, ready, router, user]);
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
     router.replace('/admin/login');
@@ -299,7 +324,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
           <aside className={cn('sticky top-0 hidden h-screen shrink-0 overflow-hidden bg-white/82 p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.95),inset_-10px_0_24px_rgba(8,37,50,0.025),12px_0_35px_rgba(8,37,50,0.055)] ring-1 ring-white/80 backdrop-blur-xl transition-all duration-300 lg:block', collapsed ? 'w-[5.4rem]' : 'w-[15.25rem]')}>
             <div className="flex h-full flex-col">
               <div className={cn('mb-2 flex items-center gap-2', collapsed ? 'justify-center' : 'justify-between px-2')}>
-                <Link href={isManager ? '/admin/manager' : '/admin'} prefetch className={cn('block transition', collapsed ? 'flex size-11 items-center justify-center rounded-2xl bg-primary-50 text-sm font-black text-primary shadow-sm' : 'min-w-0 scale-[0.88] origin-left')}>
+                <Link href={isManager ? '/admin/manager' : navItems[0]?.href || '/admin'} prefetch className={cn('block transition', collapsed ? 'flex size-11 items-center justify-center rounded-2xl bg-primary-50 text-sm font-black text-primary shadow-sm' : 'min-w-0 scale-[0.88] origin-left')}>
                   {collapsed ? 'eD' : <BrandMark />}
                 </Link>
                 <button type="button" onClick={() => setCollapsed((value) => !value)} className="hidden size-8 shrink-0 items-center justify-center rounded-full border border-border bg-white text-muted-foreground shadow-sm transition hover:border-primary/35 hover:text-primary lg:flex" aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}>
@@ -367,7 +392,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
               </div>
 
               {open ? (
-                <div className="rounded-b-[1.5rem] bg-white p-3 lg:hidden">
+                <div className="max-h-[70vh] overflow-y-auto rounded-b-[1.5rem] bg-white p-3 lg:hidden">
                   <AdminNav currentPath={currentPath} navItems={navItems} onNavigate={() => setOpen(false)} />
                   <Button type="button" variant="outline" className="mt-3 w-full rounded-2xl" onClick={handleLogout}><LogOut className="size-4" aria-hidden="true" />Logout</Button>
                 </div>
@@ -400,13 +425,14 @@ function AdminNav({ currentPath, navItems, onNavigate, collapsed = false }: { cu
       {navItems.map((item) => {
         const Icon = iconMap[item.icon as keyof typeof iconMap] ?? LayoutDashboard;
         const itemPath = normalizePath(item.href.split('?')[0]);
-        const active = currentPath === itemPath;
+        const active = currentPath === itemPath || (itemPath !== '/admin' && currentPath.startsWith(`${itemPath}/`));
         const showSection = Boolean(item.section && item.section !== previousSection);
-        previousSection = item.section || previousSection;
+        const section = item.section || '';
+        previousSection = section || previousSection;
         return (
           <div key={item.href}>
-            {showSection && !collapsed ? <p className="mb-1 mt-3 px-2.5 text-[9px] font-black uppercase tracking-[0.18em] text-muted-foreground/75 first:mt-0">{item.section}</p> : null}
-            {showSection && collapsed && previousSection !== item.section ? <div className="my-1 h-px bg-border/70" /> : null}
+            {showSection && !collapsed ? <p className="mb-1 mt-3 px-2.5 text-[9px] font-black uppercase tracking-[0.18em] text-muted-foreground/75 first:mt-0">{section}</p> : null}
+            {showSection && collapsed ? <div className="my-1 h-px bg-border/70" /> : null}
             <Link href={item.href} prefetch onClick={onNavigate} title={collapsed ? item.label : undefined} className={cn('flex items-center rounded-xl text-sm font-semibold text-muted-foreground transition hover:bg-primary-50 hover:text-primary-900', collapsed ? 'justify-center px-2 py-1.5' : 'gap-2.5 px-2.5 py-1.5', active && 'bg-primary-100 text-primary-900 shadow-[0px_-3px_0px_0px_rgba(14,124,134,0.08)_inset,0px_2px_0px_0px_rgba(255,255,255,0.65)_inset,0px_8px_18px_rgba(8,37,50,0.07)]')}>
               <span className={cn('flex size-7 shrink-0 items-center justify-center rounded-lg bg-white text-muted-foreground shadow-sm', active && 'bg-[#DDF4F6] text-primary')}><Icon className="size-3.5" aria-hidden="true" /></span>
               {!collapsed ? <span className="truncate">{item.label}</span> : null}
@@ -419,8 +445,9 @@ function AdminNav({ currentPath, navItems, onNavigate, collapsed = false }: { cu
 }
 
 function MobileBottomNav({ currentPath, navItems, isManager }: { currentPath: string; navItems: NavItem[]; isManager: boolean }) {
+  if (!isManager) return null;
   return (
-    <nav className={cn('fixed inset-x-0 bottom-0 z-50 border-t border-white/70 bg-white/92 px-2 pb-[calc(env(safe-area-inset-bottom)+0.45rem)] pt-2 shadow-[0_-16px_38px_rgba(8,37,50,0.12)] backdrop-blur-xl lg:hidden', isManager && 'manager-bottom-nav')}>
+    <nav className="manager-bottom-nav fixed inset-x-0 bottom-0 z-50 border-t border-white/70 bg-white/92 px-2 pb-[calc(env(safe-area-inset-bottom)+0.45rem)] pt-2 shadow-[0_-16px_38px_rgba(8,37,50,0.12)] backdrop-blur-xl lg:hidden">
       <div className="mx-auto flex max-w-xl items-center justify-around gap-1 rounded-[1.4rem] bg-[#F4F7F8] p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.95)]">
         {navItems.map((item) => {
           const Icon = iconMap[item.icon as keyof typeof iconMap] ?? LayoutDashboard;
