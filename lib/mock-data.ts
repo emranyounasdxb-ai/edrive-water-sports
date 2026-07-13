@@ -49,7 +49,7 @@ export const publicNavItems = [
 ];
 
 export const adminNavItems: AdminNavItem[] = [
-  { href: '/admin', label: 'Dashboard', icon: 'LayoutDashboard', section: 'Overview', roles: allPortalRoles },
+  { href: '/admin', label: 'Dashboard', icon: 'LayoutDashboard', roles: allPortalRoles },
   { href: '/admin/bookings', label: 'Bookings', icon: 'CalendarDays', section: 'Booking Operations', roles: ['super_admin', 'admin', 'booking_staff'] },
   { href: '/admin/operations-schedule', label: 'Schedule', icon: 'CalendarDays', section: 'Booking Operations', roles: allPortalRoles },
   { href: '/admin/customers', label: 'Customers', icon: 'UsersRound', section: 'Booking Operations', roles: ['super_admin', 'admin', 'booking_staff', 'finance'] },
