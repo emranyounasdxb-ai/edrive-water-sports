@@ -19,6 +19,7 @@ import {
   Menu,
   MessageSquare,
   Package,
+  RefreshCw,
   Search,
   Settings,
   Ship,
@@ -36,6 +37,8 @@ import { cn } from '@/lib/utils';
 import { LiveWeatherPill } from './admin/live-weather-pill';
 import { OperationsProvider } from './admin/operations-store';
 import { BrandMark } from './brand';
+
+const portalLoadTimeoutMs = 12000;
 
 const iconMap = {
   LayoutDashboard,
@@ -212,6 +215,13 @@ function activeSectionForPath(items: NavItem[], currentPath: string) {
   return items.find((item) => item.section && matchesPath(currentPath, item.href))?.section || '';
 }
 
+function withTimeout<T>(promise: Promise<T>, message: string) {
+  return new Promise<T>((resolve, reject) => {
+    const timeout = window.setTimeout(() => reject(new Error(message)), portalLoadTimeoutMs);
+    promise.then(resolve, reject).finally(() => window.clearTimeout(timeout));
+  });
+}
+
 function ProfileFlag({ nationality, compact = false }: { nationality?: string; compact?: boolean }) {
   const code = countryCode(nationality || '');
   if (!code) return null;
@@ -239,12 +249,13 @@ export function AdminShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const currentPath = normalizePath(pathname);
-  const [open, setOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [openSection, setOpenSection] = useState('');
   const [user, setUser] = useState<PortalUser | null>(null);
   const [ready, setReady] = useState(false);
   const [accessIssue, setAccessIssue] = useState('');
+  const [loadVersion, setLoadVersion] = useState(0);
   const isLoginPage = currentPath === '/admin/login';
 
   useEffect(() => {
@@ -252,58 +263,60 @@ export function AdminShell({ children }: { children: ReactNode }) {
 
     async function loadUser() {
       if (isLoginPage) {
-        setReady(true);
+        if (active) setReady(true);
         return;
       }
 
+      setReady(false);
       setAccessIssue('');
-      const { data: sessionData } = await supabase.auth.getSession();
-      const authUser = sessionData.session?.user;
-      if (!authUser) {
-        router.replace('/admin/login');
-        return;
+
+      try {
+        const sessionResult = await withTimeout(supabase.auth.getSession(), 'Session check timed out.');
+        if (!active) return;
+
+        const authUser = sessionResult.data.session?.user;
+        if (!authUser) {
+          setReady(true);
+          router.replace('/admin/login');
+          return;
+        }
+
+        const authEmail = authUser.email || '';
+        const queryFilter = authEmail ? `auth_user_id.eq.${authUser.id},email.eq.${authEmail}` : `auth_user_id.eq.${authUser.id}`;
+        const profileResult = await withTimeout(
+          supabase.from('admin_users').select('full_name,email,role,status,avatar_url,nationality').or(queryFilter).limit(1),
+          'Profile check timed out.'
+        );
+        if (!active) return;
+
+        if (profileResult.error) throw new Error(`Profile read error: ${profileResult.error.message}`);
+
+        const profile = (profileResult.data?.[0] ?? null) as AdminProfile | null;
+        if (!profile) throw new Error(`No active admin profile found for ${authEmail || authUser.id}.`);
+        if (!isActiveStatus(profile.status)) throw new Error(`Admin profile status is ${profile.status || 'empty'}.`);
+
+        setUser({
+          name: profile.full_name ? displayName(profile.full_name) : authEmail || 'Admin',
+          email: profile.email || authEmail || '',
+          role: profile.role || 'admin',
+          roleLabel: roleLabel(profile.role || 'admin'),
+          avatarUrl: profile.avatar_url || '',
+          nationality: profile.nationality || ''
+        });
+      } catch (loadError) {
+        if (!active) return;
+        setUser(null);
+        setAccessIssue(loadError instanceof Error ? loadError.message : 'Portal access could not be loaded.');
+      } finally {
+        if (active) setReady(true);
       }
-
-      const authEmail = authUser.email || '';
-      const queryFilter = authEmail ? `auth_user_id.eq.${authUser.id},email.eq.${authEmail}` : `auth_user_id.eq.${authUser.id}`;
-      const { data: profiles, error } = await supabase.from('admin_users').select('full_name,email,role,status,avatar_url,nationality').or(queryFilter).limit(1);
-      if (!active) return;
-
-      if (error) {
-        setAccessIssue(`Profile read error: ${error.message}`);
-        setReady(true);
-        return;
-      }
-
-      const profile = (profiles?.[0] ?? null) as AdminProfile | null;
-      if (!profile) {
-        setAccessIssue(`No active admin profile found for ${authEmail || authUser.id}. Check Supabase admin_users profile and policies.`);
-        setReady(true);
-        return;
-      }
-
-      if (!isActiveStatus(profile.status)) {
-        setAccessIssue(`Admin profile exists but status is ${profile.status || 'empty'}.`);
-        setReady(true);
-        return;
-      }
-
-      setUser({
-        name: profile.full_name ? displayName(profile.full_name) : authEmail || 'Admin',
-        email: profile.email || authEmail || '',
-        role: profile.role || 'admin',
-        roleLabel: roleLabel(profile.role || 'admin'),
-        avatarUrl: profile.avatar_url || '',
-        nationality: profile.nationality || ''
-      });
-      setReady(true);
     }
 
     void loadUser();
     return () => {
       active = false;
     };
-  }, [isLoginPage, router]);
+  }, [isLoginPage, loadVersion, router]);
 
   const navItems = useMemo(() => {
     if (!user) return [] as NavItem[];
@@ -339,6 +352,13 @@ export function AdminShell({ children }: { children: ReactNode }) {
     router.replace('/admin/login');
   };
 
+  function retryPortal() {
+    setAccessIssue('');
+    setUser(null);
+    setReady(false);
+    setLoadVersion((value) => value + 1);
+  }
+
   function toggleSection(section: string) {
     setOpenSection((current) => current === section ? '' : section);
   }
@@ -356,12 +376,12 @@ export function AdminShell({ children }: { children: ReactNode }) {
       <div className="flex min-h-screen items-center justify-center bg-[#F4F7F8] px-4">
         <div className="w-full max-w-lg rounded-[2rem] border border-border bg-white p-6 text-center shadow-[0_24px_70px_rgba(8,37,50,0.12)]">
           <BrandMark className="mx-auto mb-5 w-fit" />
-          <h1 className="font-heading text-2xl font-semibold text-primary-900">Admin access needs attention</h1>
-          <p className="mt-3 text-sm leading-6 text-muted-foreground">{accessIssue || 'Admin profile could not be loaded.'}</p>
-          <p className="mt-3 rounded-2xl bg-primary-50 p-3 text-xs font-semibold text-primary-900">Please check Supabase admin_users profile status and SELECT policy for authenticated users.</p>
+          <h1 className="font-heading text-2xl font-semibold text-primary-900">Portal access needs attention</h1>
+          <p className="mt-3 text-sm leading-6 text-muted-foreground">{accessIssue || 'Portal profile could not be loaded.'}</p>
+          <p className="mt-3 rounded-2xl bg-primary-50 p-3 text-xs font-semibold text-primary-900">Check your connection, then retry. You can also sign in again to refresh the session.</p>
           <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-center">
-            <Button asChild variant="outline" className="rounded-full"><Link href="/admin/login">Back to login</Link></Button>
-            <Button type="button" className="rounded-full" onClick={handleLogout}>Sign out</Button>
+            <Button type="button" variant="outline" onClick={retryPortal} className="rounded-full"><RefreshCw className="size-4" aria-hidden="true" />Retry</Button>
+            <Button type="button" className="rounded-full" onClick={handleLogout}>Sign In Again</Button>
           </div>
         </div>
       </div>
@@ -377,7 +397,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
           <aside className={cn('sticky top-0 hidden h-screen shrink-0 overflow-hidden bg-white/82 p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.95),inset_-10px_0_24px_rgba(8,37,50,0.025),12px_0_35px_rgba(8,37,50,0.055)] ring-1 ring-white/80 backdrop-blur-xl transition-all duration-300 lg:block', collapsed ? 'w-[5.4rem]' : 'w-[15.25rem]')}>
             <div className="flex h-full flex-col">
               <div className={cn('mb-3 flex items-center gap-2', collapsed ? 'justify-center' : 'justify-between px-2')}>
-                <Link href={isManager ? '/admin/manager' : '/admin'} prefetch className={cn('block transition', collapsed ? 'flex size-11 items-center justify-center rounded-2xl bg-primary-50 text-sm font-black text-primary shadow-sm' : 'min-w-0 scale-[0.88] origin-left')}>
+                <Link href={isManager ? '/admin/manager' : '/admin'} prefetch className={cn('block transition', collapsed ? 'flex size-11 items-center justify-center rounded-2xl bg-primary-50 text-sm font-black text-primary shadow-sm' : 'min-w-0 origin-left scale-[0.88]')}>
                   {collapsed ? 'eD' : <BrandMark />}
                 </Link>
                 <button type="button" onClick={() => setCollapsed((value) => !value)} className="hidden size-8 shrink-0 items-center justify-center rounded-full border border-border bg-white text-muted-foreground shadow-sm transition hover:border-primary/35 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 lg:flex" aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}>
@@ -416,8 +436,8 @@ export function AdminShell({ children }: { children: ReactNode }) {
           <div className="min-w-0 flex-1">
             <header className="sticky top-2 z-40 mx-2 rounded-[1.15rem] bg-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.95),0_10px_24px_rgba(8,37,50,0.06)] ring-1 ring-white/80 backdrop-blur-xl sm:top-3 sm:mx-4">
               <div className="flex h-[54px] items-center gap-2 px-2.5 sm:h-[56px] sm:px-5 lg:px-6">
-                <Button variant="outline" size="icon" className="size-10 rounded-2xl bg-white lg:hidden" onClick={() => setOpen((value) => !value)} aria-label="Toggle admin navigation">
-                  {open ? <X data-icon aria-hidden="true" /> : <Menu data-icon aria-hidden="true" />}
+                <Button variant="outline" size="icon" className="size-10 rounded-2xl bg-white lg:hidden" onClick={() => setMobileMenuOpen((value) => !value)} aria-label="Toggle admin navigation">
+                  {mobileMenuOpen ? <X data-icon aria-hidden="true" /> : <Menu data-icon aria-hidden="true" />}
                 </Button>
 
                 <div className="flex min-w-0 items-center gap-2.5">
@@ -451,7 +471,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
                 </div>
               </div>
 
-              {open ? (
+              {mobileMenuOpen ? (
                 <div className="max-h-[70vh] overflow-y-auto rounded-b-[1.5rem] bg-white p-3 lg:hidden">
                   <AdminNav
                     currentPath={currentPath}
@@ -459,7 +479,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
                     openSection={openSection}
                     onToggleSection={toggleSection}
                     onExpandSection={(section) => setOpenSection(section)}
-                    onNavigate={() => setOpen(false)}
+                    onNavigate={() => setMobileMenuOpen(false)}
                   />
                   <Button type="button" variant="outline" className="mt-3 w-full rounded-2xl" onClick={handleLogout}><LogOut className="size-4" aria-hidden="true" />Logout</Button>
                 </div>
