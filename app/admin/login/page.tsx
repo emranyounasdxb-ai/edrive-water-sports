@@ -23,7 +23,7 @@ function isActiveStatus(value: string | null | undefined) {
 export default function Page() {
   const router = useRouter();
   const [loginType, setLoginType] = useState<LoginType>('staff');
-  const [email, setEmail] = useState('admin@edrive.ae');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
@@ -126,7 +126,7 @@ export default function Page() {
                   Email
                   <span className="flex h-14 items-center gap-3 rounded-2xl border border-border bg-white px-4 shadow-[0_10px_24px_rgba(8,37,50,0.04)] focus-within:border-primary">
                     <Mail className="size-5 text-muted-foreground" aria-hidden="true" />
-                    <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} required className="h-full min-w-0 flex-1 bg-transparent text-sm font-semibold text-primary-900 outline-none" />
+                    <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="Enter your email" autoComplete="username" required className="h-full min-w-0 flex-1 bg-transparent text-sm font-semibold text-primary-900 outline-none" />
                   </span>
                 </label>
 
@@ -134,7 +134,7 @@ export default function Page() {
                   Password
                   <span className="flex h-14 items-center gap-3 rounded-2xl border border-border bg-white px-4 shadow-[0_10px_24px_rgba(8,37,50,0.04)] focus-within:border-primary">
                     <LockKeyhole className="size-5 text-muted-foreground" aria-hidden="true" />
-                    <input type={showPassword ? 'text' : 'password'} value={password} onChange={(event) => setPassword(event.target.value)} required className="h-full min-w-0 flex-1 bg-transparent text-sm font-semibold text-primary-900 outline-none" />
+                    <input type={showPassword ? 'text' : 'password'} value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" required className="h-full min-w-0 flex-1 bg-transparent text-sm font-semibold text-primary-900 outline-none" />
                     <button type="button" onClick={() => setShowPassword((current) => !current)} className="flex size-9 items-center justify-center rounded-full text-muted-foreground transition hover:bg-primary-50 hover:text-primary" aria-label={showPassword ? 'Hide password' : 'Show password'}>
                       {showPassword ? <EyeOff className="size-5" aria-hidden="true" /> : <Eye className="size-5" aria-hidden="true" />}
                     </button>
