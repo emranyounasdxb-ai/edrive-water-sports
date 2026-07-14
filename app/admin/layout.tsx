@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { AdminShell } from '@/components/edrive/admin-shell';
 import { PortalAccessProvider, PortalRoleBoundary } from '@/components/edrive/portal-access';
 import { PortalLoadingRecovery } from '@/components/edrive/portal-loading-recovery';
-import { ProfileCardNavigation } from '@/components/edrive/profile-card-navigation';
+import { TopbarProfileMenu } from '@/components/edrive/topbar-profile-menu';
 
 export const metadata: Metadata = {
   title: 'Admin'
@@ -13,7 +13,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   return (
     <PortalAccessProvider>
       <PortalLoadingRecovery />
-      <ProfileCardNavigation />
+      <TopbarProfileMenu />
       <AdminShell>
         <PortalRoleBoundary>{children}</PortalRoleBoundary>
       </AdminShell>
