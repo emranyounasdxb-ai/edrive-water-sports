@@ -1,18 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import {
-  CalendarDays,
-  ChevronLeft,
-  ChevronRight,
-  ClipboardCheck,
-  Eye,
-  RefreshCw,
-  Search,
-  ShieldCheck,
-  UserRound,
-  X
-} from 'lucide-react';
+import { ChevronLeft, ChevronRight, ClipboardCheck, Eye, RefreshCw, Search, ShieldCheck, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -82,7 +71,18 @@ function dubaiDateKey(value: string | Date) {
   }).format(date);
 }
 
-function formatDateTime(value: string) {
+function formatCompactDateTime(value: string) {
+  if (!value) return '-';
+  return new Intl.DateTimeFormat('en-AE', {
+    timeZone: 'Asia/Dubai',
+    day: '2-digit',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit'
+  }).format(new Date(value));
+}
+
+function formatFullDateTime(value: string) {
   if (!value) return '-';
   return new Intl.DateTimeFormat('en-AE', {
     timeZone: 'Asia/Dubai',
@@ -116,15 +116,12 @@ function moduleTone(moduleName: string) {
   return 'border-border bg-[#F7FAFA] text-muted-foreground';
 }
 
-function Metric({ label, value, helper }: { label: string; value: string; helper: string }) {
+function MetricPill({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded-[1rem] border border-border/75 bg-white px-4 py-3 shadow-[0_8px_22px_rgba(8,37,50,0.045)]">
-      <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">{label}</p>
-      <div className="mt-1 flex items-end justify-between gap-3">
-        <p className="font-heading text-2xl font-semibold leading-none text-foreground">{value}</p>
-        <p className="text-right text-[10px] font-semibold leading-4 text-muted-foreground">{helper}</p>
-      </div>
-    </div>
+    <span className="inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-full border border-border/80 bg-white px-3 text-[11px] font-semibold text-muted-foreground shadow-sm">
+      <span>{label}</span>
+      <strong className="font-heading text-sm font-semibold text-foreground">{value}</strong>
+    </span>
   );
 }
 
@@ -152,7 +149,7 @@ function groupDuplicateEvents(rows: AuditRow[]) {
   const groups: GroupedAuditRow[] = [];
 
   rows.forEach((row) => {
-    const previous = groups.at(-1);
+    const previous = groups[groups.length - 1];
     const sameEvent = previous && duplicateKey(previous.primary) === duplicateKey(row);
     const closeInTime = previous && Math.abs(new Date(previous.primary.created_at).getTime() - new Date(row.created_at).getTime()) <= duplicateWindowMs;
 
@@ -192,7 +189,7 @@ function DetailsDrawer({ group, onClose }: { group: GroupedAuditRow; onClose: ()
               {group.count > 1 ? <span className="rounded-full bg-primary-900 px-2.5 py-1 text-[10px] font-bold text-white">Repeated ×{group.count}</span> : null}
             </div>
             <h2 className="mt-3 break-words font-heading text-xl font-semibold leading-7 text-foreground">{titleCase(row.action)}</h2>
-            <p className="mt-1 text-xs font-semibold text-muted-foreground">Latest event: {formatDateTime(row.created_at)}</p>
+            <p className="mt-1 text-xs font-semibold text-muted-foreground">Latest event: {formatFullDateTime(row.created_at)}</p>
           </div>
           <button type="button" onClick={onClose} className="flex size-9 shrink-0 items-center justify-center rounded-full border border-border bg-white text-muted-foreground shadow-sm transition hover:text-primary" aria-label="Close details">
             <X className="size-4" aria-hidden="true" />
@@ -219,7 +216,7 @@ function DetailsDrawer({ group, onClose }: { group: GroupedAuditRow; onClose: ()
                 {group.rows.map((event, index) => (
                   <div key={event.id} className="flex items-center justify-between gap-4 rounded-lg bg-white px-3 py-2 text-xs shadow-sm">
                     <span className="font-bold text-foreground">Occurrence {group.count - index}</span>
-                    <span className="font-semibold text-muted-foreground">{formatDateTime(event.created_at)}</span>
+                    <span className="font-semibold text-muted-foreground">{formatFullDateTime(event.created_at)}</span>
                   </div>
                 ))}
               </div>
@@ -245,14 +242,13 @@ function DetailsDrawer({ group, onClose }: { group: GroupedAuditRow; onClose: ()
   );
 }
 
-function ActivityCell({ row, count }: { row: AuditRow; count: number }) {
+function ActivityLine({ row, count }: { row: AuditRow; count: number }) {
+  const label = `${titleCase(row.module)} · ${titleCase(row.action)}`;
   return (
-    <div className="min-w-0">
-      <div className="flex flex-wrap items-center gap-2">
-        <span className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-bold ${moduleTone(row.module)}`}>{titleCase(row.module)}</span>
-        {count > 1 ? <span className="rounded-full bg-primary-900 px-2 py-0.5 text-[10px] font-bold text-white">×{count}</span> : null}
-      </div>
-      <p className="mt-1 text-sm font-bold text-foreground">{titleCase(row.action)}</p>
+    <div className="flex min-w-0 items-center gap-1.5" title={label}>
+      <span className={`inline-flex shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-bold ${moduleTone(row.module)}`}>{titleCase(row.module)}</span>
+      <span className="truncate text-xs font-bold text-foreground">{titleCase(row.action)}</span>
+      {count > 1 ? <span className="shrink-0 rounded-full bg-primary-900 px-1.5 py-0.5 text-[9px] font-bold text-white">×{count}</span> : null}
     </div>
   );
 }
@@ -347,11 +343,6 @@ export function AdminAuditLogPage() {
     setQuickRange('all');
   }
 
-  function selectQuickRange(range: QuickRange) {
-    setQuickRange(range);
-    setDateFilter('');
-  }
-
   if (!accessReady && loading) return <div className="p-6 text-sm font-semibold text-muted-foreground">Loading audit access...</div>;
 
   if (accessReady && !allowed) {
@@ -369,107 +360,99 @@ export function AdminAuditLogPage() {
   }
 
   return (
-    <section className="w-full overflow-hidden px-2 py-3 sm:px-4 sm:py-5 lg:px-6 xl:px-8">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Team & System</p>
-          <h1 className="mt-1 font-heading text-3xl font-semibold text-foreground">Audit log</h1>
-          <p className="mt-1 max-w-3xl text-sm text-muted-foreground">Operational activity, access changes and security history.</p>
-        </div>
-        <Button type="button" variant="outline" onClick={loadLogs} className="h-9 w-fit rounded-full bg-white px-4 text-xs"><RefreshCw className="size-3.5" aria-hidden="true" />Refresh</Button>
-      </div>
-
-      {error ? <p className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</p> : null}
-
-      <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-        <Metric label="Today" value={String(todayCount)} helper="events recorded" />
-        <Metric label="Bookings" value={String(bookingCount)} helper="workflow events" />
-        <Metric label="Payments" value={String(paymentCount)} helper="finance events" />
-        <Metric label="Active Users" value={String(actorCount)} helper="actors in history" />
-      </div>
-
-      <Card className="mt-4 overflow-hidden rounded-[1.25rem] border-border/80 bg-white shadow-[0_14px_38px_rgba(8,37,50,0.055)]">
-        <div className="border-b border-border/70 bg-[#F7FAFA] px-3 py-3 sm:px-4">
-          <div className="flex flex-col gap-3 2xl:flex-row 2xl:items-center">
-            <div className="min-w-[12rem]">
-              <p className="font-heading text-lg font-semibold text-foreground">Activity history</p>
-              <p className="mt-0.5 text-[11px] font-semibold text-muted-foreground">{groupedRows.length} grouped events from {filteredRows.length} matching records</p>
-            </div>
-
-            <div className="relative min-w-0 flex-1">
-              <Search className="pointer-events-none absolute left-3 top-2.5 size-4 text-muted-foreground" aria-hidden="true" />
-              <Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search actor, record or action..." className="h-9 rounded-xl bg-white pl-9 text-sm" />
-            </div>
-
-            <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4 2xl:flex 2xl:shrink-0">
-              <select value={moduleFilter} onChange={(event) => setModuleFilter(event.target.value)} className="h-9 min-w-[9rem] rounded-xl border border-border bg-white px-3 text-xs font-semibold text-foreground">
-                <option value="all">All modules</option>
-                {modules.map((moduleName) => <option key={moduleName} value={moduleName}>{titleCase(moduleName)}</option>)}
-              </select>
-              <select value={actionFilter} onChange={(event) => setActionFilter(event.target.value)} className="h-9 min-w-[9rem] rounded-xl border border-border bg-white px-3 text-xs font-semibold text-foreground">
-                <option value="all">All actions</option>
-                {actions.map((action) => <option key={action} value={action}>{titleCase(action)}</option>)}
-              </select>
-              <Input type="date" value={dateFilter} onChange={(event) => { setDateFilter(event.target.value); setQuickRange('all'); }} className="h-9 min-w-[9.5rem] rounded-xl bg-white text-xs" />
-              <Button type="button" variant="outline" onClick={clearFilters} className="h-9 rounded-xl bg-white px-3 text-xs">Clear</Button>
-            </div>
+    <section className="w-full overflow-hidden px-2 py-2 sm:px-3 lg:px-4 xl:px-5">
+      <div className="flex flex-col gap-2 xl:flex-row xl:items-center">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+            <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-primary">Team & System</p>
+            <h1 className="font-heading text-2xl font-semibold leading-none text-foreground">Audit Log</h1>
+            <p className="truncate text-xs font-semibold text-muted-foreground">Operational activity, access changes and security history.</p>
           </div>
+        </div>
 
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            <span className="mr-1 inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground"><CalendarDays className="size-3.5" aria-hidden="true" />Quick range</span>
-            {([
-              ['all', 'All time'],
-              ['today', 'Today'],
-              ['7d', 'Last 7 days'],
-              ['30d', 'Last 30 days']
-            ] as Array<[QuickRange, string]>).map(([value, label]) => (
-              <button
-                key={value}
-                type="button"
-                onClick={() => selectQuickRange(value)}
-                className={`rounded-full border px-3 py-1.5 text-[11px] font-bold transition ${quickRange === value && !dateFilter ? 'border-primary bg-primary text-white' : 'border-border bg-white text-muted-foreground hover:text-primary'}`}
-              >
-                {label}
-              </button>
-            ))}
+        <div className="flex flex-wrap items-center gap-1.5">
+          <MetricPill label="Today" value={todayCount} />
+          <MetricPill label="Bookings" value={bookingCount} />
+          <MetricPill label="Payments" value={paymentCount} />
+          <MetricPill label="Users" value={actorCount} />
+          <Button type="button" variant="outline" onClick={loadLogs} className="h-8 rounded-full bg-white px-3 text-[11px]"><RefreshCw className="size-3.5" aria-hidden="true" />Refresh</Button>
+        </div>
+      </div>
+
+      {error ? <p className="mt-2 rounded-xl bg-red-50 px-3 py-2 text-xs font-semibold text-red-700">{error}</p> : null}
+
+      <Card className="mt-2 overflow-hidden rounded-[1.1rem] border-border/80 bg-white shadow-[0_12px_32px_rgba(8,37,50,0.05)]">
+        <div className="border-b border-border/70 bg-[#F7FAFA] px-2.5 py-2">
+          <div className="grid gap-1.5 xl:grid-cols-[150px_minmax(220px,1fr)_118px_118px_142px_125px_58px] xl:items-center">
+            <div className="min-w-0">
+              <p className="truncate font-heading text-sm font-semibold text-foreground">Activity History</p>
+              <p className="truncate text-[9px] font-semibold text-muted-foreground">{groupedRows.length} grouped / {filteredRows.length} records</p>
+            </div>
+
+            <div className="relative min-w-0">
+              <Search className="pointer-events-none absolute left-2.5 top-2 size-3.5 text-muted-foreground" aria-hidden="true" />
+              <Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search activity..." className="h-8 rounded-lg bg-white pl-8 text-xs" />
+            </div>
+
+            <select value={moduleFilter} onChange={(event) => setModuleFilter(event.target.value)} className="h-8 min-w-0 rounded-lg border border-border bg-white px-2 text-[11px] font-semibold text-foreground">
+              <option value="all">All modules</option>
+              {modules.map((moduleName) => <option key={moduleName} value={moduleName}>{titleCase(moduleName)}</option>)}
+            </select>
+
+            <select value={actionFilter} onChange={(event) => setActionFilter(event.target.value)} className="h-8 min-w-0 rounded-lg border border-border bg-white px-2 text-[11px] font-semibold text-foreground">
+              <option value="all">All actions</option>
+              {actions.map((action) => <option key={action} value={action}>{titleCase(action)}</option>)}
+            </select>
+
+            <Input type="date" value={dateFilter} onChange={(event) => { setDateFilter(event.target.value); setQuickRange('all'); }} className="h-8 min-w-0 rounded-lg bg-white px-2 text-[11px]" />
+
+            <select value={quickRange} onChange={(event) => { setQuickRange(event.target.value as QuickRange); setDateFilter(''); }} className="h-8 min-w-0 rounded-lg border border-border bg-white px-2 text-[11px] font-semibold text-foreground">
+              <option value="all">All time</option>
+              <option value="today">Today</option>
+              <option value="7d">Last 7 days</option>
+              <option value="30d">Last 30 days</option>
+            </select>
+
+            <Button type="button" variant="outline" onClick={clearFilters} className="h-8 rounded-lg bg-white px-2 text-[10px]">Clear</Button>
           </div>
         </div>
 
         <CardContent className="p-0">
-          <div className="hidden overflow-x-auto md:block">
-            <Table className="min-w-[980px]">
+          <div className="hidden max-h-[calc(100vh-13.5rem)] overflow-auto md:block">
+            <Table className="w-full min-w-[900px] table-fixed">
               <TableHeader>
-                <TableRow className="bg-white">
-                  <TableHead className="w-[150px]">Dubai Time</TableHead>
-                  <TableHead className="w-[190px]">Actor</TableHead>
-                  <TableHead className="w-[180px]">Activity</TableHead>
-                  <TableHead className="w-[180px]">Record</TableHead>
-                  <TableHead>Summary</TableHead>
-                  <TableHead className="w-[64px] text-right">Details</TableHead>
+                <TableRow className="sticky top-0 z-10 h-8 bg-white shadow-[0_1px_0_rgba(8,37,50,0.08)] hover:bg-white">
+                  <TableHead className="w-[132px] px-3 text-[10px]">Time</TableHead>
+                  <TableHead className="w-[170px] px-3 text-[10px]">Actor</TableHead>
+                  <TableHead className="w-[220px] px-3 text-[10px]">Activity</TableHead>
+                  <TableHead className="w-[205px] px-3 text-[10px]">Record</TableHead>
+                  <TableHead className="px-3 text-[10px]">Summary</TableHead>
+                  <TableHead className="w-[48px] px-2 text-right text-[10px]">View</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {loading ? <TableRow><TableCell colSpan={6} className="py-10 text-center text-sm font-semibold text-muted-foreground">Loading audit history...</TableCell></TableRow> : null}
-                {!loading && groupedRows.length === 0 ? <TableRow><TableCell colSpan={6} className="py-10 text-center"><ClipboardCheck className="mx-auto size-8 text-muted-foreground" aria-hidden="true" /><p className="mt-2 font-heading text-base font-semibold text-foreground">No audit events found</p><p className="mt-1 text-sm text-muted-foreground">Try changing the filters.</p></TableCell></TableRow> : null}
+                {loading ? <TableRow><TableCell colSpan={6} className="h-20 text-center text-xs font-semibold text-muted-foreground">Loading audit history...</TableCell></TableRow> : null}
+                {!loading && groupedRows.length === 0 ? <TableRow><TableCell colSpan={6} className="h-24 text-center"><ClipboardCheck className="mx-auto size-6 text-muted-foreground" aria-hidden="true" /><p className="mt-1 text-sm font-semibold text-foreground">No audit events found</p></TableCell></TableRow> : null}
                 {!loading && visibleRows.map((group) => {
                   const row = group.primary;
+                  const actorName = clean(row.actor_name);
+                  const actorTooltip = [actorName, clean(row.actor_email, ''), roleLabel(row.actor_role)].filter(Boolean).join(' · ');
+                  const record = clean(row.entity_label || row.entity_id);
+                  const recordTooltip = `${record} · ${titleCase(row.entity_type)}`;
+
                   return (
-                    <TableRow key={row.id} className="align-middle hover:bg-[#F7FAFA]">
-                      <TableCell className="whitespace-nowrap py-3 text-[11px] font-semibold text-muted-foreground">{formatDateTime(row.created_at)}</TableCell>
-                      <TableCell className="py-3">
-                        <div className="flex items-center gap-2.5">
-                          <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary-50 text-primary"><UserRound className="size-4" aria-hidden="true" /></span>
-                          <div className="min-w-0">
-                            <p className="truncate text-sm font-bold text-foreground">{clean(row.actor_name)}</p>
-                            <p className="truncate text-[11px] text-muted-foreground">{clean(row.actor_email)}</p>
-                            <span className="mt-1 inline-flex rounded-full bg-[#F0F4F5] px-2 py-0.5 text-[9px] font-bold text-muted-foreground">{roleLabel(row.actor_role)}</span>
-                          </div>
+                    <TableRow key={row.id} className="h-11 align-middle hover:bg-[#F7FAFA]">
+                      <TableCell className="truncate whitespace-nowrap px-3 py-1.5 text-[10px] font-semibold text-muted-foreground" title={formatFullDateTime(row.created_at)}>{formatCompactDateTime(row.created_at)}</TableCell>
+                      <TableCell className="px-3 py-1.5" title={actorTooltip}>
+                        <div className="flex min-w-0 items-center gap-1.5">
+                          <span className="truncate text-xs font-bold text-foreground">{actorName}</span>
+                          <span className="shrink-0 rounded-full bg-[#F0F4F5] px-1.5 py-0.5 text-[8px] font-bold text-muted-foreground">{roleLabel(row.actor_role)}</span>
                         </div>
                       </TableCell>
-                      <TableCell className="py-3"><ActivityCell row={row} count={group.count} /></TableCell>
-                      <TableCell className="py-3"><p className="max-w-[12rem] truncate text-sm font-bold text-foreground">{clean(row.entity_label || row.entity_id)}</p><p className="mt-0.5 text-[11px] text-muted-foreground">{titleCase(row.entity_type)}</p></TableCell>
-                      <TableCell className="py-3"><p className="line-clamp-2 text-sm font-semibold leading-5 text-foreground">{row.summary}</p></TableCell>
-                      <TableCell className="py-3 text-right"><button type="button" onClick={() => setSelected(group)} className="inline-flex size-8 items-center justify-center rounded-full border border-border bg-white text-muted-foreground shadow-sm transition hover:border-primary/30 hover:text-primary" aria-label="View audit details"><Eye className="size-3.5" aria-hidden="true" /></button></TableCell>
+                      <TableCell className="px-3 py-1.5"><ActivityLine row={row} count={group.count} /></TableCell>
+                      <TableCell className="truncate px-3 py-1.5 text-xs font-bold text-foreground" title={recordTooltip}>{record}</TableCell>
+                      <TableCell className="truncate px-3 py-1.5 text-xs font-semibold text-foreground" title={row.summary}>{row.summary}</TableCell>
+                      <TableCell className="px-2 py-1.5 text-right"><button type="button" onClick={() => setSelected(group)} className="inline-flex size-7 items-center justify-center rounded-full border border-border bg-white text-muted-foreground shadow-sm transition hover:border-primary/30 hover:text-primary" aria-label="View audit details"><Eye className="size-3" aria-hidden="true" /></button></TableCell>
                     </TableRow>
                   );
                 })}
@@ -478,40 +461,37 @@ export function AdminAuditLogPage() {
           </div>
 
           <div className="divide-y divide-border/70 md:hidden">
-            {loading ? <p className="p-6 text-center text-sm font-semibold text-muted-foreground">Loading audit history...</p> : null}
-            {!loading && groupedRows.length === 0 ? <div className="p-8 text-center"><ClipboardCheck className="mx-auto size-8 text-muted-foreground" aria-hidden="true" /><p className="mt-2 font-heading font-semibold text-foreground">No audit events found</p></div> : null}
+            {loading ? <p className="p-5 text-center text-xs font-semibold text-muted-foreground">Loading audit history...</p> : null}
+            {!loading && groupedRows.length === 0 ? <div className="p-7 text-center"><ClipboardCheck className="mx-auto size-7 text-muted-foreground" aria-hidden="true" /><p className="mt-1 font-semibold text-foreground">No audit events found</p></div> : null}
             {!loading && visibleRows.map((group) => {
               const row = group.primary;
               return (
-                <button key={row.id} type="button" onClick={() => setSelected(group)} className="block w-full p-4 text-left transition hover:bg-[#F7FAFA]">
-                  <div className="flex items-start justify-between gap-3">
-                    <ActivityCell row={row} count={group.count} />
-                    <Eye className="mt-1 size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                <button key={row.id} type="button" onClick={() => setSelected(group)} className="block w-full px-3 py-2.5 text-left transition hover:bg-[#F7FAFA]">
+                  <div className="flex items-center justify-between gap-2">
+                    <ActivityLine row={row} count={group.count} />
+                    <Eye className="size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
                   </div>
-                  <p className="mt-2 line-clamp-2 text-sm font-semibold leading-5 text-foreground">{row.summary}</p>
-                  <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-[11px] font-semibold text-muted-foreground">
-                    <span>{clean(row.actor_name)} · {roleLabel(row.actor_role)}</span>
-                    <span>{formatDateTime(row.created_at)}</span>
-                  </div>
+                  <p className="mt-1 truncate text-xs font-semibold text-foreground">{row.summary}</p>
+                  <p className="mt-1 truncate text-[10px] font-semibold text-muted-foreground">{clean(row.actor_name)} · {formatCompactDateTime(row.created_at)}</p>
                 </button>
               );
             })}
           </div>
 
-          <div className="flex flex-col gap-3 border-t border-border/70 bg-[#F7FAFA] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
+          <div className="flex items-center justify-between gap-2 border-t border-border/70 bg-[#F7FAFA] px-3 py-1.5 text-[10px] font-semibold text-muted-foreground">
+            <div className="flex min-w-0 items-center gap-1.5">
               <span>Rows</span>
-              <select value={pageSize} onChange={(event) => setPageSize(Number(event.target.value))} className="h-8 rounded-lg border border-border bg-white px-2 font-bold text-foreground">
+              <select value={pageSize} onChange={(event) => setPageSize(Number(event.target.value))} className="h-7 rounded-md border border-border bg-white px-1.5 font-bold text-foreground">
                 <option value={25}>25</option>
                 <option value={50}>50</option>
               </select>
-              <span>{groupedRows.length ? `${pageStart + 1}-${Math.min(pageStart + pageSize, groupedRows.length)} of ${groupedRows.length}` : '0 results'}</span>
+              <span className="truncate">{groupedRows.length ? `${pageStart + 1}-${Math.min(pageStart + pageSize, groupedRows.length)} of ${groupedRows.length}` : '0 results'}</span>
             </div>
 
-            <div className="flex items-center gap-2">
-              <button type="button" onClick={() => setCurrentPage((page) => Math.max(1, page - 1))} disabled={currentPage <= 1} className="inline-flex size-8 items-center justify-center rounded-full border border-border bg-white text-muted-foreground shadow-sm disabled:cursor-not-allowed disabled:opacity-40" aria-label="Previous page"><ChevronLeft className="size-4" aria-hidden="true" /></button>
-              <span className="min-w-[5rem] text-center text-xs font-bold text-foreground">Page {currentPage} of {pageCount}</span>
-              <button type="button" onClick={() => setCurrentPage((page) => Math.min(pageCount, page + 1))} disabled={currentPage >= pageCount} className="inline-flex size-8 items-center justify-center rounded-full border border-border bg-white text-muted-foreground shadow-sm disabled:cursor-not-allowed disabled:opacity-40" aria-label="Next page"><ChevronRight className="size-4" aria-hidden="true" /></button>
+            <div className="flex shrink-0 items-center gap-1.5">
+              <button type="button" onClick={() => setCurrentPage((page) => Math.max(1, page - 1))} disabled={currentPage <= 1} className="inline-flex size-7 items-center justify-center rounded-full border border-border bg-white text-muted-foreground disabled:cursor-not-allowed disabled:opacity-40" aria-label="Previous page"><ChevronLeft className="size-3.5" aria-hidden="true" /></button>
+              <span className="min-w-[4.5rem] text-center font-bold text-foreground">{currentPage} / {pageCount}</span>
+              <button type="button" onClick={() => setCurrentPage((page) => Math.min(pageCount, page + 1))} disabled={currentPage >= pageCount} className="inline-flex size-7 items-center justify-center rounded-full border border-border bg-white text-muted-foreground disabled:cursor-not-allowed disabled:opacity-40" aria-label="Next page"><ChevronRight className="size-3.5" aria-hidden="true" /></button>
             </div>
           </div>
         </CardContent>
