@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { FormEvent, useState } from 'react';
-import { ArrowRightToLine, Building2, Eye, EyeOff, Globe2, LockKeyhole, Mail, ShieldCheck, UserRound } from 'lucide-react';
+import { ArrowRightToLine, Building2, Eye, EyeOff, Globe2, KeyRound, LockKeyhole, Mail, ShieldCheck, UserRound } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { BrandMark } from '@/components/edrive/brand';
 import { supabase } from '@/lib/supabase-client';
@@ -27,11 +27,14 @@ export default function Page() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
   const [loading, setLoading] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError('');
+    setNotice('');
     setLoading(true);
 
     const cleanEmail = email.trim().toLowerCase();
@@ -81,6 +84,30 @@ export default function Page() {
     router.refresh();
   }
 
+  async function handlePasswordReset() {
+    setError('');
+    setNotice('');
+
+    const cleanEmail = email.trim().toLowerCase();
+    if (!cleanEmail || !cleanEmail.includes('@')) {
+      setError('Enter your login email first, then select Forgot password.');
+      return;
+    }
+
+    setResetLoading(true);
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
+      redirectTo: `${window.location.origin}/admin/reset-password/`
+    });
+    setResetLoading(false);
+
+    if (resetError) {
+      setError('Password reset email could not be sent. Please wait a moment and try again.');
+      return;
+    }
+
+    setNotice('Password reset email sent. Please check your Inbox and Spam/Junk folder.');
+  }
+
   return (
     <main className="min-h-screen overflow-hidden bg-[radial-gradient(circle_at_14%_12%,rgba(14,124,134,0.12),transparent_28%),radial-gradient(circle_at_88%_8%,rgba(200,151,74,0.16),transparent_25%),linear-gradient(135deg,#F5F8F8_0%,#EEF7F7_48%,#F8F2E8_100%)] px-4 py-4 sm:px-6 lg:px-8">
       <div className="mx-auto flex min-h-[calc(100vh-2rem)] w-full max-w-6xl flex-col gap-5">
@@ -111,7 +138,7 @@ export default function Page() {
                     <button
                       key={id}
                       type="button"
-                      onClick={() => setLoginType(id)}
+                      onClick={() => { setLoginType(id); setError(''); setNotice(''); }}
                       className={cn('rounded-2xl border bg-white/82 p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-primary/45 hover:shadow-[0_14px_30px_rgba(8,37,50,0.08)]', selected && 'border-primary bg-primary-50 shadow-[0_14px_30px_rgba(14,124,134,0.12)]')}
                     >
                       <span className="mb-3 flex items-center gap-2 text-sm font-extrabold text-primary-900"><Icon className="size-4 text-primary" aria-hidden="true" />{title}</span>
@@ -141,9 +168,16 @@ export default function Page() {
                   </span>
                 </label>
 
-                {error ? <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</p> : null}
+                <div className="-mt-2 flex justify-end">
+                  <button type="button" onClick={handlePasswordReset} disabled={resetLoading || loading} className="inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-xs font-bold text-primary transition hover:bg-primary-50 disabled:cursor-not-allowed disabled:opacity-60">
+                    <KeyRound className="size-3.5" aria-hidden="true" />{resetLoading ? 'Sending reset email...' : 'Forgot password?'}
+                  </button>
+                </div>
 
-                <Button type="submit" disabled={loading} className="h-14 w-full rounded-full bg-primary-900 text-base shadow-[0_20px_38px_rgba(8,37,50,0.18)] hover:bg-primary-800">
+                {error ? <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</p> : null}
+                {notice ? <p className="rounded-2xl bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">{notice}</p> : null}
+
+                <Button type="submit" disabled={loading || resetLoading} className="h-14 w-full rounded-full bg-primary-900 text-base shadow-[0_20px_38px_rgba(8,37,50,0.18)] hover:bg-primary-800">
                   <ArrowRightToLine className="size-5 text-gold" aria-hidden="true" />{loading ? 'Signing in...' : loginType === 'staff' ? 'Sign in as Staff' : 'Sign in as B2B Agent'}
                 </Button>
               </form>
