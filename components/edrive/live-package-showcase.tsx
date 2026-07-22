@@ -17,7 +17,6 @@ type LivePackage = {
   category: string;
   duration_minutes: number;
   base_price: number;
-  b2b_price: number;
   capacity: number;
   image_url: string | null;
   short_description: string | null;
@@ -90,11 +89,35 @@ function withDisplayImages(items: LivePackage[]) {
   });
 }
 
+async function fetchPublicPackages(categories?: string[]) {
+  const rpcResult = await supabase.rpc('get_public_packages', {
+    p_categories: categories?.length ? categories : null
+  });
+  if (!rpcResult.error) return (rpcResult.data || []) as LivePackage[];
+
+  let query = supabase
+    .from('packages')
+    .select('id,title,slug,category,duration_minutes,base_price,capacity,image_url,short_description,status,is_featured,display_order')
+    .eq('status', 'active');
+
+  if (categories?.length) query = query.in('category', categories);
+
+  const fallbackResult = await query
+    .order('display_order', { ascending: true })
+    .order('category', { ascending: true })
+    .order('capacity', { ascending: true })
+    .order('duration_minutes', { ascending: true });
+
+  if (fallbackResult.error) throw fallbackResult.error;
+  return (fallbackResult.data || []) as LivePackage[];
+}
+
 export function LivePackageShowcase({ title = 'Ride Packages', text = '', limit, compact = false, categories }: LivePackageShowcaseProps) {
   const [items, setItems] = useState<LivePackage[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [reloadKey, setReloadKey] = useState(0);
+  const categoriesKey = categories?.join('|') || '';
 
   useEffect(() => {
     let active = true;
@@ -104,23 +127,9 @@ export function LivePackageShowcase({ title = 'Ride Packages', text = '', limit,
       setLoadError('');
 
       try {
-        let query = supabase
-          .from('packages')
-          .select('id,title,slug,category,duration_minutes,base_price,b2b_price,capacity,image_url,short_description,status,is_featured,display_order')
-          .eq('status', 'active');
-
-        if (categories?.length) query = query.in('category', categories);
-
-        const { data, error } = await query
-          .order('display_order', { ascending: true })
-          .order('category', { ascending: true })
-          .order('capacity', { ascending: true })
-          .order('duration_minutes', { ascending: true });
-
-        if (error) throw error;
+        const rows = await fetchPublicPackages(categoriesKey ? categoriesKey.split('|') : undefined);
         if (!active) return;
-
-        setItems(((data || []) as LivePackage[]).filter((item) => Number(item.base_price) > 0 && Number(item.duration_minutes) > 0));
+        setItems(rows.filter((item) => Number(item.base_price) > 0 && Number(item.duration_minutes) > 0));
       } catch {
         if (!active) return;
         setItems([]);
@@ -132,7 +141,7 @@ export function LivePackageShowcase({ title = 'Ride Packages', text = '', limit,
 
     void loadPackages();
     return () => { active = false; };
-  }, [categories?.join('|'), reloadKey]);
+  }, [categoriesKey, reloadKey]);
 
   const visibleItems = useMemo(() => withDisplayImages(sortedPackages(items)), [items]);
   const displayedItems = typeof limit === 'number' ? visibleItems.slice(0, limit) : visibleItems;
@@ -174,6 +183,7 @@ export function LivePackageShowcase({ title = 'Ride Packages', text = '', limit,
               </div>
               <h2 className="section-title">{title}</h2>
               {text ? <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">{text}</p> : null}
+              <noscript><p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">JavaScript is required to display live package prices. Jet ski and jet car bookings are available daily from Dubai Islands with durations and guest capacity confirmed by the eDrive team.</p></noscript>
             </div>
           </div>
 
@@ -191,7 +201,7 @@ export function LivePackageShowcase({ title = 'Ride Packages', text = '', limit,
 function LivePackageCard({ item }: { item: PackageCardItem; index: number }) {
   const [imageFailed, setImageFailed] = useState(false);
   const imageSrc = item.display_image_url;
-  const bookingHref = `/booking?category=${encodeURIComponent(item.category)}&capacity=${encodeURIComponent(String(item.capacity || 2))}&duration=${encodeURIComponent(String(item.duration_minutes || 0))}`;
+  const bookingHref = `/booking?package=${encodeURIComponent(item.id)}&category=${encodeURIComponent(item.category)}&capacity=${encodeURIComponent(String(item.capacity || 2))}&duration=${encodeURIComponent(String(item.duration_minutes || 0))}`;
   const description = item.short_description || defaultDescription(item);
   const whatsappMessage = encodeURIComponent(`Hello eDrive, I am interested in this package: ${item.title}
 
