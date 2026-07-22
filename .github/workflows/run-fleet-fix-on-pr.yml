@@ -23,9 +23,11 @@ jobs:
           fetch-depth: 0
 
       - name: Execute embedded patch
+        id: patch
         shell: bash
         run: |
-          python - <<'PY'
+          set +e
+          python - <<'PY' > fleet-fix-debug.log 2>&1
           from pathlib import Path
           import textwrap
 
@@ -37,12 +39,25 @@ jobs:
           script = textwrap.dedent(workflow[start:end])
           exec(compile(script, 'fleet-fix-embedded.py', 'exec'))
           PY
+          code=$?
+          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+          cat fleet-fix-debug.log
+          exit 0
 
-      - name: Commit applied changes
+      - name: Commit applied changes or debug log
         shell: bash
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add app/admin/vehicles/page.tsx scripts/production-guard.mjs supabase/fleet-asset-hardening.sql supabase/fleet-edit-partial-and-image-upload.sql
-          git commit -m "fix fleet partial edits and image uploads"
+          if [ "${{ steps.patch.outputs.exit_code }}" = "0" ]; then
+            rm -f fleet-fix-debug.log
+            git add app/admin/vehicles/page.tsx scripts/production-guard.mjs supabase/fleet-asset-hardening.sql supabase/fleet-edit-partial-and-image-upload.sql
+            git commit -m "fix fleet partial edits and image uploads"
+          else
+            git reset --hard HEAD
+            git clean -fd
+            printf '%s\n' "Patch failed. See workflow job logs for the exact error." > fleet-fix-debug.log
+            git add fleet-fix-debug.log
+            git commit -m "capture fleet fix patch failure"
+          fi
           git push origin HEAD:${{ github.head_ref }}
