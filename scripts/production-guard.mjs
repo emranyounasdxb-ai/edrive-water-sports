@@ -15,12 +15,14 @@ const bookingSuccess = read('components/edrive/booking/booking-success.tsx');
 const contactForm = read('components/edrive/contact-form.tsx');
 const bookingTracker = read('components/edrive/public-booking-tracker.tsx');
 const inquiriesPage = read('app/admin/inquiries/page.tsx');
+const packagesPage = read('app/admin/packages/page.tsx');
 const bookingStatusPage = read('app/(public)/booking-status/page.tsx');
 const portalAccess = read('components/edrive/portal-access.tsx');
 const publicShell = read('components/edrive/public-shell.tsx');
 const layout = read('app/layout.tsx');
 const manifest = JSON.parse(read('public/manifest.webmanifest'));
 const migration = read('supabase/public-request-hardening.sql');
+const packageMigration = read('supabase/package-catalog-hardening.sql');
 
 assert(!packageShowcase.includes('b2b_price'), 'Public package showcase must not request B2B pricing.');
 assert(!bookingWizard.includes('b2b_price'), 'Public booking wizard must not request B2B pricing.');
@@ -43,6 +45,15 @@ assert(!publicShell.includes('frfooter'), 'Public footer markup is malformed.');
 assert(migration.includes('revoke select on table public.packages from anon'), 'Anonymous direct package table access must be revoked.');
 assert(migration.includes('revoke insert on table public.booking_requests from anon'), 'Anonymous direct booking inserts must be revoked after RPC migration.');
 assert(migration.includes('public_request_rate_limited'), 'Public booking and lookup throttling must be included in the migration.');
+
+assert(packagesPage.includes("rpc('save_package_catalog_entry'"), 'Package writes must prefer the secured catalog RPC.');
+assert(packagesPage.includes("rpc('delete_package_if_unused'"), 'Package deletion must use the booking-aware delete RPC.');
+assert(packagesPage.includes('packageSpecKey'), 'Package duplicate specifications must be detected in the admin UI.');
+assert(packagesPage.includes('Duplicate spec'), 'Existing duplicate specifications must be clearly identified.');
+assert(packagesPage.includes('isSuperAdmin'), 'Permanent package deletion must remain restricted to Super Admin.');
+assert(packageMigration.includes('packages_prevent_duplicate_trigger'), 'Database duplicate prevention trigger is required.');
+assert(packageMigration.includes('delete_package_if_unused'), 'Database booking-aware package deletion is required.');
+assert(packageMigration.includes('package_audit_logs'), 'Package catalog changes must be audited.');
 
 if (failures.length) {
   console.error('\nProduction guard failed:\n');
