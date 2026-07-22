@@ -10,6 +10,7 @@ import {
   CheckCircle2,
   Eye,
   ImageIcon,
+  MoreHorizontal,
   Pencil,
   Plus,
   RefreshCw,
@@ -17,7 +18,6 @@ import {
   ShieldCheck,
   Ship,
   Trash2,
-  Waves,
   Wrench,
   X
 } from 'lucide-react';
@@ -127,6 +127,8 @@ type FleetFormValues = Omit<FleetRecord, 'id' | 'updatedAt'>;
 type SortKey = 'code' | 'name' | 'type' | 'location' | 'capacity' | 'regNo' | 'status' | 'updatedAt';
 type SortDirection = 'asc' | 'desc';
 type ConfirmAction = { type: 'maintenance' | 'available' | 'retire' | 'reactivate' | 'delete'; record: FleetRecord } | null;
+type DrawerTab = 'overview' | 'compliance' | 'identifiers' | 'activity';
+type ActivityItem = { id: string; title: string; detail: string; createdAt: string };
 
 const emptyFleet: FleetFormValues = {
   code: '',
@@ -188,17 +190,19 @@ function mapFleet(row: Record<string, unknown>): FleetRecord {
 
 function complianceIssues(record: FleetRecord) {
   const issues: string[] = [];
-  if (!record.regNo) issues.push('Missing registration');
-  if (!record.registrationExpiry) issues.push('Missing registration expiry');
+  if (!record.regNo) issues.push('Registration required');
+  else if (!record.registrationExpiry) issues.push('Registration expiry missing');
   else if (isPastDate(record.registrationExpiry)) issues.push('Registration expired');
   else if (isExpiringSoon(record.registrationExpiry)) issues.push('Registration expiring soon');
-  if (!record.insuranceNumber) issues.push('Missing insurance');
-  if (!record.insuranceExpiry) issues.push('Missing insurance expiry');
+
+  if (!record.insuranceNumber) issues.push('Insurance required');
+  else if (!record.insuranceExpiry) issues.push('Insurance expiry missing');
   else if (isPastDate(record.insuranceExpiry)) issues.push('Insurance expired');
   else if (isExpiringSoon(record.insuranceExpiry)) issues.push('Insurance expiring soon');
-  if (!record.deviceImei) issues.push('Missing tracker');
-  if (!record.brand || !record.model) issues.push('Missing brand/model');
-  if (!record.imageUrl) issues.push('Missing image');
+
+  if (!record.deviceImei) issues.push('Tracker missing');
+  if (!record.brand || !record.model) issues.push('Brand/model incomplete');
+  if (!record.imageUrl) issues.push('Image missing');
   return issues;
 }
 
@@ -250,17 +254,38 @@ function statusBadgeClass(status: string) {
   return 'border-amber-200 bg-amber-50 text-amber-700';
 }
 
+function complianceSummary(record: FleetRecord) {
+  const issues = complianceIssues(record);
+  if (!issues.length) return { label: 'Complete', className: 'border-emerald-200 bg-emerald-50 text-emerald-700', issues };
+  if (!record.regNo) return { label: 'Registration required', className: 'border-red-200 bg-red-50 text-red-700', issues };
+  const urgent = issues.some((issue) => issue.includes('expired'));
+  return {
+    label: `${issues.length} issue${issues.length === 1 ? '' : 's'}`,
+    className: urgent ? 'border-red-200 bg-red-50 text-red-700' : 'border-amber-200 bg-amber-50 text-amber-700',
+    issues
+  };
+}
+
+function registrationNotice(record: FleetRecord) {
+  if (!record.regNo) return 'Not added';
+  if (!record.registrationExpiry) return 'Expiry missing';
+  if (isPastDate(record.registrationExpiry)) return 'Expired';
+  if (isExpiringSoon(record.registrationExpiry)) return 'Expiring soon';
+  return '';
+}
+
 export default function Page() {
-  const { role, isSuperAdmin, canMutateCurrentPage, loading: accessLoading } = usePortalAccess();
+  const { role, isSuperAdmin, loading: accessLoading } = usePortalAccess();
   const canMaintain = isSuperAdmin || role === 'maintenance_staff';
   const [items, setItems] = useState<FleetRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [open, setOpen] = useState(false);
+  const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<FleetRecord | null>(null);
-  const [modalReadOnly, setModalReadOnly] = useState(false);
+  const [viewing, setViewing] = useState<FleetRecord | null>(null);
   const [confirmAction, setConfirmAction] = useState<ConfirmAction>(null);
+  const [actionMenuId, setActionMenuId] = useState('');
   const [actionNote, setActionNote] = useState('');
   const [actionBusy, setActionBusy] = useState(false);
   const [typeFilter, setTypeFilter] = useState('All');
@@ -322,15 +347,27 @@ export default function Page() {
   const capacityOptions = Array.from(new Set(items.map((item) => item.capacity))).filter(Boolean).sort((a, b) => Number(a) - Number(b));
 
   function openCreate() {
+    setActionMenuId('');
     setEditing(null);
-    setModalReadOnly(false);
-    setOpen(true);
+    setFormOpen(true);
   }
 
-  function openRecord(record: FleetRecord, readOnly: boolean) {
+  function openEdit(record: FleetRecord) {
+    setActionMenuId('');
+    setViewing(null);
     setEditing(record);
-    setModalReadOnly(readOnly);
-    setOpen(true);
+    setFormOpen(true);
+  }
+
+  function openView(record: FleetRecord) {
+    setActionMenuId('');
+    setViewing(record);
+  }
+
+  function prepareAction(action: NonNullable<ConfirmAction>) {
+    setActionMenuId('');
+    setActionNote('');
+    setConfirmAction(action);
   }
 
   async function saveFleet(values: FleetFormValues) {
@@ -412,9 +449,10 @@ export default function Page() {
       if (result.error) return result.error.message;
     }
 
-    setOpen(false);
+    const wasEditing = Boolean(editing);
+    setFormOpen(false);
     setEditing(null);
-    setSuccess(editing ? 'Fleet unit updated successfully.' : 'Fleet unit created successfully.');
+    setSuccess(wasEditing ? 'Fleet unit updated successfully.' : 'Fleet unit created successfully.');
     await loadFleet();
     return '';
   }
@@ -504,7 +542,7 @@ export default function Page() {
             {complianceAlerts ? <Badge className="rounded-full border border-amber-200 bg-amber-50 text-amber-700">{complianceAlerts} compliance alert{complianceAlerts === 1 ? '' : 's'}</Badge> : null}
           </div>
           <h1 className="font-heading text-3xl font-semibold text-foreground">Fleet Asset & Compliance Manager</h1>
-          <p className="mt-2 text-sm leading-6 text-muted-foreground">Manage registration-controlled Jet Cars and Jet Skis, availability, maintenance, tracker identity, compliance dates, retirement, and safe asset deletion.</p>
+          <p className="mt-2 text-sm leading-6 text-muted-foreground">Manage registration-controlled Jet Cars and Jet Skis, availability, maintenance, compliance, retirement, and safe asset deletion.</p>
         </div>
         {!accessLoading && isSuperAdmin ? <Button type="button" onClick={openCreate}><Plus data-icon aria-hidden="true" />Add Fleet Unit</Button> : null}
       </div>
@@ -534,60 +572,57 @@ export default function Page() {
         </CardHeader>
       </Card>
 
-      <Card>
-        <CardHeader className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-          <div><CardTitle className="text-base">Fleet Inventory & Compliance Table</CardTitle><CardDescription>Showing {pagedItems.length} of {filteredItems.length} filtered units ({items.length} total).</CardDescription></div>
+      <Card className="overflow-visible">
+        <CardHeader className="flex flex-col gap-3 border-b border-border/70 lg:flex-row lg:items-end lg:justify-between">
+          <div><CardTitle className="text-base">Fleet Inventory</CardTitle><CardDescription>Showing {pagedItems.length} of {filteredItems.length} filtered units ({items.length} total). Open View for complete registration, tracker, insurance, identifiers, and history.</CardDescription></div>
           <label className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">Rows<select value={pageSize} onChange={(event) => setPageSize(Number(event.target.value))} className="h-9 rounded-xl border border-border bg-white px-3 text-xs font-semibold"><option value={10}>10</option><option value={20}>20</option><option value={50}>50</option></select></label>
         </CardHeader>
-        <CardContent>
-          {error ? <p className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</p> : null}
-          {success ? <p className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">{success}</p> : null}
-          <div className="overflow-x-auto rounded-2xl border border-border/70">
-            <Table className="min-w-[1460px]">
-              <TableHeader className="bg-[#F7FAFA]"><TableRow>
-                <TableHead>Image</TableHead>
-                <SortableHead label="Code" column="code" active={sortKey} direction={sortDirection} onSort={toggleSort} />
-                <SortableHead label="Vehicle" column="name" active={sortKey} direction={sortDirection} onSort={toggleSort} />
-                <SortableHead label="Type" column="type" active={sortKey} direction={sortDirection} onSort={toggleSort} />
-                <SortableHead label="Location" column="location" active={sortKey} direction={sortDirection} onSort={toggleSort} />
-                <SortableHead label="Capacity" column="capacity" active={sortKey} direction={sortDirection} onSort={toggleSort} />
-                <SortableHead label="Registration" column="regNo" active={sortKey} direction={sortDirection} onSort={toggleSort} />
-                <TableHead>Tracker IMEI</TableHead><TableHead>Compliance</TableHead>
-                <SortableHead label="Status" column="status" active={sortKey} direction={sortDirection} onSort={toggleSort} />
-                <SortableHead label="Updated" column="updatedAt" active={sortKey} direction={sortDirection} onSort={toggleSort} />
-                <TableHead className="sticky right-0 bg-[#F7FAFA] text-right">Actions</TableHead>
-              </TableRow></TableHeader>
-              <TableBody>
-                {pagedItems.length ? pagedItems.map((row) => {
-                  const issues = complianceIssues(row);
-                  return <TableRow key={row.id} className={issues.length ? 'bg-amber-50/25' : ''}>
-                    <TableCell><FleetThumbnail src={row.imageUrl} title={row.name} /></TableCell>
-                    <TableCell><button type="button" onClick={() => openRecord(row, true)} className="font-semibold text-primary hover:underline">{row.code}</button></TableCell>
-                    <TableCell className="min-w-[15rem]"><p className="font-semibold text-foreground">{row.name}</p><p className="mt-1 text-xs text-muted-foreground">{[row.brand, row.model, row.year].filter(Boolean).join(' · ') || 'Brand/model pending'}</p></TableCell>
-                    <TableCell><Badge variant="secondary">{row.type}</Badge></TableCell><TableCell>{row.location}</TableCell><TableCell>{row.capacity} seater</TableCell>
-                    <TableCell><p className={`font-semibold ${row.regNo ? 'text-foreground' : 'text-red-700'}`}>{row.regNo || 'Required'}</p><p className="mt-1 text-[10px] text-muted-foreground">Exp: {formatDate(row.registrationExpiry)}</p></TableCell>
-                    <TableCell>{row.deviceImei || <span className="text-amber-700">Missing</span>}</TableCell>
-                    <TableCell className="min-w-[14rem]">{issues.length ? <div className="flex flex-wrap gap-1">{issues.slice(0, 2).map((issue) => <span key={issue} className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-700">{issue}</span>)}{issues.length > 2 ? <span className="text-[10px] font-bold text-muted-foreground">+{issues.length - 2}</span> : null}</div> : <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700"><ShieldCheck className="size-3.5" aria-hidden="true" />Complete</span>}</TableCell>
-                    <TableCell><span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-bold ${statusBadgeClass(row.status)}`}>{row.status}</span></TableCell>
-                    <TableCell className="text-xs text-muted-foreground">{formatDate(row.updatedAt)}</TableCell>
-                    <TableCell className="sticky right-0 bg-white text-right"><div className="flex justify-end gap-2">
-                      <Button type="button" size="sm" variant="outline" onClick={() => openRecord(row, !isSuperAdmin)}>{isSuperAdmin ? <Pencil className="size-4" aria-hidden="true" /> : <Eye className="size-4" aria-hidden="true" />}{isSuperAdmin ? 'Edit' : 'View'}</Button>
-                      {canMaintain && row.status !== 'Maintenance' && row.status !== 'Retired' ? <Button type="button" size="sm" variant="subtle" onClick={() => { setActionNote(''); setConfirmAction({ type: 'maintenance', record: row }); }}><Wrench className="size-4" aria-hidden="true" />Maintenance</Button> : null}
-                      {canMaintain && row.status === 'Maintenance' ? <Button type="button" size="sm" onClick={() => { setActionNote(''); setConfirmAction({ type: 'available', record: row }); }}><CheckCircle2 className="size-4" aria-hidden="true" />Available</Button> : null}
-                      {isSuperAdmin && row.status !== 'Retired' ? <Button type="button" size="sm" variant="subtle" onClick={() => { setActionNote(''); setConfirmAction({ type: 'retire', record: row }); }}>Retire</Button> : null}
-                      {isSuperAdmin && row.status === 'Retired' ? <Button type="button" size="sm" variant="subtle" onClick={() => { setActionNote(''); setConfirmAction({ type: 'reactivate', record: row }); }}><RefreshCw className="size-4" aria-hidden="true" />Reactivate</Button> : null}
-                      {isSuperAdmin ? <Button type="button" size="sm" variant="danger" onClick={() => { setActionNote(''); setConfirmAction({ type: 'delete', record: row }); }}><Trash2 className="size-4" aria-hidden="true" />Delete</Button> : null}
-                    </div></TableCell>
-                  </TableRow>;
-                }) : <TableRow><TableCell colSpan={12} className="h-28 text-center text-sm text-muted-foreground">{loading ? 'Loading fleet...' : 'No fleet units found for the selected filters.'}</TableCell></TableRow>}
-              </TableBody>
-            </Table>
-          </div>
-          <div className="mt-4 flex flex-col items-center justify-between gap-3 sm:flex-row"><p className="text-xs font-semibold text-muted-foreground">Page {safePage} of {totalPages}</p><div className="flex gap-2"><Button type="button" size="sm" variant="outline" disabled={safePage <= 1} onClick={() => setPage((value) => Math.max(1, value - 1))}>Previous</Button><Button type="button" size="sm" variant="outline" disabled={safePage >= totalPages} onClick={() => setPage((value) => Math.min(totalPages, value + 1))}>Next</Button></div></div>
+        <CardContent className="p-0">
+          {error ? <p className="mx-5 mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</p> : null}
+          {success ? <p className="mx-5 mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">{success}</p> : null}
+          <Table className="min-w-0 table-fixed">
+            <TableHeader className="bg-[#F7FAFA]"><TableRow>
+              <SortableHead label="Vehicle" column="code" active={sortKey} direction={sortDirection} onSort={toggleSort} className="w-[38%] sm:w-[30%]" />
+              <SortableHead label="Type" column="type" active={sortKey} direction={sortDirection} onSort={toggleSort} className="hidden w-[11%] md:table-cell" />
+              <SortableHead label="Location" column="location" active={sortKey} direction={sortDirection} onSort={toggleSort} className="hidden w-[12%] lg:table-cell" />
+              <SortableHead label="Registration" column="regNo" active={sortKey} direction={sortDirection} onSort={toggleSort} className="hidden w-[16%] sm:table-cell" />
+              <TableHead className="w-[18%]">Compliance</TableHead>
+              <SortableHead label="Status" column="status" active={sortKey} direction={sortDirection} onSort={toggleSort} className="w-[15%]" />
+              <TableHead className="w-[9.5rem] text-right">Actions</TableHead>
+            </TableRow></TableHeader>
+            <TableBody>
+              {pagedItems.length ? pagedItems.map((row, rowIndex) => {
+                const summary = complianceSummary(row);
+                const regNotice = registrationNotice(row);
+                const hasMenu = canMaintain || isSuperAdmin;
+                return <TableRow key={row.id} className={summary.issues.length ? 'bg-amber-50/20' : ''}>
+                  <TableCell className="py-3"><button type="button" onClick={() => openView(row)} className="flex min-w-0 items-center gap-3 text-left"><FleetThumbnail src={row.imageUrl} title={row.name} /><span className="min-w-0"><span className="block truncate font-semibold text-foreground">{row.name}</span><span className="mt-0.5 block truncate text-xs font-semibold text-primary">{row.code}<span className="font-normal text-muted-foreground"> · {row.capacity} seats</span></span></span></button></TableCell>
+                  <TableCell className="hidden py-3 md:table-cell"><Badge variant="secondary" className="font-semibold">{row.type}</Badge></TableCell>
+                  <TableCell className="hidden truncate py-3 lg:table-cell">{row.location}</TableCell>
+                  <TableCell className="hidden py-3 sm:table-cell"><p className={`truncate font-semibold ${row.regNo ? 'text-foreground' : 'text-red-700'}`}>{row.regNo || 'Not added'}</p>{regNotice ? <p className={`mt-1 truncate text-[10px] font-semibold ${regNotice === 'Expired' ? 'text-red-700' : 'text-amber-700'}`}>{regNotice}</p> : null}</TableCell>
+                  <TableCell className="py-3"><button type="button" onClick={() => openView(row)} title={summary.issues.join('\n')} className={`inline-flex max-w-full items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-bold ${summary.className}`}>{summary.issues.length ? <AlertTriangle className="size-3.5 shrink-0" aria-hidden="true" /> : <ShieldCheck className="size-3.5 shrink-0" aria-hidden="true" />}<span className="truncate">{summary.label}</span></button></TableCell>
+                  <TableCell className="py-3"><span className={`inline-flex max-w-full truncate rounded-full border px-2.5 py-1 text-xs font-bold ${statusBadgeClass(row.status)}`}>{row.status}</span></TableCell>
+                  <TableCell className="py-3 text-right"><div className="relative inline-flex items-center justify-end gap-1.5">
+                    <Button type="button" size="sm" variant="outline" onClick={() => openView(row)}><Eye className="size-4" aria-hidden="true" />View</Button>
+                    {hasMenu ? <><button type="button" onClick={() => setActionMenuId((current) => current === row.id ? '' : row.id)} className="flex size-9 items-center justify-center rounded-full border border-border bg-white text-muted-foreground shadow-sm transition hover:border-primary/40 hover:text-primary" aria-label={`More actions for ${row.code}`}><MoreHorizontal className="size-4" aria-hidden="true" /></button>{actionMenuId === row.id ? <div className={`absolute right-0 z-50 w-52 rounded-2xl border border-border bg-white p-1.5 text-left shadow-[0_18px_45px_rgba(8,37,50,0.16)] ${rowIndex >= pagedItems.length - 2 ? 'bottom-11' : 'top-11'}`}>
+                      {isSuperAdmin ? <ActionMenuButton icon={<Pencil className="size-4" />} label="Edit fleet unit" onClick={() => openEdit(row)} /> : null}
+                      {canMaintain && row.status !== 'Maintenance' && row.status !== 'Retired' ? <ActionMenuButton icon={<Wrench className="size-4" />} label="Move to maintenance" onClick={() => prepareAction({ type: 'maintenance', record: row })} /> : null}
+                      {canMaintain && row.status === 'Maintenance' ? <ActionMenuButton icon={<CheckCircle2 className="size-4" />} label="Return to available" onClick={() => prepareAction({ type: 'available', record: row })} /> : null}
+                      {isSuperAdmin && row.status !== 'Retired' ? <ActionMenuButton icon={<Ship className="size-4" />} label="Retire fleet unit" onClick={() => prepareAction({ type: 'retire', record: row })} /> : null}
+                      {isSuperAdmin && row.status === 'Retired' ? <ActionMenuButton icon={<RefreshCw className="size-4" />} label="Reactivate fleet unit" onClick={() => prepareAction({ type: 'reactivate', record: row })} /> : null}
+                      {isSuperAdmin ? <ActionMenuButton icon={<Trash2 className="size-4" />} label="Delete permanently" danger onClick={() => prepareAction({ type: 'delete', record: row })} /> : null}
+                    </div> : null}</> : null}
+                  </div></TableCell>
+                </TableRow>;
+              }) : <TableRow><TableCell colSpan={7} className="h-28 text-center text-sm text-muted-foreground">{loading ? 'Loading fleet...' : 'No fleet units found for the selected filters.'}</TableCell></TableRow>}
+            </TableBody>
+          </Table>
+          <div className="flex flex-col items-center justify-between gap-3 border-t border-border/70 px-5 py-4 sm:flex-row"><p className="text-xs font-semibold text-muted-foreground">Page {safePage} of {totalPages}</p><div className="flex gap-2"><Button type="button" size="sm" variant="outline" disabled={safePage <= 1} onClick={() => setPage((value) => Math.max(1, value - 1))}>Previous</Button><Button type="button" size="sm" variant="outline" disabled={safePage >= totalPages} onClick={() => setPage((value) => Math.min(totalPages, value + 1))}>Next</Button></div></div>
         </CardContent>
       </Card>
 
-      {open ? <FleetModal initialValues={editing || undefined} readOnly={modalReadOnly} onClose={() => { setOpen(false); setEditing(null); }} onSubmit={saveFleet} /> : null}
+      {viewing ? <FleetDrawer record={viewing} isSuperAdmin={isSuperAdmin} onEdit={() => openEdit(viewing)} onClose={() => setViewing(null)} /> : null}
+      {formOpen ? <FleetFormModal initialValues={editing || undefined} onClose={() => { setFormOpen(false); setEditing(null); }} onSubmit={saveFleet} /> : null}
       {confirmAction ? <ConfirmModal action={confirmAction} note={actionNote} setNote={setActionNote} busy={actionBusy} onClose={() => { setConfirmAction(null); setActionNote(''); }} onConfirm={runConfirmedAction} /> : null}
     </div>
   );
@@ -595,8 +630,8 @@ export default function Page() {
 
 function FleetThumbnail({ src, title }: { src: string; title: string }) {
   const [failed, setFailed] = useState(false);
-  if (!src || failed) return <span className="flex h-14 w-20 items-center justify-center rounded-2xl bg-primary-50 text-primary"><ImageIcon className="size-5" aria-hidden="true" /></span>;
-  return <img src={src} alt={title} onError={() => setFailed(true)} className="h-14 w-20 rounded-2xl border border-border object-cover shadow-sm" loading="lazy" />;
+  if (!src || failed) return <span className="flex h-12 w-16 shrink-0 items-center justify-center rounded-xl bg-primary-50 text-primary"><ImageIcon className="size-5" aria-hidden="true" /></span>;
+  return <img src={src} alt={title} onError={() => setFailed(true)} className="h-12 w-16 shrink-0 rounded-xl border border-border object-cover shadow-sm" loading="lazy" />;
 }
 
 function Metric({ label, value, description, icon }: { label: string; value: string; description: string; icon: ReactNode }) {
@@ -607,12 +642,73 @@ function FilterSelect({ label, value, options, onChange, suffix = '' }: { label:
   return <label className="grid gap-1.5 text-sm font-semibold text-foreground">{label}<select value={value} onChange={(event) => onChange(event.target.value)} className="h-10 rounded-xl border border-border bg-white px-3 text-sm text-foreground outline-none focus:border-primary">{options.map((option) => <option key={option} value={option}>{option === 'All' ? 'All' : `${option}${suffix}`}</option>)}</select></label>;
 }
 
-function SortableHead({ label, column, active, direction, onSort }: { label: string; column: SortKey; active: SortKey; direction: SortDirection; onSort: (column: SortKey) => void }) {
+function SortableHead({ label, column, active, direction, onSort, className = '' }: { label: string; column: SortKey; active: SortKey; direction: SortDirection; onSort: (column: SortKey) => void; className?: string }) {
   const Icon = active !== column ? ArrowUpDown : direction === 'asc' ? ArrowUp : ArrowDown;
-  return <TableHead><button type="button" onClick={() => onSort(column)} className="inline-flex items-center gap-1 font-bold">{label}<Icon className="size-3.5" aria-hidden="true" /></button></TableHead>;
+  return <TableHead className={className}><button type="button" onClick={() => onSort(column)} className="inline-flex items-center gap-1 font-bold">{label}<Icon className="size-3.5" aria-hidden="true" /></button></TableHead>;
 }
 
-function FleetModal({ initialValues, readOnly, onClose, onSubmit }: { initialValues?: FleetRecord; readOnly: boolean; onClose: () => void; onSubmit: (values: FleetFormValues) => Promise<string> }) {
+function ActionMenuButton({ icon, label, onClick, danger = false }: { icon: ReactNode; label: string; onClick: () => void; danger?: boolean }) {
+  return <button type="button" onClick={onClick} className={`flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold transition ${danger ? 'text-red-700 hover:bg-red-50' : 'text-foreground hover:bg-primary-50 hover:text-primary'}`}>{icon}{label}</button>;
+}
+
+function FleetDrawer({ record, isSuperAdmin, onEdit, onClose }: { record: FleetRecord; isSuperAdmin: boolean; onEdit: () => void; onClose: () => void }) {
+  const [tab, setTab] = useState<DrawerTab>('overview');
+  const [activity, setActivity] = useState<ActivityItem[]>([]);
+  const [activityLoading, setActivityLoading] = useState(true);
+  const issues = complianceIssues(record);
+
+  useEffect(() => {
+    let active = true;
+    async function loadActivity() {
+      setActivityLoading(true);
+      const [auditResult, maintenanceResult] = await Promise.all([
+        supabase.from('fleet_asset_audit_logs').select('id, action, created_at').eq('vehicle_id', record.id).order('created_at', { ascending: false }).limit(20),
+        supabase.from('fleet_maintenance_logs').select('id, status_from, status_to, note, created_at').eq('vehicle_id', record.id).order('created_at', { ascending: false }).limit(20)
+      ]);
+      if (!active) return;
+      const auditItems = ((auditResult.data || []) as Array<Record<string, unknown>>).map((item) => ({
+        id: `audit-${toText(item.id)}`,
+        title: `Fleet ${toText(item.action) || 'update'}`,
+        detail: 'Fleet master record activity',
+        createdAt: toText(item.created_at)
+      }));
+      const maintenanceItems = ((maintenanceResult.data || []) as Array<Record<string, unknown>>).map((item) => ({
+        id: `maintenance-${toText(item.id)}`,
+        title: `${reverse(statusMap, toText(item.status_from)) || 'Status'} → ${reverse(statusMap, toText(item.status_to)) || toText(item.status_to)}`,
+        detail: toText(item.note) || 'Lifecycle status updated',
+        createdAt: toText(item.created_at)
+      }));
+      setActivity([...auditItems, ...maintenanceItems].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 20));
+      setActivityLoading(false);
+    }
+    void loadActivity();
+    return () => { active = false; };
+  }, [record.id]);
+
+  return <div className="fixed inset-0 z-[80] bg-primary-900/35 backdrop-blur-sm" onMouseDown={onClose}><aside className="ml-auto flex h-full w-full max-w-xl flex-col bg-white shadow-[-24px_0_70px_rgba(8,37,50,0.2)]" onMouseDown={(event) => event.stopPropagation()}>
+    <div className="flex items-start justify-between gap-4 border-b border-border/70 bg-[#F7FAFA] p-5"><div className="flex min-w-0 items-center gap-3"><FleetThumbnail src={record.imageUrl} title={record.name} /><div className="min-w-0"><p className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary">Fleet Profile</p><h2 className="truncate font-heading text-xl font-semibold text-foreground">{record.name}</h2><p className="mt-0.5 text-xs font-semibold text-muted-foreground">{record.code} · {record.type}</p></div></div><button type="button" onClick={onClose} className="flex size-9 shrink-0 items-center justify-center rounded-full border border-border bg-white text-muted-foreground hover:text-primary" aria-label="Close fleet details"><X className="size-4" aria-hidden="true" /></button></div>
+    <div className="flex flex-wrap gap-2 border-b border-border/70 px-5 py-3"><span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-bold ${statusBadgeClass(record.status)}`}>{record.status}</span>{issues.length ? <span className="inline-flex rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-700">{issues.length} compliance issue{issues.length === 1 ? '' : 's'}</span> : <span className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700">Compliance complete</span>}</div>
+    <div className="flex gap-1 overflow-x-auto border-b border-border/70 px-4 py-2">{([
+      ['overview', 'Overview'],
+      ['compliance', 'Compliance'],
+      ['identifiers', 'Tracker & IDs'],
+      ['activity', 'Activity']
+    ] as Array<[DrawerTab, string]>).map(([value, label]) => <button key={value} type="button" onClick={() => setTab(value)} className={`whitespace-nowrap rounded-full px-3 py-2 text-xs font-bold transition ${tab === value ? 'bg-primary text-white' : 'text-muted-foreground hover:bg-primary-50 hover:text-primary'}`}>{label}</button>)}</div>
+    <div className="min-h-0 flex-1 overflow-y-auto p-5">
+      {tab === 'overview' ? <div className="grid gap-3 sm:grid-cols-2"><DetailCard label="Vehicle type" value={record.type} /><DetailCard label="Location" value={record.location} /><DetailCard label="Capacity" value={`${record.capacity} seats`} /><DetailCard label="Status" value={record.status} /><DetailCard label="Brand" value={record.brand || 'Not added'} /><DetailCard label="Model" value={record.model || 'Not added'} /><DetailCard label="Year" value={record.year || 'Not added'} /><DetailCard label="Color" value={record.color || 'Not added'} /><DetailCard label="Last updated" value={formatDate(record.updatedAt)} /><div className="sm:col-span-2"><DetailCard label="Notes" value={record.notes || 'No notes added.'} /></div></div> : null}
+      {tab === 'compliance' ? <div className="space-y-4"><div className="grid gap-3 sm:grid-cols-2"><DetailCard label="Registration number" value={record.regNo || 'Not added'} /><DetailCard label="Registration expiry" value={formatDate(record.registrationExpiry)} /><DetailCard label="Insurance number" value={record.insuranceNumber || 'Not added'} /><DetailCard label="Insurance expiry" value={formatDate(record.insuranceExpiry)} /></div><div className="rounded-2xl border border-border bg-[#F7FAFA] p-4"><p className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">Compliance summary</p><div className="mt-3 grid gap-2">{issues.length ? issues.map((issue) => <div key={issue} className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-700"><AlertTriangle className="size-4" aria-hidden="true" />{issue}</div>) : <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-3 text-sm font-bold text-emerald-700"><ShieldCheck className="size-4" aria-hidden="true" />Fleet profile is complete.</div>}</div></div></div> : null}
+      {tab === 'identifiers' ? <div className="grid gap-3 sm:grid-cols-2"><DetailCard label="Tracker IMEI" value={record.deviceImei || 'Not assigned'} /><DetailCard label="Chassis / VIN" value={record.chassisVin || 'Not added'} /><DetailCard label="Engine / Serial" value={record.engineSerial || 'Not added'} /><DetailCard label="Installation date" value={formatDate(record.installationDate)} /><DetailCard label="Fleet code" value={record.code} /><DetailCard label="Display order" value={record.sortOrder || '100'} /></div> : null}
+      {tab === 'activity' ? <div className="space-y-3">{activityLoading ? <p className="rounded-2xl bg-[#F7FAFA] px-4 py-8 text-center text-sm font-semibold text-muted-foreground">Loading activity...</p> : activity.length ? activity.map((item) => <div key={item.id} className="rounded-2xl border border-border bg-white p-4"><div className="flex items-start justify-between gap-3"><p className="font-semibold text-foreground">{item.title}</p><span className="shrink-0 text-[10px] font-semibold text-muted-foreground">{formatDate(item.createdAt)}</span></div><p className="mt-2 text-sm leading-6 text-muted-foreground">{item.detail}</p></div>) : <p className="rounded-2xl bg-[#F7FAFA] px-4 py-8 text-center text-sm font-semibold text-muted-foreground">No fleet activity has been recorded yet.</p>}</div> : null}
+    </div>
+    <div className="flex justify-end gap-3 border-t border-border/70 bg-white p-5"><Button type="button" variant="outline" onClick={onClose}>Close</Button>{isSuperAdmin ? <Button type="button" onClick={onEdit}><Pencil className="size-4" aria-hidden="true" />Edit Fleet Unit</Button> : null}</div>
+  </aside></div>;
+}
+
+function DetailCard({ label, value }: { label: string; value: string }) {
+  return <div className="rounded-2xl border border-border bg-white p-4"><p className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">{label}</p><p className="mt-2 break-words text-sm font-semibold leading-6 text-foreground">{value}</p></div>;
+}
+
+function FleetFormModal({ initialValues, onClose, onSubmit }: { initialValues?: FleetRecord; onClose: () => void; onSubmit: (values: FleetFormValues) => Promise<string> }) {
   const [values, setValues] = useState<FleetFormValues>(initialValues ? { ...initialValues } : emptyFleet);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
@@ -620,7 +716,6 @@ function FleetModal({ initialValues, readOnly, onClose, onSubmit }: { initialVal
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (readOnly) return;
     setSaving(true);
     setFormError('');
     const message = await onSubmit(values);
@@ -632,50 +727,50 @@ function FleetModal({ initialValues, readOnly, onClose, onSubmit }: { initialVal
   function updateType(value: string) { setValues((current) => ({ ...current, type: value, capacity: value === 'Jet Ski' ? '2' : '4', imageUrl: current.imageUrl || imagePathFromCode(current.code, current.name, value) })); }
 
   return <div className="fixed inset-0 z-[80] flex items-center justify-center bg-primary-900/35 p-4 backdrop-blur-sm"><div className="flex max-h-[94vh] w-full max-w-[58rem] flex-col overflow-hidden rounded-[1.6rem] border border-white/80 bg-white shadow-[0_28px_80px_rgba(8,37,50,0.28)]">
-    <div className="flex items-start justify-between gap-4 border-b border-border/70 bg-[#F7FAFA] px-5 py-4"><div><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Fleet Asset Profile</p><h2 className="mt-1 font-heading text-xl font-semibold text-foreground">{readOnly ? 'View Fleet Unit' : initialValues ? 'Edit Fleet Unit' : 'Add Fleet Unit'}</h2>{issues.length ? <p className="mt-1 text-xs font-semibold text-amber-700">{issues.length} compliance item{issues.length === 1 ? '' : 's'} require attention.</p> : null}</div><button type="button" onClick={onClose} className="flex size-9 items-center justify-center rounded-full border border-border bg-white text-muted-foreground transition hover:text-primary"><X className="size-4" aria-hidden="true" /></button></div>
+    <div className="flex items-start justify-between gap-4 border-b border-border/70 bg-[#F7FAFA] px-5 py-4"><div><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Fleet Asset Profile</p><h2 className="mt-1 font-heading text-xl font-semibold text-foreground">{initialValues ? 'Edit Fleet Unit' : 'Add Fleet Unit'}</h2>{issues.length ? <p className="mt-1 text-xs font-semibold text-amber-700">{issues.length} compliance item{issues.length === 1 ? '' : 's'} require attention.</p> : null}</div><button type="button" onClick={onClose} className="flex size-9 items-center justify-center rounded-full border border-border bg-white text-muted-foreground transition hover:text-primary"><X className="size-4" aria-hidden="true" /></button></div>
     <form onSubmit={submit} className="flex min-h-0 flex-1 flex-col"><div className="grid gap-4 overflow-y-auto px-5 py-4 lg:grid-cols-[1.15fr_0.85fr]">
       <div className="grid gap-3 sm:grid-cols-2">
         <SectionTitle title="Identity & Registration" />
-        <FormInput label="Fleet Code" value={values.code} required readOnly={readOnly} placeholder="JC-0001 / JS-0001" maxLength={40} onChange={(value) => updateField('code', value)} />
-        <FormInput label="Vehicle Name" value={values.name} required readOnly={readOnly} maxLength={120} onChange={(value) => updateField('name', value)} />
-        <SelectInput label="Vehicle Type" value={values.type} options={Object.keys(typeMap)} required disabled={readOnly} onChange={updateType} />
-        <FormInput label="Registration Number" value={values.regNo} required readOnly={readOnly} maxLength={40} placeholder="Required and unique" onChange={(value) => updateField('regNo', value)} />
-        <FormInput label="Registration Expiry" type="date" value={values.registrationExpiry} readOnly={readOnly} onChange={(value) => updateField('registrationExpiry', value)} />
-        <FormInput label="Insurance Number" value={values.insuranceNumber} readOnly={readOnly} maxLength={80} onChange={(value) => updateField('insuranceNumber', value)} />
-        <FormInput label="Insurance Expiry" type="date" value={values.insuranceExpiry} readOnly={readOnly} onChange={(value) => updateField('insuranceExpiry', value)} />
-        <FormInput label="Tracker IMEI" value={values.deviceImei} readOnly={readOnly} inputMode="numeric" maxLength={20} onChange={(value) => updateField('deviceImei', value)} />
-        <FormInput label="Chassis / VIN" value={values.chassisVin} readOnly={readOnly} maxLength={80} onChange={(value) => updateField('chassisVin', value)} />
-        <FormInput label="Engine / Serial Number" value={values.engineSerial} readOnly={readOnly} maxLength={80} onChange={(value) => updateField('engineSerial', value)} />
+        <FormInput label="Fleet Code" value={values.code} required placeholder="JC-0001 / JS-0001" maxLength={40} onChange={(value) => updateField('code', value)} />
+        <FormInput label="Vehicle Name" value={values.name} required maxLength={120} onChange={(value) => updateField('name', value)} />
+        <SelectInput label="Vehicle Type" value={values.type} options={Object.keys(typeMap)} required onChange={updateType} />
+        <FormInput label="Registration Number" value={values.regNo} required maxLength={40} placeholder="Required and unique" onChange={(value) => updateField('regNo', value)} />
+        <FormInput label="Registration Expiry" type="date" value={values.registrationExpiry} onChange={(value) => updateField('registrationExpiry', value)} />
+        <FormInput label="Insurance Number" value={values.insuranceNumber} maxLength={80} onChange={(value) => updateField('insuranceNumber', value)} />
+        <FormInput label="Insurance Expiry" type="date" value={values.insuranceExpiry} onChange={(value) => updateField('insuranceExpiry', value)} />
+        <FormInput label="Tracker IMEI" value={values.deviceImei} inputMode="numeric" maxLength={20} onChange={(value) => updateField('deviceImei', value)} />
+        <FormInput label="Chassis / VIN" value={values.chassisVin} maxLength={80} onChange={(value) => updateField('chassisVin', value)} />
+        <FormInput label="Engine / Serial Number" value={values.engineSerial} maxLength={80} onChange={(value) => updateField('engineSerial', value)} />
         <SectionTitle title="Vehicle Configuration" />
-        <SelectInput label="Location" value={values.location} options={locations} required disabled={readOnly} onChange={(value) => updateField('location', value)} />
-        <FormInput label="Capacity / Seater" type="number" value={values.capacity} required readOnly={readOnly} min="1" max="12" onChange={(value) => updateField('capacity', value)} />
-        <SelectInput label="Status" value={values.status} options={Object.keys(statusMap)} required disabled={readOnly} onChange={(value) => updateField('status', value)} />
-        <FormInput label="Brand" value={values.brand} readOnly={readOnly} maxLength={80} onChange={(value) => updateField('brand', value)} />
-        <FormInput label="Model" value={values.model} readOnly={readOnly} maxLength={80} onChange={(value) => updateField('model', value)} />
-        <FormInput label="Year" type="number" value={values.year} readOnly={readOnly} min="1990" max={String(new Date().getFullYear() + 1)} onChange={(value) => updateField('year', value)} />
-        <FormInput label="Color" value={values.color} readOnly={readOnly} maxLength={60} onChange={(value) => updateField('color', value)} />
-        <FormInput label="Date of Installation" type="date" value={values.installationDate} readOnly={readOnly} onChange={(value) => updateField('installationDate', value)} />
-        <FormInput label="Display Order" type="number" value={values.sortOrder} readOnly={readOnly} min="0" max="9999" onChange={(value) => updateField('sortOrder', value)} />
-        <label className="grid gap-1.5 text-sm font-semibold text-foreground sm:col-span-2">Notes<textarea readOnly={readOnly} maxLength={2000} value={values.notes} onChange={(event) => updateField('notes', event.target.value)} className="min-h-24 rounded-xl border border-border bg-white px-3 py-3 text-sm text-foreground outline-none focus:border-primary read-only:bg-slate-50" /></label>
+        <SelectInput label="Location" value={values.location} options={locations} required onChange={(value) => updateField('location', value)} />
+        <FormInput label="Capacity / Seater" type="number" value={values.capacity} required min="1" max="12" onChange={(value) => updateField('capacity', value)} />
+        <SelectInput label="Status" value={values.status} options={Object.keys(statusMap)} required onChange={(value) => updateField('status', value)} />
+        <FormInput label="Brand" value={values.brand} maxLength={80} onChange={(value) => updateField('brand', value)} />
+        <FormInput label="Model" value={values.model} maxLength={80} onChange={(value) => updateField('model', value)} />
+        <FormInput label="Year" type="number" value={values.year} min="1990" max={String(new Date().getFullYear() + 1)} onChange={(value) => updateField('year', value)} />
+        <FormInput label="Color" value={values.color} maxLength={60} onChange={(value) => updateField('color', value)} />
+        <FormInput label="Date of Installation" type="date" value={values.installationDate} onChange={(value) => updateField('installationDate', value)} />
+        <FormInput label="Display Order" type="number" value={values.sortOrder} min="0" max="9999" onChange={(value) => updateField('sortOrder', value)} />
+        <label className="grid gap-1.5 text-sm font-semibold text-foreground sm:col-span-2">Notes<textarea maxLength={2000} value={values.notes} onChange={(event) => updateField('notes', event.target.value)} className="min-h-24 rounded-xl border border-border bg-white px-3 py-3 text-sm text-foreground outline-none focus:border-primary" /></label>
       </div>
       <div className="space-y-4">
-        <div className="rounded-2xl border border-border bg-[#F7FAFA] p-4"><p className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">Fleet Image</p><div className="mt-3 overflow-hidden rounded-2xl bg-white p-3"><img src={values.imageUrl || imagePathFromCode(values.code, values.name, values.type)} alt={values.name || 'Fleet preview'} className="h-48 w-full rounded-xl object-contain" /></div>{!readOnly ? <><select value={values.imageUrl} onChange={(event) => updateField('imageUrl', event.target.value)} className="mt-3 h-10 w-full rounded-xl border border-border bg-white px-3 text-sm">{fleetImageOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select><FormInput label="Custom Image Path" value={values.imageUrl} readOnly={false} placeholder="/images/edrive/fleet/jc-01.webp" onChange={(value) => updateField('imageUrl', value)} /></> : null}</div>
+        <div className="rounded-2xl border border-border bg-[#F7FAFA] p-4"><p className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">Fleet Image</p><div className="mt-3 overflow-hidden rounded-2xl bg-white p-3"><img src={values.imageUrl || imagePathFromCode(values.code, values.name, values.type)} alt={values.name || 'Fleet preview'} className="h-48 w-full rounded-xl object-contain" /></div><select value={values.imageUrl} onChange={(event) => updateField('imageUrl', event.target.value)} className="mt-3 h-10 w-full rounded-xl border border-border bg-white px-3 text-sm">{fleetImageOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select><FormInput label="Custom Image Path" value={values.imageUrl} placeholder="/images/edrive/fleet/jc-01.webp" onChange={(value) => updateField('imageUrl', value)} /></div>
         <div className="rounded-2xl border border-border bg-white p-4"><p className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">Compliance Summary</p><div className="mt-3 grid gap-2">{issues.length ? issues.map((issue) => <div key={issue} className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-700"><AlertTriangle className="size-4" aria-hidden="true" />{issue}</div>) : <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-3 text-sm font-bold text-emerald-700"><ShieldCheck className="size-4" aria-hidden="true" />Fleet profile is complete.</div>}</div></div>
         {initialValues ? <div className="rounded-2xl border border-border bg-white p-4"><p className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">Lifecycle Snapshot</p><div className="mt-3 grid gap-2 text-sm"><InfoLine label="Status" value={initialValues.status} /><InfoLine label="Registration" value={initialValues.regNo || 'Missing'} /><InfoLine label="Registration expiry" value={formatDate(initialValues.registrationExpiry)} /><InfoLine label="Insurance expiry" value={formatDate(initialValues.insuranceExpiry)} /><InfoLine label="Last updated" value={formatDate(initialValues.updatedAt)} /></div></div> : null}
       </div>
-    </div>{formError ? <p className="mx-5 mb-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{formError}</p> : null}<div className="flex justify-end gap-3 border-t border-border/70 bg-white px-5 py-4"><Button type="button" variant="outline" onClick={onClose}>{readOnly ? 'Close' : 'Cancel'}</Button>{!readOnly ? <Button type="submit" disabled={saving}>{saving ? 'Saving...' : 'Save Fleet Unit'}</Button> : null}</div></form>
+    </div>{formError ? <p className="mx-5 mb-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{formError}</p> : null}<div className="flex justify-end gap-3 border-t border-border/70 bg-white px-5 py-4"><Button type="button" variant="outline" onClick={onClose}>Cancel</Button><Button type="submit" disabled={saving}>{saving ? 'Saving...' : 'Save Fleet Unit'}</Button></div></form>
   </div></div>;
 }
 
 function SectionTitle({ title }: { title: string }) { return <div className="sm:col-span-2"><p className="border-b border-border pb-2 text-xs font-bold uppercase tracking-[0.14em] text-primary">{title}</p></div>; }
 function InfoLine({ label, value }: { label: string; value: string }) { return <div className="flex items-center justify-between gap-3 rounded-xl bg-[#F7FAFA] px-3 py-2"><span className="text-xs font-semibold text-muted-foreground">{label}</span><span className="text-right text-xs font-bold text-foreground">{value}</span></div>; }
 
-function FormInput({ label, value, onChange, type = 'text', required = false, placeholder = '', readOnly = false, maxLength, min, max, inputMode }: { label: string; value: string; onChange: (value: string) => void; type?: string; required?: boolean; placeholder?: string; readOnly?: boolean; maxLength?: number; min?: string; max?: string; inputMode?: 'numeric' | 'text' | 'tel' | 'email' }) {
-  return <label className="grid gap-1.5 text-sm font-semibold text-foreground">{label}<input required={required} readOnly={readOnly} type={type} value={value} maxLength={maxLength} min={min} max={max} inputMode={inputMode} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} className="h-10 rounded-xl border border-border bg-white px-3 text-sm text-foreground outline-none focus:border-primary read-only:bg-slate-50" /></label>;
+function FormInput({ label, value, onChange, type = 'text', required = false, placeholder = '', maxLength, min, max, inputMode }: { label: string; value: string; onChange: (value: string) => void; type?: string; required?: boolean; placeholder?: string; maxLength?: number; min?: string; max?: string; inputMode?: 'numeric' | 'text' | 'tel' | 'email' }) {
+  return <label className="grid gap-1.5 text-sm font-semibold text-foreground">{label}<input required={required} type={type} value={value} maxLength={maxLength} min={min} max={max} inputMode={inputMode} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} className="h-10 rounded-xl border border-border bg-white px-3 text-sm text-foreground outline-none focus:border-primary" /></label>;
 }
 
-function SelectInput({ label, value, options, onChange, required = false, disabled = false }: { label: string; value: string; options: string[]; onChange: (value: string) => void; required?: boolean; disabled?: boolean }) {
-  return <label className="grid gap-1.5 text-sm font-semibold text-foreground">{label}<select required={required} disabled={disabled} value={value} onChange={(event) => onChange(event.target.value)} className="h-10 rounded-xl border border-border bg-white px-3 text-sm text-foreground outline-none focus:border-primary disabled:bg-slate-50">{options.map((option) => <option key={option}>{option}</option>)}</select></label>;
+function SelectInput({ label, value, options, onChange, required = false }: { label: string; value: string; options: string[]; onChange: (value: string) => void; required?: boolean }) {
+  return <label className="grid gap-1.5 text-sm font-semibold text-foreground">{label}<select required={required} value={value} onChange={(event) => onChange(event.target.value)} className="h-10 rounded-xl border border-border bg-white px-3 text-sm text-foreground outline-none focus:border-primary">{options.map((option) => <option key={option}>{option}</option>)}</select></label>;
 }
 
 function ConfirmModal({ action, note, setNote, busy, onClose, onConfirm }: { action: NonNullable<ConfirmAction>; note: string; setNote: (value: string) => void; busy: boolean; onClose: () => void; onConfirm: () => void }) {
