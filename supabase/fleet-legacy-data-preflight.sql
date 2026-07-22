@@ -27,6 +27,20 @@ set device_imei = null,
 where nullif(regexp_replace(coalesce(device_imei, ''), '[^0-9]', '', 'g'), '') is not null
   and length(regexp_replace(coalesce(device_imei, ''), '[^0-9]', '', 'g')) not between 10 and 20;
 
+-- A previous rollout attempt may already have created these RLS policies. Remove
+-- only the named fleet policies so fleet-asset-hardening.sql can recreate them.
+do $$
+begin
+  if to_regclass('public.fleet_asset_audit_logs') is not null then
+    execute 'drop policy if exists fleet_asset_audit_staff_select on public.fleet_asset_audit_logs';
+  end if;
+
+  if to_regclass('public.fleet_maintenance_logs') is not null then
+    execute 'drop policy if exists fleet_maintenance_staff_select on public.fleet_maintenance_logs';
+  end if;
+end
+$$;
+
 -- Restore the existing validation trigger immediately when its function already
 -- exists. This keeps the table protected even if the following main migration
 -- later stops for an unrelated schema difference.
