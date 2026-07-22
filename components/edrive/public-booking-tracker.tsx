@@ -1,12 +1,13 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { CalendarDays, CheckCircle2, Clock3, CreditCard, MapPin, Search, Ship, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { formatAed } from '@/lib/booking-data';
+import { isValidOptionalEmail, isValidPhone } from '@/lib/public-request-validation';
 import { supabase } from '@/lib/supabase-client';
 
 type TrackingResult = {
@@ -27,6 +28,7 @@ type TrackingResult = {
 };
 
 const normalSteps = ['Pending', 'Confirmed', 'In Progress', 'Completed'];
+const lookupCooldownMs = 3000;
 
 function text(value: unknown, fallback = '') {
   const clean = String(value ?? '').trim();
@@ -41,7 +43,7 @@ function amount(value: unknown) {
 function niceDate(value: unknown) {
   const clean = text(value);
   if (!clean) return 'To be confirmed';
-  return new Intl.DateTimeFormat('en-AE', { day: '2-digit', month: 'long', year: 'numeric' }).format(new Date(clean.includes('T') ? clean : `${clean}T12:00:00`));
+  return new Intl.DateTimeFormat('en-AE', { day: '2-digit', month: 'long', year: 'numeric', timeZone: 'Asia/Dubai' }).format(new Date(clean.includes('T') ? clean : `${clean}T12:00:00+04:00`));
 }
 
 function statusTone(status: string) {
@@ -71,11 +73,20 @@ function Journey({ status }: { status: string }) {
 export function PublicBookingTracker() {
   const [bookingCode, setBookingCode] = useState('');
   const [contact, setContact] = useState('');
+  const [website, setWebsite] = useState('');
   const [result, setResult] = useState<TrackingResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const lastAttemptRef = useRef(0);
 
-  const canSearch = bookingCode.trim().length >= 3 && contact.trim().length >= 5;
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const reference = params.get('ref');
+    if (reference) setBookingCode(reference.trim().toUpperCase().slice(0, 80));
+  }, []);
+
+  const contactValid = isValidOptionalEmail(contact) && (contact.includes('@') || isValidPhone(contact));
+  const canSearch = bookingCode.trim().length >= 3 && contact.trim().length >= 5 && contactValid && !website;
   const paymentSummary = useMemo(() => {
     if (!result) return null;
     const total = amount(result.total_amount);
@@ -86,19 +97,24 @@ export function PublicBookingTracker() {
 
   async function searchBooking() {
     if (!canSearch) return;
+    const now = Date.now();
+    if (now - lastAttemptRef.current < lookupCooldownMs) {
+      setError('Please wait a few seconds before trying again.');
+      return;
+    }
+    lastAttemptRef.current = now;
     setLoading(true);
     setError('');
     setResult(null);
     try {
       const { data, error: lookupError } = await supabase.rpc('track_booking', {
-        p_booking_code: bookingCode.trim(),
-        p_contact: contact.trim()
+        p_booking_code: bookingCode.trim().slice(0, 80),
+        p_contact: contact.trim().slice(0, 160)
       });
       if (lookupError) throw lookupError;
       const row = Array.isArray(data) ? data[0] : null;
-      if (!row) {
-        setError('Booking not found. Check the booking code and use the same phone number or email entered during booking.');
-      } else setResult(row as TrackingResult);
+      if (!row) setError('Booking not found. Check the booking code and use the same phone number or email entered during booking.');
+      else setResult(row as TrackingResult);
     } catch {
       setError('Booking status is temporarily unavailable. Please try again or contact our support team.');
     } finally {
@@ -114,7 +130,9 @@ export function PublicBookingTracker() {
 
           <Card className="mx-auto mt-8 max-w-3xl rounded-[1.75rem] border-white/80 bg-white/90 shadow-[0_28px_80px_rgba(8,37,50,0.10)] backdrop-blur-xl">
             <CardContent className="p-5 sm:p-7">
-              <div className="grid gap-4 sm:grid-cols-2"><label className="grid gap-2 text-sm font-bold text-foreground">Booking Code<Input value={bookingCode} onChange={(event) => setBookingCode(event.target.value.toUpperCase())} placeholder="Example: ED-2026-001" autoComplete="off" className="h-12 rounded-2xl bg-white" /></label><label className="grid gap-2 text-sm font-bold text-foreground">Phone or Email<Input value={contact} onChange={(event) => setContact(event.target.value)} placeholder="Same contact used for booking" autoComplete="email" className="h-12 rounded-2xl bg-white" /></label></div>
+              <input value={website} onChange={(event) => setWebsite(event.target.value)} type="text" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden="true" />
+              <div className="grid gap-4 sm:grid-cols-2"><label className="grid gap-2 text-sm font-bold text-foreground">Booking Code<Input value={bookingCode} onChange={(event) => setBookingCode(event.target.value.toUpperCase().slice(0, 80))} placeholder="Example: ED-2026-001" autoComplete="off" className="h-12 rounded-2xl bg-white" /></label><label className="grid gap-2 text-sm font-bold text-foreground">Phone or Email<Input value={contact} onChange={(event) => setContact(event.target.value.slice(0, 160))} placeholder="Same contact used for booking" autoComplete="email" className="h-12 rounded-2xl bg-white" /></label></div>
+              {contact && !contactValid ? <p className="mt-3 text-xs font-semibold text-red-600">Enter a valid phone number or email address.</p> : null}
               {error ? <p className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold leading-6 text-red-700">{error}</p> : null}
               <Button type="button" onClick={searchBooking} disabled={!canSearch || loading} className="mt-5 h-12 w-full rounded-full text-sm"><Search className="size-4" aria-hidden="true" />{loading ? 'Checking booking...' : 'Check Booking Status'}</Button>
               <p className="mt-3 text-center text-[11px] leading-5 text-muted-foreground">For your privacy, booking details will not appear unless both entries match our record.</p>
