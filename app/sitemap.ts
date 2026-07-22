@@ -2,16 +2,14 @@ import type { MetadataRoute } from 'next';
 
 export const dynamic = 'force-static';
 
-const siteUrl = 'https://edrivewatersports.ae';
-const now = new Date('2026-07-02T00:00:00.000Z');
+const siteUrl = 'https://edrivedubai.ae';
 
 const routes = [
   '',
   'fleet',
-  'sales',
-  'rentals',
   'membership',
   'booking',
+  'my-booking',
   'contact',
   'privacy-policy',
   'terms-and-conditions',
@@ -19,10 +17,12 @@ const routes = [
 ];
 
 export default function sitemap(): MetadataRoute.Sitemap {
+  const lastModified = new Date();
+
   return routes.map((route) => ({
-    url: route ? `${siteUrl}/${route}` : siteUrl,
-    lastModified: now,
-    changeFrequency: 'weekly',
-    priority: route === '' ? 1 : route === 'booking' ? 0.45 : 0.8
+    url: route ? `${siteUrl}/${route}/` : `${siteUrl}/`,
+    lastModified,
+    changeFrequency: route === '' ? 'daily' : 'weekly',
+    priority: route === '' ? 1 : route === 'booking' || route === 'my-booking' ? 0.9 : 0.8
   }));
 }
