@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowRight, Clock, TicketCheck, Users } from 'lucide-react';
+import { ArrowRight, Clock, MessageCircle, RefreshCw, TicketCheck, Users } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/supabase-client';
@@ -93,37 +93,74 @@ function withDisplayImages(items: LivePackage[]) {
 export function LivePackageShowcase({ title = 'Ride Packages', text = '', limit, compact = false, categories }: LivePackageShowcaseProps) {
   const [items, setItems] = useState<LivePackage[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     let active = true;
 
     async function loadPackages() {
       setLoading(true);
-      let query = supabase
-        .from('packages')
-        .select('id,title,slug,category,duration_minutes,base_price,b2b_price,capacity,image_url,short_description,status,is_featured,display_order')
-        .eq('status', 'active');
+      setLoadError('');
 
-      if (categories?.length) query = query.in('category', categories);
+      try {
+        let query = supabase
+          .from('packages')
+          .select('id,title,slug,category,duration_minutes,base_price,b2b_price,capacity,image_url,short_description,status,is_featured,display_order')
+          .eq('status', 'active');
 
-      const { data } = await query
-        .order('display_order', { ascending: true })
-        .order('category', { ascending: true })
-        .order('capacity', { ascending: true })
-        .order('duration_minutes', { ascending: true });
+        if (categories?.length) query = query.in('category', categories);
 
-      if (!active) return;
-      setItems(((data || []) as LivePackage[]).filter((item) => Number(item.base_price) > 0 && Number(item.duration_minutes) > 0));
-      setLoading(false);
+        const { data, error } = await query
+          .order('display_order', { ascending: true })
+          .order('category', { ascending: true })
+          .order('capacity', { ascending: true })
+          .order('duration_minutes', { ascending: true });
+
+        if (error) throw error;
+        if (!active) return;
+
+        setItems(((data || []) as LivePackage[]).filter((item) => Number(item.base_price) > 0 && Number(item.duration_minutes) > 0));
+      } catch {
+        if (!active) return;
+        setItems([]);
+        setLoadError('Ride packages could not be loaded right now. Please retry or contact the eDrive team for the latest availability.');
+      } finally {
+        if (active) setLoading(false);
+      }
     }
 
     void loadPackages();
     return () => { active = false; };
-  }, [categories?.join('|')]);
+  }, [categories?.join('|'), reloadKey]);
 
   const visibleItems = useMemo(() => withDisplayImages(sortedPackages(items)), [items]);
+  const displayedItems = typeof limit === 'number' ? visibleItems.slice(0, limit) : visibleItems;
 
-  if (!loading && !visibleItems.length) return null;
+  if (!loading && !visibleItems.length) {
+    return (
+      <section id="live-packages" className={cn('border-y border-border bg-white/70', compact ? 'py-6' : 'py-8 sm:py-10 lg:py-11')}>
+        <div className="container-x">
+          <div className="mx-auto max-w-5xl">
+            <Badge className="rounded-full bg-primary px-2.5 py-1 text-[10px] text-white">Ride packages</Badge>
+            <h2 className="mt-3 section-title">{title}</h2>
+            {text ? <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">{text}</p> : null}
+            <div className="mt-5 rounded-[1.25rem] border border-amber-200 bg-amber-50 p-5">
+              <p className="text-sm font-semibold leading-6 text-amber-900">{loadError || 'No online packages are available at this moment. Contact the eDrive team to confirm the latest ride options and timings.'}</p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <Button type="button" size="sm" variant="outline" className="rounded-full bg-white" onClick={() => setReloadKey((value) => value + 1)}>
+                  <RefreshCw className="size-3.5" aria-hidden="true" />Retry
+                </Button>
+                <Button asChild size="sm" className="rounded-full bg-emerald-500 text-white hover:bg-emerald-600">
+                  <a href={whatsappUrl} target="_blank" rel="noopener noreferrer"><MessageCircle className="size-3.5" aria-hidden="true" />WhatsApp Team</a>
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section id="live-packages" className={cn('border-y border-border bg-white/70', compact ? 'py-6' : 'py-8 sm:py-10 lg:py-11')}>
@@ -143,7 +180,7 @@ export function LivePackageShowcase({ title = 'Ride Packages', text = '', limit,
           <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {loading
               ? Array.from({ length: limit || 9 }).map((_, index) => <div key={index} className="h-64 animate-pulse rounded-[1.25rem] bg-white/80" />)
-              : visibleItems.map((item, index) => <LivePackageCard key={item.id} item={item} index={index} />)}
+              : displayedItems.map((item, index) => <LivePackageCard key={item.id} item={item} index={index} />)}
           </div>
         </div>
       </div>
