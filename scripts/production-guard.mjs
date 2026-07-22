@@ -24,6 +24,8 @@ const layout = read('app/layout.tsx');
 const manifest = JSON.parse(read('public/manifest.webmanifest'));
 const migration = read('supabase/public-request-hardening.sql');
 const packageMigration = read('supabase/package-catalog-hardening.sql');
+const fleetEnumMigration = read('supabase/fleet-status-enum-values.sql');
+const fleetLegacyPreflight = read('supabase/fleet-legacy-data-preflight.sql');
 const fleetMigration = read('supabase/fleet-asset-hardening.sql');
 
 assert(!packageShowcase.includes('b2b_price'), 'Public package showcase must not request B2B pricing.');
@@ -65,6 +67,10 @@ assert(fleetPage.includes("role === 'maintenance_staff'"), 'Maintenance Staff mu
 assert(fleetPage.includes('isSuperAdmin'), 'Fleet master edit and delete controls must remain restricted to Super Admin.');
 assert(fleetPage.includes('complianceIssues'), 'Fleet records must expose registration, insurance, tracker, and profile alerts.');
 assert(fleetPage.includes('Missing Registration'), 'Fleet filters must surface missing registration records.');
+assert(fleetEnumMigration.includes("add value if not exists 'out_of_service'"), 'Fleet lifecycle enum prerequisite must include Out of Service.');
+assert(fleetEnumMigration.includes("add value if not exists 'retired'"), 'Fleet lifecycle enum prerequisite must include Retired.');
+assert(fleetLegacyPreflight.includes('drop trigger if exists vehicles_validate_identifiers_trigger'), 'Fleet legacy cleanup must temporarily remove the strict validation trigger.');
+assert(fleetLegacyPreflight.includes('invalid legacy tracker IMEI removed'), 'Fleet legacy cleanup must quarantine invalid tracker identifiers.');
 assert(fleetMigration.includes('vehicles_reg_no_unique_ci'), 'Database-level unique registration enforcement is required.');
 assert(fleetMigration.includes('validate_fleet_asset_identifiers'), 'Fleet identifier validation trigger is required.');
 assert(fleetMigration.includes('delete_fleet_asset_if_unused'), 'Fleet deletion must be protected by operational history.');
