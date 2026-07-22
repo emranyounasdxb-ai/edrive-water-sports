@@ -30,14 +30,14 @@ jobs:
           set +e
           python - <<'PY' > fleet-fix-debug.log 2>&1
           from pathlib import Path
-          import textwrap
 
           workflow = Path('.github/workflows/apply-fleet-partial-edit-fix.yml').read_text(encoding='utf-8')
           marker_start = "          from pathlib import Path\n"
           marker_end = "          PY\n\n      - name: Commit applied changes"
           start = workflow.index(marker_start)
           end = workflow.index(marker_end, start)
-          script = textwrap.dedent(workflow[start:end])
+          embedded_lines = workflow[start:end].splitlines()
+          script = '\n'.join(line[10:] if line.startswith('          ') else line for line in embedded_lines)
           exec(compile(script, 'fleet-fix-embedded.py', 'exec'))
           PY
           code=$?
