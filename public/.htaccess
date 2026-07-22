@@ -9,3 +9,27 @@ RewriteRule ^ https://edrivedubai.ae%{REQUEST_URI} [R=301,L]
 <FilesMatch "^(\.env|\.git|package(-lock)?\.json|tsconfig\.json)$">
   Require all denied
 </FilesMatch>
+
+<IfModule mod_headers.c>
+  # Always revalidate HTML and the service worker after a deployment.
+  <FilesMatch "\.(html)$">
+    Header set Cache-Control "no-cache, no-store, must-revalidate"
+    Header set Pragma "no-cache"
+    Header set Expires "0"
+  </FilesMatch>
+
+  <Files "sw.js">
+    Header set Cache-Control "no-cache, no-store, must-revalidate"
+    Header set Service-Worker-Allowed "/"
+  </Files>
+
+  # Versioned static assets can be cached safely.
+  <FilesMatch "\.(css|js|mjs|woff2|png|jpg|jpeg|webp|svg|ico)$">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
+
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+  Header always set X-Frame-Options "SAMEORIGIN"
+  Header always set Permissions-Policy "camera=(), microphone=(), geolocation=()"
+</IfModule>
