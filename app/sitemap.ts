@@ -7,6 +7,9 @@ const siteUrl = 'https://edrivedubai.ae';
 const routes = [
   '',
   'fleet',
+  'rentals',
+  'jet-ski-rentals',
+  'jet-car-rentals',
   'membership',
   'booking',
   'my-booking',
