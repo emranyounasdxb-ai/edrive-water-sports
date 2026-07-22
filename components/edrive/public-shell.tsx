@@ -3,9 +3,9 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { Instagram, LockKeyhole, Mail, MapPin, Menu, Phone, TicketCheck, X } from 'lucide-react';
+import { LockKeyhole, Mail, MapPin, Menu, MessageCircle, Phone, TicketCheck, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { companyInfo } from '@/lib/company-info';
+import { companyInfo, whatsappUrl } from '@/lib/company-info';
 import { publicNavItems } from '@/lib/mock-data';
 import { cn } from '@/lib/utils';
 import { BrandMark } from './brand';
@@ -137,14 +137,15 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
 function PublicFooter() {
   return (
     <footer className="border-t border-border bg-white">
+      <div className="container-x grid gap-10 py-12 md:grid-cols-[1.2fr_0.7frfooter className="border-t border-border bg-white">
       <div className="container-x grid gap-10 py-12 md:grid-cols-[1.2fr_0.7fr_1fr]">
         <div className="flex flex-col gap-5">
           <BrandMark />
           <p className="max-w-sm text-sm leading-7 text-muted-foreground">
             Private jet ski and jet car experiences from {companyInfo.locationName}, prepared with a premium fleet and attentive local support.
           </p>
-          <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="flex size-10 items-center justify-center rounded-md border border-border text-primary transition hover:bg-primary-50" aria-label="Instagram">
-            <Instagram data-icon aria-hidden="true" />
+          <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="flex w-fit items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100" aria-label="Contact eDrive on WhatsApp">
+            <MessageCircle className="size-4" aria-hidden="true" />WhatsApp
           </a>
         </div>
         <div className="flex flex-col gap-3">
@@ -164,7 +165,7 @@ function PublicFooter() {
       </div>
       <div className="waterline border-t border-border py-5">
         <div className="container-x flex flex-col justify-between gap-4 text-xs text-muted-foreground lg:flex-row lg:items-center">
-          <span>(c) 2026 eDrive Water Sports. All rights reserved.</span>
+          <span>© 2026 eDrive Water Sports. All rights reserved.</span>
           <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
             {policyLinks.map((item, index) => (
               <span key={item.href} className="inline-flex items-center gap-3">
