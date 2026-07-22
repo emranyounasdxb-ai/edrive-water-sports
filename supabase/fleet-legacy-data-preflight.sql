@@ -27,6 +27,17 @@ set device_imei = null,
 where nullif(regexp_replace(coalesce(device_imei, ''), '[^0-9]', '', 'g'), '') is not null
   and length(regexp_replace(coalesce(device_imei, ''), '[^0-9]', '', 'g')) not between 10 and 20;
 
+-- Restore the existing validation trigger immediately when its function already
+-- exists. This keeps the table protected even if the following main migration
+-- later stops for an unrelated schema difference.
+do $$
+begin
+  if to_regprocedure('public.validate_fleet_asset_identifiers()') is not null then
+    execute 'create trigger vehicles_validate_identifiers_trigger before insert or update on public.vehicles for each row execute function public.validate_fleet_asset_identifiers()';
+  end if;
+end
+$$;
+
 commit;
 
 -- Optional inspection after success:
