@@ -85,7 +85,7 @@ export function PublicBookingTracker() {
     if (reference) setBookingCode(reference.trim().toUpperCase().slice(0, 80));
   }, []);
 
-  const contactValid = isValidOptionalEmail(contact) && (contact.includes('@') || isValidPhone(contact));
+  const contactValid = contact.includes('@') ? isValidOptionalEmail(contact) : isValidPhone(contact);
   const canSearch = bookingCode.trim().length >= 3 && contact.trim().length >= 5 && contactValid && !website;
   const paymentSummary = useMemo(() => {
     if (!result) return null;
