@@ -67,6 +67,11 @@ assert(fleetPage.includes("role === 'maintenance_staff'"), 'Maintenance Staff mu
 assert(fleetPage.includes('isSuperAdmin'), 'Fleet master edit and delete controls must remain restricted to Super Admin.');
 assert(fleetPage.includes('complianceIssues'), 'Fleet records must expose registration, insurance, tracker, and profile alerts.');
 assert(fleetPage.includes('Missing Registration'), 'Fleet filters must surface missing registration records.');
+assert(fleetPage.includes('function FleetDrawer'), 'Fleet details must open in the compact right-side drawer.');
+assert(fleetPage.includes('MoreHorizontal'), 'Secondary fleet actions must remain inside the compact actions menu.');
+assert(fleetPage.includes('min-w-0 table-fixed'), 'Fleet inventory table must use the compact fixed layout.');
+assert(!fleetPage.includes('min-w-[1460px]'), 'Fleet inventory must not force the legacy horizontal desktop table width.');
+assert(fleetPage.includes('Registration required'), 'Fleet table must use one concise registration compliance summary.');
 assert(fleetEnumMigration.includes("add value if not exists 'out_of_service'"), 'Fleet lifecycle enum prerequisite must include Out of Service.');
 assert(fleetEnumMigration.includes("add value if not exists 'retired'"), 'Fleet lifecycle enum prerequisite must include Retired.');
 assert(fleetLegacyPreflight.includes('drop trigger if exists vehicles_validate_identifiers_trigger'), 'Fleet legacy cleanup must temporarily remove the strict validation trigger.');
