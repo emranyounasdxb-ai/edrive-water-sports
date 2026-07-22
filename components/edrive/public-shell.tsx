@@ -62,16 +62,7 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
                 {publicNavItems.map((item) => {
                   const active = currentPath === normalizePath(item.href);
                   return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      aria-current={active ? 'page' : undefined}
-                      className={cn(
-                        'inline-flex h-8 shrink-0 items-center justify-center whitespace-nowrap rounded-full px-3 text-center text-[11px] font-bold leading-none text-slate-700 transition-all duration-200 xl:px-4 xl:text-xs',
-                        menuPillClass,
-                        active && activeMenuClass
-                      )}
-                    >
+                    <Link key={item.href} href={item.href} aria-current={active ? 'page' : undefined} className={cn('inline-flex h-8 shrink-0 items-center justify-center whitespace-nowrap rounded-full px-3 text-center text-[11px] font-bold leading-none text-slate-700 transition-all duration-200 xl:px-4 xl:text-xs', menuPillClass, active && activeMenuClass)}>
                       <span className="relative -top-px block leading-none">{item.label}</span>
                     </Link>
                   );
@@ -80,14 +71,8 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
             </div>
 
             <div className="z-10 ml-auto hidden shrink-0 items-center gap-2 md:flex">
-              <Link href="/my-booking" className={cn('hidden lg:inline-flex', myBookingActionClass)}>
-                <TicketCheck className="size-3.5" aria-hidden="true" />
-                <span>My Booking</span>
-              </Link>
-              <Link href="/admin" className={staffActionClass}>
-                <LockKeyhole className="size-3.5" aria-hidden="true" />
-                <span>Staff Login</span>
-              </Link>
+              <Link href="/my-booking" className={cn('hidden lg:inline-flex', myBookingActionClass)}><TicketCheck className="size-3.5" aria-hidden="true" /><span>My Booking</span></Link>
+              <Link href="/admin" className={staffActionClass}><LockKeyhole className="size-3.5" aria-hidden="true" /><span>Staff Login</span></Link>
             </div>
 
             <Button variant="outline" size="icon" className={cn('z-10 size-9 shrink-0 rounded-full lg:hidden', scrolled ? 'bg-white/90 backdrop-blur-sm' : 'bg-white')} onClick={() => setOpen((value) => !value)} aria-label="Toggle navigation">
@@ -101,27 +86,11 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
             <div className="premium-surface flex flex-col gap-1 rounded-[1.5rem] p-3 shadow-[0_18px_45px_rgba(8,37,50,0.16)]">
               {publicNavItems.map((item) => {
                 const active = currentPath === normalizePath(item.href);
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    onClick={() => setOpen(false)}
-                    aria-current={active ? 'page' : undefined}
-                    className={cn('inline-flex h-10 items-center justify-center whitespace-nowrap rounded-2xl px-4 text-sm font-bold text-muted-foreground transition hover:bg-white hover:text-foreground', active && activeMenuClass)}
-                  >
-                    <span className="relative -top-px block leading-none">{item.label}</span>
-                  </Link>
-                );
+                return <Link key={item.href} href={item.href} onClick={() => setOpen(false)} aria-current={active ? 'page' : undefined} className={cn('inline-flex h-10 items-center justify-center whitespace-nowrap rounded-2xl px-4 text-sm font-bold text-muted-foreground transition hover:bg-white hover:text-foreground', active && activeMenuClass)}><span className="relative -top-px block leading-none">{item.label}</span></Link>;
               })}
               <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                <Link href="/my-booking" className={myBookingActionClass} onClick={() => setOpen(false)}>
-                  <TicketCheck className="size-3.5" aria-hidden="true" />
-                  <span>My Booking</span>
-                </Link>
-                <Link href="/admin" onClick={() => setOpen(false)} className={staffActionClass}>
-                  <LockKeyhole className="size-3.5" aria-hidden="true" />
-                  <span>Staff Login</span>
-                </Link>
+                <Link href="/my-booking" className={myBookingActionClass} onClick={() => setOpen(false)}><TicketCheck className="size-3.5" aria-hidden="true" /><span>My Booking</span></Link>
+                <Link href="/admin" onClick={() => setOpen(false)} className={staffActionClass}><LockKeyhole className="size-3.5" aria-hidden="true" /><span>Staff Login</span></Link>
               </div>
             </div>
           </div>
@@ -137,22 +106,15 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
 function PublicFooter() {
   return (
     <footer className="border-t border-border bg-white">
-      <div className="container-x grid gap-10 py-12 md:grid-cols-[1.2fr_0.7frfooter className="border-t border-border bg-white">
       <div className="container-x grid gap-10 py-12 md:grid-cols-[1.2fr_0.7fr_1fr]">
         <div className="flex flex-col gap-5">
           <BrandMark />
-          <p className="max-w-sm text-sm leading-7 text-muted-foreground">
-            Private jet ski and jet car experiences from {companyInfo.locationName}, prepared with a premium fleet and attentive local support.
-          </p>
-          <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="flex w-fit items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100" aria-label="Contact eDrive on WhatsApp">
-            <MessageCircle className="size-4" aria-hidden="true" />WhatsApp
-          </a>
+          <p className="max-w-sm text-sm leading-7 text-muted-foreground">Private jet ski and jet car experiences from {companyInfo.locationName}, prepared with a premium fleet and attentive local support.</p>
+          <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="flex w-fit items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100" aria-label="Contact eDrive on WhatsApp"><MessageCircle className="size-4" aria-hidden="true" />WhatsApp</a>
         </div>
         <div className="flex flex-col gap-3">
           <h3 className="text-sm font-semibold text-foreground">Explore</h3>
-          {publicNavItems.map((item) => (
-            <Link key={item.href} href={item.href} className="text-sm text-muted-foreground transition hover:text-primary">{item.label}</Link>
-          ))}
+          {publicNavItems.map((item) => <Link key={item.href} href={item.href} className="text-sm text-muted-foreground transition hover:text-primary">{item.label}</Link>)}
           <Link href="/booking" className="text-sm text-muted-foreground transition hover:text-primary">Book Ride</Link>
           <Link href="/my-booking" className="text-sm text-muted-foreground transition hover:text-primary">Track My Booking</Link>
         </div>
@@ -167,12 +129,7 @@ function PublicFooter() {
         <div className="container-x flex flex-col justify-between gap-4 text-xs text-muted-foreground lg:flex-row lg:items-center">
           <span>© 2026 eDrive Water Sports. All rights reserved.</span>
           <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-            {policyLinks.map((item, index) => (
-              <span key={item.href} className="inline-flex items-center gap-3">
-                {index > 0 ? <span className="text-border">|</span> : null}
-                <Link href={item.href} className="font-semibold transition hover:text-primary">{item.label}</Link>
-              </span>
-            ))}
+            {policyLinks.map((item, index) => <span key={item.href} className="inline-flex items-center gap-3">{index > 0 ? <span className="text-border">|</span> : null}<Link href={item.href} className="font-semibold transition hover:text-primary">{item.label}</Link></span>)}
           </div>
           <Link href="/booking" className="inline-flex items-center gap-2 font-semibold text-primary">Book your ride</Link>
         </div>
