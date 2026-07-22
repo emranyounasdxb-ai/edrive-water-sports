@@ -2,7 +2,7 @@ import type { MetadataRoute } from 'next';
 
 export const dynamic = 'force-static';
 
-const siteUrl = 'https://edrivewatersports.ae';
+const siteUrl = 'https://edrivedubai.ae';
 
 export default function robots(): MetadataRoute.Robots {
   return {
