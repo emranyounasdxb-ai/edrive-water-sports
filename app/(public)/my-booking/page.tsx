@@ -3,7 +3,10 @@ import { PublicBookingTracker } from '@/components/edrive/public-booking-tracker
 
 export const metadata: Metadata = {
   title: 'Track My Booking',
-  description: 'Securely check your eDrive Water Sports booking status using your booking code and contact details.'
+  description: 'Securely check your eDrive Water Sports booking status using your booking code and contact details.',
+  alternates: {
+    canonical: '/my-booking/'
+  }
 };
 
 export default function Page() {
