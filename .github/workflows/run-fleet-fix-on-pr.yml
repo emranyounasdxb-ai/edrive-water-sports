@@ -10,6 +10,7 @@ on:
 
 permissions:
   contents: write
+  pull-requests: write
 
 jobs:
   apply-fix:
@@ -41,23 +42,30 @@ jobs:
           PY
           code=$?
           echo "exit_code=$code" >> "$GITHUB_OUTPUT"
-          cat fleet-fix-debug.log
           exit 0
 
-      - name: Commit applied changes or debug log
+      - name: Report patch error
+        if: steps.patch.outputs.exit_code != '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
+          {
+            echo '### Fleet patch runner error'
+            echo '```text'
+            tail -n 40 fleet-fix-debug.log
+            echo '```'
+          } > fleet-fix-comment.md
+          gh pr comment "${{ github.event.pull_request.number }}" --body-file fleet-fix-comment.md
+          exit 1
+
+      - name: Commit applied changes
+        if: steps.patch.outputs.exit_code == '0'
+        shell: bash
+        run: |
+          rm -f fleet-fix-debug.log
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          if [ "${{ steps.patch.outputs.exit_code }}" = "0" ]; then
-            rm -f fleet-fix-debug.log
-            git add app/admin/vehicles/page.tsx scripts/production-guard.mjs supabase/fleet-asset-hardening.sql supabase/fleet-edit-partial-and-image-upload.sql
-            git commit -m "fix fleet partial edits and image uploads"
-          else
-            git reset --hard HEAD
-            git clean -fd
-            printf '%s\n' "Patch failed. See workflow job logs for the exact error." > fleet-fix-debug.log
-            git add fleet-fix-debug.log
-            git commit -m "capture fleet fix patch failure"
-          fi
+          git add app/admin/vehicles/page.tsx scripts/production-guard.mjs supabase/fleet-asset-hardening.sql supabase/fleet-edit-partial-and-image-upload.sql
+          git commit -m "fix fleet partial edits and image uploads"
           git push origin HEAD:${{ github.head_ref }}
