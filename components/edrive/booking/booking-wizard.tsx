@@ -8,13 +8,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { formatAed, formatDuration, generateBookingCode, getBookingTotals, getCapacityPerVehicle, getExperience, getSelectedRateForDuration, initialBookingDraft, timeSlots } from '@/lib/booking-data';
 import type { BookingDraft, BookingRateOption, BookingRequest } from '@/lib/booking-data';
 import { companyInfo } from '@/lib/company-info';
+import { cleanMultiline, cleanSingleLine, dubaiDateParts, dubaiDateValue, isSelectableDubaiBookingTime, isValidOptionalEmail, isValidPhone } from '@/lib/public-request-validation';
 import { supabase } from '@/lib/supabase-client';
 import { cn } from '@/lib/utils';
 import { BookingInfoAccordions } from './booking-info-accordions';
 import { BookingSuccess } from './booking-success';
 import { BookingSummaryTicket } from './booking-summary-ticket';
 
-const STORAGE_KEY = 'edrive-booking-requests';
 const steps = ['Select Package', 'Select Duration', 'Vehicles & Guests', 'Date & Time', 'Contact Details', 'Review & Submit'];
 const fieldLabel = 'grid gap-1.5 text-sm font-semibold text-foreground';
 
@@ -31,7 +31,6 @@ type PackageRateRow = {
   category: string;
   duration_minutes: number;
   base_price: number;
-  b2b_price: number | null;
   capacity: number;
   short_description?: string | null;
   display_order?: number | null;
@@ -52,36 +51,7 @@ type PackageGroup = {
 function hasPackageParams() {
   if (typeof window === 'undefined') return false;
   const params = new URLSearchParams(window.location.search);
-  return Boolean(params.get('category') && Number(params.get('capacity') || 0));
-}
-
-function localDateValue(date = new Date()) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
-
-function timeToMinutes(value: string) {
-  const match = value.trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
-  if (!match) return Number.NaN;
-  const hoursRaw = Number(match[1]);
-  const minutes = Number(match[2]);
-  const period = match[3].toUpperCase();
-  const hours = period === 'PM' && hoursRaw !== 12 ? hoursRaw + 12 : period === 'AM' && hoursRaw === 12 ? 0 : hoursRaw;
-  return hours * 60 + minutes;
-}
-
-function isPastSameDayTime(selectedDate: string, selectedTime: string, now = new Date()) {
-  if (!selectedDate || !selectedTime || selectedDate !== localDateValue(now)) return false;
-  const slotMinutes = timeToMinutes(selectedTime);
-  if (!Number.isFinite(slotMinutes)) return false;
-  const currentMinutes = now.getHours() * 60 + now.getMinutes();
-  return slotMinutes <= currentMinutes;
-}
-
-function isSelectableBookingTime(selectedDate: string, selectedTime: string, now = new Date()) {
-  return Boolean(selectedDate && selectedTime && !isPastSameDayTime(selectedDate, selectedTime, now));
+  return Boolean(params.get('package') || (params.get('category') && Number(params.get('capacity') || 0)));
 }
 
 function experienceTypeFromCategory(category: string): BookingDraft['experienceType'] {
@@ -104,6 +74,25 @@ function rideSlug(category: string, capacity: number) {
   return `package-${capacity}-seater`;
 }
 
+function slugify(value: string) {
+  return value.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+}
+
+function packageFamilyTitle(row: PackageRateRow) {
+  const clean = String(row.title || '')
+    .replace(/\b\d+(?:\.\d+)?\s*(?:minutes?|mins?|hours?|hrs?)\b/gi, '')
+    .replace(/\b(?:half|one|two|three)\s+hours?\b/gi, '')
+    .replace(/[|–—-]+\s*$/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return clean || rideTitle(row.category, Number(row.capacity || 2));
+}
+
+function packageFamilyKey(row: PackageRateRow) {
+  const capacity = Number(row.capacity || 2);
+  return `${row.category}-${capacity}-${slugify(packageFamilyTitle(row))}`;
+}
+
 function mapRates(rows: PackageRateRow[]): BookingRateOption[] {
   return rows
     .map((row) => ({
@@ -113,59 +102,80 @@ function mapRates(rows: PackageRateRow[]): BookingRateOption[] {
       category: row.category,
       minutes: Number(row.duration_minutes || 0),
       price: Number(row.base_price || 0),
-      b2bPrice: Number(row.b2b_price || 0),
       capacity: Number(row.capacity || 2)
     }))
-    .filter((rate) => rate.minutes > 0 && rate.price > 0)
-    .sort((a, b) => a.minutes - b.minutes);
+    .filter((rate) => rate.id && rate.minutes > 0 && rate.price > 0)
+    .sort((a, b) => a.minutes - b.minutes || String(a.title).localeCompare(String(b.title)));
 }
 
 function groupPackageRows(rows: PackageRateRow[]) {
   const grouped = new Map<string, PackageRateRow[]>();
 
   rows.forEach((row) => {
-    const capacity = Number(row.capacity || 2);
-    const key = `${row.category}-${capacity}`;
+    const key = packageFamilyKey(row);
     grouped.set(key, [...(grouped.get(key) || []), row]);
   });
 
   return Array.from(grouped.entries())
     .map(([key, groupRows]) => {
-      const first = groupRows[0];
+      const sortedRows = [...groupRows].sort((a, b) => Number(a.duration_minutes) - Number(b.duration_minutes));
+      const first = sortedRows[0];
       const capacity = Number(first.capacity || 2);
+      const title = packageFamilyTitle(first);
       return {
         key,
-        title: rideTitle(first.category, capacity),
-        slug: rideSlug(first.category, capacity),
+        title,
+        slug: slugify(title) || rideSlug(first.category, capacity),
         category: first.category,
         categoryLabel: categoryLabel(first.category),
         capacity,
-        description: first.short_description || `Choose your ${rideTitle(first.category, capacity).toLowerCase()} duration and submit your request.`,
-        displayOrder: Number(first.display_order || 100),
-        rates: mapRates(groupRows)
+        description: first.short_description || `Choose your ${title.toLowerCase()} duration and submit your request.`,
+        displayOrder: Math.min(...sortedRows.map((row) => Number(row.display_order || 100))),
+        rates: mapRates(sortedRows)
       } as PackageGroup;
     })
     .filter((group) => group.rates.length > 0)
-    .sort((a, b) => a.displayOrder - b.displayOrder || a.capacity - b.capacity);
+    .sort((a, b) => a.displayOrder - b.displayOrder || a.title.localeCompare(b.title));
 }
 
-function draftFromPackageGroup(group: PackageGroup) {
-  const preferredRate = group.rates.find((rate) => rate.minutes === 60) || group.rates[0];
+function draftFromPackageGroup(group: PackageGroup, preferredPackageId = '', preferredDuration = 0) {
+  const preferredRate = group.rates.find((rate) => rate.id === preferredPackageId)
+    || group.rates.find((rate) => rate.minutes === preferredDuration)
+    || group.rates.find((rate) => rate.minutes === 60)
+    || group.rates[0];
+
   return {
     ...initialBookingDraft,
-    selectedPackageName: group.title,
-    selectedPackageSlug: group.slug,
+    selectedPackageRateId: preferredRate.id,
+    selectedPackageName: preferredRate.title || group.title,
+    selectedPackageSlug: preferredRate.slug || group.slug,
     selectedPackageCategory: group.categoryLabel,
-    selectedPackageCapacity: group.capacity,
+    selectedPackageCapacity: preferredRate.capacity || group.capacity,
     selectedPackagePrice: preferredRate.price,
-    selectedPackageB2BPrice: preferredRate.b2bPrice,
+    selectedPackageB2BPrice: undefined,
     selectedPackageRates: group.rates,
     experienceType: experienceTypeFromCategory(group.category),
     durationMinutes: preferredRate.minutes,
     inquiryType: '',
     vehicleQuantity: 1,
-    guestCount: group.capacity
+    guestCount: preferredRate.capacity || group.capacity
   } satisfies BookingDraft;
+}
+
+async function fetchPublicPackageRows() {
+  const rpcResult = await supabase.rpc('get_public_packages', { p_categories: null });
+  if (!rpcResult.error) return (rpcResult.data || []) as PackageRateRow[];
+
+  const fallbackResult = await supabase
+    .from('packages')
+    .select('id,title,slug,category,duration_minutes,base_price,capacity,short_description,display_order')
+    .eq('status', 'active')
+    .order('display_order', { ascending: true })
+    .order('capacity', { ascending: true })
+    .order('duration_minutes', { ascending: true });
+
+  if (fallbackResult.error) throw fallbackResult.error;
+  return (fallbackResult.data || []) as PackageRateRow[];
 }
 
 export function BookingWizard() {
@@ -175,6 +185,7 @@ export function BookingWizard() {
   const [ready, setReady] = useState(false);
   const [packageQueryMode, setPackageQueryMode] = useState(() => hasPackageParams());
   const [packageGroups, setPackageGroups] = useState<PackageGroup[]>([]);
+  const [packageError, setPackageError] = useState('');
   const [now, setNow] = useState(() => new Date());
 
   const experience = getExperience(draft.experienceType);
@@ -206,38 +217,42 @@ export function BookingWizard() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const categoryParam = params.get('category');
+    const packageIdParam = params.get('package') || '';
+    const categoryParam = params.get('category') || '';
     const selectedCapacity = Number(params.get('capacity') || 0);
+    const selectedDuration = Number(params.get('duration') || 0);
     let active = true;
 
     async function loadPackages() {
-      const { data } = await supabase
-        .from('packages')
-        .select('id,title,slug,category,duration_minutes,base_price,b2b_price,capacity,short_description,display_order')
-        .eq('status', 'active')
-        .order('display_order', { ascending: true })
-        .order('capacity', { ascending: true })
-        .order('duration_minutes', { ascending: true });
+      setReady(false);
+      setPackageError('');
+      try {
+        const rows = await fetchPublicPackageRows();
+        if (!active) return;
+        const groups = groupPackageRows(rows);
+        setPackageGroups(groups);
 
-      if (!active) return;
-      const groups = groupPackageRows((data || []) as PackageRateRow[]);
-      setPackageGroups(groups);
+        const selectedGroup = packageIdParam
+          ? groups.find((group) => group.rates.some((rate) => rate.id === packageIdParam))
+          : groups.find((group) => group.category === categoryParam && group.capacity === selectedCapacity);
 
-      if (categoryParam && selectedCapacity) {
-        const selectedGroup = groups.find((group) => group.category === categoryParam && group.capacity === selectedCapacity);
         if (selectedGroup) {
           setPackageQueryMode(true);
-          setDraft(draftFromPackageGroup(selectedGroup));
+          setDraft(draftFromPackageGroup(selectedGroup, packageIdParam, selectedDuration));
           setStep(1);
         } else {
           setPackageQueryMode(false);
           setStep(0);
         }
-      } else {
+      } catch {
+        if (!active) return;
+        setPackageGroups([]);
         setPackageQueryMode(false);
+        setStep(0);
+        setPackageError('Ride packages could not be loaded. Please retry the page or contact the eDrive team on WhatsApp.');
+      } finally {
+        if (active) setReady(true);
       }
-
-      setReady(true);
     }
 
     void loadPackages();
@@ -246,37 +261,28 @@ export function BookingWizard() {
 
   const canContinue = useMemo(() => {
     if (step === 0) return Boolean(draft.selectedPackageRates?.length);
-    if (step === 1) return Boolean(draft.selectedPackageRates?.length && draft.durationMinutes > 0);
+    if (step === 1) return Boolean(draft.selectedPackageRateId && draft.selectedPackageRates?.length && draft.durationMinutes > 0);
     if (step === 2) return !capacityExceeded && draft.vehicleQuantity > 0 && draft.guestCount > 0;
-    if (step === 3) return isSelectableBookingTime(draft.preferredDate, draft.preferredTime, now);
-    if (step === 4) return Boolean(draft.customerName.trim() && draft.customerPhone.trim() && (!draft.customerEmail || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(draft.customerEmail)));
+    if (step === 3) return isSelectableDubaiBookingTime(draft.preferredDate, draft.preferredTime, now);
+    if (step === 4) return Boolean(draft.customerName.trim().length >= 2 && isValidPhone(draft.customerPhone) && isValidOptionalEmail(draft.customerEmail));
     return true;
   }, [capacityExceeded, draft, now, step]);
 
   function submitRequest() {
     const totals = getBookingTotals(draft);
     const selectedRate = getSelectedRateForDuration(draft);
-    let existing: BookingRequest[] = [];
-
-    try {
-      const stored = window.localStorage.getItem(STORAGE_KEY);
-      existing = stored ? JSON.parse(stored) : [];
-      if (!Array.isArray(existing)) existing = [];
-    } catch {
-      existing = [];
-    }
-
     const request: BookingRequest = {
-      bookingCode: generateBookingCode(existing.length),
+      bookingCode: generateBookingCode(),
       source: 'website',
       status: 'Pending',
       adminStatus: 'New',
       managerStatus: null,
-      selectedPackageName: draft.selectedPackageName ?? null,
-      selectedPackageSlug: draft.selectedPackageSlug ?? null,
+      selectedPackageRateId: selectedRate?.id || draft.selectedPackageRateId || null,
+      selectedPackageName: selectedRate?.title || draft.selectedPackageName || null,
+      selectedPackageSlug: selectedRate?.slug || draft.selectedPackageSlug || null,
       selectedPackageCategory: draft.selectedPackageCategory ?? null,
       selectedPackagePrice: isSales ? null : (selectedRate?.price ?? draft.selectedPackagePrice ?? null),
-      selectedPackageB2BPrice: isSales ? null : (selectedRate?.b2bPrice ?? draft.selectedPackageB2BPrice ?? null),
+      selectedPackageB2BPrice: null,
       selectedPackageCapacity: isSales ? null : getCapacityPerVehicle(draft),
       experienceType: draft.experienceType,
       serviceType: experience.serviceType,
@@ -288,13 +294,13 @@ export function BookingWizard() {
       preferredTime: draft.preferredTime,
       meetingPointName: companyInfo.locationName,
       meetingPointAddress: companyInfo.locationAddress,
-      customerName: draft.customerName.trim(),
-      customerPhone: draft.customerPhone.trim(),
-      customerEmail: draft.customerEmail.trim() || null,
-      customerHotelOrArea: draft.customerHotelOrArea.trim() || null,
+      customerName: cleanSingleLine(draft.customerName, 100),
+      customerPhone: cleanSingleLine(draft.customerPhone, 30),
+      customerEmail: cleanSingleLine(draft.customerEmail, 160) || null,
+      customerHotelOrArea: cleanSingleLine(draft.customerHotelOrArea, 160) || null,
       customerNotes: [
-        draft.selectedPackageName ? `Selected vehicle: ${draft.selectedPackageName}${draft.selectedPackageCategory ? ` (${draft.selectedPackageCategory})` : ''}. Duration: ${formatDuration(draft.durationMinutes)}.` : '',
-        draft.customerNotes.trim()
+        draft.selectedPackageName ? `Selected package: ${draft.selectedPackageName}${draft.selectedPackageCategory ? ` (${draft.selectedPackageCategory})` : ''}. Duration: ${formatDuration(draft.durationMinutes)}.` : '',
+        cleanMultiline(draft.customerNotes, 1000)
       ].filter(Boolean).join(' ') || null,
       subtotal: totals.subtotal,
       vatAmount: totals.vatAmount,
@@ -304,7 +310,6 @@ export function BookingWizard() {
       createdAt: new Date().toISOString()
     };
 
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify([...existing, request]));
     setSubmitted(request);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
@@ -312,11 +317,11 @@ export function BookingWizard() {
   function startAnother() {
     setDraft((current) => ({
       ...initialBookingDraft,
+      selectedPackageRateId: current.selectedPackageRateId,
       selectedPackageName: current.selectedPackageName,
       selectedPackageSlug: current.selectedPackageSlug,
       selectedPackageCategory: current.selectedPackageCategory,
       selectedPackagePrice: current.selectedPackagePrice,
-      selectedPackageB2BPrice: current.selectedPackageB2BPrice,
       selectedPackageCapacity: current.selectedPackageCapacity,
       selectedPackageRates: current.selectedPackageRates,
       experienceType: current.experienceType,
@@ -368,7 +373,8 @@ export function BookingWizard() {
                 <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary-50 text-xs font-bold text-primary">{visibleStepIndex + 1}</span>
               </div>
 
-              {step === 0 && !packageFlow ? <PackageSelectionStep groups={packageGroups} selectedSlug={draft.selectedPackageSlug || ''} onSelect={selectPackageGroup} /> : null}
+              {packageError ? <p className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold leading-6 text-amber-800">{packageError}</p> : null}
+              {step === 0 && !packageFlow ? <PackageSelectionStep groups={packageGroups} selectedRateId={draft.selectedPackageRateId || ''} onSelect={selectPackageGroup} /> : null}
               {step === 1 ? <DurationStep draft={draft} onUpdate={updateDraft} /> : null}
               {step === 2 ? <PartyStep draft={draft} capacity={capacity} capacityPerVehicle={capacityPerVehicle} exceeded={capacityExceeded} onUpdate={updateDraft} /> : null}
               {step === 3 ? <ScheduleStep draft={draft} now={now} onUpdate={updateDraft} /> : null}
@@ -421,7 +427,7 @@ function WizardProgress({ currentStep, packageFlow, onStepSelect }: { currentSte
   );
 }
 
-function PackageSelectionStep({ groups, selectedSlug, onSelect }: { groups: PackageGroup[]; selectedSlug: string; onSelect: (group: PackageGroup) => void }) {
+function PackageSelectionStep({ groups, selectedRateId, onSelect }: { groups: PackageGroup[]; selectedRateId: string; onSelect: (group: PackageGroup) => void }) {
   if (!groups.length) {
     return <div className="rounded-[1.25rem] border border-amber-200 bg-amber-50 p-4 text-sm font-semibold leading-6 text-amber-800">No ride packages are available right now. Please contact the eDrive team on WhatsApp for the latest options.</div>;
   }
@@ -431,7 +437,7 @@ function PackageSelectionStep({ groups, selectedSlug, onSelect }: { groups: Pack
       <p className="mb-3 text-sm leading-6 text-muted-foreground">Choose your preferred ride package below. Our team will confirm availability before your experience.</p>
       <div className="grid gap-3 sm:grid-cols-2">
         {groups.map((group) => {
-          const active = group.slug === selectedSlug;
+          const active = group.rates.some((rate) => rate.id === selectedRateId);
           const startingPrice = Math.min(...group.rates.map((rate) => rate.price));
           return (
             <button key={group.key} type="button" onClick={() => onSelect(group)} className={cn('group rounded-[1.25rem] border bg-white p-4 text-left transition duration-200 hover:-translate-y-0.5 hover:border-primary/45 hover:shadow-md', active ? 'border-primary bg-gradient-to-br from-primary-50 via-white to-accent-100/40 shadow-md ring-1 ring-primary/15' : 'border-border shadow-sm')} aria-pressed={active}>
@@ -456,7 +462,7 @@ function DurationStep({ draft, onUpdate }: { draft: BookingDraft; onUpdate: (val
   const experience = getExperience(draft.experienceType);
   const packages: BookingRateOption[] = draft.selectedPackageRates || [];
   if (!packages.length) return <div className="rounded-[1.25rem] border border-amber-200 bg-amber-50 p-4 text-sm font-semibold leading-6 text-amber-800">Please select a ride package first. Contact the team if you need help choosing an option.</div>;
-  return <div><p className="mb-3 text-sm leading-6 text-muted-foreground">Choose duration for {draft.selectedPackageName || experience.title}. Prices shown are per vehicle.</p><div className="grid gap-3 md:grid-cols-3">{packages.map((item) => <ChoiceButton key={item.minutes} active={draft.durationMinutes === item.minutes} onClick={() => onUpdate({ durationMinutes: item.minutes, selectedPackagePrice: item.price, selectedPackageB2BPrice: item.b2bPrice, selectedPackageCapacity: item.capacity })} title={formatDuration(item.minutes)} detail={formatAed(item.price)} />)}</div></div>;
+  return <div><p className="mb-3 text-sm leading-6 text-muted-foreground">Choose duration for {draft.selectedPackageName || experience.title}. Prices shown are per vehicle.</p><div className="grid gap-3 md:grid-cols-3">{packages.map((item) => <ChoiceButton key={item.id || item.minutes} active={draft.selectedPackageRateId === item.id} onClick={() => onUpdate({ selectedPackageRateId: item.id, selectedPackageName: item.title || draft.selectedPackageName, selectedPackageSlug: item.slug || draft.selectedPackageSlug, durationMinutes: item.minutes, selectedPackagePrice: item.price, selectedPackageB2BPrice: undefined, selectedPackageCapacity: item.capacity })} title={formatDuration(item.minutes)} detail={formatAed(item.price)} />)}</div></div>;
 }
 
 function ChoiceButton({ active, onClick, title, detail }: { active: boolean; onClick: () => void; title: string; detail: string }) {
@@ -472,18 +478,20 @@ function Counter({ label, helper, value, min, max, onChange }: { label: string; 
 }
 
 function ScheduleStep({ draft, now, onUpdate }: { draft: BookingDraft; now: Date; onUpdate: (values: Partial<BookingDraft>) => void }) {
-  const today = useMemo(() => new Date(), []);
-  const [visibleMonth, setVisibleMonth] = useState(() => new Date(today.getFullYear(), today.getMonth(), 1));
+  const todayIso = dubaiDateValue(now);
+  const todayParts = dubaiDateParts(now);
+  const [visibleMonth, setVisibleMonth] = useState(() => new Date(todayParts.year, todayParts.month - 1, 1));
   const year = visibleMonth.getFullYear();
   const month = visibleMonth.getMonth();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const startDay = new Date(year, month, 1).getDay();
-  const minMonth = new Date(today.getFullYear(), today.getMonth(), 1).getTime();
-  const selectedDateIsToday = draft.preferredDate === localDateValue(now);
-  const availableToday = timeSlots.some((time) => isSelectableBookingTime(draft.preferredDate, time, now));
+  const minMonthKey = todayParts.year * 12 + todayParts.month - 1;
+  const visibleMonthKey = year * 12 + month;
+  const selectedDateIsToday = draft.preferredDate === todayIso;
+  const availableToday = timeSlots.some((time) => isSelectableDubaiBookingTime(draft.preferredDate, time, now));
 
   function selectDate(iso: string) {
-    const nextTime = draft.preferredTime && isSelectableBookingTime(iso, draft.preferredTime, now) ? draft.preferredTime : '';
+    const nextTime = draft.preferredTime && isSelectableDubaiBookingTime(iso, draft.preferredTime, now) ? draft.preferredTime : '';
     onUpdate({ preferredDate: iso, preferredTime: nextTime });
   }
 
@@ -491,7 +499,7 @@ function ScheduleStep({ draft, now, onUpdate }: { draft: BookingDraft; now: Date
     <div className="grid gap-4 xl:grid-cols-[1fr_0.92fr]">
       <div className="rounded-[1.25rem] border border-border bg-white p-4">
         <div className="mb-3 flex items-center justify-between">
-          <button type="button" aria-label="Previous month" disabled={visibleMonth.getTime() <= minMonth} onClick={() => setVisibleMonth(new Date(year, month - 1, 1))} className="flex size-8 items-center justify-center rounded-full border border-border text-primary disabled:opacity-30"><ChevronLeft className="size-4" /></button>
+          <button type="button" aria-label="Previous month" disabled={visibleMonthKey <= minMonthKey} onClick={() => setVisibleMonth(new Date(year, month - 1, 1))} className="flex size-8 items-center justify-center rounded-full border border-border text-primary disabled:opacity-30"><ChevronLeft className="size-4" /></button>
           <p className="font-semibold text-foreground">{visibleMonth.toLocaleDateString('en-AE', { month: 'long', year: 'numeric' })}</p>
           <button type="button" aria-label="Next month" onClick={() => setVisibleMonth(new Date(year, month + 1, 1))} className="flex size-8 items-center justify-center rounded-full border border-border text-primary"><ChevronRight className="size-4" /></button>
         </div>
@@ -499,20 +507,19 @@ function ScheduleStep({ draft, now, onUpdate }: { draft: BookingDraft; now: Date
         <div className="mt-1 grid grid-cols-7 gap-1">
           {Array.from({ length: startDay }).map((_, index) => <span key={`blank-${index}`} />)}
           {Array.from({ length: daysInMonth }, (_, index) => index + 1).map((day) => {
-            const date = new Date(year, month, day);
             const iso = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-            const disabled = date < new Date(today.getFullYear(), today.getMonth(), today.getDate());
+            const disabled = iso < todayIso;
             const selected = draft.preferredDate === iso;
             return <button key={iso} type="button" disabled={disabled} onClick={() => selectDate(iso)} className={cn('aspect-square rounded-lg text-xs font-semibold transition', selected ? 'bg-primary text-white shadow-sm' : 'hover:bg-primary-50', disabled && 'cursor-not-allowed text-muted-foreground/35 hover:bg-transparent')}>{day}</button>;
           })}
         </div>
       </div>
       <div>
-        <div className="mb-3 flex items-center gap-2"><Clock3 className="size-4 text-primary" aria-hidden="true" /><p className="font-semibold text-foreground">Preferred time</p></div>
-        {selectedDateIsToday ? <p className="mb-3 rounded-xl bg-primary-50 px-3 py-2 text-xs font-semibold leading-5 text-primary-900">Past time slots are disabled for today. Please choose an upcoming time.</p> : null}
+        <div className="mb-3 flex items-center gap-2"><Clock3 className="size-4 text-primary" aria-hidden="true" /><p className="font-semibold text-foreground">Preferred time <span className="font-normal text-muted-foreground">(Dubai time)</span></p></div>
+        {selectedDateIsToday ? <p className="mb-3 rounded-xl bg-primary-50 px-3 py-2 text-xs font-semibold leading-5 text-primary-900">Past time slots are disabled using Dubai local time.</p> : null}
         <div className="grid max-h-[300px] grid-cols-2 gap-2 overflow-y-auto pr-1">
           {timeSlots.map((time) => {
-            const disabled = !isSelectableBookingTime(draft.preferredDate, time, now);
+            const disabled = !isSelectableDubaiBookingTime(draft.preferredDate, time, now);
             return <button key={time} type="button" disabled={disabled} onClick={() => onUpdate({ preferredTime: time })} className={cn('rounded-xl border px-3 py-2 text-sm font-semibold transition', draft.preferredTime === time ? 'border-primary bg-primary text-white' : 'border-border bg-white text-foreground hover:border-primary/40', disabled && 'cursor-not-allowed border-border bg-slate-50 text-muted-foreground/45 line-through hover:border-border')}>{time}</button>;
           })}
         </div>
@@ -523,15 +530,17 @@ function ScheduleStep({ draft, now, onUpdate }: { draft: BookingDraft; now: Date
 }
 
 function ContactStep({ draft, onUpdate }: { draft: BookingDraft; onUpdate: (values: Partial<BookingDraft>) => void }) {
-  return <div className="grid gap-4"><div className="grid gap-4 sm:grid-cols-2"><label className={fieldLabel}>Full name <span className="relative"><UserRound className="pointer-events-none absolute left-3 top-3.5 size-4 text-muted-foreground" /><Input required value={draft.customerName} onChange={(event) => onUpdate({ customerName: event.target.value })} className="pl-10" placeholder="Your full name" /></span></label><label className={fieldLabel}>Phone or WhatsApp <span className="relative"><Phone className="pointer-events-none absolute left-3 top-3.5 size-4 text-muted-foreground" /><Input required type="tel" value={draft.customerPhone} onChange={(event) => onUpdate({ customerPhone: event.target.value })} className="pl-10" placeholder={companyInfo.whatsappDisplay} /></span></label></div><div className="grid gap-4 sm:grid-cols-2"><label className={fieldLabel}>Email address <span className="font-normal text-muted-foreground">(optional)</span><span className="relative"><Mail className="pointer-events-none absolute left-3 top-3.5 size-4 text-muted-foreground" /><Input type="email" value={draft.customerEmail} onChange={(event) => onUpdate({ customerEmail: event.target.value })} className="pl-10" placeholder="you@example.com" /></span></label><label className={fieldLabel}>Hotel or area <span className="font-normal text-muted-foreground">(optional)</span><span className="relative"><MapPin className="pointer-events-none absolute left-3 top-3.5 size-4 text-muted-foreground" /><Input value={draft.customerHotelOrArea} onChange={(event) => onUpdate({ customerHotelOrArea: event.target.value })} className="pl-10" placeholder="Where are you staying?" /></span></label></div><label className={fieldLabel}>Ride type or package notes <span className="font-normal text-muted-foreground">(optional)</span><Textarea value={draft.customerNotes} onChange={(event) => onUpdate({ customerNotes: event.target.value })} placeholder="Selected package, celebration details, rider experience, or anything else we should know" /></label><p className="rounded-[1.15rem] bg-primary-50 px-4 py-3 text-xs leading-5 text-primary-900">Your details are used only to confirm and manage this booking request.</p></div>;
+  const phoneValid = !draft.customerPhone || isValidPhone(draft.customerPhone);
+  const emailValid = isValidOptionalEmail(draft.customerEmail);
+  return <div className="grid gap-4"><div className="grid gap-4 sm:grid-cols-2"><label className={fieldLabel}>Full name <span className="relative"><UserRound className="pointer-events-none absolute left-3 top-3.5 size-4 text-muted-foreground" /><Input required autoComplete="name" maxLength={100} value={draft.customerName} onChange={(event) => onUpdate({ customerName: event.target.value })} className="pl-10" placeholder="Your full name" /></span></label><label className={fieldLabel}>Phone or WhatsApp <span className="relative"><Phone className="pointer-events-none absolute left-3 top-3.5 size-4 text-muted-foreground" /><Input required type="tel" inputMode="tel" autoComplete="tel" maxLength={30} value={draft.customerPhone} onChange={(event) => onUpdate({ customerPhone: event.target.value })} className={cn('pl-10', !phoneValid && 'border-red-300 focus-visible:ring-red-200')} placeholder={companyInfo.whatsappDisplay} /></span>{!phoneValid ? <span className="text-xs font-medium text-red-600">Enter a valid phone number with 7 to 15 digits.</span> : null}</label></div><div className="grid gap-4 sm:grid-cols-2"><label className={fieldLabel}>Email address <span className="font-normal text-muted-foreground">(optional)</span><span className="relative"><Mail className="pointer-events-none absolute left-3 top-3.5 size-4 text-muted-foreground" /><Input type="email" autoComplete="email" maxLength={160} value={draft.customerEmail} onChange={(event) => onUpdate({ customerEmail: event.target.value })} className={cn('pl-10', !emailValid && 'border-red-300 focus-visible:ring-red-200')} placeholder="you@example.com" /></span>{!emailValid ? <span className="text-xs font-medium text-red-600">Enter a valid email address.</span> : null}</label><label className={fieldLabel}>Hotel or area <span className="font-normal text-muted-foreground">(optional)</span><span className="relative"><MapPin className="pointer-events-none absolute left-3 top-3.5 size-4 text-muted-foreground" /><Input autoComplete="address-level2" maxLength={160} value={draft.customerHotelOrArea} onChange={(event) => onUpdate({ customerHotelOrArea: event.target.value })} className="pl-10" placeholder="Where are you staying?" /></span></label></div><label className={fieldLabel}>Ride type or package notes <span className="font-normal text-muted-foreground">(optional)</span><Textarea maxLength={1000} value={draft.customerNotes} onChange={(event) => onUpdate({ customerNotes: event.target.value })} placeholder="Selected package, celebration details, rider experience, or anything else we should know" /></label><p className="rounded-[1.15rem] bg-primary-50 px-4 py-3 text-xs leading-5 text-primary-900">Your details are used only to confirm and manage this booking request. They are not stored in this browser after submission.</p></div>;
 }
 
 function ReviewStep({ draft }: { draft: BookingDraft }) {
   const experience = getExperience(draft.experienceType);
   const totals = getBookingTotals(draft);
   const isSales = experience.serviceType === 'sales_inquiry';
-  const date = new Intl.DateTimeFormat('en-AE', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(`${draft.preferredDate}T12:00:00`));
-  return <div><div className="grid gap-3 sm:grid-cols-2"><ReviewGroup title="Experience" items={[[draft.selectedPackageName || experience.title, isSales ? draft.inquiryType : formatDuration(draft.durationMinutes)], ...(draft.selectedPackageCapacity ? [[`${draft.selectedPackageCapacity} seater`, draft.selectedPackageCategory ?? 'Selected vehicle']] : []), [`${draft.vehicleQuantity} ${draft.vehicleQuantity === 1 ? 'vehicle' : 'vehicles'}`, `${draft.guestCount} ${draft.guestCount === 1 ? 'guest' : 'guests'}`]]} /><ReviewGroup title="Schedule" items={[[date, draft.preferredTime], [companyInfo.locationName, companyInfo.locationAddress]]} /><ReviewGroup title="Contact" items={[[draft.customerName, draft.customerPhone], [draft.customerEmail || 'Email not provided', draft.customerHotelOrArea || 'Area not provided']]} /><ReviewGroup title={isSales ? 'Pricing' : 'Estimate'} items={[[isSales ? 'Request quote' : formatAed(totals.totalAmount), isSales ? 'Our sales team will follow up' : 'Includes 5% VAT'], ['Payment status', 'Not Paid']]} /></div>{draft.customerNotes ? <div className="mt-3 rounded-[1.15rem] border border-border bg-white p-4"><p className="text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">Notes</p><p className="mt-2 text-sm leading-6 text-foreground">{draft.customerNotes}</p></div> : null}<div className="mt-4 rounded-[1.15rem] border border-primary/15 bg-primary-50 p-4 text-sm leading-6 text-primary-900">Submitting sends a request only. Your booking becomes final after our team confirms availability with you.</div></div>;
+  const date = new Intl.DateTimeFormat('en-AE', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Dubai' }).format(new Date(`${draft.preferredDate}T12:00:00+04:00`));
+  return <div><div className="grid gap-3 sm:grid-cols-2"><ReviewGroup title="Experience" items={[[draft.selectedPackageName || experience.title, isSales ? draft.inquiryType : formatDuration(draft.durationMinutes)], ...(draft.selectedPackageCapacity ? [[`${draft.selectedPackageCapacity} seater`, draft.selectedPackageCategory ?? 'Selected vehicle']] : []), [`${draft.vehicleQuantity} ${draft.vehicleQuantity === 1 ? 'vehicle' : 'vehicles'}`, `${draft.guestCount} ${draft.guestCount === 1 ? 'guest' : 'guests'}`]]} /><ReviewGroup title="Schedule" items={[[date, `${draft.preferredTime} Dubai time`], [companyInfo.locationName, companyInfo.locationAddress]]} /><ReviewGroup title="Contact" items={[[draft.customerName, draft.customerPhone], [draft.customerEmail || 'Email not provided', draft.customerHotelOrArea || 'Area not provided']]} /><ReviewGroup title={isSales ? 'Pricing' : 'Estimate'} items={[[isSales ? 'Request quote' : formatAed(totals.totalAmount), isSales ? 'Our sales team will follow up' : 'Includes 5% VAT'], ['Payment status', 'Not Paid']]} /></div>{draft.customerNotes ? <div className="mt-3 rounded-[1.15rem] border border-border bg-white p-4"><p className="text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">Notes</p><p className="mt-2 text-sm leading-6 text-foreground">{draft.customerNotes}</p></div> : null}<div className="mt-4 rounded-[1.15rem] border border-primary/15 bg-primary-50 p-4 text-sm leading-6 text-primary-900">Submitting sends a request only. Your booking becomes final after our team confirms availability with you.</div></div>;
 }
 
 function ReviewGroup({ title, items }: { title: string; items: string[][] }) {
