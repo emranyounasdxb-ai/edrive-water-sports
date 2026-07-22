@@ -1,6 +1,6 @@
 -- eDrive package catalog hardening.
 -- Apply after supabase/security-hardening.sql and supabase/public-request-hardening.sql.
--- Existing package and booking records are not deleted or rewritten by this migration.
+-- Existing package and booking records are never deleted by this migration.
 
 begin;
 
@@ -55,6 +55,43 @@ create trigger packages_catalog_audit_trigger
 after insert or update or delete on public.packages
 for each row execute function public.audit_package_catalog_change();
 
+-- Safely resolve existing duplicate specifications before enforcement starts.
+-- The best named/ordered package remains live; additional matching records become inactive.
+with ranked_packages as (
+  select
+    p.id,
+    row_number() over (
+      partition by
+        lower(btrim(coalesce(p.category::text, ''))),
+        coalesce(p.capacity, 0),
+        coalesce(p.duration_minutes, 0)
+      order by
+        case
+          when lower(coalesce(p.category::text, '')) = 'jet_car_rental'
+            and lower(btrim(coalesce(p.title::text, ''))) like 'jet car%' then 0
+          when lower(coalesce(p.category::text, '')) = 'jet_ski_rental'
+            and lower(btrim(coalesce(p.title::text, ''))) like 'jet ski%' then 0
+          when lower(coalesce(p.category::text, '')) = 'yacht_rental'
+            and lower(btrim(coalesce(p.title::text, ''))) like 'yacht%' then 0
+          else 1
+        end,
+        case lower(coalesce(p.status::text, 'active'))
+          when 'active' then 0
+          when 'draft' then 1
+          else 2
+        end,
+        coalesce(p.display_order, 100),
+        p.id
+    ) as package_rank
+  from public.packages p
+  where lower(coalesce(p.status::text, 'active')) <> 'inactive'
+)
+update public.packages p
+set status = 'inactive'
+from ranked_packages r
+where p.id = r.id
+  and r.package_rank > 1;
+
 create or replace function public.prevent_duplicate_package_catalog_entries()
 returns trigger
 language plpgsql
@@ -66,7 +103,7 @@ begin
     if exists (
       select 1
       from public.packages p
-      where p.id <> coalesce(new.id, gen_random_uuid())
+      where p.id is distinct from new.id
         and lower(coalesce(p.status::text, 'active')) <> 'inactive'
         and lower(btrim(coalesce(p.category::text, ''))) = lower(btrim(coalesce(new.category::text, '')))
         and coalesce(p.capacity, 0) = coalesce(new.capacity, 0)
@@ -78,7 +115,7 @@ begin
     if exists (
       select 1
       from public.packages p
-      where p.id <> coalesce(new.id, gen_random_uuid())
+      where p.id is distinct from new.id
         and lower(coalesce(p.status::text, 'active')) <> 'inactive'
         and lower(regexp_replace(btrim(coalesce(p.title::text, '')), '\s+', ' ', 'g')) = lower(regexp_replace(btrim(coalesce(new.title::text, '')), '\s+', ' ', 'g'))
     ) then
