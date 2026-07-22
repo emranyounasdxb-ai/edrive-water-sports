@@ -18,6 +18,7 @@ import {
   ShieldCheck,
   Ship,
   Trash2,
+  Upload,
   Wrench,
   X
 } from 'lucide-react';
@@ -50,6 +51,9 @@ const jetSkiImageOptions = Array.from({ length: 4 }, (_, index) => {
   return { label: `Jet Ski ${number}`, value: `${fleetBasePath}/js-${number}.webp` };
 });
 const fleetImageOptions = [{ label: 'Auto by fleet type', value: '' }, ...jetCarImageOptions, ...jetSkiImageOptions];
+const fleetImageBucket = 'fleet-images';
+const maxFleetImageBytes = 5 * 1024 * 1024;
+const allowedFleetImageTypes = new Set(['image/jpeg', 'image/png', 'image/webp']);
 const reverse = (map: Record<string, string>, value?: string) => Object.keys(map).find((key) => map[key] === value) || value || '';
 const toText = (value: unknown) => String(value ?? '').trim();
 const toNumberText = (value: unknown) => value === null || value === undefined || value === '' ? '' : String(Number(value));
@@ -58,6 +62,37 @@ const normalizeKey = (value: string) => value.trim().toLowerCase().replace(/\s+/
 const normalizeRegistration = (value: string) => value.trim().toUpperCase().replace(/\s+/g, ' ');
 const normalizeCode = (value: string) => value.trim().toUpperCase().replace(/\s+/g, '-');
 const normalizeImei = (value: string) => value.replace(/\D/g, '');
+
+function fleetImageExtension(file: File) {
+  const extension = file.name.split('.').pop()?.toLowerCase();
+  if (extension === 'png' || extension === 'webp') return extension;
+  return 'jpg';
+}
+
+async function uploadFleetImage(file: File, code: string) {
+  if (!allowedFleetImageTypes.has(file.type)) throw new Error('Fleet image must be JPG, PNG, or WebP.');
+  if (file.size > maxFleetImageBytes) throw new Error('Fleet image must be 5 MB or smaller.');
+
+  const safeCode = normalizeCode(code) || 'fleet-unit';
+  const objectPath = `vehicles/${safeCode.toLowerCase()}-${Date.now()}-${crypto.randomUUID().slice(0, 8)}.${fleetImageExtension(file)}`;
+  const uploadResult = await supabase.storage.from(fleetImageBucket).upload(objectPath, file, {
+    cacheControl: '31536000',
+    contentType: file.type,
+    upsert: false
+  });
+
+  if (uploadResult.error) {
+    const message = uploadResult.error.message || 'Fleet image upload failed.';
+    if (message.toLowerCase().includes('bucket not found')) {
+      throw new Error('Fleet image storage is not active yet. Apply supabase/fleet-edit-partial-and-image-upload.sql first.');
+    }
+    throw new Error(message);
+  }
+
+  const publicUrl = supabase.storage.from(fleetImageBucket).getPublicUrl(objectPath).data.publicUrl;
+  if (!publicUrl) throw new Error('Fleet image uploaded, but its public URL could not be created.');
+  return publicUrl;
+}
 
 function imagePathFromCode(code: string, name: string, type: string) {
   const source = `${code} ${name}`.toLowerCase();
@@ -218,7 +253,8 @@ function validateFleet(values: FleetFormValues, items: FleetRecord[], editingId?
 
   if (!/^[A-Z0-9][A-Z0-9-]{2,39}$/.test(code)) return 'Fleet code must contain 3–40 letters, numbers, or hyphens.';
   if (name.length < 3 || name.length > 120) return 'Vehicle name must contain 3–120 characters.';
-  if (!regNo || regNo.length < 3 || regNo.length > 40) return 'Registration number is required for every fleet unit.';
+  if (!editingId && (!regNo || regNo.length < 3 || regNo.length > 40)) return 'Registration number is required for every new fleet unit.';
+  if (regNo && (regNo.length < 3 || regNo.length > 40)) return 'Registration number must contain 3–40 characters.';
   if (!Number.isInteger(capacity) || capacity < 1 || capacity > 12) return 'Capacity must be a whole number between 1 and 12.';
   if (year && (!Number.isInteger(year) || year < 1990 || year > new Date().getFullYear() + 1)) return 'Vehicle year is outside the allowed range.';
   if (imei && (imei.length < 10 || imei.length > 20)) return 'Tracker IMEI must contain 10–20 digits.';
@@ -228,8 +264,10 @@ function validateFleet(values: FleetFormValues, items: FleetRecord[], editingId?
 
   const duplicateCode = items.find((item) => item.id !== editingId && normalizeKey(item.code) === normalizeKey(code));
   if (duplicateCode) return `Fleet code ${code} is already used by “${duplicateCode.name}”.`;
-  const duplicateReg = items.find((item) => item.id !== editingId && normalizeKey(item.regNo) === normalizeKey(regNo));
-  if (duplicateReg) return `Registration number ${regNo} is already assigned to ${duplicateReg.code}.`;
+  if (regNo) {
+    const duplicateReg = items.find((item) => item.id !== editingId && normalizeKey(item.regNo) === normalizeKey(regNo));
+    if (duplicateReg) return `Registration number ${regNo} is already assigned to ${duplicateReg.code}.`;
+  }
   if (imei) {
     const duplicateImei = items.find((item) => item.id !== editingId && normalizeImei(item.deviceImei) === imei);
     if (duplicateImei) return `Tracker IMEI is already assigned to ${duplicateImei.code}.`;
@@ -244,6 +282,12 @@ function validateFleet(values: FleetFormValues, items: FleetRecord[], editingId?
 function rpcUnavailable(message: string, functionName: string) {
   const value = message.toLowerCase();
   return value.includes(functionName.toLowerCase()) && (value.includes('does not exist') || value.includes('schema cache') || value.includes('could not find') || value.includes('pgrst202'));
+}
+
+function fleetSaveErrorMessage(message: string) {
+  const value = message.toLowerCase();
+  if (value.includes('vehicle_type') && value.includes('type text')) return 'Fleet database enum fix is pending. Apply supabase/fleet-edit-partial-and-image-upload.sql.';
+  return message;
 }
 
 function statusBadgeClass(status: string) {
@@ -370,7 +414,7 @@ export default function Page() {
     setConfirmAction(action);
   }
 
-  async function saveFleet(values: FleetFormValues) {
+  async function saveFleet(values: FleetFormValues, imageFile?: File | null) {
     setError('');
     setSuccess('');
     const validationError = validateFleet(values, items, editing?.id);
@@ -378,7 +422,15 @@ export default function Page() {
 
     const code = normalizeCode(values.code);
     const name = values.name.trim();
-    const imageUrl = values.imageUrl.trim() || imagePathFromCode(code, name, values.type);
+    let uploadedImageUrl = '';
+    if (imageFile) {
+      try {
+        uploadedImageUrl = await uploadFleetImage(imageFile, code);
+      } catch (uploadError) {
+        return uploadError instanceof Error ? uploadError.message : 'Unable to upload the fleet image.';
+      }
+    }
+    const imageUrl = uploadedImageUrl || values.imageUrl.trim() || imagePathFromCode(code, name, values.type);
     const payload = {
       vehicle_code: code,
       vehicle_name: name,
@@ -414,7 +466,7 @@ export default function Page() {
     };
 
     const rpcResult = await supabase.rpc('save_fleet_asset_entry', { p_payload: payload, p_vehicle_id: editing?.id || null });
-    if (rpcResult.error && !rpcUnavailable(rpcResult.error.message || '', 'save_fleet_asset_entry')) return rpcResult.error.message;
+    if (rpcResult.error && !rpcUnavailable(rpcResult.error.message || '', 'save_fleet_asset_entry')) return fleetSaveErrorMessage(rpcResult.error.message);
 
     if (rpcResult.error) {
       const legacyPayload = {
@@ -708,53 +760,81 @@ function DetailCard({ label, value }: { label: string; value: string }) {
   return <div className="rounded-2xl border border-border bg-white p-4"><p className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">{label}</p><p className="mt-2 break-words text-sm font-semibold leading-6 text-foreground">{value}</p></div>;
 }
 
-function FleetFormModal({ initialValues, onClose, onSubmit }: { initialValues?: FleetRecord; onClose: () => void; onSubmit: (values: FleetFormValues) => Promise<string> }) {
+function FleetFormModal({ initialValues, onClose, onSubmit }: { initialValues?: FleetRecord; onClose: () => void; onSubmit: (values: FleetFormValues, imageFile?: File | null) => Promise<string> }) {
   const [values, setValues] = useState<FleetFormValues>(initialValues ? { ...initialValues } : emptyFleet);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
-  const issues = initialValues ? complianceIssues(initialValues) : [];
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState('');
+  const issues = initialValues ? complianceIssues({ ...initialValues, ...values, imageUrl: imagePreview || values.imageUrl }) : [];
+
+  useEffect(() => {
+    if (!imageFile) {
+      setImagePreview('');
+      return;
+    }
+    const previewUrl = URL.createObjectURL(imageFile);
+    setImagePreview(previewUrl);
+    return () => URL.revokeObjectURL(previewUrl);
+  }, [imageFile]);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSaving(true);
     setFormError('');
-    const message = await onSubmit(values);
-    if (message) setFormError(message);
-    setSaving(false);
+    try {
+      const message = await onSubmit(values, imageFile);
+      if (message) setFormError(message);
+    } finally {
+      setSaving(false);
+    }
   }
 
   function updateField<K extends keyof FleetFormValues>(name: K, value: FleetFormValues[K]) { setValues((current) => ({ ...current, [name]: value })); }
   function updateType(value: string) { setValues((current) => ({ ...current, type: value, capacity: value === 'Jet Ski' ? '2' : '4', imageUrl: current.imageUrl || imagePathFromCode(current.code, current.name, value) })); }
+  function selectImage(file: File | null) {
+    if (!file) { setImageFile(null); return; }
+    if (!allowedFleetImageTypes.has(file.type)) { setFormError('Fleet image must be JPG, PNG, or WebP.'); return; }
+    if (file.size > maxFleetImageBytes) { setFormError('Fleet image must be 5 MB or smaller.'); return; }
+    setFormError('');
+    setImageFile(file);
+  }
 
   return <div className="fixed inset-0 z-[80] flex items-center justify-center bg-primary-900/35 p-4 backdrop-blur-sm"><div className="flex max-h-[94vh] w-full max-w-[58rem] flex-col overflow-hidden rounded-[1.6rem] border border-white/80 bg-white shadow-[0_28px_80px_rgba(8,37,50,0.28)]">
     <div className="flex items-start justify-between gap-4 border-b border-border/70 bg-[#F7FAFA] px-5 py-4"><div><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Fleet Asset Profile</p><h2 className="mt-1 font-heading text-xl font-semibold text-foreground">{initialValues ? 'Edit Fleet Unit' : 'Add Fleet Unit'}</h2>{issues.length ? <p className="mt-1 text-xs font-semibold text-amber-700">{issues.length} compliance item{issues.length === 1 ? '' : 's'} require attention.</p> : null}</div><button type="button" onClick={onClose} className="flex size-9 items-center justify-center rounded-full border border-border bg-white text-muted-foreground transition hover:text-primary"><X className="size-4" aria-hidden="true" /></button></div>
-    <form onSubmit={submit} className="flex min-h-0 flex-1 flex-col"><div className="grid gap-4 overflow-y-auto px-5 py-4 lg:grid-cols-[1.15fr_0.85fr]">
+    <form onSubmit={submit} className="flex min-h-0 flex-1 flex-col"><div className="grid gap-4 overflow-y-auto px-5 py-4 lg:grid-cols-[1.15fr_0.85fr]"><div className="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm font-semibold leading-6 text-sky-800 lg:col-span-2">You can save available changes now. Missing insurance, tracker, VIN, expiry dates, year, color, or other optional details will remain highlighted and can be completed later.</div>
       <div className="grid gap-3 sm:grid-cols-2">
         <SectionTitle title="Identity & Registration" />
-        <FormInput label="Fleet Code" value={values.code} required placeholder="JC-0001 / JS-0001" maxLength={40} onChange={(value) => updateField('code', value)} />
-        <FormInput label="Vehicle Name" value={values.name} required maxLength={120} onChange={(value) => updateField('name', value)} />
-        <SelectInput label="Vehicle Type" value={values.type} options={Object.keys(typeMap)} required onChange={updateType} />
-        <FormInput label="Registration Number" value={values.regNo} required maxLength={40} placeholder="Required and unique" onChange={(value) => updateField('regNo', value)} />
-        <FormInput label="Registration Expiry" type="date" value={values.registrationExpiry} onChange={(value) => updateField('registrationExpiry', value)} />
-        <FormInput label="Insurance Number" value={values.insuranceNumber} maxLength={80} onChange={(value) => updateField('insuranceNumber', value)} />
-        <FormInput label="Insurance Expiry" type="date" value={values.insuranceExpiry} onChange={(value) => updateField('insuranceExpiry', value)} />
-        <FormInput label="Tracker IMEI" value={values.deviceImei} inputMode="numeric" maxLength={20} onChange={(value) => updateField('deviceImei', value)} />
-        <FormInput label="Chassis / VIN" value={values.chassisVin} maxLength={80} onChange={(value) => updateField('chassisVin', value)} />
-        <FormInput label="Engine / Serial Number" value={values.engineSerial} maxLength={80} onChange={(value) => updateField('engineSerial', value)} />
+        <FormInput label="Fleet Code *" value={values.code} required placeholder="JC-0001 / JS-0001" maxLength={40} onChange={(value) => updateField('code', value)} />
+        <FormInput label="Vehicle Name *" value={values.name} required maxLength={120} onChange={(value) => updateField('name', value)} />
+        <SelectInput label="Vehicle Type *" value={values.type} options={Object.keys(typeMap)} required onChange={updateType} />
+        <FormInput label={initialValues ? 'Registration Number' : 'Registration Number *'} value={values.regNo} required={!initialValues} maxLength={40} placeholder={initialValues ? 'Add when available' : 'Required and unique'} onChange={(value) => updateField('regNo', value)} />
+        <FormInput label="Registration Expiry (optional)" type="date" value={values.registrationExpiry} onChange={(value) => updateField('registrationExpiry', value)} />
+        <FormInput label="Insurance Number (optional)" value={values.insuranceNumber} maxLength={80} onChange={(value) => updateField('insuranceNumber', value)} />
+        <FormInput label="Insurance Expiry (optional)" type="date" value={values.insuranceExpiry} onChange={(value) => updateField('insuranceExpiry', value)} />
+        <FormInput label="Tracker IMEI (optional)" value={values.deviceImei} inputMode="numeric" maxLength={20} onChange={(value) => updateField('deviceImei', value)} />
+        <FormInput label="Chassis / VIN (optional)" value={values.chassisVin} maxLength={80} onChange={(value) => updateField('chassisVin', value)} />
+        <FormInput label="Engine / Serial Number (optional)" value={values.engineSerial} maxLength={80} onChange={(value) => updateField('engineSerial', value)} />
         <SectionTitle title="Vehicle Configuration" />
-        <SelectInput label="Location" value={values.location} options={locations} required onChange={(value) => updateField('location', value)} />
-        <FormInput label="Capacity / Seater" type="number" value={values.capacity} required min="1" max="12" onChange={(value) => updateField('capacity', value)} />
-        <SelectInput label="Status" value={values.status} options={Object.keys(statusMap)} required onChange={(value) => updateField('status', value)} />
-        <FormInput label="Brand" value={values.brand} maxLength={80} onChange={(value) => updateField('brand', value)} />
-        <FormInput label="Model" value={values.model} maxLength={80} onChange={(value) => updateField('model', value)} />
-        <FormInput label="Year" type="number" value={values.year} min="1990" max={String(new Date().getFullYear() + 1)} onChange={(value) => updateField('year', value)} />
-        <FormInput label="Color" value={values.color} maxLength={60} onChange={(value) => updateField('color', value)} />
-        <FormInput label="Date of Installation" type="date" value={values.installationDate} onChange={(value) => updateField('installationDate', value)} />
+        <SelectInput label="Location *" value={values.location} options={locations} required onChange={(value) => updateField('location', value)} />
+        <FormInput label="Capacity / Seater *" type="number" value={values.capacity} required min="1" max="12" onChange={(value) => updateField('capacity', value)} />
+        <SelectInput label="Status *" value={values.status} options={Object.keys(statusMap)} required onChange={(value) => updateField('status', value)} />
+        <FormInput label="Brand (optional)" value={values.brand} maxLength={80} onChange={(value) => updateField('brand', value)} />
+        <FormInput label="Model (optional)" value={values.model} maxLength={80} onChange={(value) => updateField('model', value)} />
+        <FormInput label="Year (optional)" type="number" value={values.year} min="1990" max={String(new Date().getFullYear() + 1)} onChange={(value) => updateField('year', value)} />
+        <FormInput label="Color (optional)" value={values.color} maxLength={60} onChange={(value) => updateField('color', value)} />
+        <FormInput label="Date of Installation (optional)" type="date" value={values.installationDate} onChange={(value) => updateField('installationDate', value)} />
         <FormInput label="Display Order" type="number" value={values.sortOrder} min="0" max="9999" onChange={(value) => updateField('sortOrder', value)} />
-        <label className="grid gap-1.5 text-sm font-semibold text-foreground sm:col-span-2">Notes<textarea maxLength={2000} value={values.notes} onChange={(event) => updateField('notes', event.target.value)} className="min-h-24 rounded-xl border border-border bg-white px-3 py-3 text-sm text-foreground outline-none focus:border-primary" /></label>
+        <label className="grid gap-1.5 text-sm font-semibold text-foreground sm:col-span-2">Notes (optional)<textarea maxLength={2000} value={values.notes} onChange={(event) => updateField('notes', event.target.value)} className="min-h-24 rounded-xl border border-border bg-white px-3 py-3 text-sm text-foreground outline-none focus:border-primary" /></label>
       </div>
       <div className="space-y-4">
-        <div className="rounded-2xl border border-border bg-[#F7FAFA] p-4"><p className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">Fleet Image</p><div className="mt-3 overflow-hidden rounded-2xl bg-white p-3"><img src={values.imageUrl || imagePathFromCode(values.code, values.name, values.type)} alt={values.name || 'Fleet preview'} className="h-48 w-full rounded-xl object-contain" /></div><select value={values.imageUrl} onChange={(event) => updateField('imageUrl', event.target.value)} className="mt-3 h-10 w-full rounded-xl border border-border bg-white px-3 text-sm">{fleetImageOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select><FormInput label="Custom Image Path" value={values.imageUrl} placeholder="/images/edrive/fleet/jc-01.webp" onChange={(value) => updateField('imageUrl', value)} /></div>
+        <div className="rounded-2xl border border-border bg-[#F7FAFA] p-4">
+<div className="flex items-start justify-between gap-3"><p className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">Fleet Image</p><span className="text-[10px] font-semibold text-muted-foreground">JPG, PNG or WebP · max 5 MB</span></div>
+<div className="mt-3 overflow-hidden rounded-2xl bg-white p-3"><img src={imagePreview || values.imageUrl || imagePathFromCode(values.code, values.name, values.type)} alt={values.name || 'Fleet preview'} className="h-48 w-full rounded-xl object-contain" /></div>
+<label className="mt-3 flex h-11 cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-primary/40 bg-primary-50 text-sm font-bold text-primary transition hover:border-primary hover:bg-primary-100"><Upload className="size-4" aria-hidden="true" />{imageFile ? 'Change selected image' : 'Upload fleet image'}<input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={(event) => { selectImage(event.currentTarget.files?.[0] || null); event.currentTarget.value = ''; }} /></label>
+{imageFile ? <div className="mt-2 flex items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2"><span className="min-w-0 truncate text-xs font-semibold text-emerald-800">Selected: {imageFile.name}</span><button type="button" onClick={() => setImageFile(null)} className="shrink-0 text-xs font-bold text-emerald-800 hover:underline">Remove</button></div> : <p className="mt-2 text-xs leading-5 text-muted-foreground">The selected file uploads only when you click Save Fleet Unit.</p>}
+<div className="mt-4 border-t border-border/70 pt-4"><p className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">Or use an existing image</p><select value={values.imageUrl} onChange={(event) => { setImageFile(null); updateField('imageUrl', event.target.value); }} className="mt-2 h-10 w-full rounded-xl border border-border bg-white px-3 text-sm">{fleetImageOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select><FormInput label="Custom Image URL / Path (optional)" value={values.imageUrl} placeholder="/images/edrive/fleet/jc-01.webp or https://..." onChange={(value) => { setImageFile(null); updateField('imageUrl', value); }} /></div>
+        </div>
         <div className="rounded-2xl border border-border bg-white p-4"><p className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">Compliance Summary</p><div className="mt-3 grid gap-2">{issues.length ? issues.map((issue) => <div key={issue} className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-700"><AlertTriangle className="size-4" aria-hidden="true" />{issue}</div>) : <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-3 text-sm font-bold text-emerald-700"><ShieldCheck className="size-4" aria-hidden="true" />Fleet profile is complete.</div>}</div></div>
         {initialValues ? <div className="rounded-2xl border border-border bg-white p-4"><p className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">Lifecycle Snapshot</p><div className="mt-3 grid gap-2 text-sm"><InfoLine label="Status" value={initialValues.status} /><InfoLine label="Registration" value={initialValues.regNo || 'Missing'} /><InfoLine label="Registration expiry" value={formatDate(initialValues.registrationExpiry)} /><InfoLine label="Insurance expiry" value={formatDate(initialValues.insuranceExpiry)} /><InfoLine label="Last updated" value={formatDate(initialValues.updatedAt)} /></div></div> : null}
       </div>

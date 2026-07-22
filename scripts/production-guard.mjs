@@ -27,6 +27,7 @@ const packageMigration = read('supabase/package-catalog-hardening.sql');
 const fleetEnumMigration = read('supabase/fleet-status-enum-values.sql');
 const fleetLegacyPreflight = read('supabase/fleet-legacy-data-preflight.sql');
 const fleetMigration = read('supabase/fleet-asset-hardening.sql');
+const fleetEditMigration = read('supabase/fleet-edit-partial-and-image-upload.sql');
 
 assert(!packageShowcase.includes('b2b_price'), 'Public package showcase must not request B2B pricing.');
 assert(!bookingWizard.includes('b2b_price'), 'Public booking wizard must not request B2B pricing.');
@@ -59,7 +60,7 @@ assert(packageMigration.includes('packages_prevent_duplicate_trigger'), 'Databas
 assert(packageMigration.includes('delete_package_if_unused'), 'Database booking-aware package deletion is required.');
 assert(packageMigration.includes('package_audit_logs'), 'Package catalog changes must be audited.');
 
-assert(fleetPage.includes('Registration number is required for every fleet unit.'), 'Fleet registration number must remain mandatory in the admin UI.');
+assert(fleetPage.includes('Registration number is required for every new fleet unit.'), 'New fleet units must require a registration number in the admin UI.');
 assert(fleetPage.includes("rpc('save_fleet_asset_entry'"), 'Fleet master writes must prefer the secured fleet RPC.');
 assert(fleetPage.includes("rpc('set_fleet_asset_status'"), 'Fleet lifecycle updates must use the secured status RPC.');
 assert(fleetPage.includes("rpc('delete_fleet_asset_if_unused'"), 'Fleet deletion must use the operational-history-aware RPC.');
@@ -67,6 +68,9 @@ assert(fleetPage.includes("role === 'maintenance_staff'"), 'Maintenance Staff mu
 assert(fleetPage.includes('isSuperAdmin'), 'Fleet master edit and delete controls must remain restricted to Super Admin.');
 assert(fleetPage.includes('complianceIssues'), 'Fleet records must expose registration, insurance, tracker, and profile alerts.');
 assert(fleetPage.includes('Missing Registration'), 'Fleet filters must surface missing registration records.');
+assert(fleetPage.includes("const fleetImageBucket = 'fleet-images'"), 'Fleet image uploads must use the dedicated storage bucket.');
+assert(fleetPage.includes('Upload fleet image'), 'Fleet edit form must expose image upload.');
+assert(fleetPage.includes('!editingId && (!regNo'), 'Existing incomplete fleet records must support partial edits.');
 assert(fleetPage.includes('function FleetDrawer'), 'Fleet details must open in the compact right-side drawer.');
 assert(fleetPage.includes('MoreHorizontal'), 'Secondary fleet actions must remain inside the compact actions menu.');
 assert(fleetPage.includes('min-w-0 table-fixed'), 'Fleet inventory table must use the compact fixed layout.');
@@ -81,6 +85,9 @@ assert(fleetMigration.includes('validate_fleet_asset_identifiers'), 'Fleet ident
 assert(fleetMigration.includes('delete_fleet_asset_if_unused'), 'Fleet deletion must be protected by operational history.');
 assert(fleetMigration.includes('fleet_asset_audit_logs'), 'Fleet master changes must be audited.');
 assert(fleetMigration.includes('fleet_maintenance_logs'), 'Fleet maintenance lifecycle changes must be logged.');
+assert(fleetEditMigration.includes('v_type::public.vehicle_type'), 'Fleet save RPC must cast vehicle_type text to its enum.');
+assert(fleetEditMigration.includes("'fleet-images'"), 'Fleet image storage bucket migration is required.');
+assert(fleetEditMigration.includes("tg_op = 'INSERT' and length(v_reg) < 3"), 'New fleet units must still require registration while legacy edits remain possible.');
 
 if (failures.length) {
   console.error('\nProduction guard failed:\n');

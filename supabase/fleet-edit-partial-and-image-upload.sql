@@ -1,143 +1,8 @@
--- eDrive fleet asset and compliance hardening.
--- Apply after supabase/security-hardening.sql and supabase/public-request-hardening.sql.
--- Existing operational records are preserved. Duplicate identifiers are quarantined, not deleted.
+-- eDrive Fleet partial edit, enum-cast, and image upload rollout.
+-- Run once in Supabase SQL Editor after fleet-asset-hardening.sql.
+-- Rerunnable and safe for existing fleet rows.
 
 begin;
-
-alter table public.vehicles add column if not exists registration_expiry date;
-alter table public.vehicles add column if not exists insurance_number text;
-alter table public.vehicles add column if not exists insurance_expiry date;
-alter table public.vehicles add column if not exists chassis_vin text;
-alter table public.vehicles add column if not exists engine_serial text;
-alter table public.vehicles add column if not exists retired_at timestamptz;
-alter table public.vehicles add column if not exists updated_at timestamptz not null default now();
-
--- Normalize identifiers before enforcing case-insensitive uniqueness.
-update public.vehicles
-set vehicle_code = upper(regexp_replace(btrim(vehicle_code), '\s+', '-', 'g'))
-where nullif(btrim(coalesce(vehicle_code, '')), '') is not null;
-
-update public.vehicles
-set reg_no = upper(regexp_replace(btrim(reg_no), '\s+', ' ', 'g'))
-where nullif(btrim(coalesce(reg_no, '')), '') is not null;
-
-update public.vehicles
-set device_imei = regexp_replace(device_imei, '[^0-9]', '', 'g')
-where nullif(btrim(coalesce(device_imei, '')), '') is not null;
-
-update public.vehicles
-set chassis_vin = upper(btrim(chassis_vin))
-where nullif(btrim(coalesce(chassis_vin, '')), '') is not null;
-
--- Quarantine duplicate fleet codes by giving secondary rows an explicit legacy suffix.
-with ranked as (
-  select id,
-         row_number() over (partition by lower(btrim(vehicle_code)) order by id) as duplicate_rank
-  from public.vehicles
-  where nullif(btrim(coalesce(vehicle_code, '')), '') is not null
-)
-update public.vehicles v
-set vehicle_code = upper(btrim(v.vehicle_code)) || '-DUP-' || upper(substr(replace(v.id::text, '-', ''), 1, 6)),
-    status = 'out_of_service',
-    is_available = false,
-    notes = concat_ws(E'\n', nullif(btrim(coalesce(v.notes, '')), ''), 'System alert: duplicate fleet code quarantined. Review and assign the correct unique code.'),
-    updated_at = now()
-from ranked r
-where v.id = r.id and r.duplicate_rank > 1;
-
--- A duplicated registration number cannot safely remain assigned to two assets.
--- Keep the first row and clear secondary values so staff must enter the correct real registration.
-with ranked as (
-  select id,
-         row_number() over (partition by lower(btrim(reg_no)) order by id) as duplicate_rank
-  from public.vehicles
-  where nullif(btrim(coalesce(reg_no, '')), '') is not null
-)
-update public.vehicles v
-set reg_no = null,
-    notes = concat_ws(E'\n', nullif(btrim(coalesce(v.notes, '')), ''), 'System alert: duplicate registration number removed. Enter the correct unique registration before saving this fleet profile.'),
-    updated_at = now()
-from ranked r
-where v.id = r.id and r.duplicate_rank > 1;
-
-with ranked as (
-  select id,
-         row_number() over (partition by regexp_replace(device_imei, '[^0-9]', '', 'g') order by id) as duplicate_rank
-  from public.vehicles
-  where nullif(regexp_replace(coalesce(device_imei, ''), '[^0-9]', '', 'g'), '') is not null
-)
-update public.vehicles v
-set device_imei = null,
-    notes = concat_ws(E'\n', nullif(btrim(coalesce(v.notes, '')), ''), 'System alert: duplicate tracker IMEI removed. Assign the correct unique tracker.'),
-    updated_at = now()
-from ranked r
-where v.id = r.id and r.duplicate_rank > 1;
-
-with ranked as (
-  select id,
-         row_number() over (partition by lower(btrim(chassis_vin)) order by id) as duplicate_rank
-  from public.vehicles
-  where nullif(btrim(coalesce(chassis_vin, '')), '') is not null
-)
-update public.vehicles v
-set chassis_vin = null,
-    notes = concat_ws(E'\n', nullif(btrim(coalesce(v.notes, '')), ''), 'System alert: duplicate chassis/VIN removed. Enter the correct unique VIN.'),
-    updated_at = now()
-from ranked r
-where v.id = r.id and r.duplicate_rank > 1;
-
-create unique index if not exists vehicles_vehicle_code_unique_ci
-  on public.vehicles (lower(btrim(vehicle_code)))
-  where nullif(btrim(coalesce(vehicle_code, '')), '') is not null;
-
-create unique index if not exists vehicles_reg_no_unique_ci
-  on public.vehicles (lower(btrim(reg_no)))
-  where nullif(btrim(coalesce(reg_no, '')), '') is not null;
-
-create unique index if not exists vehicles_device_imei_unique_digits
-  on public.vehicles ((regexp_replace(device_imei, '[^0-9]', '', 'g')))
-  where nullif(regexp_replace(coalesce(device_imei, ''), '[^0-9]', '', 'g'), '') is not null;
-
-create unique index if not exists vehicles_chassis_vin_unique_ci
-  on public.vehicles (lower(btrim(chassis_vin)))
-  where nullif(btrim(coalesce(chassis_vin, '')), '') is not null;
-
-create table if not exists public.fleet_asset_audit_logs (
-  id bigint generated always as identity primary key,
-  vehicle_id uuid,
-  action text not null check (action in ('insert', 'update', 'delete')),
-  old_data jsonb,
-  new_data jsonb,
-  actor_id uuid,
-  created_at timestamptz not null default now()
-);
-
-create table if not exists public.fleet_maintenance_logs (
-  id bigint generated always as identity primary key,
-  vehicle_id uuid not null,
-  status_from text,
-  status_to text not null,
-  note text,
-  actor_id uuid,
-  created_at timestamptz not null default now()
-);
-
-alter table public.fleet_asset_audit_logs enable row level security;
-alter table public.fleet_maintenance_logs enable row level security;
-revoke all on table public.fleet_asset_audit_logs from anon;
-revoke all on table public.fleet_maintenance_logs from anon;
-grant select on table public.fleet_asset_audit_logs to authenticated;
-grant select on table public.fleet_maintenance_logs to authenticated;
-
-create policy "fleet_asset_audit_staff_select"
-on public.fleet_asset_audit_logs
-for select to authenticated
-using (public.has_edrive_role(array['super_admin', 'admin', 'maintenance_staff']));
-
-create policy "fleet_maintenance_staff_select"
-on public.fleet_maintenance_logs
-for select to authenticated
-using (public.has_edrive_role(array['super_admin', 'admin', 'maintenance_staff', 'booking_staff', 'booking_manager']));
 
 create or replace function public.validate_fleet_asset_identifiers()
 returns trigger
@@ -209,133 +74,6 @@ drop trigger if exists vehicles_validate_identifiers_trigger on public.vehicles;
 create trigger vehicles_validate_identifiers_trigger
 before insert or update on public.vehicles
 for each row execute function public.validate_fleet_asset_identifiers();
-
-create or replace function public.audit_fleet_asset_change()
-returns trigger
-language plpgsql
-security definer
-set search_path = public
-as $$
-begin
-  if tg_op = 'INSERT' then
-    insert into public.fleet_asset_audit_logs (vehicle_id, action, new_data, actor_id)
-    values (new.id, 'insert', to_jsonb(new), auth.uid());
-    return new;
-  elsif tg_op = 'UPDATE' then
-    insert into public.fleet_asset_audit_logs (vehicle_id, action, old_data, new_data, actor_id)
-    values (new.id, 'update', to_jsonb(old), to_jsonb(new), auth.uid());
-    return new;
-  end if;
-
-  insert into public.fleet_asset_audit_logs (vehicle_id, action, old_data, actor_id)
-  values (old.id, 'delete', to_jsonb(old), auth.uid());
-  return old;
-end;
-$$;
-
-revoke all on function public.audit_fleet_asset_change() from public;
-drop trigger if exists vehicles_asset_audit_trigger on public.vehicles;
-create trigger vehicles_asset_audit_trigger
-after insert or update or delete on public.vehicles
-for each row execute function public.audit_fleet_asset_change();
-
-create or replace function public.fleet_asset_has_operational_history(
-  p_vehicle_id uuid,
-  p_vehicle_code text,
-  p_vehicle_name text,
-  p_reg_no text
-)
-returns boolean
-language plpgsql
-security definer
-set search_path = public
-as $$
-declare
-  v_found boolean := false;
-  v_table text;
-  v_column text;
-  v_identity text[] := array[
-    lower(btrim(coalesce(p_vehicle_code, ''))),
-    lower(btrim(coalesce(p_vehicle_name, ''))),
-    lower(btrim(coalesce(p_reg_no, '')))
-  ];
-begin
-  if to_regclass('public.booking_requests') is not null then
-    if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'booking_requests' and column_name = 'assigned_vehicle_id') then
-      execute 'select exists (select 1 from public.booking_requests where assigned_vehicle_id::text = $1::text)' into v_found using p_vehicle_id;
-      if v_found then return true; end if;
-    end if;
-    if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'booking_requests' and column_name = 'assigned_vehicle_name') then
-      execute 'select exists (select 1 from public.booking_requests where lower(btrim(coalesce(assigned_vehicle_name::text, ''''))) = any($1))' into v_found using v_identity;
-      if v_found then return true; end if;
-    end if;
-  end if;
-
-  if exists (select 1 from public.fleet_maintenance_logs where vehicle_id = p_vehicle_id) then
-    return true;
-  end if;
-
-  foreach v_table in array array[
-    'vehicle_assignments', 'ride_assignments', 'booking_vehicle_assignments',
-    'vehicle_documents', 'fleet_documents', 'vehicle_expenses', 'fleet_expenses',
-    'maintenance_records', 'vehicle_maintenance', 'maintenance_logs',
-    'tracker_assignments', 'vehicle_tracker_assignments'
-  ] loop
-    if to_regclass('public.' || v_table) is null then continue; end if;
-
-    foreach v_column in array array['vehicle_id', 'fleet_id'] loop
-      if exists (
-        select 1 from information_schema.columns
-        where table_schema = 'public' and table_name = v_table and column_name = v_column
-      ) then
-        execute format('select exists (select 1 from public.%I where %I::text = $1::text)', v_table, v_column)
-          into v_found using p_vehicle_id;
-        if v_found then return true; end if;
-      end if;
-    end loop;
-
-    foreach v_column in array array['vehicle_code', 'fleet_code', 'registration_number', 'reg_no'] loop
-      if exists (
-        select 1 from information_schema.columns
-        where table_schema = 'public' and table_name = v_table and column_name = v_column
-      ) then
-        execute format('select exists (select 1 from public.%I where lower(btrim(coalesce(%I::text, ''''))) = any($1))', v_table, v_column)
-          into v_found using v_identity;
-        if v_found then return true; end if;
-      end if;
-    end loop;
-  end loop;
-
-  return false;
-end;
-$$;
-
-revoke all on function public.fleet_asset_has_operational_history(uuid, text, text, text) from public;
-
-create or replace function public.protect_fleet_asset_delete()
-returns trigger
-language plpgsql
-security definer
-set search_path = public
-as $$
-begin
-  if not public.has_edrive_role(array['super_admin']) then
-    raise exception 'Only the Super Admin can delete fleet units.';
-  end if;
-
-  if public.fleet_asset_has_operational_history(old.id, old.vehicle_code, coalesce(old.vehicle_name, old.name), old.reg_no) then
-    raise exception 'This fleet unit has booking, assignment, maintenance, tracker, document, or expense history and cannot be deleted. Retire it instead.';
-  end if;
-
-  return old;
-end;
-$$;
-
-revoke all on function public.protect_fleet_asset_delete() from public;
-drop trigger if exists vehicles_protect_delete_trigger on public.vehicles;
-create trigger vehicles_protect_delete_trigger
-before delete on public.vehicles
-for each row execute function public.protect_fleet_asset_delete();
 
 create or replace function public.save_fleet_asset_entry(
   p_payload jsonb,
@@ -480,6 +218,7 @@ $$;
 revoke all on function public.save_fleet_asset_entry(jsonb, uuid) from public;
 grant execute on function public.save_fleet_asset_entry(jsonb, uuid) to authenticated;
 
+-- Ensure lifecycle updates also cast text to the vehicle_status enum.
 create or replace function public.set_fleet_asset_status(
   p_vehicle_id uuid,
   p_status text,
@@ -501,11 +240,9 @@ begin
   if v_role not in ('super_admin', 'maintenance_staff') then
     raise exception 'You do not have permission to change fleet lifecycle status.';
   end if;
-
   if v_role = 'maintenance_staff' and v_status not in ('maintenance', 'out_of_service', 'available') then
     raise exception 'Maintenance Staff can only set Maintenance, Out of Service, or Available.';
   end if;
-
   if v_status not in ('available', 'booked', 'reserved', 'assigned', 'in_use', 'maintenance', 'out_of_service', 'retired', 'for_sale') then
     raise exception 'Fleet lifecycle status is invalid.';
   end if;
@@ -533,7 +270,6 @@ begin
 
   insert into public.fleet_maintenance_logs (vehicle_id, status_from, status_to, note, actor_id)
   values (p_vehicle_id, v_old_status, v_status, nullif(left(btrim(coalesce(p_note, '')), 1000), ''), auth.uid());
-
   return true;
 end;
 $$;
@@ -541,64 +277,44 @@ $$;
 revoke all on function public.set_fleet_asset_status(uuid, text, text) from public;
 grant execute on function public.set_fleet_asset_status(uuid, text, text) to authenticated;
 
-create or replace function public.delete_fleet_asset_if_unused(p_vehicle_id uuid)
-returns boolean
-language plpgsql
-security definer
-set search_path = public
-as $$
-declare
-  v_vehicle public.vehicles%rowtype;
-begin
-  if not public.has_edrive_role(array['super_admin']) then
-    raise exception 'Only the Super Admin can delete fleet units.';
-  end if;
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values (
+  'fleet-images',
+  'fleet-images',
+  true,
+  5242880,
+  array['image/jpeg', 'image/png', 'image/webp']
+)
+on conflict (id) do update
+set public = excluded.public,
+    file_size_limit = excluded.file_size_limit,
+    allowed_mime_types = excluded.allowed_mime_types;
 
-  select * into v_vehicle from public.vehicles where id = p_vehicle_id for update;
-  if not found then raise exception 'Fleet unit was not found.'; end if;
+drop policy if exists "fleet_images_public_read" on storage.objects;
+create policy "fleet_images_public_read"
+on storage.objects
+for select to public
+using (bucket_id = 'fleet-images');
 
-  if public.fleet_asset_has_operational_history(v_vehicle.id, v_vehicle.vehicle_code, coalesce(v_vehicle.vehicle_name, v_vehicle.name), v_vehicle.reg_no) then
-    raise exception 'This fleet unit has operational history and cannot be deleted. Retire it instead.';
-  end if;
-
-  delete from public.vehicles where id = p_vehicle_id;
-  return true;
-end;
-$$;
-
-revoke all on function public.delete_fleet_asset_if_unused(uuid) from public;
-grant execute on function public.delete_fleet_asset_if_unused(uuid) to authenticated;
-
-alter table public.vehicles enable row level security;
-grant select, insert, update, delete on table public.vehicles to authenticated;
-grant usage, select on all sequences in schema public to authenticated;
-
--- These named policies complement existing project policies without removing booking workflows.
-drop policy if exists "vehicles_fleet_staff_select" on public.vehicles;
-create policy "vehicles_fleet_staff_select"
-on public.vehicles
-for select to authenticated
-using (public.has_edrive_role(array[
-  'super_admin', 'admin', 'booking_staff', 'booking_manager', 'maintenance_staff', 'finance', 'manager'
-]));
-
-drop policy if exists "vehicles_super_admin_insert" on public.vehicles;
-create policy "vehicles_super_admin_insert"
-on public.vehicles
+drop policy if exists "fleet_images_super_admin_insert" on storage.objects;
+create policy "fleet_images_super_admin_insert"
+on storage.objects
 for insert to authenticated
-with check (public.has_edrive_role(array['super_admin']));
+with check (bucket_id = 'fleet-images' and public.has_edrive_role(array['super_admin']));
 
-drop policy if exists "vehicles_super_admin_update" on public.vehicles;
-create policy "vehicles_super_admin_update"
-on public.vehicles
+drop policy if exists "fleet_images_super_admin_update" on storage.objects;
+create policy "fleet_images_super_admin_update"
+on storage.objects
 for update to authenticated
-using (public.has_edrive_role(array['super_admin']))
-with check (public.has_edrive_role(array['super_admin']));
+using (bucket_id = 'fleet-images' and public.has_edrive_role(array['super_admin']))
+with check (bucket_id = 'fleet-images' and public.has_edrive_role(array['super_admin']));
 
-drop policy if exists "vehicles_super_admin_delete" on public.vehicles;
-create policy "vehicles_super_admin_delete"
-on public.vehicles
+drop policy if exists "fleet_images_super_admin_delete" on storage.objects;
+create policy "fleet_images_super_admin_delete"
+on storage.objects
 for delete to authenticated
-using (public.has_edrive_role(array['super_admin']));
+using (bucket_id = 'fleet-images' and public.has_edrive_role(array['super_admin']));
 
 commit;
+
+notify pgrst, 'reload schema';
