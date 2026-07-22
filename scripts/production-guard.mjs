@@ -60,7 +60,7 @@ assert(packageMigration.includes('packages_prevent_duplicate_trigger'), 'Databas
 assert(packageMigration.includes('delete_package_if_unused'), 'Database booking-aware package deletion is required.');
 assert(packageMigration.includes('package_audit_logs'), 'Package catalog changes must be audited.');
 
-assert(fleetPage.includes('Registration number is required for every fleet unit.'), 'Fleet registration number must remain mandatory in the admin UI.');
+assert(fleetPage.includes('Registration number is required for every new fleet unit.'), 'New fleet units must require a registration number in the admin UI.');
 assert(fleetPage.includes("rpc('save_fleet_asset_entry'"), 'Fleet master writes must prefer the secured fleet RPC.');
 assert(fleetPage.includes("rpc('set_fleet_asset_status'"), 'Fleet lifecycle updates must use the secured status RPC.');
 assert(fleetPage.includes("rpc('delete_fleet_asset_if_unused'"), 'Fleet deletion must use the operational-history-aware RPC.');
