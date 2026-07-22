@@ -35,6 +35,7 @@ export type BookingRateOption = {
 };
 
 export type BookingDraft = {
+  selectedPackageRateId?: string;
   selectedPackageName?: string;
   selectedPackageSlug?: string;
   selectedPackageCategory?: string;
@@ -62,6 +63,7 @@ export type BookingRequest = {
   status: BookingStatus;
   adminStatus: 'New' | 'Reviewed' | 'Contacted' | 'Closed';
   managerStatus: BookingStatus | null;
+  selectedPackageRateId?: string | null;
   selectedPackageName?: string | null;
   selectedPackageSlug?: string | null;
   selectedPackageCategory?: string | null;
@@ -125,7 +127,12 @@ export function getExperience(id: ExperienceId) {
 }
 
 export function getSelectedRateForDuration(draft: BookingDraft) {
-  return draft.selectedPackageRates?.find((item) => item.minutes === draft.durationMinutes) ?? null;
+  const rates = draft.selectedPackageRates || [];
+  if (draft.selectedPackageRateId) {
+    const exact = rates.find((item) => item.id === draft.selectedPackageRateId);
+    if (exact) return exact;
+  }
+  return rates.find((item) => item.minutes === draft.durationMinutes) ?? null;
 }
 
 export function getCapacityPerVehicle(draft: BookingDraft) {
