@@ -8,7 +8,7 @@ import { jetCarLightImage } from '@/lib/mock-data';
 import { whatsappUrl } from '@/lib/company-info';
 
 export const metadata: Metadata = {
-  title: 'Jet Car Rental Dubai | eDrive Water Sports',
+  title: 'Jet Car Rental Dubai',
   description: 'Book a luxury jet car rental in Dubai with eDrive Water Sports at Dubai Islands. Compare ride durations, prices, seating options, and premium water sports experiences.'
 };
 
