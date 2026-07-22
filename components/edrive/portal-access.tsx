@@ -34,7 +34,7 @@ function canMutatePath(role: string, pathname: string) {
   const path = normalizePath(pathname);
   if (role === 'super_admin') return true;
   if (role === 'admin') return false;
-  if (role === 'booking_staff') return path === '/admin/bookings' || path.startsWith('/admin/bookings/');
+  if (role === 'booking_staff') return path === '/admin/bookings' || path.startsWith('/admin/bookings/') || path === '/admin/inquiries' || path.startsWith('/admin/inquiries/');
   if (role === 'finance') return path === '/admin/payments' || path.startsWith('/admin/payments/');
   if (role === 'maintenance_staff') return path === '/admin/vehicles' || path.startsWith('/admin/vehicles/') || path === '/admin/maintenance' || path.startsWith('/admin/maintenance/');
   if (role === 'manager') return path === '/admin/my-rides' || path.startsWith('/admin/my-rides/');
