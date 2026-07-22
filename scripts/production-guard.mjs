@@ -28,6 +28,7 @@ const fleetEnumMigration = read('supabase/fleet-status-enum-values.sql');
 const fleetLegacyPreflight = read('supabase/fleet-legacy-data-preflight.sql');
 const fleetMigration = read('supabase/fleet-asset-hardening.sql');
 const fleetEditMigration = read('supabase/fleet-edit-partial-and-image-upload.sql');
+const fleetEditFinalMigration = read('supabase/fleet-edit-final-enum-fix.sql');
 
 assert(!packageShowcase.includes('b2b_price'), 'Public package showcase must not request B2B pricing.');
 assert(!bookingWizard.includes('b2b_price'), 'Public booking wizard must not request B2B pricing.');
@@ -69,7 +70,11 @@ assert(fleetPage.includes('isSuperAdmin'), 'Fleet master edit and delete control
 assert(fleetPage.includes('complianceIssues'), 'Fleet records must expose registration, insurance, tracker, and profile alerts.');
 assert(fleetPage.includes('Missing Registration'), 'Fleet filters must surface missing registration records.');
 assert(fleetPage.includes("const fleetImageBucket = 'fleet-images'"), 'Fleet image uploads must use the dedicated storage bucket.');
-assert(fleetPage.includes('Upload fleet image'), 'Fleet edit form must expose image upload.');
+assert(fleetPage.includes('Replace image'), 'Fleet edit form must expose a simple replacement image action.');
+assert(fleetPage.includes('Advanced image options'), 'Gallery and custom image fields must stay collapsed by default.');
+assert(fleetPage.includes('fleetImageOptionsForType'), 'Fleet image gallery must be filtered by vehicle type.');
+assert(fleetPage.includes('removeFleetImage'), 'Failed fleet saves must clean up newly uploaded images.');
+assert(!fleetPage.includes('Fleet database enum fix is pending'), 'Fleet edit must not show the obsolete migration-pending message.');
 assert(fleetPage.includes('!editingId && (!regNo'), 'Existing incomplete fleet records must support partial edits.');
 assert(fleetPage.includes('function FleetDrawer'), 'Fleet details must open in the compact right-side drawer.');
 assert(fleetPage.includes('MoreHorizontal'), 'Secondary fleet actions must remain inside the compact actions menu.');
@@ -86,6 +91,8 @@ assert(fleetMigration.includes('delete_fleet_asset_if_unused'), 'Fleet deletion 
 assert(fleetMigration.includes('fleet_asset_audit_logs'), 'Fleet master changes must be audited.');
 assert(fleetMigration.includes('fleet_maintenance_logs'), 'Fleet maintenance lifecycle changes must be logged.');
 assert(fleetEditMigration.includes('v_type::public.vehicle_type'), 'Fleet save RPC must cast vehicle_type text to its enum.');
+assert(fleetEditMigration.includes('type = v_type::public.vehicle_type'), 'Fleet save RPC must cast the legacy type column when it uses the vehicle_type enum.');
+assert(fleetEditFinalMigration.includes('type = v_type::public.vehicle_type'), 'Final fleet enum rollout must include the legacy type-column cast.');
 assert(fleetEditMigration.includes("'fleet-images'"), 'Fleet image storage bucket migration is required.');
 assert(fleetEditMigration.includes("tg_op = 'INSERT' and length(v_reg) < 3"), 'New fleet units must still require registration while legacy edits remain possible.');
 

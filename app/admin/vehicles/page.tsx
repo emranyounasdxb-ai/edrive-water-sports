@@ -50,7 +50,12 @@ const jetSkiImageOptions = Array.from({ length: 4 }, (_, index) => {
   const number = String(index + 1).padStart(2, '0');
   return { label: `Jet Ski ${number}`, value: `${fleetBasePath}/js-${number}.webp` };
 });
-const fleetImageOptions = [{ label: 'Auto by fleet type', value: '' }, ...jetCarImageOptions, ...jetSkiImageOptions];
+function fleetImageOptionsForType(type: string) {
+  return [
+    { label: 'Auto by fleet type', value: '' },
+    ...(type === 'Jet Ski' ? jetSkiImageOptions : jetCarImageOptions)
+  ];
+}
 const fleetImageBucket = 'fleet-images';
 const maxFleetImageBytes = 5 * 1024 * 1024;
 const allowedFleetImageTypes = new Set(['image/jpeg', 'image/png', 'image/webp']);
@@ -91,7 +96,12 @@ async function uploadFleetImage(file: File, code: string) {
 
   const publicUrl = supabase.storage.from(fleetImageBucket).getPublicUrl(objectPath).data.publicUrl;
   if (!publicUrl) throw new Error('Fleet image uploaded, but its public URL could not be created.');
-  return publicUrl;
+  return { publicUrl, objectPath };
+}
+
+async function removeFleetImage(objectPath: string) {
+  if (!objectPath) return;
+  await supabase.storage.from(fleetImageBucket).remove([objectPath]);
 }
 
 function imagePathFromCode(code: string, name: string, type: string) {
@@ -284,11 +294,6 @@ function rpcUnavailable(message: string, functionName: string) {
   return value.includes(functionName.toLowerCase()) && (value.includes('does not exist') || value.includes('schema cache') || value.includes('could not find') || value.includes('pgrst202'));
 }
 
-function fleetSaveErrorMessage(message: string) {
-  const value = message.toLowerCase();
-  if (value.includes('vehicle_type') && value.includes('type text')) return 'Fleet database enum fix is pending. Apply supabase/fleet-edit-partial-and-image-upload.sql.';
-  return message;
-}
 
 function statusBadgeClass(status: string) {
   if (status === 'Available') return 'border-emerald-200 bg-emerald-50 text-emerald-700';
@@ -422,15 +427,17 @@ export default function Page() {
 
     const code = normalizeCode(values.code);
     const name = values.name.trim();
-    let uploadedImageUrl = '';
+    let uploadedImage: { publicUrl: string; objectPath: string } | null = null;
+
     if (imageFile) {
       try {
-        uploadedImageUrl = await uploadFleetImage(imageFile, code);
+        uploadedImage = await uploadFleetImage(imageFile, code);
       } catch (uploadError) {
         return uploadError instanceof Error ? uploadError.message : 'Unable to upload the fleet image.';
       }
     }
-    const imageUrl = uploadedImageUrl || values.imageUrl.trim() || imagePathFromCode(code, name, values.type);
+
+    const imageUrl = uploadedImage?.publicUrl || values.imageUrl.trim() || imagePathFromCode(code, name, values.type);
     const payload = {
       vehicle_code: code,
       vehicle_name: name,
@@ -465,40 +472,17 @@ export default function Page() {
       is_archived: values.status === 'Retired'
     };
 
-    const rpcResult = await supabase.rpc('save_fleet_asset_entry', { p_payload: payload, p_vehicle_id: editing?.id || null });
-    if (rpcResult.error && !rpcUnavailable(rpcResult.error.message || '', 'save_fleet_asset_entry')) return fleetSaveErrorMessage(rpcResult.error.message);
+    const rpcResult = await supabase.rpc('save_fleet_asset_entry', {
+      p_payload: payload,
+      p_vehicle_id: editing?.id || null
+    });
 
     if (rpcResult.error) {
-      const legacyPayload = {
-        vehicle_code: payload.vehicle_code,
-        vehicle_name: payload.vehicle_name,
-        vehicle_type: payload.vehicle_type,
-        name: payload.name,
-        slug: payload.slug,
-        type: payload.type,
-        description: payload.description,
-        rental_price_aed_per_hour: 0,
-        location: payload.location,
-        capacity: payload.capacity,
-        status: payload.status,
-        brand: payload.brand,
-        model: payload.model,
-        year: payload.year,
-        reg_no: payload.reg_no,
-        device_imei: payload.device_imei,
-        color: payload.color,
-        date_of_installation: payload.date_of_installation,
-        expiry_date: payload.expiry_date,
-        primary_image_url: payload.primary_image_url,
-        main_image_url: payload.main_image_url,
-        notes: payload.notes,
-        sort_order: payload.sort_order,
-        is_available: payload.is_available,
-        is_visible_public: payload.is_visible_public,
-        is_archived: payload.is_archived
-      };
-      const result = editing ? await supabase.from('vehicles').update(legacyPayload).eq('id', editing.id) : await supabase.from('vehicles').insert(legacyPayload);
-      if (result.error) return result.error.message;
+      if (uploadedImage) await removeFleetImage(uploadedImage.objectPath);
+      if (rpcUnavailable(rpcResult.error.message || '', 'save_fleet_asset_entry')) {
+        return 'Fleet save service is temporarily unavailable. Refresh the page and try again.';
+      }
+      return rpcResult.error.message || 'Unable to save the fleet unit.';
     }
 
     const wasEditing = Boolean(editing);
@@ -767,6 +751,7 @@ function FleetFormModal({ initialValues, onClose, onSubmit }: { initialValues?: 
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState('');
   const issues = initialValues ? complianceIssues({ ...initialValues, ...values, imageUrl: imagePreview || values.imageUrl }) : [];
+  const imageOptions = fleetImageOptionsForType(values.type);
 
   useEffect(() => {
     if (!imageFile) {
@@ -790,56 +775,139 @@ function FleetFormModal({ initialValues, onClose, onSubmit }: { initialValues?: 
     }
   }
 
-  function updateField<K extends keyof FleetFormValues>(name: K, value: FleetFormValues[K]) { setValues((current) => ({ ...current, [name]: value })); }
-  function updateType(value: string) { setValues((current) => ({ ...current, type: value, capacity: value === 'Jet Ski' ? '2' : '4', imageUrl: current.imageUrl || imagePathFromCode(current.code, current.name, value) })); }
+  function updateField<K extends keyof FleetFormValues>(name: K, value: FleetFormValues[K]) {
+    setValues((current) => ({ ...current, [name]: value }));
+  }
+
+  function updateType(value: string) {
+    setImageFile(null);
+    setValues((current) => {
+      const galleryImage = current.imageUrl.startsWith(fleetBasePath);
+      return {
+        ...current,
+        type: value,
+        capacity: value === 'Jet Ski' ? '2' : '4',
+        imageUrl: galleryImage ? imagePathFromCode(current.code, current.name, value) : current.imageUrl
+      };
+    });
+  }
+
   function selectImage(file: File | null) {
-    if (!file) { setImageFile(null); return; }
-    if (!allowedFleetImageTypes.has(file.type)) { setFormError('Fleet image must be JPG, PNG, or WebP.'); return; }
-    if (file.size > maxFleetImageBytes) { setFormError('Fleet image must be 5 MB or smaller.'); return; }
+    if (!file) {
+      setImageFile(null);
+      return;
+    }
+    if (!allowedFleetImageTypes.has(file.type)) {
+      setFormError('Fleet image must be JPG, PNG, or WebP.');
+      return;
+    }
+    if (file.size > maxFleetImageBytes) {
+      setFormError('Fleet image must be 5 MB or smaller.');
+      return;
+    }
     setFormError('');
     setImageFile(file);
   }
 
-  return <div className="fixed inset-0 z-[80] flex items-center justify-center bg-primary-900/35 p-4 backdrop-blur-sm"><div className="flex max-h-[94vh] w-full max-w-[58rem] flex-col overflow-hidden rounded-[1.6rem] border border-white/80 bg-white shadow-[0_28px_80px_rgba(8,37,50,0.28)]">
-    <div className="flex items-start justify-between gap-4 border-b border-border/70 bg-[#F7FAFA] px-5 py-4"><div><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Fleet Asset Profile</p><h2 className="mt-1 font-heading text-xl font-semibold text-foreground">{initialValues ? 'Edit Fleet Unit' : 'Add Fleet Unit'}</h2>{issues.length ? <p className="mt-1 text-xs font-semibold text-amber-700">{issues.length} compliance item{issues.length === 1 ? '' : 's'} require attention.</p> : null}</div><button type="button" onClick={onClose} className="flex size-9 items-center justify-center rounded-full border border-border bg-white text-muted-foreground transition hover:text-primary"><X className="size-4" aria-hidden="true" /></button></div>
-    <form onSubmit={submit} className="flex min-h-0 flex-1 flex-col"><div className="grid gap-4 overflow-y-auto px-5 py-4 lg:grid-cols-[1.15fr_0.85fr]"><div className="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm font-semibold leading-6 text-sky-800 lg:col-span-2">You can save available changes now. Missing insurance, tracker, VIN, expiry dates, year, color, or other optional details will remain highlighted and can be completed later.</div>
-      <div className="grid gap-3 sm:grid-cols-2">
-        <SectionTitle title="Identity & Registration" />
-        <FormInput label="Fleet Code *" value={values.code} required placeholder="JC-0001 / JS-0001" maxLength={40} onChange={(value) => updateField('code', value)} />
-        <FormInput label="Vehicle Name *" value={values.name} required maxLength={120} onChange={(value) => updateField('name', value)} />
-        <SelectInput label="Vehicle Type *" value={values.type} options={Object.keys(typeMap)} required onChange={updateType} />
-        <FormInput label={initialValues ? 'Registration Number' : 'Registration Number *'} value={values.regNo} required={!initialValues} maxLength={40} placeholder={initialValues ? 'Add when available' : 'Required and unique'} onChange={(value) => updateField('regNo', value)} />
-        <FormInput label="Registration Expiry (optional)" type="date" value={values.registrationExpiry} onChange={(value) => updateField('registrationExpiry', value)} />
-        <FormInput label="Insurance Number (optional)" value={values.insuranceNumber} maxLength={80} onChange={(value) => updateField('insuranceNumber', value)} />
-        <FormInput label="Insurance Expiry (optional)" type="date" value={values.insuranceExpiry} onChange={(value) => updateField('insuranceExpiry', value)} />
-        <FormInput label="Tracker IMEI (optional)" value={values.deviceImei} inputMode="numeric" maxLength={20} onChange={(value) => updateField('deviceImei', value)} />
-        <FormInput label="Chassis / VIN (optional)" value={values.chassisVin} maxLength={80} onChange={(value) => updateField('chassisVin', value)} />
-        <FormInput label="Engine / Serial Number (optional)" value={values.engineSerial} maxLength={80} onChange={(value) => updateField('engineSerial', value)} />
-        <SectionTitle title="Vehicle Configuration" />
-        <SelectInput label="Location *" value={values.location} options={locations} required onChange={(value) => updateField('location', value)} />
-        <FormInput label="Capacity / Seater *" type="number" value={values.capacity} required min="1" max="12" onChange={(value) => updateField('capacity', value)} />
-        <SelectInput label="Status *" value={values.status} options={Object.keys(statusMap)} required onChange={(value) => updateField('status', value)} />
-        <FormInput label="Brand (optional)" value={values.brand} maxLength={80} onChange={(value) => updateField('brand', value)} />
-        <FormInput label="Model (optional)" value={values.model} maxLength={80} onChange={(value) => updateField('model', value)} />
-        <FormInput label="Year (optional)" type="number" value={values.year} min="1990" max={String(new Date().getFullYear() + 1)} onChange={(value) => updateField('year', value)} />
-        <FormInput label="Color (optional)" value={values.color} maxLength={60} onChange={(value) => updateField('color', value)} />
-        <FormInput label="Date of Installation (optional)" type="date" value={values.installationDate} onChange={(value) => updateField('installationDate', value)} />
-        <FormInput label="Display Order" type="number" value={values.sortOrder} min="0" max="9999" onChange={(value) => updateField('sortOrder', value)} />
-        <label className="grid gap-1.5 text-sm font-semibold text-foreground sm:col-span-2">Notes (optional)<textarea maxLength={2000} value={values.notes} onChange={(event) => updateField('notes', event.target.value)} className="min-h-24 rounded-xl border border-border bg-white px-3 py-3 text-sm text-foreground outline-none focus:border-primary" /></label>
-      </div>
-      <div className="space-y-4">
-        <div className="rounded-2xl border border-border bg-[#F7FAFA] p-4">
-<div className="flex items-start justify-between gap-3"><p className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">Fleet Image</p><span className="text-[10px] font-semibold text-muted-foreground">JPG, PNG or WebP · max 5 MB</span></div>
-<div className="mt-3 overflow-hidden rounded-2xl bg-white p-3"><img src={imagePreview || values.imageUrl || imagePathFromCode(values.code, values.name, values.type)} alt={values.name || 'Fleet preview'} className="h-48 w-full rounded-xl object-contain" /></div>
-<label className="mt-3 flex h-11 cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-primary/40 bg-primary-50 text-sm font-bold text-primary transition hover:border-primary hover:bg-primary-100"><Upload className="size-4" aria-hidden="true" />{imageFile ? 'Change selected image' : 'Upload fleet image'}<input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={(event) => { selectImage(event.currentTarget.files?.[0] || null); event.currentTarget.value = ''; }} /></label>
-{imageFile ? <div className="mt-2 flex items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2"><span className="min-w-0 truncate text-xs font-semibold text-emerald-800">Selected: {imageFile.name}</span><button type="button" onClick={() => setImageFile(null)} className="shrink-0 text-xs font-bold text-emerald-800 hover:underline">Remove</button></div> : <p className="mt-2 text-xs leading-5 text-muted-foreground">The selected file uploads only when you click Save Fleet Unit.</p>}
-<div className="mt-4 border-t border-border/70 pt-4"><p className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">Or use an existing image</p><select value={values.imageUrl} onChange={(event) => { setImageFile(null); updateField('imageUrl', event.target.value); }} className="mt-2 h-10 w-full rounded-xl border border-border bg-white px-3 text-sm">{fleetImageOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select><FormInput label="Custom Image URL / Path (optional)" value={values.imageUrl} placeholder="/images/edrive/fleet/jc-01.webp or https://..." onChange={(value) => { setImageFile(null); updateField('imageUrl', value); }} /></div>
+  return <div className="fixed inset-0 z-[80] flex items-center justify-center bg-primary-900/35 p-4 backdrop-blur-sm">
+    <div className="flex max-h-[94vh] w-full max-w-[54rem] flex-col overflow-hidden rounded-[1.6rem] border border-white/80 bg-white shadow-[0_28px_80px_rgba(8,37,50,0.28)]">
+      <div className="flex items-start justify-between gap-4 border-b border-border/70 bg-[#F7FAFA] px-5 py-4">
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Fleet Asset Profile</p>
+          <h2 className="mt-1 font-heading text-xl font-semibold text-foreground">{initialValues ? 'Edit Fleet Unit' : 'Add Fleet Unit'}</h2>
+          {initialValues ? <p className="mt-1 text-xs font-medium text-muted-foreground">{issues.length ? `Profile incomplete · ${issues.length} detail${issues.length === 1 ? '' : 's'} can be completed later.` : 'Fleet profile is complete.'}</p> : <p className="mt-1 text-xs font-medium text-muted-foreground">Create the core fleet record first. Additional details can be added later.</p>}
         </div>
-        <div className="rounded-2xl border border-border bg-white p-4"><p className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">Compliance Summary</p><div className="mt-3 grid gap-2">{issues.length ? issues.map((issue) => <div key={issue} className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-700"><AlertTriangle className="size-4" aria-hidden="true" />{issue}</div>) : <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-3 text-sm font-bold text-emerald-700"><ShieldCheck className="size-4" aria-hidden="true" />Fleet profile is complete.</div>}</div></div>
-        {initialValues ? <div className="rounded-2xl border border-border bg-white p-4"><p className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">Lifecycle Snapshot</p><div className="mt-3 grid gap-2 text-sm"><InfoLine label="Status" value={initialValues.status} /><InfoLine label="Registration" value={initialValues.regNo || 'Missing'} /><InfoLine label="Registration expiry" value={formatDate(initialValues.registrationExpiry)} /><InfoLine label="Insurance expiry" value={formatDate(initialValues.insuranceExpiry)} /><InfoLine label="Last updated" value={formatDate(initialValues.updatedAt)} /></div></div> : null}
+        <button type="button" onClick={onClose} className="flex size-9 items-center justify-center rounded-full border border-border bg-white text-muted-foreground transition hover:text-primary"><X className="size-4" aria-hidden="true" /></button>
       </div>
-    </div>{formError ? <p className="mx-5 mb-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{formError}</p> : null}<div className="flex justify-end gap-3 border-t border-border/70 bg-white px-5 py-4"><Button type="button" variant="outline" onClick={onClose}>Cancel</Button><Button type="submit" disabled={saving}>{saving ? 'Saving...' : 'Save Fleet Unit'}</Button></div></form>
-  </div></div>;
+
+      <form onSubmit={submit} className="flex min-h-0 flex-1 flex-col">
+        <div className="grid min-h-0 gap-4 overflow-y-auto px-5 py-4 lg:grid-cols-[1.1fr_0.9fr]">
+          <div className="space-y-4">
+            <div className="rounded-2xl border border-border bg-white p-4">
+              <SectionTitle title="Core Fleet Details" />
+              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                <FormInput label="Fleet Code *" value={values.code} required placeholder="JC-0001 / JS-0001" maxLength={40} onChange={(value) => updateField('code', value)} />
+                <FormInput label="Vehicle Name *" value={values.name} required maxLength={120} onChange={(value) => updateField('name', value)} />
+                <SelectInput label="Vehicle Type *" value={values.type} options={Object.keys(typeMap)} required onChange={updateType} />
+                <FormInput label={initialValues ? 'Registration Number' : 'Registration Number *'} value={values.regNo} required={!initialValues} maxLength={40} placeholder={initialValues ? 'Add when available' : 'Required and unique'} onChange={(value) => updateField('regNo', value)} />
+                <SelectInput label="Location *" value={values.location} options={locations} required onChange={(value) => updateField('location', value)} />
+                <FormInput label="Capacity / Seater *" type="number" value={values.capacity} required min="1" max="12" onChange={(value) => updateField('capacity', value)} />
+                <SelectInput label="Status *" value={values.status} options={Object.keys(statusMap)} required onChange={(value) => updateField('status', value)} />
+              </div>
+            </div>
+
+            <details className="group rounded-2xl border border-border bg-white">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-bold text-foreground">
+                Additional vehicle details
+                <span className="text-xs font-semibold text-muted-foreground group-open:hidden">Optional</span>
+                <span className="hidden text-xs font-semibold text-primary group-open:inline">Hide</span>
+              </summary>
+              <div className="grid gap-3 border-t border-border/70 p-4 sm:grid-cols-2">
+                <FormInput label="Registration Expiry" type="date" value={values.registrationExpiry} onChange={(value) => updateField('registrationExpiry', value)} />
+                <FormInput label="Insurance Number" value={values.insuranceNumber} maxLength={80} onChange={(value) => updateField('insuranceNumber', value)} />
+                <FormInput label="Insurance Expiry" type="date" value={values.insuranceExpiry} onChange={(value) => updateField('insuranceExpiry', value)} />
+                <FormInput label="Tracker IMEI" value={values.deviceImei} inputMode="numeric" maxLength={20} onChange={(value) => updateField('deviceImei', value)} />
+                <FormInput label="Chassis / VIN" value={values.chassisVin} maxLength={80} onChange={(value) => updateField('chassisVin', value)} />
+                <FormInput label="Engine / Serial Number" value={values.engineSerial} maxLength={80} onChange={(value) => updateField('engineSerial', value)} />
+                <FormInput label="Brand" value={values.brand} maxLength={80} onChange={(value) => updateField('brand', value)} />
+                <FormInput label="Model" value={values.model} maxLength={80} onChange={(value) => updateField('model', value)} />
+                <FormInput label="Year" type="number" value={values.year} min="1990" max={String(new Date().getFullYear() + 1)} onChange={(value) => updateField('year', value)} />
+                <FormInput label="Color" value={values.color} maxLength={60} onChange={(value) => updateField('color', value)} />
+                <FormInput label="Date of Installation" type="date" value={values.installationDate} onChange={(value) => updateField('installationDate', value)} />
+                <FormInput label="Display Order" type="number" value={values.sortOrder} min="0" max="9999" onChange={(value) => updateField('sortOrder', value)} />
+                <label className="grid gap-1.5 text-sm font-semibold text-foreground sm:col-span-2">Notes<textarea maxLength={2000} value={values.notes} onChange={(event) => updateField('notes', event.target.value)} className="min-h-24 rounded-xl border border-border bg-white px-3 py-3 text-sm text-foreground outline-none focus:border-primary" /></label>
+              </div>
+            </details>
+          </div>
+
+          <div className="space-y-4">
+            <div className="rounded-2xl border border-border bg-[#F7FAFA] p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">Current Image</p>
+                  <p className="mt-1 text-[11px] text-muted-foreground">JPG, PNG or WebP · maximum 5 MB</p>
+                </div>
+                <ImageIcon className="size-4 text-muted-foreground" aria-hidden="true" />
+              </div>
+              <div className="mt-3 overflow-hidden rounded-2xl bg-white p-3">
+                <img src={imagePreview || values.imageUrl || imagePathFromCode(values.code, values.name, values.type)} alt={values.name || 'Fleet preview'} className="h-48 w-full rounded-xl object-contain" />
+              </div>
+              <label className="mt-3 flex h-11 cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-primary/40 bg-primary-50 text-sm font-bold text-primary transition hover:border-primary hover:bg-primary-100">
+                <Upload className="size-4" aria-hidden="true" />
+                {imageFile ? 'Choose a different image' : 'Replace image'}
+                <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={(event) => { selectImage(event.currentTarget.files?.[0] || null); event.currentTarget.value = ''; }} />
+              </label>
+              {imageFile ? <div className="mt-2 flex items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2"><span className="min-w-0 truncate text-xs font-semibold text-emerald-800">Selected: {imageFile.name}</span><button type="button" onClick={() => setImageFile(null)} className="shrink-0 text-xs font-bold text-emerald-800 hover:underline">Remove</button></div> : <p className="mt-2 text-xs leading-5 text-muted-foreground">The current image stays unchanged unless you select a replacement.</p>}
+
+              <details className="group mt-4 border-t border-border/70 pt-3">
+                <summary className="flex cursor-pointer list-none items-center justify-between text-xs font-bold text-primary">
+                  Advanced image options
+                  <span className="text-muted-foreground group-open:hidden">Show</span>
+                  <span className="hidden text-muted-foreground group-open:inline">Hide</span>
+                </summary>
+                <div className="mt-3 space-y-3">
+                  <label className="grid gap-1.5 text-sm font-semibold text-foreground">Choose from {values.type} gallery
+                    <select value={values.imageUrl} onChange={(event) => { setImageFile(null); updateField('imageUrl', event.target.value); }} className="h-10 w-full rounded-xl border border-border bg-white px-3 text-sm">
+                      {imageOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                    </select>
+                  </label>
+                  <FormInput label="Custom Image URL / Path" value={values.imageUrl} placeholder="/images/edrive/fleet/jc-01.webp or https://..." onChange={(value) => { setImageFile(null); updateField('imageUrl', value); }} />
+                </div>
+              </details>
+            </div>
+
+            {initialValues && issues.length ? <div className="flex items-start gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-semibold leading-5 text-amber-800"><AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" /><span>{issues.length} profile check{issues.length === 1 ? '' : 's'} remain. They do not block saving this edit.</span></div> : null}
+          </div>
+        </div>
+
+        {formError ? <p className="mx-5 mb-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{formError}</p> : null}
+        <div className="flex justify-end gap-3 border-t border-border/70 bg-white px-5 py-4">
+          <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
+          <Button type="submit" disabled={saving}>{saving ? 'Saving...' : 'Save Fleet Unit'}</Button>
+        </div>
+      </form>
+    </div>
+  </div>;
 }
 
 function SectionTitle({ title }: { title: string }) { return <div className="sm:col-span-2"><p className="border-b border-border pb-2 text-xs font-bold uppercase tracking-[0.14em] text-primary">{title}</p></div>; }

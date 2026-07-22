@@ -423,7 +423,7 @@ begin
       primary_image_url, main_image_url, notes, sort_order, is_available,
       is_visible_public, is_archived, retired_at, updated_at
     ) values (
-      v_code, v_name, v_type::public.vehicle_type, v_name, lower(v_code), v_type,
+      v_code, v_name, v_type::public.vehicle_type, v_name, lower(v_code), v_type::public.vehicle_type,
       left(coalesce(p_payload->>'description', ''), 1000),
       0, v_location, v_capacity, v_status::public.vehicle_status,
       left(coalesce(p_payload->>'brand', ''), 80), left(coalesce(p_payload->>'model', ''), 80), v_year,
@@ -442,7 +442,7 @@ begin
         vehicle_type = v_type::public.vehicle_type,
         name = v_name,
         slug = lower(v_code),
-        type = v_type,
+        type = v_type::public.vehicle_type,
         description = left(coalesce(p_payload->>'description', ''), 1000),
         location = v_location,
         capacity = v_capacity,
