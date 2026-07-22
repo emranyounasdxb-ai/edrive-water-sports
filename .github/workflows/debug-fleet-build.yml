@@ -18,6 +18,11 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      NEXT_PUBLIC_OPENWEATHER_API_KEY: ${{ secrets.NEXT_PUBLIC_OPENWEATHER_API_KEY }}
+      NEXT_PUBLIC_SITE_URL: ${{ secrets.NEXT_PUBLIC_SITE_URL }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -25,29 +30,34 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - name: Run production build
-        id: build
+      - name: Run production validation pipeline
+        id: validation
         shell: bash
         run: |
           set +e
-          npm run build > fleet-build.log 2>&1
+          {
+            npm run typecheck &&
+            npm run test:production &&
+            npm run build &&
+            npm run test:export
+          } > fleet-build.log 2>&1
           code=$?
           echo "exit_code=$code" >> "$GITHUB_OUTPUT"
           exit 0
-      - name: Report build error
-        if: steps.build.outputs.exit_code != '0'
+      - name: Report validation error
+        if: steps.validation.outputs.exit_code != '0'
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           {
-            echo '### Fleet production build error'
+            echo '### Fleet production validation error'
             echo '```text'
-            tail -n 100 fleet-build.log
+            tail -n 120 fleet-build.log
             echo '```'
           } > fleet-build-comment.md
           gh pr comment "${{ github.event.pull_request.number }}" --body-file fleet-build-comment.md
           exit 1
-      - name: Confirm build
-        if: steps.build.outputs.exit_code == '0'
-        run: echo "Production build passed."
+      - name: Confirm validation
+        if: steps.validation.outputs.exit_code == '0'
+        run: echo "Typecheck, production guard, static build, and export smoke all passed."
