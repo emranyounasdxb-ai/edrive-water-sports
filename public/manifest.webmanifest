@@ -1,8 +1,8 @@
 {
   "name": "eDrive Water Sports",
   "short_name": "eDrive",
-  "description": "eDrive Water Sports manager and booking portal.",
-  "start_url": "/admin/",
+  "description": "Book and manage premium eDrive Water Sports experiences from Dubai Islands.",
+  "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
