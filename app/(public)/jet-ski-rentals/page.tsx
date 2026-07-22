@@ -8,7 +8,7 @@ import { jetSkiLightImage } from '@/lib/mock-data';
 import { whatsappUrl } from '@/lib/company-info';
 
 export const metadata: Metadata = {
-  title: 'Jet Ski Rental Dubai | eDrive Water Sports',
+  title: 'Jet Ski Rental Dubai',
   description: 'Book premium jet ski rental in Dubai with eDrive Water Sports at Dubai Islands. Choose your ride duration, seats, price, and preferred time with fast WhatsApp support.'
 };
 
