@@ -9,6 +9,7 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "test:production": "node scripts/production-guard.mjs",
+    "test:export": "node scripts/static-export-smoke.mjs",
     "validate:workflow": "node scripts/validate-workflow.mjs"
   },
   "dependencies": {
