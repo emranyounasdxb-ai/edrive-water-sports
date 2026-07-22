@@ -27,7 +27,7 @@ export const metadata: Metadata = {
     default: 'eDrive Water Sports',
     template: '%s | eDrive Water Sports'
   },
-  description: 'Premium jet ski rental Dubai, jet car rental Dubai, water sports packages, fleet, membership, sales, and contact for eDrive Water Sports at Dubai Islands Marina.',
+  description: 'Premium jet ski rental Dubai, jet car rides, water sports packages, fleet, membership, booking, and guest support from eDrive Water Sports at Dubai Islands.',
   metadataBase: new URL('https://edrivedubai.ae'),
   manifest: '/manifest.webmanifest',
   applicationName: 'eDrive Water Sports',
@@ -49,7 +49,7 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: 'eDrive Water Sports',
-    description: 'Premium jet ski and jet car experiences from Dubai Island Marina.',
+    description: 'Premium jet ski and jet car experiences from Dubai Islands.',
     url: 'https://edrivedubai.ae',
     siteName: 'eDrive Water Sports',
     images: [{ url: '/brand/og-image.png', width: 1200, height: 630, alt: 'eDrive Water Sports' }],
@@ -58,7 +58,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'eDrive Water Sports',
-    description: 'Premium jet ski and jet car experiences from Dubai Island Marina.',
+    description: 'Premium jet ski and jet car experiences from Dubai Islands.',
     images: ['/brand/og-image.png']
   }
 };
@@ -67,7 +67,6 @@ export const viewport: Viewport = {
   themeColor: '#082532',
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
   viewportFit: 'cover'
 };
 
