@@ -35,6 +35,7 @@ const requiredRoutes = [
   'admin/login/index.html',
   'admin/inquiries/index.html',
   'admin/packages/index.html',
+  'admin/vehicles/index.html',
   'manifest.webmanifest',
   'sw.js',
   'robots.txt',
