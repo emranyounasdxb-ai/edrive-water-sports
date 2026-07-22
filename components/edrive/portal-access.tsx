@@ -32,7 +32,8 @@ function normalizePath(pathname: string) {
 
 function canMutatePath(role: string, pathname: string) {
   const path = normalizePath(pathname);
-  if (role === 'super_admin' || role === 'admin') return true;
+  if (role === 'super_admin') return true;
+  if (role === 'admin') return false;
   if (role === 'booking_staff') return path === '/admin/bookings' || path.startsWith('/admin/bookings/');
   if (role === 'finance') return path === '/admin/payments' || path.startsWith('/admin/payments/');
   if (role === 'maintenance_staff') return path === '/admin/vehicles' || path.startsWith('/admin/vehicles/') || path === '/admin/maintenance' || path.startsWith('/admin/maintenance/');
@@ -164,7 +165,7 @@ export function PortalRoleBoundary({ children }: { children: ReactNode }) {
       {restricted ? (
         <div className="mb-4 flex items-start gap-3 rounded-2xl border border-primary/15 bg-primary-50 px-4 py-3 text-sm text-primary-900">
           <ShieldCheck className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-          <div><p className="font-bold">Role-based access</p><p className="mt-0.5 text-xs font-semibold leading-5 text-primary-900/75">Available actions on this page are based on the {portalRoleLabel(role)} role.</p></div>
+          <div><p className="font-bold">Role-based access</p><p className="mt-0.5 text-xs font-semibold leading-5 text-primary-900/75">This page is read-only for the {portalRoleLabel(role)} role. Database security policies also enforce the same restriction.</p></div>
         </div>
       ) : null}
       {children}
