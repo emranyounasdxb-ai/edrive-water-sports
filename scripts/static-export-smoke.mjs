@@ -34,6 +34,7 @@ const requiredRoutes = [
   'refund-replacement-policy/index.html',
   'admin/login/index.html',
   'admin/inquiries/index.html',
+  'admin/packages/index.html',
   'manifest.webmanifest',
   'sw.js',
   'robots.txt',
