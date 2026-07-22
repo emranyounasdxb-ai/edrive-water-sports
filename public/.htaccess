@@ -1,0 +1,17 @@
+# eDrive Water Sports production redirects
+RewriteEngine On
+
+# Use one canonical host for SEO and analytics.
+RewriteCond %{HTTP_HOST} ^www\.edrivedubai\.ae$ [NC]
+RewriteRule ^ https://edrivedubai.ae%{REQUEST_URI} [R=301,L]
+
+# Retire legacy public URLs without leaving customer-facing 404 pages.
+Redirect 301 /sales/ https://edrivedubai.ae/contact/
+Redirect 301 /floating-platform/ https://edrivedubai.ae/contact/
+Redirect 301 /status/ https://edrivedubai.ae/my-booking/
+Redirect 301 /admin-portal/ https://edrivedubai.ae/admin/
+
+# Protect environment and repository files if they are ever uploaded accidentally.
+<FilesMatch "^(\.env|\.git|package(-lock)?\.json|tsconfig\.json)$">
+  Require all denied
+</FilesMatch>
