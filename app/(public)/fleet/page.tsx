@@ -3,7 +3,7 @@ import { LivePackageShowcase } from '@/components/edrive/live-package-showcase';
 import { FleetPage } from '@/components/edrive/public-pages';
 
 export const metadata: Metadata = {
-  title: 'Jet Ski & Jet Car Fleet Dubai | eDrive Water Sports',
+  title: 'Jet Ski & Jet Car Fleet Dubai',
   description: 'Explore eDrive Water Sports premium jet ski and jet car fleet at Dubai Islands with ride options for tourists, residents, families, couples, and VIP guests.'
 };
 
