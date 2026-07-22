@@ -1,79 +1,8 @@
--- eDrive Fleet partial edit, enum-cast, and image upload rollout.
--- Run once in Supabase SQL Editor after fleet-asset-hardening.sql.
--- Rerunnable and safe for existing fleet rows.
+-- Final eDrive Fleet edit enum correction.
+-- Run once in Supabase SQL Editor. Safe to rerun.
+-- This fixes the legacy `type` column when it also uses public.vehicle_type.
 
 begin;
-
-create or replace function public.validate_fleet_asset_identifiers()
-returns trigger
-language plpgsql
-security definer
-set search_path = public
-as $$
-declare
-  v_code text := upper(regexp_replace(btrim(coalesce(new.vehicle_code, '')), '\s+', '-', 'g'));
-  v_reg text := upper(regexp_replace(btrim(coalesce(new.reg_no, '')), '\s+', ' ', 'g'));
-  v_imei text := regexp_replace(coalesce(new.device_imei, ''), '[^0-9]', '', 'g');
-  v_vin text := upper(btrim(coalesce(new.chassis_vin, '')));
-  v_new_status text := lower(coalesce(new.status::text, 'available'));
-  v_old_status text := '';
-begin
-  if tg_op = 'UPDATE' then
-    v_old_status := lower(coalesce(old.status::text, ''));
-    if v_reg = '' and nullif(btrim(coalesce(old.reg_no, '')), '') is not null then
-      v_reg := upper(regexp_replace(btrim(old.reg_no), '\s+', ' ', 'g'));
-    end if;
-  end if;
-
-  if v_code !~ '^[A-Z0-9][A-Z0-9-]{2,39}$' then
-    raise exception 'Fleet code must contain 3-40 letters, numbers, or hyphens.';
-  end if;
-
-  if tg_op = 'INSERT' and length(v_reg) < 3 then
-    raise exception 'Registration number is required for every new fleet unit.';
-  end if;
-
-  if tg_op = 'UPDATE' and v_new_status = 'available' and v_old_status <> 'available' and length(v_reg) < 3 then
-    raise exception 'Add the required unique registration number before making this unit Available.';
-  end if;
-
-  if coalesce(new.capacity, 0) < 1 or coalesce(new.capacity, 0) > 12 then
-    raise exception 'Fleet capacity must be between 1 and 12.';
-  end if;
-
-  if v_imei <> '' and (length(v_imei) < 10 or length(v_imei) > 20) then
-    raise exception 'Tracker IMEI must contain 10-20 digits.';
-  end if;
-
-  if v_new_status not in (
-    'available', 'booked', 'reserved', 'assigned', 'in_use', 'maintenance',
-    'out_of_service', 'retired', 'inactive', 'for_sale'
-  ) then
-    raise exception 'Fleet lifecycle status is invalid.';
-  end if;
-
-  if v_new_status = 'available' and new.registration_expiry is not null and new.registration_expiry < current_date then
-    raise exception 'A fleet unit with expired registration cannot be marked Available.';
-  end if;
-
-  if v_new_status = 'available' and new.insurance_expiry is not null and new.insurance_expiry < current_date then
-    raise exception 'A fleet unit with expired insurance cannot be marked Available.';
-  end if;
-
-  new.vehicle_code := v_code;
-  new.reg_no := nullif(v_reg, '');
-  new.device_imei := nullif(v_imei, '');
-  new.chassis_vin := nullif(v_vin, '');
-  new.updated_at := now();
-  return new;
-end;
-$$;
-
-revoke all on function public.validate_fleet_asset_identifiers() from public;
-drop trigger if exists vehicles_validate_identifiers_trigger on public.vehicles;
-create trigger vehicles_validate_identifiers_trigger
-before insert or update on public.vehicles
-for each row execute function public.validate_fleet_asset_identifiers();
 
 create or replace function public.save_fleet_asset_entry(
   p_payload jsonb,
@@ -215,105 +144,9 @@ begin
 end;
 $$;
 
+
 revoke all on function public.save_fleet_asset_entry(jsonb, uuid) from public;
 grant execute on function public.save_fleet_asset_entry(jsonb, uuid) to authenticated;
-
--- Ensure lifecycle updates also cast text to the vehicle_status enum.
-create or replace function public.set_fleet_asset_status(
-  p_vehicle_id uuid,
-  p_status text,
-  p_note text default null
-)
-returns boolean
-language plpgsql
-security definer
-set search_path = public
-as $$
-declare
-  v_role text := public.current_edrive_role();
-  v_status text := lower(btrim(coalesce(p_status, '')));
-  v_old_status text;
-  v_reg text;
-  v_registration_expiry date;
-  v_insurance_expiry date;
-begin
-  if v_role not in ('super_admin', 'maintenance_staff') then
-    raise exception 'You do not have permission to change fleet lifecycle status.';
-  end if;
-  if v_role = 'maintenance_staff' and v_status not in ('maintenance', 'out_of_service', 'available') then
-    raise exception 'Maintenance Staff can only set Maintenance, Out of Service, or Available.';
-  end if;
-  if v_status not in ('available', 'booked', 'reserved', 'assigned', 'in_use', 'maintenance', 'out_of_service', 'retired', 'for_sale') then
-    raise exception 'Fleet lifecycle status is invalid.';
-  end if;
-
-  select lower(coalesce(status::text, '')), reg_no, registration_expiry, insurance_expiry
-  into v_old_status, v_reg, v_registration_expiry, v_insurance_expiry
-  from public.vehicles
-  where id = p_vehicle_id
-  for update;
-
-  if not found then raise exception 'Fleet unit was not found.'; end if;
-  if v_status = 'available' and length(btrim(coalesce(v_reg, ''))) < 3 then raise exception 'Add the required unique registration number before making this unit Available.'; end if;
-  if v_status = 'available' and v_registration_expiry is not null and v_registration_expiry < current_date then raise exception 'Registration is expired. Renew it before making this unit Available.'; end if;
-  if v_status = 'available' and v_insurance_expiry is not null and v_insurance_expiry < current_date then raise exception 'Insurance is expired. Renew it before making this unit Available.'; end if;
-
-  update public.vehicles
-  set status = v_status::public.vehicle_status,
-      is_available = v_status = 'available',
-      is_archived = v_status = 'retired',
-      is_visible_public = v_status <> 'retired',
-      retired_at = case when v_status = 'retired' then coalesce(retired_at, now()) else null end,
-      notes = case when nullif(btrim(coalesce(p_note, '')), '') is null then notes else concat_ws(E'\n', nullif(btrim(coalesce(notes, '')), ''), left(btrim(p_note), 1000)) end,
-      updated_at = now()
-  where id = p_vehicle_id;
-
-  insert into public.fleet_maintenance_logs (vehicle_id, status_from, status_to, note, actor_id)
-  values (p_vehicle_id, v_old_status, v_status, nullif(left(btrim(coalesce(p_note, '')), 1000), ''), auth.uid());
-  return true;
-end;
-$$;
-
-revoke all on function public.set_fleet_asset_status(uuid, text, text) from public;
-grant execute on function public.set_fleet_asset_status(uuid, text, text) to authenticated;
-
-insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-values (
-  'fleet-images',
-  'fleet-images',
-  true,
-  5242880,
-  array['image/jpeg', 'image/png', 'image/webp']
-)
-on conflict (id) do update
-set public = excluded.public,
-    file_size_limit = excluded.file_size_limit,
-    allowed_mime_types = excluded.allowed_mime_types;
-
-drop policy if exists "fleet_images_public_read" on storage.objects;
-create policy "fleet_images_public_read"
-on storage.objects
-for select to public
-using (bucket_id = 'fleet-images');
-
-drop policy if exists "fleet_images_super_admin_insert" on storage.objects;
-create policy "fleet_images_super_admin_insert"
-on storage.objects
-for insert to authenticated
-with check (bucket_id = 'fleet-images' and public.has_edrive_role(array['super_admin']));
-
-drop policy if exists "fleet_images_super_admin_update" on storage.objects;
-create policy "fleet_images_super_admin_update"
-on storage.objects
-for update to authenticated
-using (bucket_id = 'fleet-images' and public.has_edrive_role(array['super_admin']))
-with check (bucket_id = 'fleet-images' and public.has_edrive_role(array['super_admin']));
-
-drop policy if exists "fleet_images_super_admin_delete" on storage.objects;
-create policy "fleet_images_super_admin_delete"
-on storage.objects
-for delete to authenticated
-using (bucket_id = 'fleet-images' and public.has_edrive_role(array['super_admin']));
 
 commit;
 
