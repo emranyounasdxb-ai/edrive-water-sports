@@ -16,6 +16,7 @@ const contactForm = read('components/edrive/contact-form.tsx');
 const bookingTracker = read('components/edrive/public-booking-tracker.tsx');
 const inquiriesPage = read('app/admin/inquiries/page.tsx');
 const packagesPage = read('app/admin/packages/page.tsx');
+const fleetPage = read('app/admin/vehicles/page.tsx');
 const bookingStatusPage = read('app/(public)/booking-status/page.tsx');
 const portalAccess = read('components/edrive/portal-access.tsx');
 const publicShell = read('components/edrive/public-shell.tsx');
@@ -23,6 +24,7 @@ const layout = read('app/layout.tsx');
 const manifest = JSON.parse(read('public/manifest.webmanifest'));
 const migration = read('supabase/public-request-hardening.sql');
 const packageMigration = read('supabase/package-catalog-hardening.sql');
+const fleetMigration = read('supabase/fleet-asset-hardening.sql');
 
 assert(!packageShowcase.includes('b2b_price'), 'Public package showcase must not request B2B pricing.');
 assert(!bookingWizard.includes('b2b_price'), 'Public booking wizard must not request B2B pricing.');
@@ -54,6 +56,20 @@ assert(packagesPage.includes('isSuperAdmin'), 'Permanent package deletion must r
 assert(packageMigration.includes('packages_prevent_duplicate_trigger'), 'Database duplicate prevention trigger is required.');
 assert(packageMigration.includes('delete_package_if_unused'), 'Database booking-aware package deletion is required.');
 assert(packageMigration.includes('package_audit_logs'), 'Package catalog changes must be audited.');
+
+assert(fleetPage.includes('Registration number is required for every fleet unit.'), 'Fleet registration number must remain mandatory in the admin UI.');
+assert(fleetPage.includes("rpc('save_fleet_asset_entry'"), 'Fleet master writes must prefer the secured fleet RPC.');
+assert(fleetPage.includes("rpc('set_fleet_asset_status'"), 'Fleet lifecycle updates must use the secured status RPC.');
+assert(fleetPage.includes("rpc('delete_fleet_asset_if_unused'"), 'Fleet deletion must use the operational-history-aware RPC.');
+assert(fleetPage.includes("role === 'maintenance_staff'"), 'Maintenance Staff must have limited lifecycle controls.');
+assert(fleetPage.includes('isSuperAdmin'), 'Fleet master edit and delete controls must remain restricted to Super Admin.');
+assert(fleetPage.includes('complianceIssues'), 'Fleet records must expose registration, insurance, tracker, and profile alerts.');
+assert(fleetPage.includes('Missing Registration'), 'Fleet filters must surface missing registration records.');
+assert(fleetMigration.includes('vehicles_reg_no_unique_ci'), 'Database-level unique registration enforcement is required.');
+assert(fleetMigration.includes('validate_fleet_asset_identifiers'), 'Fleet identifier validation trigger is required.');
+assert(fleetMigration.includes('delete_fleet_asset_if_unused'), 'Fleet deletion must be protected by operational history.');
+assert(fleetMigration.includes('fleet_asset_audit_logs'), 'Fleet master changes must be audited.');
+assert(fleetMigration.includes('fleet_maintenance_logs'), 'Fleet maintenance lifecycle changes must be logged.');
 
 if (failures.length) {
   console.error('\nProduction guard failed:\n');
