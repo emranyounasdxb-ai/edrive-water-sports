@@ -1,5 +1,6 @@
 name: Apply Public Hero Video
 
+# Validates the final shared-video and fallback-image contract.
 on:
   pull_request:
     branches:
