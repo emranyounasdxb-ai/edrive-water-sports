@@ -1,5 +1,6 @@
 name: Apply Uniform Public Hero Layout
 
+# Validates the permanent shared public hero contract.
 on:
   pull_request:
     branches:
