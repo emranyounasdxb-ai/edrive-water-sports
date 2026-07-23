@@ -8,6 +8,7 @@ import './hero-cta.css';
 import './contact-page-polish.css';
 import './manager-app-polish.css';
 import './fleet-image-polish.css';
+import './public-hero-contract.css';
 
 const inter = Inter({
   subsets: ['latin'],
