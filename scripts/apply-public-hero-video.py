@@ -88,6 +88,24 @@ if guard_import_marker not in guard:
     raise SystemExit('production guard import marker not found')
 guard = guard.replace(guard_import_marker, guard_import_replacement, 1)
 
+old_hero_marker_assert = "assert(publicPages.match(/data-public-hero(?=[\\s>])/g)?.length === 2, 'HomeHero and PublicHero must keep stable public hero markers.');"
+new_hero_marker_assert = "assert(publicPages.match(/data-public-hero(?=[\\s>])/g)?.length === 1, 'HomeHero must keep its stable public hero marker.');\nassert(publicVideoHero.includes('data-public-hero'), 'Shared PublicVideoHero must keep the stable public hero marker.');"
+if old_hero_marker_assert not in guard:
+    raise SystemExit('old public hero marker guard not found')
+guard = guard.replace(old_hero_marker_assert, new_hero_marker_assert, 1)
+
+old_media_marker_assert = "assert(publicPages.match(/data-public-hero-image/g)?.length === 2, 'HomeHero and PublicHero images must keep stable visibility markers.');"
+new_media_marker_assert = "assert(heroVideoMedia.includes('data-public-hero-image'), 'Hero fallback image must keep its stable visibility marker.');\nassert(heroVideoMedia.includes('data-public-hero-video'), 'Hero video must keep its stable video marker.');"
+if old_media_marker_assert not in guard:
+    raise SystemExit('old public hero image marker guard not found')
+guard = guard.replace(old_media_marker_assert, new_media_marker_assert, 1)
+
+old_object_cover_assert = "assert(publicPages.includes('className=\"object-cover object-center\"'), 'Shared public heroes must render their assigned image consistently.');"
+new_object_cover_assert = "assert(heroVideoMedia.includes('object-cover'), 'Shared public hero media must cover the complete hero frame.');"
+if old_object_cover_assert not in guard:
+    raise SystemExit('old public hero object-cover guard not found')
+guard = guard.replace(old_object_cover_assert, new_object_cover_assert, 1)
+
 assert_marker = """assert(publicPages.includes('const publicHeroFrameClass ='), 'All public pages must use one shared hero frame contract.');
 assert(publicPages.includes('const publicHeroContentClass ='), 'All public pages must use one shared hero content contract.');
 assert(publicPages.match(/className=\{publicHeroFrameClass\}/g)?.length === 2, 'HomeHero and PublicHero must use the same hero frame class.');
