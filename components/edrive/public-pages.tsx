@@ -22,20 +22,14 @@ import { dubaiWaterfrontImage, fleetHeroImage, fleetShowcaseImage, jetCarLightIm
 import { cn } from '@/lib/utils';
 import { BookingForm } from './booking-form';
 import { ContactForm } from './contact-form';
+import { HeroVideoMedia } from './hero-video-media';
 import { LivePackageShowcase } from './live-package-showcase';
 import { MotionReveal } from './motion-reveal';
+import { PublicVideoHero, publicHeroContentClass, publicHeroFrameClass, type PublicHeroAction } from './public-video-hero';
 
 const sectionPad = 'py-10 sm:py-12 lg:py-14';
-const publicHeroFrameClass = 'relative isolate min-h-[600px] overflow-hidden bg-primary-900 text-white sm:min-h-[620px] lg:min-h-[640px] xl:min-h-[680px]';
-const publicHeroContentClass = 'container-x relative flex min-h-[600px] items-center pb-10 pt-28 sm:min-h-[620px] sm:pb-12 sm:pt-28 lg:min-h-[640px] lg:pb-14 lg:pt-24 xl:min-h-[680px]';
 
-type HeroAction = {
-  href: string;
-  label: string;
-  icon: LucideIcon;
-  variant?: 'default' | 'outline' | 'gold';
-  external?: boolean;
-};
+type HeroAction = PublicHeroAction;
 
 const serviceCards = [
   {
@@ -142,7 +136,7 @@ export function HomePage() {
 function HomeHero() {
   return (
     <section className={publicHeroFrameClass} data-public-hero>
-      <Image src={dubaiWaterfrontImage} alt="Jet ski and jet car riding across the Dubai waterfront" fill priority data-public-hero-image className="object-cover object-[68%_68%]" sizes="100vw" />
+      <HeroVideoMedia fallbackImage={dubaiWaterfrontImage} fallbackAlt="Jet ski and jet car riding across the Dubai waterfront" priority objectPosition="object-[68%_68%]" />
       <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(5,27,39,0.98)_0%,rgba(5,35,48,0.90)_34%,rgba(5,35,48,0.38)_58%,rgba(5,35,48,0.04)_82%)]" />
       <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(4,23,33,0.36)_0%,transparent_38%,rgba(4,23,33,0.24)_100%)]" />
 
@@ -287,34 +281,7 @@ export function ContactPage() {
 }
 
 function PublicHero({ title, text, image, imageAlt, actions = [] }: { title: string; text: string; image: string; imageAlt: string; actions?: HeroAction[] }) {
-  return (
-    <section className={publicHeroFrameClass} data-public-hero>
-      <Image src={image} alt={imageAlt} fill priority data-public-hero-image className="object-cover object-center" sizes="100vw" />
-      <div className="absolute inset-0 bg-primary-950/65" />
-      <div className={publicHeroContentClass}>
-        <MotionReveal>
-          <div className="max-w-3xl">
-            <p className="mb-3 text-xs font-bold uppercase tracking-[0.24em] text-accent-300">eDrive Water Sports</p>
-            <h1 className="font-heading text-4xl font-semibold leading-tight text-white sm:text-5xl">{title}</h1>
-            <p className="mt-4 max-w-2xl text-base leading-7 text-white/82 sm:text-lg">{text}</p>
-            {actions.length ? (
-              <div className="mt-7 flex flex-wrap gap-3">
-                {actions.map((action) => <HeroButton key={action.label} action={action} />)}
-              </div>
-            ) : null}
-          </div>
-        </MotionReveal>
-      </div>
-    </section>
-  );
-}
-
-function HeroButton({ action }: { action: HeroAction }) {
-  const Icon = action.icon;
-  const className = cn('rounded-full', action.variant === 'outline' && 'bg-white text-primary-900 hover:bg-primary-50', action.variant === 'gold' && 'bg-accent text-primary-950 hover:bg-accent-300');
-  const content = <><Icon data-icon aria-hidden="true" />{action.label}</>;
-  if (action.external) return <Button asChild className={className}><a href={action.href} target="_blank" rel="noopener noreferrer">{content}</a></Button>;
-  return <Button asChild className={className}><Link href={action.href}>{content}</Link></Button>;
+  return <PublicVideoHero title={title} text={text} fallbackImage={image} fallbackAlt={imageAlt} actions={actions} />;
 }
 
 function SectionHeader({ title, text }: { title: string; text: string }) {
