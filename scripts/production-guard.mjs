@@ -56,7 +56,8 @@ assert(!publicShell.includes('pt-[86px]'), 'Public main must not use the old ind
 assert(publicShellStyles.includes('--public-header-height: 4.625rem'), 'Public header height must remain locked to 74px.');
 assert(publicShellStyles.includes('height: var(--public-header-height)'), 'Public header must use the shared header-height variable.');
 assert(publicShellStyles.includes('padding-top: var(--public-header-height)'), 'Public main must use the same shared header-height variable.');
-assert(publicShellStyles.includes('.main > :first-child'), 'The first public page section must be protected from accidental top margin.');
+assert(publicShellStyles.includes('.main > section:first-of-type'), 'The first rendered public section must be protected from accidental top margin.');
+assert(publicShellStyles.includes('.main > div:first-of-type'), 'Public pages with a div root must also be protected from accidental top margin.');
 assert(migration.includes('revoke select on table public.packages from anon'), 'Anonymous direct package table access must be revoked.');
 assert(migration.includes('revoke insert on table public.booking_requests from anon'), 'Anonymous direct booking inserts must be revoked after RPC migration.');
 assert(migration.includes('public_request_rate_limited'), 'Public booking and lookup throttling must be included in the migration.');
