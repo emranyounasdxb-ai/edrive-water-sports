@@ -32,7 +32,7 @@ check('FTP username secret unchanged', /CPANEL_FTP_USERNAME/.test(workflow));
 check('FTP password secret unchanged', /CPANEL_FTP_PASSWORD/.test(workflow));
 check('FTP directory secret unchanged', /CPANEL_FTP_DIR/.test(workflow));
 check('Supabase URL secret available during build', /NEXT_PUBLIC_SUPABASE_URL/.test(workflow));
-check('Supabase anon key secret available during build', /NEXT_PUBLIC_SUPABASE_ANON_KEY/.test(workflow));
+check('Supabase anon key available during build', /NEXT_PUBLIC_SUPABASE_ANON_KEY/.test(workflow));
 
 const bookingRecords = read('lib/booking-records.ts');
 check('Live booking table remains booking_requests', /booking_requests/.test(bookingRecords) && !/['"]bookings['"]/.test(bookingRecords));
@@ -41,6 +41,17 @@ const paymentSql = read('supabase/payment-receiving.sql');
 check('Payment receipt table definition exists', /payment_receipts/.test(paymentSql));
 check('Payment allocation table definition exists', /payment_receipt_allocations/.test(paymentSql));
 check('Payment ledger table definition exists', /payment_ledger_entries/.test(paymentSql));
+
+const securitySql = read('supabase/security-hardening.sql');
+check('Production security migration exists', /production RLS hardening/i.test(securitySql));
+check('Active portal role helper exists', /current_edrive_role/.test(securitySql) && /has_edrive_role/.test(securitySql));
+check('Legacy active-table policies are cleared', /from pg_policies/.test(securitySql) && /drop policy if exists/.test(securitySql));
+check('Public booking access is insert only', /booking_requests_website_insert/.test(securitySql) && !/booking_requests_public_select/.test(securitySql));
+check('Admin portal access is read only', /admin_users_super_admin_update/.test(securitySql) && !/admin_users_admin_update/.test(securitySql));
+check('Payment receipts use role policies', /payment_receipts_finance_insert/.test(securitySql) && /payment_receipts_super_admin_delete/.test(securitySql));
+check('Payment allocations use role policies', /payment_allocations_finance_insert/.test(securitySql) && /payment_allocations_super_admin_delete/.test(securitySql));
+check('Payment ledger is protected', /payment_ledger_finance_insert/.test(securitySql) && /payment_ledger_super_admin_delete/.test(securitySql));
+check('Broad authenticated payment policies are not restored', !/payment_(?:receipts|allocations|ledger)[\s\S]{0,180}for all[\s\S]{0,100}using\s*\(true\)/i.test(securitySql));
 
 const auditSql = read('supabase/audit-log.sql');
 check('Audit log definition exists', /audit_logs/.test(auditSql));
