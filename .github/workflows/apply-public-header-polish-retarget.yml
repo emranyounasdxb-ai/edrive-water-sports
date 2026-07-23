@@ -1,0 +1,46 @@
+name: Apply Public Header Polish Retarget
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - scripts/apply-public-header-polish-retarget.py
+      - .github/workflows/apply-public-header-polish-retarget.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply-and-test:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      NEXT_PUBLIC_OPENWEATHER_API_KEY: ${{ secrets.NEXT_PUBLIC_OPENWEATHER_API_KEY }}
+      NEXT_PUBLIC_SITE_URL: ${{ secrets.NEXT_PUBLIC_SITE_URL }}
+    steps:
+      - name: Checkout feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+      - name: Apply stable public hero selectors
+        run: python scripts/apply-public-header-polish-retarget.py
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run test:production
+      - run: npm run build
+      - run: npm run test:export
+      - name: Commit validated changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/hero-cta.css app/contact-page-polish.css components/edrive/public-pages.tsx components/edrive/public-shell.module.css scripts/production-guard.mjs
+          git commit -m "lock public hero overlap to stable layout markers"
+          git push origin HEAD:${{ github.head_ref }}
