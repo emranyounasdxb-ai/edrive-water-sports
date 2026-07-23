@@ -88,7 +88,10 @@ if guard_import_marker not in guard:
     raise SystemExit('production guard import marker not found')
 guard = guard.replace(guard_import_marker, guard_import_replacement, 1)
 
-assert_marker = "assert(publicPages.includes('const publicHeroFrameClass ='), 'All public pages must use one shared hero frame contract.');"
+assert_marker = """assert(publicPages.includes('const publicHeroFrameClass ='), 'All public pages must use one shared hero frame contract.');
+assert(publicPages.includes('const publicHeroContentClass ='), 'All public pages must use one shared hero content contract.');
+assert(publicPages.match(/className=\{publicHeroFrameClass\}/g)?.length === 2, 'HomeHero and PublicHero must use the same hero frame class.');
+assert(publicPages.match(/className=\{publicHeroContentClass\}/g)?.length === 2, 'HomeHero and PublicHero must use the same hero content class.');"""
 assert_replacement = """assert(heroVideoExists, 'Shared public hero video file must exist.');
 assert(!heroVideoExists || fs.statSync(heroVideoFile).size > 1024, 'Shared public hero video file must not be empty.');
 assert(heroVideoMedia.includes("publicHeroVideoPath = '/videos/edrive-hero-loop.mp4'"), 'Hero video component must use the approved shared video path.');
@@ -103,11 +106,16 @@ assert(jetSkiRentalsPage.includes('<PublicVideoHero'), 'Jet Ski rentals page mus
 assert(jetCarRentalsPage.includes('<PublicVideoHero'), 'Jet Car rentals page must use the shared video hero.');
 assert(publicVideoHero.includes('publicHeroFrameClass') && publicVideoHero.includes('publicHeroContentClass'), 'Shared video hero must preserve the locked public hero layout contract.');
 assert(publicVideoHero.includes('<HeroVideoMedia'), 'Shared public hero must render the approved video media component.');
-assert(publicVideoHero.includes("fallbackImage={fallbackImage}"), 'Every video hero must keep its page-specific fallback image.');
-assert(publicVideoHero.includes("fallbackAlt={fallbackAlt}"), 'Every video hero must keep accessible fallback image text.');
-assert(publicVideoHero.includes("export const publicHeroFrameClass ="), 'All public pages must use one shared hero frame contract.');"""
+assert(publicVideoHero.includes('fallbackImage={fallbackImage}'), 'Every video hero must keep its page-specific fallback image.');
+assert(publicVideoHero.includes('fallbackAlt={fallbackAlt}'), 'Every video hero must keep accessible fallback image text.');
+assert(publicVideoHero.includes('export const publicHeroFrameClass ='), 'Shared video hero must own the public hero frame contract.');
+assert(publicVideoHero.includes('export const publicHeroContentClass ='), 'Shared video hero must own the public hero content contract.');
+assert(publicPages.match(/className=\{publicHeroFrameClass\}/g)?.length === 1, 'HomeHero must use the shared hero frame class.');
+assert(publicPages.match(/className=\{publicHeroContentClass\}/g)?.length === 1, 'HomeHero must use the shared hero content class.');
+assert(publicVideoHero.includes('className={publicHeroFrameClass}'), 'Shared PublicVideoHero must use the shared hero frame class.');
+assert(publicVideoHero.includes('className={publicHeroContentClass}'), 'Shared PublicVideoHero must use the shared hero content class.');"""
 if assert_marker not in guard:
-    raise SystemExit('production guard hero contract assertion marker not found')
+    raise SystemExit('production guard hero contract assertion block not found')
 guard = guard.replace(assert_marker, assert_replacement, 1)
 
 guard_path.write_text(guard, encoding='utf-8')
