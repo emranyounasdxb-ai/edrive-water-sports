@@ -26,7 +26,8 @@
   padding-top: var(--public-header-height);
 }
 
-.main > :first-child {
+.main > section:first-of-type,
+.main > div:first-of-type {
   margin-top: 0 !important;
 }
 
