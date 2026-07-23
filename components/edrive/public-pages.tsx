@@ -26,6 +26,8 @@ import { LivePackageShowcase } from './live-package-showcase';
 import { MotionReveal } from './motion-reveal';
 
 const sectionPad = 'py-10 sm:py-12 lg:py-14';
+const publicHeroFrameClass = 'relative isolate min-h-[600px] overflow-hidden bg-primary-900 text-white sm:min-h-[620px] lg:min-h-[640px] xl:min-h-[680px]';
+const publicHeroContentClass = 'container-x relative flex min-h-[600px] items-center pb-10 pt-28 sm:min-h-[620px] sm:pb-12 sm:pt-28 lg:min-h-[640px] lg:pb-14 lg:pt-24 xl:min-h-[680px]';
 
 type HeroAction = {
   href: string;
@@ -139,12 +141,12 @@ export function HomePage() {
 
 function HomeHero() {
   return (
-    <section className="relative isolate min-h-[600px] overflow-hidden bg-primary-900 text-white sm:min-h-[620px] lg:min-h-[640px] xl:min-h-[680px]" data-public-hero>
+    <section className={publicHeroFrameClass} data-public-hero>
       <Image src={dubaiWaterfrontImage} alt="Jet ski and jet car riding across the Dubai waterfront" fill priority data-public-hero-image className="object-cover object-[68%_68%]" sizes="100vw" />
       <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(5,27,39,0.98)_0%,rgba(5,35,48,0.90)_34%,rgba(5,35,48,0.38)_58%,rgba(5,35,48,0.04)_82%)]" />
       <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(4,23,33,0.36)_0%,transparent_38%,rgba(4,23,33,0.24)_100%)]" />
 
-      <div className="container-x relative flex min-h-[600px] items-center pb-10 pt-28 sm:min-h-[620px] sm:pb-12 sm:pt-28 lg:min-h-[640px] lg:pb-14 lg:pt-24 xl:min-h-[680px]">
+      <div className={publicHeroContentClass}>
         <MotionReveal>
           <div className="max-w-2xl">
             <p className="mb-4 text-xs font-bold uppercase tracking-[0.24em] text-accent-300">eDrive Water Sports</p>
@@ -286,10 +288,10 @@ export function ContactPage() {
 
 function PublicHero({ title, text, image, imageAlt, actions = [] }: { title: string; text: string; image: string; imageAlt: string; actions?: HeroAction[] }) {
   return (
-    <section className="relative isolate min-h-[500px] overflow-hidden bg-primary-900 text-white sm:min-h-[540px] lg:min-h-[580px] xl:min-h-[620px]" data-public-hero>
+    <section className={publicHeroFrameClass} data-public-hero>
       <Image src={image} alt={imageAlt} fill priority data-public-hero-image className="object-cover object-center" sizes="100vw" />
       <div className="absolute inset-0 bg-primary-950/65" />
-      <div className="container-x relative flex min-h-[500px] items-center py-20 sm:min-h-[540px] sm:py-24 lg:min-h-[580px] lg:py-28 xl:min-h-[620px]">
+      <div className={publicHeroContentClass}>
         <MotionReveal>
           <div className="max-w-3xl">
             <p className="mb-3 text-xs font-bold uppercase tracking-[0.24em] text-accent-300">eDrive Water Sports</p>
