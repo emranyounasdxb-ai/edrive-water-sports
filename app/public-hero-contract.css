@@ -1,0 +1,62 @@
+/*
+ * Permanent public hero layout contract.
+ * Keep this stylesheet imported after all public-page polish files.
+ * It is the final authority for public hero height, spacing, and CTA visibility.
+ */
+
+[data-public-main] > [data-public-hero]:first-of-type,
+[data-public-main] > [data-public-hero]:first-of-type:has(+ section.container-x.grid) {
+  min-height: 600px !important;
+}
+
+[data-public-main] > [data-public-hero]:first-of-type > .container-x.relative,
+[data-public-main] > [data-public-hero]:first-of-type:has(+ section.container-x.grid) > .container-x.relative {
+  min-height: 600px !important;
+  align-items: center !important;
+  padding-top: 7rem !important;
+  padding-bottom: 2.5rem !important;
+}
+
+[data-public-main] > [data-public-hero]:first-of-type:has(+ section.container-x.grid) .mt-7 {
+  display: flex !important;
+}
+
+@media (min-width: 640px) {
+  [data-public-main] > [data-public-hero]:first-of-type,
+  [data-public-main] > [data-public-hero]:first-of-type:has(+ section.container-x.grid) {
+    min-height: 620px !important;
+  }
+
+  [data-public-main] > [data-public-hero]:first-of-type > .container-x.relative,
+  [data-public-main] > [data-public-hero]:first-of-type:has(+ section.container-x.grid) > .container-x.relative {
+    min-height: 620px !important;
+    padding-top: 7rem !important;
+    padding-bottom: 3rem !important;
+  }
+}
+
+@media (min-width: 1024px) {
+  [data-public-main] > [data-public-hero]:first-of-type,
+  [data-public-main] > [data-public-hero]:first-of-type:has(+ section.container-x.grid) {
+    min-height: 640px !important;
+  }
+
+  [data-public-main] > [data-public-hero]:first-of-type > .container-x.relative,
+  [data-public-main] > [data-public-hero]:first-of-type:has(+ section.container-x.grid) > .container-x.relative {
+    min-height: 640px !important;
+    padding-top: 6rem !important;
+    padding-bottom: 3.5rem !important;
+  }
+}
+
+@media (min-width: 1280px) {
+  [data-public-main] > [data-public-hero]:first-of-type,
+  [data-public-main] > [data-public-hero]:first-of-type:has(+ section.container-x.grid) {
+    min-height: 680px !important;
+  }
+
+  [data-public-main] > [data-public-hero]:first-of-type > .container-x.relative,
+  [data-public-main] > [data-public-hero]:first-of-type:has(+ section.container-x.grid) > .container-x.relative {
+    min-height: 680px !important;
+  }
+}
