@@ -26,7 +26,7 @@
   padding-top: var(--public-header-height);
 }
 
-.main > section:first-of-type,
+.main > section:first-of-type:not([data-public-hero]),
 .main > div:first-of-type {
   margin-top: 0 !important;
 }
