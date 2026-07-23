@@ -139,7 +139,7 @@ export function HomePage() {
 
 function HomeHero() {
   return (
-    <section className="relative isolate min-h-[600px] overflow-hidden bg-primary-900 text-white sm:min-h-[620px] lg:min-h-[640px] xl:min-h-[680px]">
+    <section className="relative isolate min-h-[600px] overflow-hidden bg-primary-900 text-white sm:min-h-[620px] lg:min-h-[640px] xl:min-h-[680px]" data-public-hero>
       <Image src={dubaiWaterfrontImage} alt="Jet ski and jet car riding across the Dubai waterfront" fill priority className="object-cover object-[68%_68%]" sizes="100vw" />
       <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(5,27,39,0.98)_0%,rgba(5,35,48,0.90)_34%,rgba(5,35,48,0.38)_58%,rgba(5,35,48,0.04)_82%)]" />
       <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(4,23,33,0.36)_0%,transparent_38%,rgba(4,23,33,0.24)_100%)]" />
@@ -286,7 +286,7 @@ export function ContactPage() {
 
 function PublicHero({ title, text, image, imageAlt, actions = [] }: { title: string; text: string; image: string; imageAlt: string; actions?: HeroAction[] }) {
   return (
-    <section className="relative isolate min-h-[500px] overflow-hidden bg-primary-900 text-white sm:min-h-[540px] lg:min-h-[580px] xl:min-h-[620px]">
+    <section className="relative isolate min-h-[500px] overflow-hidden bg-primary-900 text-white sm:min-h-[540px] lg:min-h-[580px] xl:min-h-[620px]" data-public-hero>
       <Image src={image} alt={imageAlt} fill priority className="object-cover opacity-55" sizes="100vw" />
       <div className="absolute inset-0 bg-primary-950/65" />
       <div className="container-x relative flex min-h-[500px] items-center py-20 sm:min-h-[540px] sm:py-24 lg:min-h-[580px] lg:py-28 xl:min-h-[620px]">

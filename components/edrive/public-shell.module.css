@@ -1,0 +1,38 @@
+.shell {
+  --public-header-height: 4.625rem;
+  --public-header-padding-y: 0.75rem;
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+.header {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 90;
+  height: var(--public-header-height);
+  padding-block: var(--public-header-padding-y);
+}
+
+.headerNav {
+  height: 100%;
+}
+
+.headerBar {
+  height: 100%;
+  min-height: 0;
+}
+
+.main {
+  padding-top: var(--public-header-height);
+}
+
+.main > section:first-of-type:not([data-public-hero]),
+.main > div:first-of-type {
+  margin-top: 0 !important;
+}
+
+@media (max-width: 1023px) {
+  .shell {
+    --public-header-height: 4.625rem;
+  }
+}

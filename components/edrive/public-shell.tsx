@@ -9,6 +9,7 @@ import { companyInfo, whatsappUrl } from '@/lib/company-info';
 import { publicNavItems } from '@/lib/mock-data';
 import { cn } from '@/lib/utils';
 import { BrandMark } from './brand';
+import styles from './public-shell.module.css';
 
 const menuPillClass = 'border border-white/75 bg-white/72 shadow-[inset_0_1px_0_rgba(255,255,255,0.95),inset_0_-8px_14px_rgba(8,37,50,0.025),0_5px_14px_rgba(8,37,50,0.045)] hover:border-primary/15 hover:bg-primary-50/80 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.95),inset_0_-8px_14px_rgba(8,37,50,0.025),0_8px_18px_rgba(8,37,50,0.07)]';
 const activeMenuClass = 'border-primary/18 bg-primary-100 text-primary-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.95),inset_0_-8px_14px_rgba(8,37,50,0.03),0_9px_20px_rgba(8,37,50,0.09)]';
@@ -41,12 +42,13 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <div className="min-h-screen overflow-hidden bg-background">
-      <header className="fixed inset-x-0 top-0 z-[90] py-3">
-        <nav className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
+    <div className={cn(styles.shell, 'bg-background')}>
+      <header className={styles.header} data-public-header>
+        <nav className={cn(styles.headerNav, 'mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8')}>
           <div
             className={cn(
-              'relative flex min-h-[50px] items-center justify-between gap-3 rounded-full px-4 ring-1 transition-all duration-300 ease-out',
+              styles.headerBar,
+              'relative flex items-center justify-between gap-3 rounded-full px-4 ring-1 transition-all duration-300 ease-out',
               'shadow-[inset_0_1px_0_rgba(255,255,255,1),inset_0_-10px_22px_rgba(8,37,50,0.025),0_18px_42px_rgba(8,37,50,0.18),0_3px_8px_rgba(255,255,255,0.65)]',
               scrolled
                 ? 'border border-white/90 bg-white/90 ring-black/5 backdrop-blur-sm shadow-[inset_0_1px_0_rgba(255,255,255,0.95),inset_0_-10px_22px_rgba(8,37,50,0.025),0_14px_32px_rgba(8,37,50,0.12)]'
@@ -97,7 +99,7 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
         ) : null}
       </header>
 
-      <main className="pt-[86px]">{children}</main>
+      <main className={styles.main} data-public-main>{children}</main>
       <PublicFooter />
     </div>
   );

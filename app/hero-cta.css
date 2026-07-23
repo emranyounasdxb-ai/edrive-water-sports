@@ -1,4 +1,4 @@
-main > section.relative.isolate .max-w-2xl > .mt-8.flex.max-w-xl {
+[data-public-main] > [data-public-hero] .max-w-2xl > .mt-8.flex.max-w-xl {
   position: relative;
   isolation: isolate;
   border-radius: 1.45rem !important;
@@ -14,7 +14,7 @@ main > section.relative.isolate .max-w-2xl > .mt-8.flex.max-w-xl {
   backdrop-filter: blur(16px);
 }
 
-main > section.relative.isolate .max-w-2xl > .mt-8.flex.max-w-xl::before {
+[data-public-main] > [data-public-hero] .max-w-2xl > .mt-8.flex.max-w-xl::before {
   content: "";
   position: absolute;
   inset: 1px;
@@ -24,7 +24,7 @@ main > section.relative.isolate .max-w-2xl > .mt-8.flex.max-w-xl::before {
   pointer-events: none;
 }
 
-main > section.relative.isolate .max-w-2xl > .mt-8.flex.max-w-xl > a {
+[data-public-main] > [data-public-hero] .max-w-2xl > .mt-8.flex.max-w-xl > a {
   position: relative;
   min-height: 3.58rem;
   overflow: hidden;
@@ -37,11 +37,11 @@ main > section.relative.isolate .max-w-2xl > .mt-8.flex.max-w-xl > a {
   transition: transform 180ms ease, background 180ms ease, box-shadow 180ms ease, color 180ms ease;
 }
 
-main > section.relative.isolate .max-w-2xl > .mt-8.flex.max-w-xl > a:hover {
+[data-public-main] > [data-public-hero] .max-w-2xl > .mt-8.flex.max-w-xl > a:hover {
   transform: translateY(-1px);
 }
 
-main > section.relative.isolate .max-w-2xl > .mt-8.flex.max-w-xl > a:first-child {
+[data-public-main] > [data-public-hero] .max-w-2xl > .mt-8.flex.max-w-xl > a:first-child {
   justify-content: center;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.02) 48%),
@@ -52,7 +52,7 @@ main > section.relative.isolate .max-w-2xl > .mt-8.flex.max-w-xl > a:first-child
     inset 0 -6px 16px rgba(0, 0, 0, 0.16);
 }
 
-main > section.relative.isolate .max-w-2xl > .mt-8.flex.max-w-xl > a:first-child svg {
+[data-public-main] > [data-public-hero] .max-w-2xl > .mt-8.flex.max-w-xl > a:first-child svg {
   width: 1rem;
   height: 1rem;
   padding: 0.1rem;
@@ -60,7 +60,7 @@ main > section.relative.isolate .max-w-2xl > .mt-8.flex.max-w-xl > a:first-child
   filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.28));
 }
 
-main > section.relative.isolate .max-w-2xl > .mt-8.flex.max-w-xl > a:last-child {
+[data-public-main] > [data-public-hero] .max-w-2xl > .mt-8.flex.max-w-xl > a:last-child {
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.20), rgba(255, 255, 255, 0.02) 42%),
     linear-gradient(135deg, #16a3ad 0%, #0f8d98 48%, #087582 100%) !important;
@@ -71,7 +71,7 @@ main > section.relative.isolate .max-w-2xl > .mt-8.flex.max-w-xl > a:last-child 
     0 0 22px rgba(19, 180, 196, 0.16);
 }
 
-main > section.relative.isolate .max-w-2xl > .mt-8.flex.max-w-xl > a:last-child::after {
+[data-public-main] > [data-public-hero] .max-w-2xl > .mt-8.flex.max-w-xl > a:last-child::after {
   content: "";
   position: absolute;
   inset: 0;
@@ -81,11 +81,11 @@ main > section.relative.isolate .max-w-2xl > .mt-8.flex.max-w-xl > a:last-child:
   pointer-events: none;
 }
 
-main > section.relative.isolate .max-w-2xl > .mt-8.flex.max-w-xl > a:last-child:hover::after {
+[data-public-main] > [data-public-hero] .max-w-2xl > .mt-8.flex.max-w-xl > a:last-child:hover::after {
   transform: translateX(70%);
 }
 
-main > section.relative.isolate .max-w-2xl > .mt-8.flex.max-w-xl > a:last-child span {
+[data-public-main] > [data-public-hero] .max-w-2xl > .mt-8.flex.max-w-xl > a:last-child span {
   max-width: none;
   flex: 1 1 auto;
   white-space: nowrap;
@@ -99,47 +99,47 @@ main > section.relative.isolate .max-w-2xl > .mt-8.flex.max-w-xl > a:last-child 
     0 0 16px rgba(143, 245, 255, 0.18);
 }
 
-main > section.relative.isolate .max-w-2xl > .mt-8.flex.max-w-xl > a:last-child svg {
+[data-public-main] > [data-public-hero] .max-w-2xl > .mt-8.flex.max-w-xl > a:last-child svg {
   width: 0.92rem;
   height: 0.92rem;
   filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.24));
 }
 
-main.pt-\[86px\] > section.relative.isolate:first-child {
-  margin-top: -86px;
+[data-public-main] > [data-public-hero]:first-of-type {
+  margin-top: calc(-1 * var(--public-header-height));
   min-height: 520px !important;
   background-image: url('/images/edrive/dubai-waterfront-hero.png');
   background-size: cover;
   background-position: center 58%;
 }
 
-main.pt-\[86px\] > section.relative.isolate:first-child::before,
-main.pt-\[86px\] > section.relative.isolate:first-child::after {
+[data-public-main] > [data-public-hero]:first-of-type::before,
+[data-public-main] > [data-public-hero]:first-of-type::after {
   content: "";
   position: absolute;
   inset: 0;
   pointer-events: none;
 }
 
-main.pt-\[86px\] > section.relative.isolate:first-child::before {
+[data-public-main] > [data-public-hero]:first-of-type::before {
   z-index: 1;
   background: linear-gradient(90deg, rgba(5, 27, 39, 0.96) 0%, rgba(5, 35, 48, 0.86) 36%, rgba(5, 35, 48, 0.38) 62%, rgba(5, 35, 48, 0.06) 88%);
 }
 
-main.pt-\[86px\] > section.relative.isolate:first-child::after {
+[data-public-main] > [data-public-hero]:first-of-type::after {
   z-index: 2;
   background: linear-gradient(180deg, rgba(4, 23, 33, 0.32) 0%, rgba(4, 23, 33, 0.06) 42%, rgba(4, 23, 33, 0.28) 100%);
 }
 
-main.pt-\[86px\] > section.relative.isolate:first-child > img {
+[data-public-main] > [data-public-hero]:first-of-type > img {
   opacity: 0 !important;
 }
 
-main.pt-\[86px\] > section.relative.isolate:first-child > div:not(.container-x) {
+[data-public-main] > [data-public-hero]:first-of-type > div:not(.container-x) {
   opacity: 0 !important;
 }
 
-main.pt-\[86px\] > section.relative.isolate:first-child > .container-x.relative {
+[data-public-main] > [data-public-hero]:first-of-type > .container-x.relative {
   z-index: 3;
   min-height: 520px !important;
   align-items: center !important;
@@ -147,54 +147,54 @@ main.pt-\[86px\] > section.relative.isolate:first-child > .container-x.relative 
   padding-bottom: 48px !important;
 }
 
-main.pt-\[86px\] > section.relative.isolate:first-child h1,
-main.pt-\[86px\] > section.relative.isolate:first-child p {
+[data-public-main] > [data-public-hero]:first-of-type h1,
+[data-public-main] > [data-public-hero]:first-of-type p {
   text-shadow: 0 3px 18px rgba(0, 0, 0, 0.38);
 }
 
-main.pt-\[86px\] > section.relative.isolate:first-child + section.container-x.grid {
+[data-public-main] > [data-public-hero]:first-of-type + section.container-x.grid {
   align-items: start;
   gap: 2rem !important;
   padding-top: 4rem !important;
   padding-bottom: 4.5rem !important;
 }
 
-main.pt-\[86px\] > section.relative.isolate:first-child + section.container-x.grid > div:first-child {
+[data-public-main] > [data-public-hero]:first-of-type + section.container-x.grid > div:first-child {
   display: grid;
   gap: 0.85rem;
   align-self: start;
   padding-top: 0.2rem;
 }
 
-main.pt-\[86px\] > section.relative.isolate:first-child + section.container-x.grid > div:first-child a {
+[data-public-main] > [data-public-hero]:first-of-type + section.container-x.grid > div:first-child a {
   display: block;
   border-radius: 1.35rem;
   overflow: hidden;
 }
 
-main.pt-\[86px\] > section.relative.isolate:first-child + section.container-x.grid > div:first-child .premium-card-hover {
+[data-public-main] > [data-public-hero]:first-of-type + section.container-x.grid > div:first-child .premium-card-hover {
   border: 1px solid rgba(8, 37, 50, 0.08) !important;
   background: rgba(255, 255, 255, 0.92) !important;
   box-shadow: 0 14px 36px rgba(8, 37, 50, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.94) !important;
 }
 
-main.pt-\[86px\] > section.relative.isolate:first-child + section.container-x.grid > div:first-child .premium-card-hover::before,
-main.pt-\[86px\] > section.relative.isolate:first-child + section.container-x.grid > div:first-child .premium-card-hover::after {
+[data-public-main] > [data-public-hero]:first-of-type + section.container-x.grid > div:first-child .premium-card-hover::before,
+[data-public-main] > [data-public-hero]:first-of-type + section.container-x.grid > div:first-child .premium-card-hover::after {
   display: none !important;
 }
 
-main.pt-\[86px\] > section.relative.isolate:first-child + section.container-x.grid form,
-main.pt-\[86px\] > section.relative.isolate:first-child + section.container-x.grid > div:last-child {
+[data-public-main] > [data-public-hero]:first-of-type + section.container-x.grid form,
+[data-public-main] > [data-public-hero]:first-of-type + section.container-x.grid > div:last-child {
   align-self: start;
 }
 
 @media (min-width: 768px) {
-  main.pt-\[86px\] > section.relative.isolate:first-child {
+  [data-public-main] > [data-public-hero]:first-of-type {
     min-height: 560px !important;
     background-position: center 55%;
   }
 
-  main.pt-\[86px\] > section.relative.isolate:first-child > .container-x.relative {
+  [data-public-main] > [data-public-hero]:first-of-type > .container-x.relative {
     min-height: 560px !important;
     padding-top: 116px !important;
     padding-bottom: 56px !important;
@@ -202,11 +202,11 @@ main.pt-\[86px\] > section.relative.isolate:first-child + section.container-x.gr
 }
 
 @media (min-width: 1280px) {
-  main.pt-\[86px\] > section.relative.isolate:first-child {
+  [data-public-main] > [data-public-hero]:first-of-type {
     min-height: 590px !important;
   }
 
-  main.pt-\[86px\] > section.relative.isolate:first-child > .container-x.relative {
+  [data-public-main] > [data-public-hero]:first-of-type > .container-x.relative {
     min-height: 590px !important;
     padding-top: 118px !important;
     padding-bottom: 58px !important;
@@ -214,33 +214,33 @@ main.pt-\[86px\] > section.relative.isolate:first-child + section.container-x.gr
 }
 
 @media (max-width: 640px) {
-  main > section.relative.isolate .max-w-2xl > .mt-8.flex.max-w-xl > a {
+  [data-public-main] > [data-public-hero] .max-w-2xl > .mt-8.flex.max-w-xl > a {
     min-height: 3.35rem;
   }
 
-  main > section.relative.isolate .max-w-2xl > .mt-8.flex.max-w-xl > a:last-child span {
+  [data-public-main] > [data-public-hero] .max-w-2xl > .mt-8.flex.max-w-xl > a:last-child span {
     max-width: none;
     white-space: normal;
     font-size: 0.74rem;
     line-height: 1.12;
   }
 
-  main.pt-\[86px\] > section.relative.isolate:first-child {
+  [data-public-main] > [data-public-hero]:first-of-type {
     min-height: 540px !important;
     background-position: 64% center;
   }
 
-  main.pt-\[86px\] > section.relative.isolate:first-child::before {
+  [data-public-main] > [data-public-hero]:first-of-type::before {
     background: linear-gradient(90deg, rgba(5, 27, 39, 0.94) 0%, rgba(5, 35, 48, 0.82) 54%, rgba(5, 35, 48, 0.22) 100%);
   }
 
-  main.pt-\[86px\] > section.relative.isolate:first-child > .container-x.relative {
+  [data-public-main] > [data-public-hero]:first-of-type > .container-x.relative {
     min-height: 540px !important;
     padding-top: 104px !important;
     padding-bottom: 36px !important;
   }
 
-  main.pt-\[86px\] > section.relative.isolate:first-child + section.container-x.grid {
+  [data-public-main] > [data-public-hero]:first-of-type + section.container-x.grid {
     padding-top: 2rem !important;
     padding-bottom: 2.5rem !important;
   }
