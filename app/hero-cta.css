@@ -108,9 +108,6 @@
 [data-public-main] > [data-public-hero]:first-of-type {
   margin-top: calc(-1 * var(--public-header-height));
   min-height: 520px !important;
-  background-image: url('/images/edrive/dubai-waterfront-hero.png');
-  background-size: cover;
-  background-position: center 58%;
 }
 
 [data-public-main] > [data-public-hero]:first-of-type::before,
@@ -131,8 +128,9 @@
   background: linear-gradient(180deg, rgba(4, 23, 33, 0.32) 0%, rgba(4, 23, 33, 0.06) 42%, rgba(4, 23, 33, 0.28) 100%);
 }
 
-[data-public-main] > [data-public-hero]:first-of-type > img {
-  opacity: 0 !important;
+[data-public-main] > [data-public-hero]:first-of-type > [data-public-hero-image] {
+  z-index: 0;
+  opacity: 1 !important;
 }
 
 [data-public-main] > [data-public-hero]:first-of-type > div:not(.container-x) {
@@ -191,7 +189,6 @@
 @media (min-width: 768px) {
   [data-public-main] > [data-public-hero]:first-of-type {
     min-height: 560px !important;
-    background-position: center 55%;
   }
 
   [data-public-main] > [data-public-hero]:first-of-type > .container-x.relative {
@@ -227,7 +224,6 @@
 
   [data-public-main] > [data-public-hero]:first-of-type {
     min-height: 540px !important;
-    background-position: 64% center;
   }
 
   [data-public-main] > [data-public-hero]:first-of-type::before {

@@ -60,10 +60,16 @@ assert(publicShellStyles.includes('--public-header-height: 4.625rem'), 'Public h
 assert(publicShellStyles.includes('height: var(--public-header-height)'), 'Public header must use the shared header-height variable.');
 assert(publicShellStyles.includes('padding-top: var(--public-header-height)'), 'Public main must use the same shared header-height variable.');
 assert(publicShellStyles.includes('.main > section:first-of-type:not([data-public-hero])'), 'Non-hero public sections must be protected from accidental top margin.');
-assert(publicPages.match(/data-public-hero/g)?.length === 2, 'HomeHero and PublicHero must keep stable public hero markers.');
+assert(publicPages.match(/data-public-hero(?=[\s>])/g)?.length === 2, 'HomeHero and PublicHero must keep stable public hero markers.');
 assert(heroCtaStyles.includes('[data-public-main] > [data-public-hero]:first-of-type'), 'Hero polish must target stable public layout markers.');
 assert(heroCtaStyles.includes('margin-top: calc(-1 * var(--public-header-height))'), 'Public hero must overlap the shared header height without a blank strip.');
 assert(contactPolishStyles.includes('[data-public-main] > [data-public-hero]:first-of-type'), 'Contact polish must target stable public layout markers.');
+assert(publicPages.match(/data-public-hero-image/g)?.length === 2, 'HomeHero and PublicHero images must keep stable visibility markers.');
+assert(heroCtaStyles.includes('> [data-public-hero-image]'), 'Public hero visibility must target the stable hero-image marker.');
+assert(heroCtaStyles.includes('opacity: 1 !important'), 'Assigned public hero images must remain visible.');
+assert(!heroCtaStyles.includes("background-image: url('/images/edrive/dubai-waterfront-hero.png')"), 'Global hero CSS must not force one shared background image across pages.');
+assert(!heroCtaStyles.includes('[data-public-hero]:first-of-type > img {'), 'Global hero CSS must not hide page-specific hero images.');
+assert(publicPages.includes('className="object-cover object-center"'), 'Shared public heroes must render their assigned image consistently.');
 assert(!heroCtaStyles.includes('main.pt-\\[86px\\]'), 'Hero polish must not depend on the removed Tailwind top-padding class.');
 assert(!contactPolishStyles.includes('main.pt-\\[86px\\]'), 'Contact polish must not depend on the removed Tailwind top-padding class.');
 assert(publicShellStyles.includes('.main > div:first-of-type'), 'Public pages with a div root must also be protected from accidental top margin.');
