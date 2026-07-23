@@ -2,6 +2,9 @@ name: Apply Uniform Public Hero Layout
 
 # Validates the permanent shared public hero contract.
 on:
+  push:
+    branches:
+      - fix/uniform-public-hero-layout-20260723
   pull_request:
     branches:
       - main
@@ -14,7 +17,7 @@ permissions:
 
 jobs:
   apply-and-test:
-    if: github.event.pull_request.head.repo.full_name == github.repository
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     env:
       NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
@@ -25,7 +28,7 @@ jobs:
       - name: Checkout feature branch
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.head_ref }}
+          ref: ${{ github.head_ref || github.ref_name }}
           fetch-depth: 0
       - name: Apply uniform public hero layout
         run: python scripts/apply-uniform-public-hero-layout.py
@@ -44,4 +47,4 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add app/hero-cta.css app/contact-page-polish.css components/edrive/public-pages.tsx scripts/production-guard.mjs
           git commit -m "use one uniform public hero layout"
-          git push origin HEAD:${{ github.head_ref }}
+          git push origin HEAD:${{ github.head_ref || github.ref_name }}
