@@ -43,6 +43,12 @@ if home_image not in pages or public_image not in pages:
 pages = pages.replace(home_image, new_home_image, 1)
 pages = pages.replace(public_image, new_public_image, 1)
 
+old_hero_count_guard = "assert(publicPages.match(/data-public-hero/g)?.length === 2, 'HomeHero and PublicHero must keep stable public hero markers.');"
+new_hero_count_guard = "assert(publicPages.match(/data-public-hero(?=[\\s>])/g)?.length === 2, 'HomeHero and PublicHero must keep stable public hero markers.');"
+if old_hero_count_guard not in guard:
+    raise SystemExit('Public hero marker count guard not found')
+guard = guard.replace(old_hero_count_guard, new_hero_count_guard, 1)
+
 guard_marker = "assert(contactPolishStyles.includes('[data-public-main] > [data-public-hero]:first-of-type'), 'Contact polish must target stable public layout markers.');"
 new_guards = """assert(contactPolishStyles.includes('[data-public-main] > [data-public-hero]:first-of-type'), 'Contact polish must target stable public layout markers.');
 assert(publicPages.match(/data-public-hero-image/g)?.length === 2, 'HomeHero and PublicHero images must keep stable visibility markers.');
