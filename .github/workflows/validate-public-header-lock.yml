@@ -1,0 +1,34 @@
+name: Validate Public Header Lock
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - components/edrive/public-shell.tsx
+      - components/edrive/public-shell.module.css
+      - scripts/production-guard.mjs
+      - .github/workflows/validate-public-header-lock.yml
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      NEXT_PUBLIC_OPENWEATHER_API_KEY: ${{ secrets.NEXT_PUBLIC_OPENWEATHER_API_KEY }}
+      NEXT_PUBLIC_SITE_URL: ${{ secrets.NEXT_PUBLIC_SITE_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run test:production
+      - run: npm run build
+      - run: npm run test:export
