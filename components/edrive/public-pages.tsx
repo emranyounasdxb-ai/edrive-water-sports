@@ -58,6 +58,17 @@ const serviceCards = [
   }
 ];
 
+const homeServiceCardImages: Record<string, string> = {
+  'Jet Ski Rentals': '/images/edrive/home/home-jet-ski-rentals.webp',
+  'Jet Car Rentals': '/images/edrive/home/home-jet-car-rentals.webp',
+  'VIP Marine Support': '/images/edrive/home/home-membership-gold-card.webp'
+};
+
+const homeServiceCards = serviceCards.map((item) => ({
+  ...item,
+  image: homeServiceCardImages[item.title] ?? item.image
+}));
+
 const whyChoose = [
   { icon: MapPin, title: 'Dubai Islands Location', text: `Start your ride from ${companyInfo.locationName} with clear arrival guidance and team support.` },
   { icon: ShieldCheck, title: 'Safety First', text: 'Every experience includes a safety briefing, life jacket support, and guidance from the eDrive team.' },
@@ -105,7 +116,7 @@ export function HomePage() {
         <div className={cn('container-x', sectionPad)}>
           <SectionHeader title="Premium Water Sports Experiences" text="Plan jet ski rentals, jet car rides, VIP marine support, and special Dubai water sports moments with eDrive." />
           <div className="mt-7 grid gap-5 md:grid-cols-3">
-            {serviceCards.map((item) => <ServiceCard key={item.title} {...item} />)}
+            {homeServiceCards.map((item) => <ServiceCard key={item.title} {...item} />)}
           </div>
         </div>
       </section>
