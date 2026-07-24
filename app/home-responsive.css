@@ -1,0 +1,318 @@
+[data-public-main] > #live-packages:has(+ section) {
+  padding-block: 4rem !important;
+}
+
+[data-public-main] > #live-packages:has(+ section) > .container-x > .mx-auto.max-w-5xl {
+  width: 100%;
+  max-width: 74rem;
+}
+
+[data-public-main] > #live-packages:has(+ section) .section-title {
+  font-size: clamp(1.8rem, 2.6vw, 2.35rem);
+}
+
+[data-public-main] > #live-packages:has(+ section) > .container-x > .mx-auto.max-w-5xl > .mt-5.grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 1.25rem !important;
+  margin-top: 1.75rem !important;
+}
+
+[data-public-main] > #live-packages:has(+ section) > .container-x > .mx-auto.max-w-5xl > .mt-5.grid > article {
+  height: 100%;
+  border-radius: 1.45rem !important;
+  padding: 0.65rem !important;
+}
+
+[data-public-main] > #live-packages:has(+ section) > .container-x > .mx-auto.max-w-5xl > .mt-5.grid > article > div:first-child {
+  aspect-ratio: 16 / 9 !important;
+  border-radius: 1.05rem !important;
+}
+
+[data-public-main] > #live-packages:has(+ section) > .container-x > .mx-auto.max-w-5xl > .mt-5.grid > article > div:last-child {
+  padding: 0.95rem 0.8rem 0.8rem !important;
+}
+
+[data-public-main] > #live-packages:has(+ section) article h3 {
+  min-height: 2.55rem;
+  font-size: 1.05rem !important;
+  line-height: 1.25 !important;
+}
+
+[data-public-main] > #live-packages:has(+ section) article .mt-2.grid {
+  gap: 0.45rem !important;
+  border-radius: 0.95rem !important;
+  padding: 0.7rem 0.8rem !important;
+}
+
+[data-public-main] > #live-packages:has(+ section) article .mt-2.grid span:first-child {
+  font-size: 0.86rem !important;
+}
+
+[data-public-main] > #live-packages:has(+ section) article .mt-2.grid p {
+  font-size: 0.72rem !important;
+}
+
+[data-public-main] > #live-packages:has(+ section) article > div:last-child > p.mt-2 {
+  min-height: 2.9rem;
+  font-size: 0.78rem !important;
+  line-height: 1.45 !important;
+}
+
+[data-public-main] > #live-packages:has(+ section) article .mt-auto.grid {
+  gap: 0.55rem !important;
+  padding-top: 0.9rem !important;
+}
+
+[data-public-main] > #live-packages:has(+ section) article .mt-auto.grid a {
+  min-height: 2.35rem;
+  font-size: 0.72rem !important;
+}
+
+[data-public-main] > #live-packages + section > .container-x,
+[data-public-main] > #live-packages + section + section > .container-x,
+[data-public-main] > #live-packages + section + section + section > .container-x,
+[data-public-main] > #live-packages + section + section + section + section > .container-x {
+  width: 100%;
+  max-width: 80rem;
+}
+
+[data-public-main] > #live-packages + section > .container-x,
+[data-public-main] > #live-packages + section + section > .container-x,
+[data-public-main] > #live-packages + section + section + section > .container-x {
+  padding-top: 4.75rem !important;
+  padding-bottom: 4.75rem !important;
+}
+
+[data-public-main] > #live-packages + section .section-title,
+[data-public-main] > #live-packages + section + section .section-title,
+[data-public-main] > #live-packages + section + section + section .section-title {
+  font-size: clamp(1.9rem, 2.75vw, 2.5rem);
+}
+
+[data-public-main] > #live-packages + section > .container-x > .mt-7.grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 1.4rem !important;
+  margin-top: 2rem !important;
+}
+
+[data-public-main] > #live-packages + section > .container-x > .mt-7.grid > .premium-card-hover {
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 1.55rem !important;
+}
+
+[data-public-main] > #live-packages + section > .container-x > .mt-7.grid > .premium-card-hover > img {
+  width: 100%;
+  height: auto !important;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+}
+
+[data-public-main] > #live-packages + section > .container-x > .mt-7.grid > .premium-card-hover > div {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  padding: 1.45rem !important;
+}
+
+[data-public-main] > #live-packages + section > .container-x > .mt-7.grid h3 {
+  font-size: 1.35rem !important;
+}
+
+[data-public-main] > #live-packages + section > .container-x > .mt-7.grid p {
+  min-height: 0 !important;
+  flex: 1;
+  font-size: 0.86rem !important;
+  line-height: 1.65 !important;
+}
+
+[data-public-main] > #live-packages + section > .container-x > .mt-7.grid a {
+  min-height: 2.75rem;
+}
+
+[data-public-main] > #live-packages + section + section > .container-x > .mt-7.grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  gap: 1.2rem !important;
+  margin-top: 2rem !important;
+}
+
+[data-public-main] > #live-packages + section + section > .container-x > .mt-7.grid > .premium-card-hover {
+  height: 100%;
+  min-height: 12rem;
+  border-radius: 1.4rem !important;
+}
+
+[data-public-main] > #live-packages + section + section > .container-x > .mt-7.grid > .premium-card-hover > div {
+  padding: 1.4rem !important;
+}
+
+[data-public-main] > #live-packages + section + section > .container-x > .mt-7.grid span.mb-4 {
+  width: 2.8rem !important;
+  height: 2.8rem !important;
+  border-radius: 0.8rem !important;
+}
+
+[data-public-main] > #live-packages + section + section > .container-x > .mt-7.grid h3 {
+  font-size: 1rem;
+}
+
+[data-public-main] > #live-packages + section + section > .container-x > .mt-7.grid p {
+  font-size: 0.82rem !important;
+  line-height: 1.6 !important;
+}
+
+[data-public-main] > #live-packages + section + section + section > .container-x {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+  gap: 2rem !important;
+}
+
+[data-public-main] > #live-packages + section + section + section > .container-x > div:first-child {
+  max-width: 46rem;
+  margin-inline: auto;
+  text-align: center;
+}
+
+[data-public-main] > #live-packages + section + section + section > .container-x > div:first-child p:last-child {
+  max-width: 42rem;
+  margin-inline: auto;
+}
+
+[data-public-main] > #live-packages + section + section + section > .container-x > .grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 1.25rem !important;
+}
+
+[data-public-main] > #live-packages + section + section + section > .container-x > .grid > .premium-card-hover {
+  height: 100%;
+  min-height: 11.5rem;
+  border-radius: 1.4rem !important;
+}
+
+[data-public-main] > #live-packages + section + section + section > .container-x > .grid > .premium-card-hover > div {
+  padding: 1.45rem !important;
+}
+
+[data-public-main] > #live-packages + section + section + section + section {
+  padding-bottom: 4.75rem !important;
+}
+
+[data-public-main] > #live-packages + section + section + section + section > .container-x > div {
+  gap: 1.75rem !important;
+  border-radius: 1.65rem !important;
+  padding: 1.75rem !important;
+}
+
+[data-public-main] > #live-packages + section + section + section + section h2 {
+  font-size: clamp(1.45rem, 2vw, 1.9rem) !important;
+}
+
+@media (max-width: 1023px) {
+  [data-public-main] > #live-packages:has(+ section) {
+    padding-block: 3.5rem !important;
+  }
+
+  [data-public-main] > #live-packages:has(+ section) > .container-x > .mx-auto.max-w-5xl > .mt-5.grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  [data-public-main] > #live-packages + section > .container-x,
+  [data-public-main] > #live-packages + section + section > .container-x,
+  [data-public-main] > #live-packages + section + section + section > .container-x {
+    padding-top: 3.75rem !important;
+    padding-bottom: 3.75rem !important;
+  }
+
+  [data-public-main] > #live-packages + section > .container-x > .mt-7.grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  [data-public-main] > #live-packages + section > .container-x > .mt-7.grid > .premium-card-hover:last-child {
+    width: calc(50% - 0.7rem);
+    grid-column: 1 / -1;
+    justify-self: center;
+  }
+
+  [data-public-main] > #live-packages + section + section > .container-x > .mt-7.grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  [data-public-main] > #live-packages + section + section + section > .container-x > .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  [data-public-main] > #live-packages + section + section + section > .container-x > .grid > .premium-card-hover:last-child {
+    width: calc(50% - 0.625rem);
+    grid-column: 1 / -1;
+    justify-self: center;
+  }
+}
+
+@media (max-width: 639px) {
+  [data-public-main] > #live-packages:has(+ section) {
+    padding-block: 3rem !important;
+  }
+
+  [data-public-main] > #live-packages:has(+ section) > .container-x > .mx-auto.max-w-5xl > .mt-5.grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 1rem !important;
+    margin-top: 1.4rem !important;
+  }
+
+  [data-public-main] > #live-packages:has(+ section) article h3 {
+    min-height: 0;
+    font-size: 1.05rem !important;
+  }
+
+  [data-public-main] > #live-packages:has(+ section) article > div:last-child > p.mt-2 {
+    min-height: 0;
+  }
+
+  [data-public-main] > #live-packages + section > .container-x,
+  [data-public-main] > #live-packages + section + section > .container-x,
+  [data-public-main] > #live-packages + section + section + section > .container-x {
+    padding-top: 3rem !important;
+    padding-bottom: 3rem !important;
+  }
+
+  [data-public-main] > #live-packages + section > .container-x > .mt-7.grid,
+  [data-public-main] > #live-packages + section + section > .container-x > .mt-7.grid,
+  [data-public-main] > #live-packages + section + section + section > .container-x > .grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 1rem !important;
+  }
+
+  [data-public-main] > #live-packages + section > .container-x > .mt-7.grid > .premium-card-hover:last-child,
+  [data-public-main] > #live-packages + section + section + section > .container-x > .grid > .premium-card-hover:last-child {
+    width: 100%;
+    grid-column: auto;
+  }
+
+  [data-public-main] > #live-packages + section > .container-x > .mt-7.grid > .premium-card-hover > div,
+  [data-public-main] > #live-packages + section + section > .container-x > .mt-7.grid > .premium-card-hover > div,
+  [data-public-main] > #live-packages + section + section + section > .container-x > .grid > .premium-card-hover > div {
+    padding: 1.25rem !important;
+  }
+
+  [data-public-main] > #live-packages + section + section + section > .container-x > div:first-child {
+    text-align: left;
+  }
+
+  [data-public-main] > #live-packages + section + section + section + section {
+    padding-bottom: 3rem !important;
+  }
+
+  [data-public-main] > #live-packages + section + section + section + section > .container-x > div {
+    padding: 1.35rem !important;
+  }
+
+  [data-public-main] > #live-packages + section + section + section + section > .container-x > div > div:last-child {
+    width: 100%;
+  }
+
+  [data-public-main] > #live-packages + section + section + section + section a {
+    width: 100%;
+  }
+}
