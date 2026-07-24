@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import { useEffect, useRef, useState } from 'react';
 
-export const publicHeroVideoPath = '/videos/edrive-hero-loop.mp4?v=20260724';
+export const publicHeroVideoPath = '/videos/edrive-hero-loop.mp4';
 
 export function HeroVideoMedia({
   fallbackImage,
@@ -19,8 +19,10 @@ export function HeroVideoMedia({
   const videoRef = useRef<HTMLVideoElement>(null);
   const [videoReady, setVideoReady] = useState(false);
   const [videoFailed, setVideoFailed] = useState(false);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
 
   const markVideoReady = () => {
+    if (videoRef.current?.error) return;
     setVideoReady(true);
     setVideoFailed(false);
   };
@@ -34,21 +36,45 @@ export function HeroVideoMedia({
     const video = videoRef.current;
     if (!video) return;
 
-    if (video.error) {
-      showFallbackImage();
-      return;
-    }
+    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
 
-    if (video.readyState >= 2) {
-      markVideoReady();
-    }
+    const updateMotionPreference = () => {
+      const shouldReduceMotion = mediaQuery.matches;
+      setPrefersReducedMotion(shouldReduceMotion);
 
-    void video.play().catch(() => {
-      if (video.readyState >= 2) markVideoReady();
-    });
+      if (shouldReduceMotion) {
+        video.pause();
+        return;
+      }
+
+      if (video.error) {
+        setVideoReady(false);
+        setVideoFailed(true);
+        return;
+      }
+
+      if (video.readyState >= 2) {
+        setVideoReady(true);
+        setVideoFailed(false);
+      }
+
+      void video.play().catch(() => {
+        if (video.readyState >= 2 && !video.error) {
+          setVideoReady(true);
+          setVideoFailed(false);
+        }
+      });
+    };
+
+    updateMotionPreference();
+    mediaQuery.addEventListener('change', updateMotionPreference);
+
+    return () => mediaQuery.removeEventListener('change', updateMotionPreference);
   }, []);
 
-  const fallbackPriority = priority && videoFailed;
+  const showFallback = videoFailed || prefersReducedMotion;
+  const fallbackPriority = priority && showFallback;
+  const showVideo = videoReady && !showFallback;
 
   return (
     <>
@@ -57,18 +83,21 @@ export function HeroVideoMedia({
         alt={fallbackAlt}
         fill
         priority={fallbackPriority}
-        loading={fallbackPriority ? 'eager' : 'lazy'}
         fetchPriority={fallbackPriority ? 'high' : 'low'}
+        hidden={!showFallback}
+        aria-hidden={!showFallback}
         data-public-hero-image
-        data-video-fallback={videoFailed ? 'visible' : 'hidden'}
+        data-video-fallback={showFallback ? 'visible' : 'hidden'}
         className={`object-cover ${objectPosition}`}
+        style={{ visibility: showFallback ? 'visible' : 'hidden' }}
         sizes="100vw"
       />
       <video
         ref={videoRef}
         data-public-hero-video
-        data-video-ready={videoReady && !videoFailed ? 'true' : 'false'}
+        data-video-ready={showVideo ? 'true' : 'false'}
         className={`absolute inset-0 size-full object-cover ${objectPosition}`}
+        style={{ visibility: showVideo ? 'visible' : 'hidden' }}
         autoPlay
         muted
         loop
