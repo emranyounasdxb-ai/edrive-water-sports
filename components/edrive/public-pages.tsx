@@ -53,7 +53,7 @@ const serviceCards = [
     title: 'VIP Marine Support',
     text: 'Personal ride planning, priority support, and elevated service for groups, special occasions, and VIP guests.',
     image: fleetShowcaseImage,
-    href: '/contact',
+    href: '/membership',
     cta: 'Request VIP Support'
   }
 ];
