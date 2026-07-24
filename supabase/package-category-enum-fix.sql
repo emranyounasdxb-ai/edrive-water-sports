@@ -1,4 +1,4 @@
--- Fix package catalog saves when public.packages.category uses the rental_category enum.
+-- Fix package catalog saves when public.packages.category and public.packages.status use enum columns.
 -- Run once in Supabase SQL Editor. Safe to rerun.
 -- Existing packages, prices, images, and booking records are not changed.
 
@@ -60,7 +60,7 @@ begin
       image_url, short_description, status, is_featured, display_order
     ) values (
       v_title, v_slug, v_category::public.rental_category, v_duration, v_base_price, v_b2b_price, v_capacity,
-      nullif(v_image_url, ''), nullif(v_description, ''), v_status, v_featured, v_display_order
+      nullif(v_image_url, ''), nullif(v_description, ''), v_status::public.record_status, v_featured, v_display_order
     ) returning id into v_id;
   else
     update public.packages
@@ -73,7 +73,7 @@ begin
         capacity = v_capacity,
         image_url = nullif(v_image_url, ''),
         short_description = nullif(v_description, ''),
-        status = v_status,
+        status = v_status::public.record_status,
         is_featured = v_featured,
         display_order = v_display_order
     where id = p_package_id
