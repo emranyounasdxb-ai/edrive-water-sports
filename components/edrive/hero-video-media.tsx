@@ -67,9 +67,14 @@ export function HeroVideoMedia({
     };
 
     updateMotionPreference();
-    mediaQuery.addEventListener('change', updateMotionPreference);
 
-    return () => mediaQuery.removeEventListener('change', updateMotionPreference);
+    if (typeof mediaQuery.addEventListener === 'function') {
+      mediaQuery.addEventListener('change', updateMotionPreference);
+      return () => mediaQuery.removeEventListener('change', updateMotionPreference);
+    }
+
+    mediaQuery.addListener(updateMotionPreference);
+    return () => mediaQuery.removeListener(updateMotionPreference);
   }, []);
 
   const showFallback = videoFailed || prefersReducedMotion;
@@ -83,7 +88,6 @@ export function HeroVideoMedia({
         alt={fallbackAlt}
         fill
         priority={fallbackPriority}
-        fetchPriority={fallbackPriority ? 'high' : 'low'}
         hidden={!showFallback}
         aria-hidden={!showFallback}
         data-public-hero-image
