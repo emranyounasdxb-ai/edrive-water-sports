@@ -185,7 +185,7 @@ function FleetUnitCard({ unit }: { unit: PublicFleetUnit }) {
         />
         <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-primary-950/45 to-transparent" aria-hidden="true" />
         <Badge className="absolute left-3 top-3 border-white/60 bg-white/92 text-primary-900" variant="secondary">{typeLabel(unit.vehicle_type)}</Badge>
-        <Badge className={cn('absolute right-3 top-3 border', statusClass(unit.status))} variant="outline">{statusLabel(unit.status)}</Badge>
+        <Badge className={cn('absolute right-3 top-3 border', statusClass(unit.status))} variant="secondary">{statusLabel(unit.status)}</Badge>
         <span className="absolute bottom-3 left-3 rounded-full bg-primary-950/80 px-3 py-1 text-xs font-bold text-white backdrop-blur-sm">{unit.vehicle_code}</span>
       </div>
 
