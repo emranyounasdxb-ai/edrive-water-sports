@@ -138,7 +138,7 @@ export function getCategoryPackageImage(category: PackageImageCategory, index = 
 }
 
 export function getPackageImage(packageItem: PackageLike, index = 0) {
-  return getPackageImageBySlug(packageItem.slug) || getCategoryPackageImage(packageItem.category, index) || packageItem.image || '';
+  return packageItem.image || getPackageImageBySlug(packageItem.slug) || getCategoryPackageImage(packageItem.category, index) || '';
 }
 
 export function getLivePackageImage(category: string, seed = 0) {
