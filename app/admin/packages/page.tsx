@@ -16,6 +16,7 @@ import {
   Search,
   TicketCheck,
   Trash2,
+  Upload,
   Waves,
   X
 } from 'lucide-react';
@@ -24,7 +25,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { usePortalAccess } from '@/components/edrive/portal-access';
-import { getJetCarPackageImage, getJetSkiPackageImage, jetCarPackageImages, jetSkiPackageImages } from '@/lib/edrive-package-images';
+import { getJetCarPackageImage, getJetSkiPackageImage } from '@/lib/edrive-package-images';
 import { supabase } from '@/lib/supabase-client';
 
 const categoryMap: Record<string, string> = {
@@ -34,12 +35,9 @@ const categoryMap: Record<string, string> = {
 };
 
 const statusMap: Record<string, string> = { Active: 'active', Draft: 'draft', Inactive: 'inactive' };
-
-const packageImageOptions = [
-  { label: 'Auto by package type', value: '' },
-  ...jetCarPackageImages.map((value, index) => ({ label: `Jet Car ${String(index + 1).padStart(2, '0')}`, value })),
-  ...jetSkiPackageImages.slice(1).map((value, index) => ({ label: `Jet Ski ${String(index + 1).padStart(2, '0')}`, value }))
-];
+const packageImageBucket = 'package-images';
+const maxPackageImageBytes = 5 * 1024 * 1024;
+const allowedPackageImageTypes = new Set(['image/jpeg', 'image/png', 'image/webp']);
 
 const reverse = (map: Record<string, string>, value?: string) => Object.keys(map).find((key) => map[key] === value) || value || '';
 const toText = (value: unknown) => String(value ?? '');
@@ -68,6 +66,7 @@ type PackageFormValues = Omit<PackageRecord, 'id'>;
 type SortKey = 'title' | 'category' | 'durationMinutes' | 'capacity' | 'basePrice' | 'b2bPrice' | 'status' | 'displayOrder';
 type SortDirection = 'asc' | 'desc';
 type ConfirmAction = { type: 'activate' | 'deactivate' | 'delete'; record: PackageRecord } | null;
+type UploadedPackageImage = { publicUrl: string; objectPath: string };
 
 const emptyPackage: PackageFormValues = {
   title: '',
@@ -84,10 +83,6 @@ const emptyPackage: PackageFormValues = {
   displayOrder: '100'
 };
 
-function isUploadedPackageImage(value: string) {
-  return value.includes('/images/edrive/packages/jet-ski/') || value.includes('/images/edrive/packages/jet-car/');
-}
-
 function getDefaultImage(category: string, seedValue: string | number = 0) {
   const seed = Number(seedValue || 0);
   if (category === 'Jet Ski Rental' || category === 'jet_ski_rental') return getJetSkiPackageImage(seed);
@@ -96,7 +91,55 @@ function getDefaultImage(category: string, seedValue: string | number = 0) {
 }
 
 function resolvePackageImage(category: string, imageUrl: string, seedValue: string | number = 0) {
-  return isUploadedPackageImage(imageUrl) ? imageUrl : getDefaultImage(category, seedValue);
+  return imageUrl.trim() || getDefaultImage(category, seedValue);
+}
+
+function packageImageExtension(file: File) {
+  const extension = file.name.split('.').pop()?.toLowerCase();
+  if (extension === 'png' || extension === 'webp') return extension;
+  return 'jpg';
+}
+
+function packageImageObjectPath(imageUrl: string) {
+  const marker = `/storage/v1/object/public/${packageImageBucket}/`;
+  const markerIndex = imageUrl.indexOf(marker);
+  if (markerIndex < 0) return '';
+  const path = imageUrl.slice(markerIndex + marker.length).split('?')[0];
+  try {
+    return decodeURIComponent(path);
+  } catch {
+    return path;
+  }
+}
+
+async function uploadPackageImage(file: File, packageSlug: string): Promise<UploadedPackageImage> {
+  if (!allowedPackageImageTypes.has(file.type)) throw new Error('Package image must be JPG, PNG, or WebP.');
+  if (file.size > maxPackageImageBytes) throw new Error('Package image must be 5 MB or smaller.');
+
+  const safeSlug = slugify(packageSlug) || 'package';
+  const objectPath = `packages/${safeSlug}-${Date.now()}-${crypto.randomUUID().slice(0, 8)}.${packageImageExtension(file)}`;
+  const uploadResult = await supabase.storage.from(packageImageBucket).upload(objectPath, file, {
+    cacheControl: '31536000',
+    contentType: file.type,
+    upsert: false
+  });
+
+  if (uploadResult.error) {
+    const message = uploadResult.error.message || 'Package image upload failed.';
+    if (message.toLowerCase().includes('bucket not found')) {
+      throw new Error('Package image storage is not active yet. Run supabase/package-image-upload.sql in Supabase SQL Editor first.');
+    }
+    throw new Error(message);
+  }
+
+  const publicUrl = supabase.storage.from(packageImageBucket).getPublicUrl(objectPath).data.publicUrl;
+  if (!publicUrl) throw new Error('Package image uploaded, but its public URL could not be created.');
+  return { publicUrl, objectPath };
+}
+
+async function removePackageImage(objectPath: string) {
+  if (!objectPath) return;
+  await supabase.storage.from(packageImageBucket).remove([objectPath]);
 }
 
 function mapPackage(row: Record<string, unknown>, index: number): PackageRecord {
@@ -146,9 +189,6 @@ function validatePackage(values: PackageFormValues, items: PackageRecord[], edit
   if (!Number.isFinite(b2b) || b2b < 0) return 'B2B price cannot be negative.';
   if (b2b > b2c) return 'B2B price cannot be higher than the B2C price.';
   if (!Number.isInteger(displayOrder) || displayOrder < 0 || displayOrder > 9999) return 'Display order must be a whole number between 0 and 9999.';
-  if (values.status === 'Active' && !values.imageUrl.trim()) {
-    // The auto image option is valid and will be resolved during save.
-  }
 
   const duplicateTitle = items.find((item) => item.id !== editingId && item.status !== 'Inactive' && normalizeText(item.title) === normalizeText(title));
   if (duplicateTitle) return `A live package already uses the title “${duplicateTitle.title}”.`;
@@ -270,7 +310,7 @@ export default function Page() {
     setOpen(true);
   }
 
-  async function savePackage(values: PackageFormValues) {
+  async function savePackage(values: PackageFormValues, imageFile?: File | null) {
     setError('');
     setSuccess('');
     const validationError = validatePackage(values, items, editing?.id);
@@ -278,7 +318,17 @@ export default function Page() {
 
     const title = values.title.trim();
     const slug = values.slug.trim() ? slugify(values.slug) : slugify(`${title}-${values.durationMinutes}-minutes`);
-    const imageUrl = values.imageUrl.trim() || getDefaultImage(values.category, values.displayOrder || values.durationMinutes);
+    let uploadedImage: UploadedPackageImage | null = null;
+
+    if (imageFile) {
+      try {
+        uploadedImage = await uploadPackageImage(imageFile, slug);
+      } catch (uploadError) {
+        return uploadError instanceof Error ? uploadError.message : 'Unable to upload the package image.';
+      }
+    }
+
+    const imageUrl = uploadedImage?.publicUrl || values.imageUrl.trim() || getDefaultImage(values.category, values.displayOrder || values.durationMinutes);
     const payload = {
       title,
       slug,
@@ -300,6 +350,7 @@ export default function Page() {
     });
 
     if (rpcResult.error && !rpcUnavailable(rpcResult.error.message || '', 'save_package_catalog_entry')) {
+      if (uploadedImage) await removePackageImage(uploadedImage.objectPath);
       return rpcResult.error.message;
     }
 
@@ -307,12 +358,21 @@ export default function Page() {
       const result = editing
         ? await supabase.from('packages').update(payload).eq('id', editing.id)
         : await supabase.from('packages').insert(payload);
-      if (result.error) return result.error.message;
+      if (result.error) {
+        if (uploadedImage) await removePackageImage(uploadedImage.objectPath);
+        return result.error.message;
+      }
     }
 
+    if (uploadedImage && editing) {
+      const previousObjectPath = packageImageObjectPath(editing.imageUrl);
+      if (previousObjectPath && previousObjectPath !== uploadedImage.objectPath) await removePackageImage(previousObjectPath);
+    }
+
+    const wasEditing = Boolean(editing);
     setOpen(false);
     setEditing(null);
-    setSuccess(editing ? 'Package updated successfully.' : 'Package created successfully.');
+    setSuccess(wasEditing ? 'Package updated successfully.' : 'Package created successfully.');
     await loadPackages();
     return '';
   }
@@ -371,6 +431,7 @@ export default function Page() {
       }
     }
 
+    await removePackageImage(packageImageObjectPath(record.imageUrl));
     setActionBusy(false);
     setConfirmAction(null);
     setSuccess('Unused package deleted permanently.');
@@ -503,6 +564,7 @@ export default function Page() {
 
 function PackageThumbnail({ src, title }: { src: string; title: string }) {
   const [failed, setFailed] = useState(false);
+  useEffect(() => { setFailed(false); }, [src]);
   if (!src || failed) return <span className="flex h-14 w-20 items-center justify-center rounded-2xl bg-primary-50 text-primary"><ImageIcon className="size-5" aria-hidden="true" /></span>;
   return <img src={src} alt={title} onError={() => setFailed(true)} className="h-14 w-20 rounded-2xl border border-border object-cover shadow-sm" loading="lazy" />;
 }
@@ -520,25 +582,55 @@ function SortableHead({ label, column, active, direction, onSort }: { label: str
   return <TableHead><button type="button" data-readonly-allow="true" onClick={() => onSort(column)} className="inline-flex items-center gap-1.5 font-semibold text-foreground">{label}<Icon className="size-3.5 text-muted-foreground" aria-hidden="true" /></button></TableHead>;
 }
 
-function PackageModal({ initialValues, readOnly, items, onClose, onSubmit }: { initialValues?: PackageRecord; readOnly: boolean; items: PackageRecord[]; onClose: () => void; onSubmit: (values: PackageFormValues) => Promise<string> }) {
+function PackageModal({ initialValues, readOnly, items, onClose, onSubmit }: { initialValues?: PackageRecord; readOnly: boolean; items: PackageRecord[]; onClose: () => void; onSubmit: (values: PackageFormValues, imageFile?: File | null) => Promise<string> }) {
   const [values, setValues] = useState<PackageFormValues>(initialValues ? { ...initialValues } : emptyPackage);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreviewUrl, setImagePreviewUrl] = useState('');
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
   const generatedTitle = generatedPackageTitle(values);
   const duplicate = values.status !== 'Inactive' && items.some((item) => item.id !== initialValues?.id && item.status !== 'Inactive' && packageSpecKey(item) === packageSpecKey(values));
+  const displayedImage = imagePreviewUrl || values.imageUrl || getDefaultImage(values.category, values.displayOrder);
+
+  useEffect(() => {
+    if (!imageFile) {
+      setImagePreviewUrl('');
+      return;
+    }
+    const objectUrl = URL.createObjectURL(imageFile);
+    setImagePreviewUrl(objectUrl);
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [imageFile]);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (readOnly) return;
     setSaving(true);
     setFormError('');
-    const nextError = await onSubmit(values);
+    const nextError = await onSubmit(values, imageFile);
     if (nextError) setFormError(nextError);
     setSaving(false);
   }
 
   function updateField<K extends keyof PackageFormValues>(name: K, value: PackageFormValues[K]) {
     setValues((current) => ({ ...current, [name]: value }));
+  }
+
+  function selectImage(file?: File) {
+    setFormError('');
+    if (!file) {
+      setImageFile(null);
+      return;
+    }
+    if (!allowedPackageImageTypes.has(file.type)) {
+      setFormError('Package image must be JPG, PNG, or WebP.');
+      return;
+    }
+    if (file.size > maxPackageImageBytes) {
+      setFormError('Package image must be 5 MB or smaller.');
+      return;
+    }
+    setImageFile(file);
   }
 
   return (
@@ -550,8 +642,18 @@ function PackageModal({ initialValues, readOnly, items, onClose, onSubmit }: { i
             <div className="grid content-start gap-3 px-5 py-4 sm:grid-cols-2">
               {formError ? <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 sm:col-span-2">{formError}</p> : null}
               {duplicate ? <p className="flex gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold leading-6 text-red-700 sm:col-span-2"><AlertTriangle className="mt-0.5 size-4 shrink-0" />A non-inactive package already uses this ride type, capacity, and duration. Save is blocked until the duplicate is removed or deactivated.</p> : null}
-              <label className="grid gap-1.5 text-sm font-semibold text-foreground sm:col-span-2">Package Image<div className="flex items-center gap-3 rounded-xl border border-border bg-white p-3"><PackageThumbnail src={values.imageUrl || getDefaultImage(values.category, values.displayOrder)} title={values.title || 'Package image'} /><select disabled={readOnly} value={values.imageUrl} onChange={(event) => updateField('imageUrl', event.target.value)} className="h-10 flex-1 rounded-xl border border-border bg-white px-3 text-sm text-foreground outline-none focus:border-primary disabled:bg-slate-50">{packageImageOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></div></label>
-              <FormInput label="Custom Image Path" value={values.imageUrl} placeholder="/images/edrive/packages/jet-car/jet-car-package-01.webp" maxLength={240} disabled={readOnly} onChange={(value) => updateField('imageUrl', value)} />
+              <div className="grid gap-2 sm:col-span-2">
+                <p className="text-sm font-semibold text-foreground">Package Image</p>
+                <div className="flex flex-col gap-3 rounded-xl border border-border bg-white p-3 sm:flex-row sm:items-center">
+                  <PackageThumbnail src={displayedImage} title={values.title || 'Package image'} />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold text-foreground">{imageFile?.name || (values.imageUrl ? 'Current package image' : 'Default package image')}</p>
+                    <p className="mt-1 text-xs leading-5 text-muted-foreground">JPG, PNG, or WebP. Maximum 5 MB. Uploading a new image replaces the current package image after a successful save.</p>
+                  </div>
+                  {!readOnly ? <label className="inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-full bg-primary px-4 text-sm font-semibold text-white transition hover:bg-primary-800"><Upload className="size-4" aria-hidden="true" />{values.imageUrl || imageFile ? 'Replace image' : 'Upload image'}<input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={(event) => selectImage(event.target.files?.[0])} /></label> : null}
+                </div>
+                {imageFile && !readOnly ? <button type="button" onClick={() => setImageFile(null)} className="w-fit text-xs font-semibold text-red-600 hover:underline">Remove selected replacement</button> : null}
+              </div>
               <div className="grid gap-1.5"><FormInput label="Package Title" value={values.title} required maxLength={120} disabled={readOnly} onChange={(value) => updateField('title', value)} />{!readOnly ? <button type="button" onClick={() => updateField('title', generatedTitle)} className="w-fit text-xs font-semibold text-primary hover:underline">Use suggested title: {generatedTitle}</button> : null}</div>
               <FormInput label="Slug / URL" value={values.slug} placeholder="Auto-generated if empty" maxLength={160} disabled={readOnly} onChange={(value) => updateField('slug', value)} />
               <SelectInput label="Category" value={values.category} options={Object.keys(categoryMap)} required disabled={readOnly} onChange={(value) => updateField('category', value)} />
@@ -565,9 +667,9 @@ function PackageModal({ initialValues, readOnly, items, onClose, onSubmit }: { i
               <label className="grid gap-1.5 text-sm font-semibold text-foreground sm:col-span-2">Short Description<textarea disabled={readOnly} maxLength={500} value={values.shortDescription} onChange={(event) => updateField('shortDescription', event.target.value)} className="min-h-24 rounded-xl border border-border bg-white px-3 py-3 text-sm text-foreground outline-none focus:border-primary disabled:bg-slate-50" /><span className="text-right text-[10px] font-medium text-muted-foreground">{values.shortDescription.length}/500</span></label>
             </div>
 
-            <aside className="border-t border-border/70 bg-[#F7FAFA] p-5 lg:border-l lg:border-t-0"><p className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary">Website Card Preview</p><div className="mt-4 overflow-hidden rounded-[1.4rem] border border-white bg-white p-2 shadow-[0_18px_45px_rgba(8,37,50,0.08)]"><div className="aspect-[16/9] overflow-hidden rounded-[1rem] bg-primary-50"><PackageThumbnailLarge src={values.imageUrl || getDefaultImage(values.category, values.displayOrder)} title={values.title || generatedTitle} /></div><div className="p-3"><div className="flex flex-wrap items-center justify-between gap-2"><Badge variant="secondary">{values.category.replace(' Rental', '')}</Badge>{values.isFeatured ? <Badge className="bg-accent-100 text-accent-800">Featured</Badge> : null}</div><h3 className="mt-3 font-heading text-lg font-semibold text-foreground">{values.title || generatedTitle}</h3><p className="mt-2 text-sm leading-6 text-muted-foreground">{values.shortDescription || 'Add a concise public description explaining the ride experience and what guests can expect.'}</p><div className="mt-3 grid grid-cols-2 gap-2 rounded-xl bg-primary-50 p-3 text-xs"><span className="font-bold text-primary-900">{values.durationMinutes || 0} min</span><span className="text-right font-bold text-primary-900">{values.capacity || 0} seater</span><span className="col-span-2 font-heading text-xl font-semibold text-primary-900">{formatAed(values.basePrice)}</span></div></div></div><div className="mt-4 rounded-xl border border-border bg-white p-4 text-xs leading-5 text-muted-foreground"><p><strong className="text-foreground">Public status:</strong> {values.status}</p><p className="mt-1"><strong className="text-foreground">Display order:</strong> {values.displayOrder || 0}</p><p className="mt-1 break-all"><strong className="text-foreground">URL:</strong> /{values.slug ? slugify(values.slug) : slugify(`${values.title || generatedTitle}-${values.durationMinutes}-minutes`)}</p></div></aside>
+            <aside className="border-t border-border/70 bg-[#F7FAFA] p-5 lg:border-l lg:border-t-0"><p className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary">Website Card Preview</p><div className="mt-4 overflow-hidden rounded-[1.4rem] border border-white bg-white p-2 shadow-[0_18px_45px_rgba(8,37,50,0.08)]"><div className="aspect-[16/9] overflow-hidden rounded-[1rem] bg-primary-50"><PackageThumbnailLarge src={displayedImage} title={values.title || generatedTitle} /></div><div className="p-3"><div className="flex flex-wrap items-center justify-between gap-2"><Badge variant="secondary">{values.category.replace(' Rental', '')}</Badge>{values.isFeatured ? <Badge className="bg-accent-100 text-accent-800">Featured</Badge> : null}</div><h3 className="mt-3 font-heading text-lg font-semibold text-foreground">{values.title || generatedTitle}</h3><p className="mt-2 text-sm leading-6 text-muted-foreground">{values.shortDescription || 'Add a concise public description explaining the ride experience and what guests can expect.'}</p><div className="mt-3 grid grid-cols-2 gap-2 rounded-xl bg-primary-50 p-3 text-xs"><span className="font-bold text-primary-900">{values.durationMinutes || 0} min</span><span className="text-right font-bold text-primary-900">{values.capacity || 0} seater</span><span className="col-span-2 font-heading text-xl font-semibold text-primary-900">{formatAed(values.basePrice)}</span></div></div></div><div className="mt-4 rounded-xl border border-border bg-white p-4 text-xs leading-5 text-muted-foreground"><p><strong className="text-foreground">Public status:</strong> {values.status}</p><p className="mt-1"><strong className="text-foreground">Display order:</strong> {values.displayOrder || 0}</p><p className="mt-1 break-all"><strong className="text-foreground">URL:</strong> /{values.slug ? slugify(values.slug) : slugify(`${values.title || generatedTitle}-${values.durationMinutes}-minutes`)}</p></div></aside>
           </div>
-          <div className="flex justify-end gap-3 border-t border-border/70 bg-white px-5 py-4"><Button type="button" variant="outline" data-readonly-allow="true" onClick={onClose}>{readOnly ? 'Close' : 'Cancel'}</Button>{!readOnly ? <Button type="submit" disabled={saving || duplicate}>{saving ? 'Saving...' : 'Save Package'}</Button> : null}</div>
+          <div className="flex justify-end gap-3 border-t border-border/70 bg-white px-5 py-4"><Button type="button" variant="outline" data-readonly-allow="true" onClick={onClose}>{readOnly ? 'Close' : 'Cancel'}</Button>{!readOnly ? <Button type="submit" disabled={saving || duplicate}>{saving ? imageFile ? 'Uploading & Saving...' : 'Saving...' : 'Save Package'}</Button> : null}</div>
         </form>
       </div>
     </div>
@@ -576,6 +678,7 @@ function PackageModal({ initialValues, readOnly, items, onClose, onSubmit }: { i
 
 function PackageThumbnailLarge({ src, title }: { src: string; title: string }) {
   const [failed, setFailed] = useState(false);
+  useEffect(() => { setFailed(false); }, [src]);
   if (!src || failed) return <span className="flex h-full w-full items-center justify-center text-primary"><ImageIcon className="size-8" aria-hidden="true" /></span>;
   return <img src={src} alt={title} onError={() => setFailed(true)} className="h-full w-full object-cover" />;
 }
