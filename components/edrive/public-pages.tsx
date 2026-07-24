@@ -5,7 +5,6 @@ import {
   ArrowRight,
   CalendarCheck,
   Car,
-  CheckCircle2,
   Crown,
   Mail,
   MapPin,
@@ -18,13 +17,14 @@ import {
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { companyInfo, whatsappUrl } from '@/lib/company-info';
-import { dubaiWaterfrontImage, fleetHeroImage, fleetShowcaseImage, jetCarLightImage, jetSkiLightImage } from '@/lib/mock-data';
+import { dubaiWaterfrontImage, fleetHeroImage, jetCarLightImage, jetSkiLightImage } from '@/lib/mock-data';
 import { cn } from '@/lib/utils';
 import { BookingForm } from './booking-form';
 import { ContactForm } from './contact-form';
 import { HeroVideoMedia } from './hero-video-media';
 import { LivePackageShowcase } from './live-package-showcase';
 import { MotionReveal } from './motion-reveal';
+import { PublicFleetShowcase } from './public-fleet-showcase';
 import { PublicVideoHero, publicHeroContentClass, publicHeroFrameClass, type PublicHeroAction } from './public-video-hero';
 
 const sectionPad = 'py-10 sm:py-12 lg:py-14';
@@ -50,18 +50,18 @@ const serviceCards = [
   },
   {
     icon: Crown,
-    title: 'VIP Marine Support',
-    text: 'Personal ride planning, priority support, and elevated service for groups, special occasions, and VIP guests.',
-    image: fleetShowcaseImage,
+    title: 'eDrive Signature Membership',
+    text: 'Priority benefits, exclusive offers, and dedicated ride support for repeat customers and VIP guests.',
+    image: '/images/edrive/home/home-membership-gold-card.webp',
     href: '/membership',
-    cta: 'Request VIP Support'
+    cta: 'View Membership'
   }
 ];
 
 const homeServiceCardImages: Record<string, string> = {
   'Jet Ski Rentals': '/images/edrive/home/home-jet-ski-rentals.webp',
   'Jet Car Rentals': '/images/edrive/home/home-jet-car-rentals.webp',
-  'VIP Marine Support': '/images/edrive/home/home-membership-gold-card.webp'
+  'eDrive Signature Membership': '/images/edrive/home/home-membership-gold-card.webp'
 };
 
 const homeServiceCards = serviceCards.map((item) => ({
@@ -77,27 +77,9 @@ const whyChoose = [
 ];
 
 const bookingSteps = [
-  { icon: Sparkles, title: 'Choose your ride', text: 'Select jet ski, jet car, VIP support, or a package that matches your group and timing.' },
+  { icon: Sparkles, title: 'Choose your ride', text: 'Select a jet ski, jet car, or package that matches your group and preferred timing.' },
   { icon: CalendarCheck, title: 'Pick date and time', text: 'Share your preferred slot, guest count, and any celebration or group details.' },
   { icon: MessageCircle, title: 'Team confirms', text: 'Our team checks availability and confirms the final details before your water sports experience.' }
-];
-
-const membershipTiers = [
-  {
-    name: 'Explorer Member',
-    bestFor: 'Tourists, occasional riders, and first-time customers',
-    benefits: ['Member-only offers', 'Priority WhatsApp support', 'Birthday discount', 'Ride recommendations']
-  },
-  {
-    name: 'Premium Member',
-    bestFor: 'Dubai residents, repeat riders, couples, and small groups',
-    benefits: ['Better booking support', 'Priority slots', 'Weekday offers', 'Friends/family add-on support']
-  },
-  {
-    name: 'VIP Marine Member',
-    bestFor: 'VIP customers, private groups, and luxury clients',
-    benefits: ['VIP planning', 'Priority sunset slots', 'Custom ride support', 'Dedicated contact flow']
-  }
 ];
 
 export function HomePage() {
@@ -114,7 +96,7 @@ export function HomePage() {
 
       <section className="bg-[#f4f5f5]">
         <div className={cn('container-x', sectionPad)}>
-          <SectionHeader title="Premium Water Sports Experiences" text="Plan jet ski rentals, jet car rides, VIP marine support, and special Dubai water sports moments with eDrive." />
+          <SectionHeader title="Premium Water Sports & Membership" text="Plan jet ski rentals, jet car rides, and eDrive Signature Membership benefits with one trusted Dubai Islands team." />
           <div className="mt-7 grid gap-5 md:grid-cols-3">
             {homeServiceCards.map((item) => <ServiceCard key={item.title} {...item} />)}
           </div>
@@ -182,52 +164,40 @@ export function FleetPage() {
   return (
     <>
       <PublicHero
-        title="Premium Jet Ski & Jet Car Fleet Dubai"
-        text="Explore eDrive Water Sports ride options for jet ski rentals, luxury jet car experiences, family rides, group bookings, and VIP marine moments."
+        title="Premium eDrive Fleet"
+        text="Explore individual eDrive Jet Ski and Jet Car units with original fleet images, seating details, and direct package access."
         image={fleetHeroImage}
         imageAlt="Premium eDrive jet ski and jet car fleet in Dubai"
         actions={[
-          { href: '/booking', label: 'Book Now', icon: CalendarCheck },
-          { href: '/contact', label: 'Contact eDrive', icon: MessageCircle, variant: 'gold' }
+          { href: '#public-fleet', label: 'Explore Fleet', icon: Car },
+          { href: '/booking', label: 'Book a Ride', icon: CalendarCheck, variant: 'gold' }
         ]}
       />
 
-      <section className={cn('container-x', sectionPad)}>
-        <SectionHeader title="Ride Types" text="Choose the ride style that matches your group size, preferred timing, and Dubai water sports experience." />
-        <div className="mt-7 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-          {serviceCards.map((item) => <ServiceCard key={item.title} {...item} />)}
-        </div>
-      </section>
+      <div id="public-fleet">
+        <PublicFleetShowcase />
+      </div>
 
       <section className="border-y border-border bg-white/70">
         <div className={cn('container-x', sectionPad)}>
-          <SectionHeader title="Fleet Support" text="Every ride is prepared with team assistance, safety briefing, clear arrival guidance, and booking confirmation before your experience." />
+          <SectionHeader title="Fleet Quality & Ride Support" text="Every public fleet unit is supported by clear arrival guidance, safety preparation, and booking confirmation before your experience." />
           <FeatureGrid items={whyChoose} className="mt-7 lg:grid-cols-4" />
         </div>
       </section>
-    </>
-  );
-}
 
-export function MembershipPage() {
-  return (
-    <>
-      <PublicHero
-        title="eDrive Water Sports Membership"
-        text="Get priority support, special offers, and better ride planning for repeat customers, Dubai residents, couples, groups, and VIP guests."
-        image={dubaiWaterfrontImage}
-        imageAlt="eDrive Water Sports membership in Dubai"
-        actions={[
-          { href: '/contact', label: 'Apply for Membership', icon: Crown },
-          { href: '/booking', label: 'Book a Ride', icon: CalendarCheck, variant: 'outline' },
-          { href: whatsappUrl, label: 'WhatsApp Team', icon: MessageCircle, variant: 'gold', external: true }
-        ]}
-      />
-
-      <section className={cn('container-x', sectionPad)}>
-        <SectionHeader title="Membership Tiers" text="Choose the support level that matches your ride style and our team will confirm the latest available benefits directly." />
-        <div className="mt-7 grid gap-5 lg:grid-cols-3">
-          {membershipTiers.map((tier) => <MembershipTierCard key={tier.name} tier={tier} />)}
+      <section className="bg-[#f4f5f5] pb-12 pt-10 sm:pb-14 lg:pb-16">
+        <div className="container-x">
+          <div className="flex flex-col gap-5 rounded-[1.6rem] bg-primary-900 p-6 text-white shadow-xl sm:p-8 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-accent-300">Choose your ride package</p>
+              <h2 className="mt-2 font-heading text-2xl font-semibold sm:text-3xl">Compare current durations and prices.</h2>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-white/70">Open the rentals catalog to choose a Jet Ski or Jet Car package that matches your group and preferred ride time.</p>
+            </div>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Button asChild className="rounded-full bg-white text-primary-900 hover:bg-primary-50"><Link href="/rentals">View All Packages<ArrowRight className="size-4" aria-hidden="true" /></Link></Button>
+              <Button asChild variant="outline" className="rounded-full border-white/30 bg-transparent text-white hover:bg-white/10 hover:text-white"><Link href="/booking">Book a Ride</Link></Button>
+            </div>
+          </div>
         </div>
       </section>
     </>
@@ -335,20 +305,6 @@ function FeatureCard({ item }: { item: { icon: LucideIcon; title: string; text: 
   );
 }
 
-function MembershipTierCard({ tier }: { tier: { name: string; bestFor: string; benefits: string[] } }) {
-  return (
-    <Card className="premium-card-hover">
-      <CardContent className="p-6">
-        <h3 className="font-heading text-2xl font-semibold text-foreground">{tier.name}</h3>
-        <p className="mt-2 text-sm leading-6 text-muted-foreground">{tier.bestFor}</p>
-        <ul className="mt-5 grid gap-3">
-          {tier.benefits.map((benefit) => <li key={benefit} className="flex items-center gap-3 text-sm text-foreground"><CheckCircle2 className="size-4 text-primary" aria-hidden="true" />{benefit}</li>)}
-        </ul>
-      </CardContent>
-    </Card>
-  );
-}
-
 function HomeContactStrip() {
   return (
     <section className="bg-[#f4f5f5] pb-10 sm:pb-12 lg:pb-14">
@@ -357,7 +313,7 @@ function HomeContactStrip() {
           <div>
             <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-accent-300">Need help choosing?</p>
             <h2 className="mt-2 font-heading text-2xl font-semibold">Talk to eDrive before you book.</h2>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-white/70">Tell us your date, number of guests, and whether you prefer a jet ski rental, jet car ride, family package, combo ride, or VIP experience.</p>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-white/70">Tell us your date, number of guests, preferred ride, or whether you need help with an eDrive Signature Membership inquiry.</p>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row">
             <Button asChild className="rounded-full bg-emerald-500 hover:bg-emerald-600"><a href={whatsappUrl} target="_blank" rel="noopener noreferrer"><MessageCircle data-icon aria-hidden="true" />Chat on WhatsApp</a></Button>
