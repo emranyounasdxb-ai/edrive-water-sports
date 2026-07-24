@@ -1,9 +1,9 @@
 import type { Metadata } from 'next';
-import { MembershipPage } from '@/components/edrive/public-pages';
+import { MembershipPage } from '@/components/edrive/membership-page';
 
 export const metadata: Metadata = {
-  title: 'Water Sports Membership Dubai',
-  description: 'Request eDrive Water Sports membership benefits for repeat riders, Dubai residents, couples, families, and VIP guests booking Dubai marine experiences.'
+  title: 'eDrive Signature Membership Dubai',
+  description: 'Discover eDrive Signature Membership benefits for repeat riders, Dubai residents, couples, families, private groups, and VIP guests.'
 };
 
 export default function Page() {
