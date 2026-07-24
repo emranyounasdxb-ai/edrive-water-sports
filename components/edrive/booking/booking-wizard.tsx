@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { formatAed, formatDuration, generateBookingCode, getBookingTotals, getCapacityPerVehicle, getExperience, getSelectedRateForDuration, initialBookingDraft, timeSlots } from '@/lib/booking-data';
 import type { BookingDraft, BookingRateOption, BookingRequest } from '@/lib/booking-data';
 import { companyInfo } from '@/lib/company-info';
+import { getLivePackageImage } from '@/lib/edrive-package-images';
 import { cleanMultiline, cleanSingleLine, dubaiDateParts, dubaiDateValue, isSelectableDubaiBookingTime, isValidOptionalEmail, isValidPhone } from '@/lib/public-request-validation';
 import { supabase } from '@/lib/supabase-client';
 import { cn } from '@/lib/utils';
@@ -32,6 +33,7 @@ type PackageRateRow = {
   duration_minutes: number;
   base_price: number;
   capacity: number;
+  image_url?: string | null;
   short_description?: string | null;
   display_order?: number | null;
 };
@@ -43,6 +45,7 @@ type PackageGroup = {
   category: string;
   categoryLabel: string;
   capacity: number;
+  imageUrl: string;
   description: string;
   displayOrder: number;
   rates: BookingRateOption[];
@@ -122,6 +125,7 @@ function groupPackageRows(rows: PackageRateRow[]) {
       const first = sortedRows[0];
       const capacity = Number(first.capacity || 2);
       const title = packageFamilyTitle(first);
+      const savedImage = sortedRows.map((row) => String(row.image_url || '').trim()).find(Boolean);
       return {
         key,
         title,
@@ -129,6 +133,7 @@ function groupPackageRows(rows: PackageRateRow[]) {
         category: first.category,
         categoryLabel: categoryLabel(first.category),
         capacity,
+        imageUrl: savedImage || getLivePackageImage(first.category, Number(first.display_order || capacity)),
         description: first.short_description || `Choose your ${title.toLowerCase()} duration and submit your request.`,
         displayOrder: Math.min(...sortedRows.map((row) => Number(row.display_order || 100))),
         rates: mapRates(sortedRows)
@@ -168,7 +173,7 @@ async function fetchPublicPackageRows() {
 
   const fallbackResult = await supabase
     .from('packages')
-    .select('id,title,slug,category,duration_minutes,base_price,capacity,short_description,display_order')
+    .select('id,title,slug,category,duration_minutes,base_price,capacity,image_url,short_description,display_order')
     .eq('status', 'active')
     .order('display_order', { ascending: true })
     .order('capacity', { ascending: true })
@@ -436,12 +441,13 @@ function PackageSelectionStep({ groups, selectedRateId, onSelect }: { groups: Pa
     <div>
       <p className="mb-3 text-sm leading-6 text-muted-foreground">Choose your preferred ride package below. Our team will confirm availability before your experience.</p>
       <div className="grid gap-3 sm:grid-cols-2">
-        {groups.map((group) => {
+        {groups.map((group, index) => {
           const active = group.rates.some((rate) => rate.id === selectedRateId);
           const startingPrice = Math.min(...group.rates.map((rate) => rate.price));
           return (
-            <button key={group.key} type="button" onClick={() => onSelect(group)} className={cn('group rounded-[1.25rem] border bg-white p-4 text-left transition duration-200 hover:-translate-y-0.5 hover:border-primary/45 hover:shadow-md', active ? 'border-primary bg-gradient-to-br from-primary-50 via-white to-accent-100/40 shadow-md ring-1 ring-primary/15' : 'border-border shadow-sm')} aria-pressed={active}>
-              <div className="flex items-start justify-between gap-3">
+            <button key={group.key} type="button" onClick={() => onSelect(group)} className={cn('group overflow-hidden rounded-[1.25rem] border bg-white text-left transition duration-200 hover:-translate-y-0.5 hover:border-primary/45 hover:shadow-md', active ? 'border-primary bg-gradient-to-br from-primary-50 via-white to-accent-100/40 shadow-md ring-1 ring-primary/15' : 'border-border shadow-sm')} aria-pressed={active}>
+              <PackageSelectionImage src={group.imageUrl} title={group.title} category={group.category} index={index} />
+              <div className="flex items-start justify-between gap-3 p-4">
                 <div>
                   <div className="flex flex-wrap items-center gap-2"><TicketCheck className="size-4 text-primary" aria-hidden="true" /><h3 className="font-heading text-lg font-semibold text-foreground">{group.title}</h3></div>
                   <p className="mt-1.5 text-xs leading-5 text-muted-foreground">{group.categoryLabel} · {group.capacity} seater</p>
@@ -456,6 +462,12 @@ function PackageSelectionStep({ groups, selectedRateId, onSelect }: { groups: Pa
       </div>
     </div>
   );
+}
+
+function PackageSelectionImage({ src, title, category, index }: { src: string; title: string; category: string; index: number }) {
+  const [failed, setFailed] = useState(false);
+  const imageSrc = failed || !src ? getLivePackageImage(category, index) : src;
+  return <img src={imageSrc} alt={title} onError={() => setFailed(true)} className="aspect-[16/8.4] w-full object-cover object-center" loading="lazy" />;
 }
 
 function DurationStep({ draft, onUpdate }: { draft: BookingDraft; onUpdate: (values: Partial<BookingDraft>) => void }) {
