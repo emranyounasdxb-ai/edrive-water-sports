@@ -63,9 +63,8 @@ function fallbackImageForPackage(item: LivePackage, index = 0) {
   return getLivePackageImage(item.category, seed);
 }
 
-function imageForLivePackage(item: LivePackage, index = 0, repeatedImage = false) {
-  if (item.image_url && !repeatedImage) return item.image_url;
-  return fallbackImageForPackage(item, index);
+function imageForLivePackage(item: LivePackage, index = 0) {
+  return String(item.image_url || '').trim() || fallbackImageForPackage(item, index);
 }
 
 function sortedPackages(items: LivePackage[]) {
@@ -80,13 +79,7 @@ function sortedPackages(items: LivePackage[]) {
 }
 
 function withDisplayImages(items: LivePackage[]) {
-  const usedImages = new Map<string, number>();
-  return items.map((item, index) => {
-    const rawImage = String(item.image_url || '').trim();
-    const repeatedImage = rawImage ? (usedImages.get(rawImage) || 0) > 0 : false;
-    if (rawImage) usedImages.set(rawImage, (usedImages.get(rawImage) || 0) + 1);
-    return { ...item, display_image_url: imageForLivePackage(item, index, repeatedImage) };
-  });
+  return items.map((item, index) => ({ ...item, display_image_url: imageForLivePackage(item, index) }));
 }
 
 async function fetchPublicPackages(categories?: string[]) {
