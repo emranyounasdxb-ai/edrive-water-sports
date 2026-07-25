@@ -9,11 +9,11 @@ import { Input } from '@/components/ui/input';
 import { formatAed } from '@/lib/booking-data';
 import { bookingRequestsTable } from '@/lib/booking-records';
 import { supabase } from '@/lib/supabase-client';
+import { completeBookingRide, getAssignableVehicles, markBookingNoShow, startBookingRide, type AssignableVehicle } from '@/services/booking-assignments';
 import { AdminOperationsAssignmentsPage } from './admin-operations-modules';
 
-type PortalProfile = { full_name: string | null; email: string | null; role: string | null; status: string | null };
-type ManagerProfile = { name: string; email: string; role: string; ready: boolean };
-type VehicleOption = { name: string; code: string; type: string; status: string };
+type PortalProfile = { id: string; full_name: string | null; email: string | null; role: string | null; status: string | null };
+type ManagerProfile = { id: string; name: string; email: string; role: string; status: string; ready: boolean; error: string };
 type CompletionValues = { method: 'Cash' | 'Card' | 'B2B Invoice'; amount: number; reference: string; note: string };
 type RideFilter = 'today' | 'tomorrow' | 'upcoming' | 'overdue' | 'completed' | 'no-show' | 'all';
 type RideType = 'jet_car' | 'jet_ski' | '';
@@ -45,8 +45,12 @@ type BookingRow = Record<string, unknown> & {
   payment_source?: string | null;
   payment_workflow_status?: string | null;
   collection_status?: string | null;
+  assigned_manager_id?: string | null;
   assigned_manager_name?: string | null;
   assigned_vehicle_name?: string | null;
+  vehicle_quantity?: number | string | null;
+  ride_started_at?: string | null;
+  ride_completed_at?: string | null;
   b2b_agent_name?: string | null;
   internal_note?: string | null;
 };
@@ -73,11 +77,11 @@ function numberValue(value: unknown) {
 }
 
 function localDateKey(offsetDays = 0) {
-  const date = new Date();
-  date.setDate(date.getDate() + offsetDays);
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
+  const date = new Date(Date.now() + offsetDays * 86_400_000);
+  const parts = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Dubai', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(date);
+  const year = parts.find((part) => part.type === 'year')?.value || '';
+  const month = parts.find((part) => part.type === 'month')?.value || '';
+  const day = parts.find((part) => part.type === 'day')?.value || '';
   return `${year}-${month}-${day}`;
 }
 
@@ -93,11 +97,12 @@ function dateLabel(value: unknown) {
 
 function timeToMinutes(value: unknown) {
   const clean = text(value, '').trim();
-  const match = clean.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  const match = clean.match(/^(\d{1,2}):(\d{2})(?:\s*(AM|PM))?$/i);
   if (!match) return Number.NaN;
   const hoursRaw = Number(match[1]);
   const minutes = Number(match[2]);
-  const period = match[3].toUpperCase();
+  const period = match[3]?.toUpperCase();
+  if (minutes > 59 || (period ? hoursRaw < 1 || hoursRaw > 12 : hoursRaw > 23)) return Number.NaN;
   const hours = period === 'PM' && hoursRaw !== 12 ? hoursRaw + 12 : period === 'AM' && hoursRaw === 12 ? 0 : hoursRaw;
   return hours * 60 + minutes;
 }
@@ -170,11 +175,6 @@ function statusTone(status: unknown) {
   return 'border-gold/35 bg-gold/10 text-gold';
 }
 
-function matchesManager(booking: BookingRow, manager: ManagerProfile) {
-  const assigned = String(booking.assigned_manager_name || '').trim().toLowerCase();
-  return Boolean(assigned && (assigned === manager.name.trim().toLowerCase() || assigned === manager.email.trim().toLowerCase()));
-}
-
 function isVisibleBooking(booking: BookingRow) {
   return ['confirmed', 'completed', 'no show'].includes(text(booking.status, '').toLowerCase());
 }
@@ -201,7 +201,10 @@ function hasRideTimePassed(booking: BookingRow, now = new Date()) {
   if (rideDate > today) return false;
   const scheduledMinutes = timeToMinutes(booking.preferred_time);
   if (!Number.isFinite(scheduledMinutes)) return false;
-  return scheduledMinutes <= now.getHours() * 60 + now.getMinutes();
+  const parts = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Dubai', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(now);
+  const hours = Number(parts.find((part) => part.type === 'hour')?.value || 0);
+  const minutes = Number(parts.find((part) => part.type === 'minute')?.value || 0);
+  return scheduledMinutes <= hours * 60 + minutes;
 }
 
 function canMarkNoShow(booking: BookingRow) {
@@ -223,23 +226,6 @@ function matchesFilter(booking: BookingRow, filter: RideFilter) {
   return true;
 }
 
-function isVehicleAvailable(vehicle: VehicleOption) {
-  return text(vehicle.status, '').toLowerCase() === 'available';
-}
-
-function vehicleValue(vehicle: VehicleOption) {
-  return text(vehicle.name || vehicle.code, '');
-}
-
-function sameVehicle(vehicle: VehicleOption, selected: string) {
-  const value = selected.trim().toLowerCase();
-  return Boolean(value && [vehicle.name, vehicle.code].some((item) => text(item, '').toLowerCase() === value));
-}
-
-function findVehicle(vehicles: VehicleOption[], selected: string) {
-  return vehicles.find((item) => sameVehicle(item, selected));
-}
-
 function normalizeRideType(value: unknown): RideType {
   const clean = text(value, '').toLowerCase().replace(/[_-]+/g, ' ');
   if (!clean) return '';
@@ -259,31 +245,33 @@ function rideTypeLabel(type: RideType) {
   return 'Vehicle';
 }
 
-function vehicleRideType(vehicle: VehicleOption): RideType {
-  return normalizeRideType(vehicle.type) || normalizeRideType(vehicle.name) || normalizeRideType(vehicle.code);
-}
-
-function vehicleMatchesRide(vehicle: VehicleOption, expected: RideType) {
-  return !expected || vehicleRideType(vehicle) === expected;
-}
-
-async function updateVehicleStatus(vehicleName: string, status: 'available' | 'booked') {
-  const clean = vehicleName.trim();
-  if (!clean) return;
-  const payload = { status, updated_at: new Date().toISOString() };
-  await supabase.from('vehicles').update(payload).eq('vehicle_name', clean);
-  await supabase.from('vehicles').update(payload).eq('vehicle_code', clean);
-}
-
 async function loadManagerProfile(): Promise<ManagerProfile> {
-  const { data: sessionData } = await supabase.auth.getSession();
+  const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+  if (sessionError) throw new Error(`Unable to verify your authenticated session: ${sessionError.message}`);
   const authUser = sessionData.session?.user;
-  const authEmail = authUser?.email || '';
-  if (!authUser) return { name: '', email: '', role: 'admin', ready: true };
-  const filter = authEmail ? `auth_user_id.eq.${authUser.id},email.eq.${authEmail}` : `auth_user_id.eq.${authUser.id}`;
-  const { data } = await supabase.from('admin_users').select('full_name,email,role,status').or(filter).limit(1);
-  const profile = (data || [])[0] as PortalProfile | undefined;
-  return { name: profile?.full_name || authEmail, email: profile?.email || authEmail, role: profile?.role || 'admin', ready: true };
+  if (!authUser) throw new Error('No authenticated user session was found.');
+  const { data, error } = await supabase
+    .from('admin_users')
+    .select('id,full_name,email,role,status')
+    .eq('auth_user_id', authUser.id)
+    .limit(2);
+  if (error) throw new Error(`Unable to load your staff profile: ${error.message}`);
+  const rows = (data || []) as PortalProfile[];
+  if (rows.length === 0) throw new Error('No staff profile is linked to your authenticated user ID.');
+  if (rows.length > 1) throw new Error('Multiple staff profiles are linked to your authenticated user ID. Contact a Super Admin.');
+  const profile = rows[0];
+  const status = text(profile.status, '').toLowerCase();
+  if (status !== 'active') throw new Error('Your staff profile is inactive. Contact a Super Admin.');
+  if (!profile.id) throw new Error('Your staff profile does not have a stable admin_users ID.');
+  return {
+    id: profile.id,
+    name: profile.full_name || profile.email || 'Staff user',
+    email: profile.email || '',
+    role: text(profile.role, '').toLowerCase(),
+    status,
+    ready: true,
+    error: ''
+  };
 }
 
 function CompactStat({ label, value, tone = 'default' }: { label: string; value: string; tone?: 'default' | 'good' | 'bad' }) {
@@ -326,6 +314,7 @@ function PaymentModal({ booking, onClose, onComplete }: { booking: BookingRow; o
       if (!isB2B && (!Number.isFinite(numeric) || numeric <= 0)) throw new Error('Enter received amount.');
       if (lockedMethod === 'Card' && !reference.trim()) throw new Error('Card reference required.');
       await onComplete({ method: lockedMethod, amount: Number.isFinite(numeric) ? numeric : 0, reference: reference.trim(), note: note.trim() });
+      onClose();
     } catch (modalError) {
       setError(modalError instanceof Error ? modalError.message : 'Unable to complete ride.');
     } finally {
@@ -369,9 +358,25 @@ function PaymentModal({ booking, onClose, onComplete }: { booking: BookingRow; o
   );
 }
 
-function NoShowModal({ booking, saving, onClose, onConfirm }: { booking: BookingRow; saving: boolean; onClose: () => void; onConfirm: (reason: string, note: string) => Promise<void> }) {
+function NoShowModal({ booking, onClose, onConfirm }: { booking: BookingRow; onClose: () => void; onConfirm: (reason: string, note: string) => Promise<void> }) {
   const [reason, setReason] = useState('Guest did not arrive');
   const [note, setNote] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  async function submit() {
+    setSaving(true);
+    setError('');
+    try {
+      await onConfirm(reason, note);
+      onClose();
+    } catch (modalError) {
+      setError(modalError instanceof Error ? modalError.message : 'Unable to mark no show.');
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-3 sm:items-center">
       <div className="w-full max-w-md rounded-[1.5rem] bg-white p-4 shadow-2xl">
@@ -380,24 +385,27 @@ function NoShowModal({ booking, saving, onClose, onConfirm }: { booking: Booking
           <button type="button" onClick={onClose} className="rounded-full border border-border p-2 text-muted-foreground" aria-label="Close"><X className="size-4" /></button>
         </div>
         <div className="mt-4 rounded-xl bg-red-50 px-3 py-2 text-xs font-semibold leading-5 text-red-700">No payment will be collected and this booking will move to No Collection.</div>
+        {error ? <p className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-xs font-semibold text-red-700">{error}</p> : null}
         <div className="mt-4 grid gap-3">
           <label className="grid gap-1.5 text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">Reason<select value={reason} onChange={(event) => setReason(event.target.value)} className={selectClass}><option value="Guest did not arrive">Guest did not arrive</option><option value="Customer cancelled on spot">Customer cancelled on spot</option><option value="Weather or safety issue">Weather or safety issue</option><option value="Other">Other</option></select></label>
           <label className="grid gap-1.5 text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">Note<Input value={note} onChange={(event) => setNote(event.target.value)} className="h-10 rounded-xl bg-white" placeholder="Optional note" /></label>
-          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end"><Button type="button" variant="outline" onClick={onClose} className="rounded-full bg-white">Cancel</Button><Button type="button" onClick={() => onConfirm(reason, note)} disabled={saving} className="rounded-full bg-red-600 hover:bg-red-700"><AlertCircle className="size-4" />{saving ? 'Saving...' : 'Confirm No Show'}</Button></div>
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end"><Button type="button" variant="outline" onClick={onClose} disabled={saving} className="rounded-full bg-white">Cancel</Button><Button type="button" onClick={submit} disabled={saving} className="rounded-full bg-red-600 hover:bg-red-700"><AlertCircle className="size-4" />{saving ? 'Saving...' : 'Confirm No Show'}</Button></div>
         </div>
       </div>
     </div>
   );
 }
 
-function RideCard({ booking, vehicles, onSaved }: { booking: BookingRow; vehicles: VehicleOption[]; onSaved: () => Promise<void> }) {
+function RideCard({ booking, onSaved }: { booking: BookingRow; onSaved: () => Promise<void> }) {
   const assignedVehicle = text(booking.assigned_vehicle_name, '');
   const expectedType = expectedRideType(booking);
   const expectedLabel = rideTypeLabel(expectedType);
-  const assignedVehicleRow = assignedVehicle ? findVehicle(vehicles, assignedVehicle) : undefined;
-  const assignedMatches = !assignedVehicle || (assignedVehicleRow ? vehicleMatchesRide(assignedVehicleRow, expectedType) : !expectedType);
-  const initialVehicle = assignedMatches ? assignedVehicle : '';
-  const [vehicle, setVehicle] = useState(initialVehicle);
+  const requiredVehicleCount = Math.max(1, Math.trunc(numberValue(booking.vehicle_quantity) || 1));
+  const [vehicles, setVehicles] = useState<AssignableVehicle[]>([]);
+  const [selectedVehicleIds, setSelectedVehicleIds] = useState<string[]>([]);
+  const [vehiclesLoading, setVehiclesLoading] = useState(false);
+  const [startPanelOpen, setStartPanelOpen] = useState(false);
+  const [vehicleError, setVehicleError] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [completionOpen, setCompletionOpen] = useState(false);
@@ -410,99 +418,84 @@ function RideCard({ booking, vehicles, onSaved }: { booking: BookingRow; vehicle
   const actionAllowed = canOperateBooking(booking);
   const noShowAllowed = canMarkNoShow(booking);
   const noShowWaiting = actionAllowed && !inProgress && !completed && !noShow && !noShowAllowed;
-  const assignedTypeWarning = Boolean(assignedVehicle && !assignedMatches);
-  const vehicleWarning = assignedTypeWarning ? `${assignedVehicle} is not valid for this ${expectedLabel} booking.` : '';
 
-  useEffect(() => { setVehicle(initialVehicle); }, [initialVehicle]);
+  async function openStartPanel() {
+    if (!booking.id) {
+      setError('This booking does not have a stable ID.');
+      return;
+    }
+    setStartPanelOpen(true);
+    setSelectedVehicleIds([]);
+    setVehicles([]);
+    setVehiclesLoading(true);
+    setVehicleError('');
+    try {
+      setVehicles(await getAssignableVehicles(booking.id));
+    } catch (loadError) {
+      setVehicleError(loadError instanceof Error ? loadError.message : 'Unable to load available vehicles.');
+    } finally {
+      setVehiclesLoading(false);
+    }
+  }
 
-  const vehicleOptions = useMemo(() => {
-    const names = new Set<string>();
-    vehicles.filter((item) => isVehicleAvailable(item) && vehicleMatchesRide(item, expectedType)).forEach((item) => names.add(vehicleValue(item)));
-    if (assignedVehicle && assignedMatches) names.add(assignedVehicle);
-    return Array.from(names).filter(Boolean).sort();
-  }, [assignedMatches, assignedVehicle, expectedType, vehicles]);
+  function closeStartPanel() {
+    setStartPanelOpen(false);
+    setSelectedVehicleIds([]);
+    setVehicles([]);
+    setVehicleError('');
+  }
 
-  const selectedVehicle = vehicle ? findVehicle(vehicles, vehicle) : undefined;
-  const selectedMatches = !vehicle || Boolean(selectedVehicle && vehicleMatchesRide(selectedVehicle, expectedType));
-  const selectedAvailable = !vehicle || Boolean(selectedVehicle && selectedMatches && isVehicleAvailable(selectedVehicle)) || (vehicle === assignedVehicle && assignedMatches);
+  function toggleVehicle(vehicleId: string) {
+    setSelectedVehicleIds((current) => {
+      if (current.includes(vehicleId)) return current.filter((id) => id !== vehicleId);
+      if (current.length >= requiredVehicleCount) return current;
+      return [...current, vehicleId];
+    });
+  }
 
   async function startRide() {
-    if (!vehicle.trim()) { setError(`Please select available ${expectedLabel} first.`); return; }
-    const selected = findVehicle(vehicles, vehicle);
-    if (!selected) { setError('Selected vehicle was not found. Please select another vehicle.'); return; }
-    if (!vehicleMatchesRide(selected, expectedType)) { setError(`This booking is for ${expectedLabel}. Please select a ${expectedLabel} only.`); return; }
-    if (!isVehicleAvailable(selected)) { setError('This vehicle is not available. Please select another available vehicle.'); return; }
+    if (!booking.id) { setVehicleError('This booking does not have a stable ID.'); return; }
+    if (new Set(selectedVehicleIds).size !== requiredVehicleCount) { setVehicleError(`Select exactly ${requiredVehicleCount} distinct ${requiredVehicleCount === 1 ? 'vehicle' : 'vehicles'}.`); return; }
     setSaving(true);
-    setError('');
+    setVehicleError('');
     try {
-      const payload: Record<string, unknown> = { assigned_vehicle_name: vehicle, payment_workflow_status: 'Ride In Progress', updated_at: new Date().toISOString() };
-      const query = supabase.from(bookingRequestsTable).update(payload);
-      const result = booking.id ? await query.eq('id', booking.id) : await query.eq('booking_code', bookingCode(booking));
-      if (result.error) throw new Error(result.error.message);
-      await updateVehicleStatus(vehicle, 'booked');
+      await startBookingRide(booking.id, selectedVehicleIds);
+      closeStartPanel();
       await onSaved();
     } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : 'Unable to start ride.');
+      setVehicleError(saveError instanceof Error ? saveError.message : 'Unable to start ride.');
     } finally {
       setSaving(false);
     }
   }
 
   async function markNoShow(reason: string, note: string) {
-    setSaving(true);
-    setError('');
+    if (!booking.id) throw new Error('This booking does not have a stable ID.');
+    await markBookingNoShow(booking.id, reason, note);
     try {
-      const noteLine = `No Show: ${reason}${note.trim() ? ` - ${note.trim()}` : ''}`;
-      const payload: Record<string, unknown> = {
-        status: 'No Show',
-        manager_status: 'No Show',
-        amount_received_aed: 0,
-        amount_pending_aed: 0,
-        payment_status: 'No Show',
-        collection_status: 'no_collection',
-        payment_workflow_status: 'No Show',
-        internal_note: [booking.internal_note, noteLine].filter(Boolean).map(String).join('\n'),
-        updated_at: new Date().toISOString()
-      };
-      const query = supabase.from(bookingRequestsTable).update(payload);
-      const result = booking.id ? await query.eq('id', booking.id) : await query.eq('booking_code', bookingCode(booking));
-      if (result.error) throw new Error(result.error.message);
-      if (assignedVehicle || vehicle) await updateVehicleStatus(assignedVehicle || vehicle, 'available');
-      setNoShowOpen(false);
       await onSaved();
-    } catch (showError) {
-      setError(showError instanceof Error ? showError.message : 'Unable to mark no show.');
-    } finally {
-      setSaving(false);
+    } catch (refreshError) {
+      setError(refreshError instanceof Error ? refreshError.message : 'The booking changed, but the ride list could not be refreshed.');
     }
   }
 
   async function completeRide(values: CompletionValues) {
+    if (!booking.id) throw new Error('This booking does not have a stable ID.');
     const b2b = isB2BBooking(booking);
     const method: CompletionValues['method'] = b2b ? 'B2B Invoice' : values.method === 'B2B Invoice' ? 'Cash' : values.method;
     const total = totalAmount(booking);
     const received = b2b ? 0 : Math.min(Math.max(numberValue(values.amount), 0), total);
-    const pending = b2b ? total : Math.max(total - received, 0);
-    const noteParts = [booking.internal_note, method === 'Card' && values.reference ? `Card ref: ${values.reference}` : '', values.note].filter(Boolean).map(String);
-    const payload: Record<string, unknown> = {
-      status: 'Completed',
-      manager_status: 'Completed',
-      payment_method: method,
-      payment_source: b2b ? 'b2b' : 'direct',
-      amount_received_aed: received,
-      amount_pending_aed: pending,
-      payment_status: b2b ? 'Not Paid' : pending <= 0 ? 'Paid' : 'Partial Paid',
-      collection_status: b2b ? 'pending_collection' : pending <= 0 ? 'collected' : 'partial_collection',
-      payment_workflow_status: b2b ? 'B2B Invoice Generated' : 'Collected By Manager',
-      internal_note: noteParts.join('\n'),
-      updated_at: new Date().toISOString()
-    };
-    const query = supabase.from(bookingRequestsTable).update(payload);
-    const result = booking.id ? await query.eq('id', booking.id) : await query.eq('booking_code', bookingCode(booking));
-    if (result.error) throw new Error(result.error.message);
-    if (assignedVehicle || vehicle) await updateVehicleStatus(assignedVehicle || vehicle, 'available');
-    setCompletionOpen(false);
-    await onSaved();
+    await completeBookingRide(booking.id, {
+      paymentMethod: method,
+      amountReceivedAed: received,
+      cardReference: values.reference,
+      note: values.note
+    });
+    try {
+      await onSaved();
+    } catch (refreshError) {
+      setError(refreshError instanceof Error ? refreshError.message : 'The ride completed, but the ride list could not be refreshed.');
+    }
   }
 
   return (
@@ -511,18 +504,26 @@ function RideCard({ booking, vehicles, onSaved }: { booking: BookingRow; vehicle
         <div className="min-w-0"><p className="text-xs font-bold text-primary">{dateLabel(booking.preferred_date)} · {text(booking.preferred_time, 'Time pending')}</p><h3 className="mt-1 break-words font-heading text-base font-semibold leading-tight text-foreground">{packageLabel(booking)}</h3><p className="mt-1 text-sm font-semibold text-muted-foreground">{text(booking.customer_name, 'Guest')}</p></div>
         <span className={`shrink-0 rounded-full border px-2.5 py-1 text-[11px] font-bold ${statusTone(status)}`}>{status}</span>
       </button>
-      <div className="mt-3 grid grid-cols-2 gap-2"><Detail label="Vehicle" value={vehicle || (assignedTypeWarning ? `Select ${expectedLabel}` : 'Not selected')} sub={vehicleWarning || (inProgress || completed ? 'Assigned vehicle' : `Select ${expectedLabel} before ride`)} tone={assignedTypeWarning ? 'warning' : 'default'} /><Detail label="Payment" value={formatAed(totalAmount(booking))} sub={paymentSubText(booking)} /></div>
+      <div className="mt-3 grid grid-cols-2 gap-2"><Detail label="Vehicle" value={assignedVehicle || (selectedVehicleIds.length ? `${selectedVehicleIds.length} selected` : 'Not selected')} sub={inProgress || completed ? 'Assigned vehicle(s)' : `${requiredVehicleCount} required at ride start`} /><Detail label="Payment" value={formatAed(totalAmount(booking))} sub={paymentSubText(booking)} /></div>
       {expanded ? <div className="mt-3 grid grid-cols-2 gap-2"><Detail label="Booking" value={bookingCode(booking)} /><Detail label="Ride" value={rideDetails(booking)} sub={text(booking.customer_phone || booking.customer_email, '')} /></div> : null}
       <div className="mt-3 flex flex-wrap gap-2"><Badge variant="secondary">{isB2BBooking(booking) ? `B2B · ${text(booking.b2b_agent_name, 'Agent')}` : 'Direct Sale'}</Badge><Badge variant="secondary">{expectedLabel}</Badge><button type="button" onClick={() => setExpanded((value) => !value)} className="rounded-full border border-border bg-white px-3 py-1 text-xs font-bold text-muted-foreground">{expanded ? 'Less' : 'Details'} {expanded ? <ChevronUp className="inline size-3" /> : <ChevronDown className="inline size-3" />}</button>{noShowWaiting ? <Badge variant="secondary">No Show after scheduled time</Badge> : null}</div>
       {error ? <p className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-xs font-semibold text-red-700">{error}</p> : null}
-      <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
-        <label className="grid gap-1.5 text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">Vehicle
-          <select value={vehicle} onChange={(event) => setVehicle(event.target.value)} disabled={!actionAllowed || inProgress} className={selectClass}><option value="">Select available {expectedLabel}</option>{vehicleOptions.map((item) => <option key={item} value={item}>{item}</option>)}{!vehicleOptions.length ? <option value="" disabled>No available {expectedLabel}</option> : null}</select>
-          {actionAllowed && !inProgress && vehicle && !selectedAvailable ? <span className="text-[11px] font-semibold normal-case tracking-normal text-red-700">Selected vehicle is not available for this booking.</span> : null}
-          {assignedTypeWarning ? <span className="text-[11px] font-semibold normal-case tracking-normal text-red-700">Previous vehicle type does not match this booking.</span> : null}
-        </label>
+      {startPanelOpen ? <div className="mt-3 rounded-2xl border border-primary/20 bg-primary-50/40 p-3">
+        <div className="flex items-center justify-between gap-3"><p className="text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">Guest Received · Select {requiredVehicleCount} {expectedLabel}{requiredVehicleCount === 1 ? '' : 's'}</p><span className="text-xs font-bold text-primary">{selectedVehicleIds.length}/{requiredVehicleCount}</span></div>
+        {vehicleError ? <p className="mt-2 rounded-xl bg-red-50 px-3 py-2 text-xs font-semibold text-red-700">{vehicleError}</p> : null}
+        <div className="mt-2 grid gap-2 sm:grid-cols-2">
+          {vehiclesLoading ? <p className="rounded-xl border border-dashed border-border p-3 text-xs font-semibold text-muted-foreground">Loading available vehicles...</p> : null}
+          {!vehiclesLoading && vehicles.map((item) => {
+            const selected = selectedVehicleIds.includes(item.vehicle_id);
+            return <button key={item.vehicle_id} type="button" onClick={() => toggleVehicle(item.vehicle_id)} className={`rounded-xl border p-3 text-left transition ${selected ? 'border-primary bg-primary-50 ring-2 ring-primary/10' : 'border-border bg-white hover:border-primary/40'}`}><span className="block font-mono text-sm font-bold text-primary-900">{item.registration_number}</span><span className="mt-1 block text-xs font-semibold text-foreground">{text(item.vehicle_code, 'No code')} · {text(item.vehicle_name, 'Unnamed')}</span><span className="mt-1 block text-[11px] text-muted-foreground">{text(item.vehicle_type, expectedLabel)} · Capacity {item.capacity ?? '-'} · {item.status}</span></button>;
+          })}
+          {!vehiclesLoading && vehicles.length === 0 ? <p className="rounded-xl border border-dashed border-border p-3 text-xs font-semibold text-muted-foreground">No assignable {expectedLabel} vehicles are available.</p> : null}
+        </div>
+        <div className="mt-3 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end"><Button type="button" variant="outline" onClick={closeStartPanel} disabled={saving} className="rounded-full bg-white">Close</Button><Button type="button" onClick={startRide} disabled={saving || vehiclesLoading || selectedVehicleIds.length !== requiredVehicleCount} className="rounded-full"><Save className="size-4" />{saving ? 'Starting...' : 'Confirm & Start Ride'}</Button></div>
+      </div> : null}
+      <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:justify-end">
         <div className="flex flex-col gap-2 sm:flex-row">
-          {actionAllowed && !inProgress ? <Button type="button" onClick={startRide} disabled={saving || !vehicle || !selectedAvailable || !selectedMatches} className="rounded-full"><Save className="size-4" />{saving ? 'Starting...' : 'Start Ride'}</Button> : null}
+          {actionAllowed && !inProgress && status === 'Confirmed' && !startPanelOpen ? <Button type="button" onClick={openStartPanel} className="rounded-full"><Save className="size-4" />Guest Received / Select Vehicle</Button> : null}
           {inProgress ? <Button type="button" onClick={() => setCompletionOpen(true)} className="rounded-full bg-emerald-600 hover:bg-emerald-700"><CheckCircle2 className="size-4" />Complete Ride</Button> : null}
           {noShowAllowed ? <Button type="button" variant="outline" onClick={() => setNoShowOpen(true)} disabled={saving} className="rounded-full border-red-200 bg-red-50 text-red-700 hover:bg-red-100"><AlertCircle className="size-4" />No Show</Button> : null}
           {noShowWaiting ? <Button type="button" disabled variant="outline" className="rounded-full border-border bg-white text-muted-foreground"><AlertCircle className="size-4" />No Show after time</Button> : null}
@@ -532,14 +533,13 @@ function RideCard({ booking, vehicles, onSaved }: { booking: BookingRow; vehicle
         </div>
       </div>
       {completionOpen ? <PaymentModal booking={booking} onClose={() => setCompletionOpen(false)} onComplete={completeRide} /> : null}
-      {noShowOpen ? <NoShowModal booking={booking} saving={saving} onClose={() => setNoShowOpen(false)} onConfirm={markNoShow} /> : null}
+      {noShowOpen ? <NoShowModal booking={booking} onClose={() => setNoShowOpen(false)} onConfirm={markNoShow} /> : null}
     </div>
   );
 }
 
 function ManagerAssignedRidesPage({ manager }: { manager: ManagerProfile }) {
   const [bookings, setBookings] = useState<BookingRow[]>([]);
-  const [vehicles, setVehicles] = useState<VehicleOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [query, setQuery] = useState('');
@@ -549,13 +549,15 @@ function ManagerAssignedRidesPage({ manager }: { manager: ManagerProfile }) {
     setLoading(true);
     setError('');
     try {
-      const [bookingResult, vehicleResult] = await Promise.all([
-        supabase.from(bookingRequestsTable).select('*').order('preferred_date', { ascending: true }).limit(500),
-        supabase.from('vehicles').select('vehicle_code,vehicle_name,vehicle_type,status').order('vehicle_code', { ascending: true }).limit(500)
-      ]);
+      if (!manager.id) throw new Error('A stable Ride Manager profile ID is required.');
+      const bookingResult = await supabase
+        .from(bookingRequestsTable)
+        .select('*')
+        .eq('assigned_manager_id', manager.id)
+        .order('preferred_date', { ascending: true })
+        .limit(500);
       if (bookingResult.error) throw new Error(bookingResult.error.message);
       setBookings((bookingResult.data || []) as BookingRow[]);
-      setVehicles(((vehicleResult.data || []) as Record<string, unknown>[]).map((row) => ({ name: text(row.vehicle_name || row.vehicle_code, 'Vehicle'), code: text(row.vehicle_code, ''), type: text(row.vehicle_type, ''), status: text(row.status, '') })));
     } catch (loadError) {
       setBookings([]);
       setError(loadError instanceof Error ? loadError.message : 'Unable to load assigned rides.');
@@ -564,9 +566,9 @@ function ManagerAssignedRidesPage({ manager }: { manager: ManagerProfile }) {
     }
   }
 
-  useEffect(() => { void loadData(); }, []);
+  useEffect(() => { void loadData(); }, [manager.id]);
 
-  const scopedBookings = useMemo(() => bookings.filter((booking) => isVisibleBooking(booking) && matchesManager(booking, manager)), [bookings, manager]);
+  const scopedBookings = useMemo(() => bookings.filter(isVisibleBooking), [bookings]);
   const counts = useMemo(() => ({
     today: scopedBookings.filter((booking) => matchesFilter(booking, 'today')).length,
     tomorrow: scopedBookings.filter((booking) => matchesFilter(booking, 'tomorrow')).length,
@@ -599,20 +601,31 @@ function ManagerAssignedRidesPage({ manager }: { manager: ManagerProfile }) {
       <Card className="mt-3 overflow-hidden rounded-[1.35rem] border-border/80 bg-white shadow-[0_12px_28px_rgba(8,37,50,0.05)]">
         <CardHeader className="gap-3 border-b border-border/70 bg-[#F7FAFA] px-4 py-3"><div><CardTitle className="font-heading text-xl font-semibold sm:text-2xl">{filterLabels[filter]} rides</CardTitle><p className="mt-0.5 text-xs font-semibold text-muted-foreground">{loading ? 'Loading...' : `${visible.length} rides`}</p></div>{scopedBookings.length > 0 ? <div className="relative w-full"><Search className="pointer-events-none absolute left-3 top-3 size-4 text-muted-foreground" /><Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search rides..." className="h-10 rounded-full bg-white pl-9" /></div> : null}</CardHeader>
         <div className="flex flex-wrap gap-2 border-b border-border/70 bg-white px-4 py-3">{filterList.map((item) => <button key={item} type="button" onClick={() => setFilter(item)} className={`rounded-full border px-3 py-2 text-xs font-bold transition ${filter === item ? 'border-primary bg-primary text-white' : 'border-border bg-white text-muted-foreground'}`}>{filterLabels[item]} <span className={filter === item ? 'text-white/80' : 'text-muted-foreground'}>{counts[item]}</span></button>)}</div>
-        <CardContent className="grid gap-3 p-3 sm:p-4 xl:grid-cols-2">{loading ? <div className="rounded-2xl border border-dashed border-border bg-[#F7FAFA] px-4 py-5 text-center text-sm font-semibold text-muted-foreground">Loading assigned rides...</div> : null}{!loading && visible.length === 0 ? <div className="rounded-2xl border border-dashed border-border bg-[#F7FAFA] px-4 py-5 text-center"><p className="font-heading text-base font-semibold text-foreground">No rides in {filterLabels[filter]}</p><p className="mt-1 text-sm text-muted-foreground">Rides will appear here according to their booking date.</p></div> : null}{visible.map((booking, index) => <RideCard key={String(booking.id || `${bookingCode(booking)}-${index}`)} booking={booking} vehicles={vehicles} onSaved={loadData} />)}</CardContent>
+        <CardContent className="grid gap-3 p-3 sm:p-4 xl:grid-cols-2">{loading ? <div className="rounded-2xl border border-dashed border-border bg-[#F7FAFA] px-4 py-5 text-center text-sm font-semibold text-muted-foreground">Loading assigned rides...</div> : null}{!loading && visible.length === 0 ? <div className="rounded-2xl border border-dashed border-border bg-[#F7FAFA] px-4 py-5 text-center"><p className="font-heading text-base font-semibold text-foreground">No rides in {filterLabels[filter]}</p><p className="mt-1 text-sm text-muted-foreground">Rides will appear here according to their booking date.</p></div> : null}{visible.map((booking, index) => <RideCard key={String(booking.id || `${bookingCode(booking)}-${index}`)} booking={booking} onSaved={loadData} />)}</CardContent>
       </Card>
     </section>
   );
 }
 
 export function ManagerScopedAssignmentsPage() {
-  const [manager, setManager] = useState<ManagerProfile>({ name: '', email: '', role: 'admin', ready: false });
+  const [manager, setManager] = useState<ManagerProfile>({ id: '', name: '', email: '', role: '', status: '', ready: false, error: '' });
   useEffect(() => {
     let active = true;
-    void loadManagerProfile().then((profile) => { if (active) setManager(profile); });
+    void loadManagerProfile()
+      .then((profile) => { if (active) setManager(profile); })
+      .catch((profileError) => {
+        if (active) setManager({ id: '', name: '', email: '', role: '', status: '', ready: true, error: profileError instanceof Error ? profileError.message : 'Unable to load your staff profile.' });
+      });
     return () => { active = false; };
   }, []);
   if (!manager.ready) return <div className="p-6 text-sm font-semibold text-muted-foreground">Loading access...</div>;
+  if (manager.error) return <AccessError message={manager.error} />;
+  if (manager.status !== 'active' || !manager.id) return <AccessError message="An active staff profile with a stable admin_users ID is required." />;
   if (manager.role === 'manager') return <ManagerAssignedRidesPage manager={manager} />;
-  return <AdminOperationsAssignmentsPage />;
+  if (['super_admin', 'booking_staff', 'booking_manager'].includes(manager.role)) return <AdminOperationsAssignmentsPage />;
+  return <AccessError message={`Your ${manager.role || 'current'} role does not have access to ride assignments.`} />;
+}
+
+function AccessError({ message }: { message: string }) {
+  return <div className="p-6"><div className="mx-auto max-w-xl rounded-2xl border border-red-200 bg-red-50 px-4 py-4 text-sm font-semibold text-red-700"><p className="font-heading text-lg font-semibold">Assignment access unavailable</p><p className="mt-1">{message}</p></div></div>;
 }

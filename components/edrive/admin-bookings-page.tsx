@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { formatAed } from '@/lib/booking-data';
 import { bookingRequestsTable } from '@/lib/booking-records';
 import { supabase } from '@/lib/supabase-client';
+import { setBookingManager } from '@/services/booking-assignments';
 
 type BookingRow = {
   id: string;
@@ -40,6 +41,7 @@ type BookingRow = {
   collection_status?: string | null;
   amount_received_aed?: number | string | null;
   amount_pending_aed?: number | string | null;
+  assigned_manager_id?: string | null;
   assigned_manager_name?: string | null;
   assigned_vehicle_name?: string | null;
   b2b_agent_name?: string | null;
@@ -49,9 +51,9 @@ type BookingRow = {
   updated_at?: string | null;
 };
 
-type ManagerOption = { name: string; email: string };
+type ManagerOption = { id: string; name: string; email: string };
 type BookingFilter = 'all' | 'new' | 'pending' | 'confirmed' | 'b2b' | 'direct' | 'unassigned';
-type ManageValues = { status: string; assignedManagerName: string; internalNote: string };
+type ManageValues = { status: string; assignedManagerId: string; internalNote: string };
 
 const bookingStatusOptions = ['Pending', 'Confirmed', 'Cancelled'];
 
@@ -172,10 +174,9 @@ function managerStageLabel(booking: BookingRow) {
 function isAdminLocked(booking: BookingRow) {
   const status = displayText(booking.status, 'Pending');
   const stage = managerStageLabel(booking);
-  const hasManager = Boolean(displayText(booking.assigned_manager_name, ''));
   if (['Completed', 'No Show', 'Cancelled'].includes(status)) return true;
   if (['In Progress', 'Completed', 'No Show'].includes(stage)) return true;
-  return status === 'Confirmed' && hasManager;
+  return false;
 }
 
 export function AdminBookingsLivePage() {
@@ -188,11 +189,11 @@ export function AdminBookingsLivePage() {
   const [selectedBooking, setSelectedBooking] = useState<BookingRow | null>(null);
 
   async function loadManagers() {
-    const { data } = await supabase.from('admin_users').select('full_name,email,role,status').order('full_name', { ascending: true }).limit(100);
-    const rows = ((data || []) as Array<{ full_name: string | null; email: string | null; role: string | null; status: string | null }>);
+    const { data } = await supabase.from('admin_users').select('id,full_name,email,role,status').order('full_name', { ascending: true }).limit(100);
+    const rows = ((data || []) as Array<{ id: string; full_name: string | null; email: string | null; role: string | null; status: string | null }>);
     const activeManagers = rows
       .filter((item) => String(item.role || '').trim().toLowerCase() === 'manager' && isActiveStatus(item.status))
-      .map((item) => ({ name: item.full_name || item.email || 'Manager', email: item.email || '' }));
+      .map((item) => ({ id: item.id, name: item.full_name || item.email || 'Manager', email: item.email || '' }));
     setManagers(activeManagers);
   }
 
@@ -215,13 +216,12 @@ export function AdminBookingsLivePage() {
 
   async function saveBookingStatus(booking: BookingRow, values: ManageValues) {
     if (isAdminLocked(booking)) throw new Error('This booking is already with the manager and is read-only for admin.');
-    const assignedManagerName = values.assignedManagerName.trim();
+    if (values.assignedManagerId && values.status !== 'Confirmed') throw new Error('Confirm the booking before assigning a Ride Manager.');
     const now = new Date().toISOString();
     const payload: Record<string, unknown> = {
       status: values.status,
       admin_status: adminStatusForBookingStatus(values.status, booking.admin_status),
       manager_status: managerStatusForBookingStatus(values.status, booking.manager_status),
-      assigned_manager_name: assignedManagerName || null,
       internal_note: values.internalNote.trim() || null,
       updated_at: now
     };
@@ -229,6 +229,9 @@ export function AdminBookingsLivePage() {
     const queryBuilder = supabase.from(bookingRequestsTable).update(payload);
     const result = booking.id ? await queryBuilder.eq('id', booking.id) : await queryBuilder.eq('booking_code', booking.booking_code);
     if (result.error) throw new Error(result.error.message);
+    if (values.assignedManagerId) {
+      await setBookingManager(booking.id, values.assignedManagerId);
+    }
     await refreshAll();
     setSelectedBooking(null);
   }
@@ -250,7 +253,7 @@ export function AdminBookingsLivePage() {
     { id: 'confirmed' as const, label: 'Confirmed', count: stats.confirmedCount },
     { id: 'b2b' as const, label: 'B2B', count: bookings.filter(isB2BBooking).length },
     { id: 'direct' as const, label: 'Direct Sale', count: bookings.filter((booking) => !isB2BBooking(booking)).length },
-    { id: 'unassigned' as const, label: 'Unassigned', count: bookings.filter((booking) => !booking.assigned_manager_name).length }
+    { id: 'unassigned' as const, label: 'Unassigned', count: bookings.filter((booking) => !booking.assigned_manager_id).length }
   ], [bookings, stats.confirmedCount, stats.newCount]);
 
   const filtered = useMemo(() => {
@@ -263,7 +266,7 @@ export function AdminBookingsLivePage() {
       if (activeFilter === 'confirmed') return booking.status === 'Confirmed';
       if (activeFilter === 'b2b') return isB2BBooking(booking);
       if (activeFilter === 'direct') return !isB2BBooking(booking);
-      if (activeFilter === 'unassigned') return !booking.assigned_manager_name;
+      if (activeFilter === 'unassigned') return !booking.assigned_manager_id;
       return true;
     });
   }, [activeFilter, bookings, query]);
@@ -357,7 +360,7 @@ export function AdminBookingsLivePage() {
                         </TableCell>
                         <TableCell className="whitespace-nowrap py-4"><span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-bold ${statusClass(booking.status)}`}>{booking.status || 'Pending'}</span></TableCell>
                         <TableCell className="py-4">
-                          <div className="whitespace-nowrap font-semibold text-foreground">{booking.assigned_manager_name || 'Unassigned'}</div>
+                          <div className="whitespace-nowrap font-semibold text-foreground">{managers.find((manager) => manager.id === booking.assigned_manager_id)?.name || booking.assigned_manager_name || 'Unassigned'}</div>
                           <div className="whitespace-nowrap text-xs text-muted-foreground">{managerStageLabel(booking)}</div>
                         </TableCell>
                         <TableCell className="whitespace-nowrap py-4 text-right"><Button type="button" size="sm" variant="outline" className="rounded-full bg-white" onClick={() => setSelectedBooking(booking)}>{locked ? <Eye className="size-3.5" aria-hidden="true" /> : null}{locked ? 'View' : 'Manage'}</Button></TableCell>
@@ -382,12 +385,12 @@ function Metric({ title, value, icon: Icon }: { title: string; value: string; ic
 function ManageBookingModal({ booking, managers, onClose, onSave }: { booking: BookingRow; managers: ManagerOption[]; onClose: () => void; onSave: (booking: BookingRow, values: ManageValues) => Promise<void> }) {
   const locked = isAdminLocked(booking);
   const total = bookingTotal(booking);
-  const [values, setValues] = useState<ManageValues>({ status: booking.status || 'Pending', assignedManagerName: booking.assigned_manager_name || '', internalNote: booking.internal_note || '' });
+  const [values, setValues] = useState<ManageValues>({ status: booking.status || 'Pending', assignedManagerId: booking.assigned_manager_id || '', internalNote: booking.internal_note || '' });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const whatsapp = whatsAppHref(booking);
   const sourceLabel = paymentTypeLabel(booking);
-  const managerOptions = Array.from(new Set([values.assignedManagerName, ...managers.map((manager) => manager.name)].filter(Boolean)));
+  const assignedManagerName = managers.find((manager) => manager.id === booking.assigned_manager_id)?.name || booking.assigned_manager_name || 'Not assigned';
 
   async function submit() {
     setSaving(true);
@@ -422,7 +425,7 @@ function ManageBookingModal({ booking, managers, onClose, onSave }: { booking: B
                 <InfoLine label="Package" value={packageLabel(booking)} />
                 <InfoLine label="Date / Time" value={`${niceDate(booking.preferred_date)} · ${booking.preferred_time || '-'}`} />
                 <InfoLine label="Party" value={`${booking.vehicle_quantity || 1} vehicle · ${booking.guest_count || booking.selected_package_capacity || 1} guests`} />
-                <InfoLine label="Assigned Manager" value={booking.assigned_manager_name || 'Not assigned'} />
+                <InfoLine label="Assigned Manager" value={assignedManagerName} />
                 <InfoLine label="Assigned Vehicle" value={booking.assigned_vehicle_name || 'Not assigned'} />
                 <InfoLine label="Customer / Agent Note" value={booking.customer_notes || 'No note added.'} />
               </div>
@@ -444,7 +447,7 @@ function ManageBookingModal({ booking, managers, onClose, onSave }: { booking: B
                 <>
                   <div className="grid gap-3 sm:grid-cols-2">
                     <label className="grid gap-1.5 text-sm font-semibold text-foreground">Booking Status<select value={values.status} onChange={(event) => setValues((current) => ({ ...current, status: event.target.value }))} className="h-11 rounded-xl border border-border bg-white px-3 text-sm font-semibold outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10">{bookingStatusOptions.map((status) => <option key={status}>{status}</option>)}</select></label>
-                    <label className="grid gap-1.5 text-sm font-semibold text-foreground">Assigned Manager<select value={values.assignedManagerName} onChange={(event) => setValues((current) => ({ ...current, assignedManagerName: event.target.value }))} className="h-11 rounded-xl border border-border bg-white px-3 text-sm font-semibold outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10"><option value="">Select manager</option>{managerOptions.map((manager) => <option key={manager} value={manager}>{manager}</option>)}</select></label>
+                    <label className="grid gap-1.5 text-sm font-semibold text-foreground">Assigned Ride Manager<select value={values.assignedManagerId} onChange={(event) => setValues((current) => ({ ...current, assignedManagerId: event.target.value }))} className="h-11 rounded-xl border border-border bg-white px-3 text-sm font-semibold outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10"><option value="">Select active manager</option>{managers.map((manager) => <option key={manager.id} value={manager.id}>{manager.name}{manager.email ? ` · ${manager.email}` : ''}</option>)}</select></label>
                     <div className="sm:col-span-2">
                       <p className="mb-2 text-sm font-semibold text-foreground">Booking Type / Amount</p>
                       <div className="grid grid-cols-2 gap-2 rounded-2xl border border-border bg-white p-2">
