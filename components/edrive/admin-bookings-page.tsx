@@ -107,7 +107,7 @@ function serviceDetail(booking: BookingRow) {
   const parts = [booking.service_type || 'website'];
   if (booking.selected_package_capacity) parts.push(`${booking.selected_package_capacity} seater`);
   if (booking.duration_minutes) parts.push(`${booking.duration_minutes} min`);
-  return parts.join(' · ');
+  return parts.join(' | ');
 }
 
 function bookingTotal(booking: BookingRow) {
@@ -425,8 +425,8 @@ function ManageBookingModal({ booking, managers, onClose, onSave }: { booking: B
                 <InfoLine label="Phone" value={booking.customer_phone || '-'} />
                 <InfoLine label="Email" value={booking.customer_email || '-'} />
                 <InfoLine label="Package" value={packageLabel(booking)} />
-                <InfoLine label="Date / Time" value={`${niceDate(booking.preferred_date)} · ${booking.preferred_time || '-'}`} />
-                <InfoLine label="Party" value={`${booking.vehicle_quantity || 1} vehicle · ${booking.guest_count || booking.selected_package_capacity || 1} guests`} />
+                <InfoLine label="Date / Time" value={`${niceDate(booking.preferred_date)} | ${booking.preferred_time || '-'}`} />
+                <InfoLine label="Party" value={`${booking.vehicle_quantity || 1} vehicle | ${booking.guest_count || booking.selected_package_capacity || 1} guests`} />
                 <InfoLine label="Assigned Manager" value={assignedManagerName} />
                 <InfoLine label="Assigned Vehicle" value={booking.assigned_vehicle_name || 'Not assigned'} />
                 <InfoLine label="Customer / Agent Note" value={booking.customer_notes || 'No note added.'} />
@@ -449,7 +449,7 @@ function ManageBookingModal({ booking, managers, onClose, onSave }: { booking: B
                 <>
                   <div className="grid gap-3 sm:grid-cols-2">
                     <label className="grid gap-1.5 text-sm font-semibold text-foreground">Booking Status<select value={values.status} onChange={(event) => setValues((current) => ({ ...current, status: event.target.value }))} className="h-11 rounded-xl border border-border bg-white px-3 text-sm font-semibold outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10">{bookingStatusOptions.map((status) => <option key={status}>{status}</option>)}</select></label>
-                    <label className="grid gap-1.5 text-sm font-semibold text-foreground">Assigned Ride Manager<select value={values.assignedManagerId} onChange={(event) => setValues((current) => ({ ...current, assignedManagerId: event.target.value }))} className="h-11 rounded-xl border border-border bg-white px-3 text-sm font-semibold outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10"><option value="">Select active manager</option>{managers.map((manager) => <option key={manager.id} value={manager.id}>{manager.name}{manager.email ? ` · ${manager.email}` : ''}</option>)}</select></label>
+                    <label className="grid gap-1.5 text-sm font-semibold text-foreground">Assigned Ride Manager<select value={values.assignedManagerId} onChange={(event) => setValues((current) => ({ ...current, assignedManagerId: event.target.value }))} className="h-11 rounded-xl border border-border bg-white px-3 text-sm font-semibold outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10"><option value="">Select active manager</option>{managers.map((manager) => <option key={manager.id} value={manager.id}>{manager.name}{manager.email ? ` | ${manager.email}` : ''}</option>)}</select></label>
                     <div className="sm:col-span-2">
                       <p className="mb-2 text-sm font-semibold text-foreground">Booking Type / Amount</p>
                       <div className="grid grid-cols-2 gap-2 rounded-2xl border border-border bg-white p-2">
@@ -465,7 +465,7 @@ function ManageBookingModal({ booking, managers, onClose, onSave }: { booking: B
           </div>
         </div>
         <div className="flex flex-col gap-3 border-t border-border/70 bg-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex flex-wrap gap-2 rounded-xl border border-primary/15 bg-primary-50 px-3 py-2 text-xs font-semibold text-foreground"><span>Total: {formatAed(total)}</span><span>·</span><span>Type: {sourceLabel}</span><span>·</span><span>Pending: {formatAed(bookingPending(booking))}</span></div>
+          <div className="flex flex-wrap gap-2 rounded-xl border border-primary/15 bg-primary-50 px-3 py-2 text-xs font-semibold text-foreground"><span>Total: {formatAed(total)}</span><span>|</span><span>Type: {sourceLabel}</span><span>|</span><span>Pending: {formatAed(bookingPending(booking))}</span></div>
           <div className="flex flex-col gap-2 sm:flex-row">
             {whatsapp ? <Button asChild className="rounded-full bg-[#25D366] text-white hover:bg-[#1FB85A]"><a href={whatsapp} target="_blank" rel="noreferrer"><MessageCircle className="size-4" aria-hidden="true" />WhatsApp Customer</a></Button> : null}
             {locked ? <Button type="button" variant="outline" onClick={onClose} className="rounded-full bg-white">Close</Button> : <Button type="button" onClick={submit} disabled={saving} className="rounded-full"><Save className="size-4" aria-hidden="true" />{saving ? 'Saving...' : 'Save Changes'}</Button>}

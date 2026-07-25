@@ -14,7 +14,6 @@ const roleOptions = [
   { value: 'admin', label: 'Admin' },
   { value: 'booking_staff', label: 'Booking Staff' },
   { value: 'finance', label: 'Finance' },
-  { value: 'maintenance_staff', label: 'Maintenance Staff' },
   { value: 'manager', label: 'Manager' }
 ];
 
@@ -29,7 +28,6 @@ const accessByRole: Record<string, string[]> = {
   admin: ['Dashboard', 'Bookings', 'Schedule', 'Customers', 'Packages', 'Fleet', 'Payments', 'Reports', 'Audit Log'],
   booking_staff: ['Dashboard', 'Bookings', 'Schedule', 'Customers', 'Packages'],
   finance: ['Dashboard', 'Schedule', 'Customers', 'Payments', 'Reports', 'Audit Log'],
-  maintenance_staff: ['Dashboard', 'Schedule', 'Fleet', 'Maintenance'],
   manager: ['Today', 'My Rides', 'Schedule', 'Collections']
 };
 
@@ -343,7 +341,7 @@ export function TeamAccessPage() {
           {!visible.length ? <div className="rounded-2xl border border-dashed border-border bg-[#F7FAFA] px-4 py-8 text-center text-sm font-semibold text-muted-foreground">No matching team profiles.</div> : null}
           {visible.map((row) => (
             <div key={row.id} className="grid gap-3 rounded-[1.15rem] border border-border/70 bg-white p-3 shadow-sm lg:grid-cols-[1.15fr_0.8fr_0.9fr_1.5fr_auto] lg:items-center">
-              <div className="flex min-w-0 items-center gap-3"><TeamAvatar row={row} /><div className="min-w-0"><p className="truncate font-heading text-base font-semibold text-foreground">{displayName(row.full_name) || 'Unnamed user'}</p><p className="truncate text-xs text-muted-foreground">{row.email || '-'}</p><p className="mt-1 truncate text-[11px] font-semibold text-muted-foreground">{row.phone || 'No phone'} · {row.nationality || 'No nationality'}</p></div></div>
+              <div className="flex min-w-0 items-center gap-3"><TeamAvatar row={row} /><div className="min-w-0"><p className="truncate font-heading text-base font-semibold text-foreground">{displayName(row.full_name) || 'Unnamed user'}</p><p className="truncate text-xs text-muted-foreground">{row.email || '-'}</p><p className="mt-1 truncate text-[11px] font-semibold text-muted-foreground">{row.phone || 'No phone'} | {row.nationality || 'No nationality'}</p></div></div>
               <div><p className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">Role</p><p className="mt-1 text-sm font-bold text-foreground">{displayRole(row.role)}</p><p className="mt-0.5 text-xs text-muted-foreground">{row.department || 'Department not set'}</p></div>
               <div><p className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">Status</p><div className="mt-1"><StatusBadge status={row.status} /></div><p className="mt-1 text-[11px] text-muted-foreground">{row.auth_user_id ? 'Auth linked' : 'Auth UID missing'}</p></div>
               <div><p className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">Portal Access</p><div className="mt-1 flex flex-wrap gap-1.5">{(accessByRole[row.role || ''] || ['No modules assigned']).slice(0, 5).map((item) => <Badge key={item} variant="secondary" className="rounded-full text-[10px]">{item}</Badge>)}</div></div>

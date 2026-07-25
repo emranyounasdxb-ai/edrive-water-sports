@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { BookOpen, Building2, Eye, FileClock, MessageCircle, ReceiptText, RefreshCw, Save, Trash2, UsersRound, WalletCards, X } from 'lucide-react';
+import { BookOpen, Building2, Eye, FileClock, MessageCircle, ReceiptText, RefreshCw, Save, UsersRound, WalletCards, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,6 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { formatAed } from '@/lib/booking-data';
 import { bookingRequestsTable } from '@/lib/booking-records';
 import { supabase } from '@/lib/supabase-client';
+import { manageB2BAgentProfile } from '@/services/b2b-finance';
 
 type AgentStatus = 'Active' | 'Inactive' | 'Suspended';
 type AgentType = 'B2B Agent' | 'Tour Operator' | 'Hotel' | 'Travel Desk' | 'Vendor' | 'Freelancer';
@@ -20,6 +21,7 @@ type AgentTab = 'profile' | 'bookings' | 'ledger';
 
 type AgentRow = {
   id: string;
+  auth_user_id: string;
   agent_code: string;
   company_name: string;
   agent_type: AgentType;
@@ -38,6 +40,7 @@ type AgentRow = {
 };
 
 type AgentForm = {
+  auth_user_id: string;
   agent_code: string;
   company_name: string;
   agent_type: AgentType;
@@ -81,6 +84,7 @@ const statusOptions: AgentStatus[] = ['Active', 'Inactive', 'Suspended'];
 const inputClass = 'h-11 w-full rounded-md border border-input bg-white px-3 py-2 text-sm text-foreground shadow-sm ring-offset-background transition focus-visible:border-primary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/25 disabled:cursor-not-allowed disabled:opacity-50';
 
 const emptyForm: AgentForm = {
+  auth_user_id: '',
   agent_code: '',
   company_name: '',
   agent_type: 'B2B Agent',
@@ -95,12 +99,6 @@ const emptyForm: AgentForm = {
   special_pricing: false,
   notes: ''
 };
-
-const testAgents = [
-  { agent_code: 'B2B-001', company_name: 'SkyWay Travel LLC', agent_type: 'B2B Agent', contact_person: 'Ahmed Khan', phone: '+971500000001', login_email: 'skyway@test.com', email: 'skyway@test.com', billing_email: 'skyway@test.com', payment_terms: 'Instant', credit_limit_aed: 5000, status: 'Active', rate_profile: defaultRateProfile, special_pricing: false, notes: 'Test partner account. Create Supabase Auth login separately with the shared test password.', is_test_record: true },
-  { agent_code: 'B2B-002', company_name: 'Golden Wings Tourism', agent_type: 'Tour Operator', contact_person: 'Sarah Ali', phone: '+971500000002', login_email: 'golden@test.com', email: 'golden@test.com', billing_email: 'golden@test.com', payment_terms: 'Weekly', credit_limit_aed: 12000, status: 'Active', rate_profile: defaultRateProfile, special_pricing: false, notes: 'Test partner account. Create Supabase Auth login separately with the shared test password.', is_test_record: true },
-  { agent_code: 'B2B-003', company_name: 'Royal Stay Hotels', agent_type: 'Hotel', contact_person: "John D'Souza", phone: '+971500000003', login_email: 'royalstay@test.com', email: 'royalstay@test.com', billing_email: 'royalstay@test.com', payment_terms: 'Monthly', credit_limit_aed: 20000, status: 'Active', rate_profile: defaultRateProfile, special_pricing: false, notes: 'Test partner account. Create Supabase Auth login separately with the shared test password.', is_test_record: true }
-];
 
 function cleanEmail(value: string) {
   return value.trim().toLowerCase();
@@ -134,6 +132,7 @@ function mapAgent(row: Record<string, unknown>): AgentRow {
   const loginEmail = String(row.login_email || row.email || '');
   return {
     id: String(row.id || ''),
+    auth_user_id: String(row.auth_user_id || ''),
     agent_code: String(row.agent_code || ''),
     company_name: String(row.company_name || ''),
     agent_type: normalizeAgentType(String(row.agent_type || 'B2B Agent')),
@@ -168,6 +167,7 @@ function statusBadge(status: AgentStatus) {
 
 function formFromAgent(agent: AgentRow): AgentForm {
   return {
+    auth_user_id: agent.auth_user_id,
     agent_code: agent.agent_code,
     company_name: agent.company_name,
     agent_type: agent.agent_type,
@@ -185,9 +185,7 @@ function formFromAgent(agent: AgentRow): AgentForm {
 }
 
 function matchAgentBooking(agent: AgentRow, booking: BookingRow) {
-  const bookingName = String(booking.b2b_agent_name || '').toLowerCase();
-  const bookingEmail = String(booking.b2b_agent_email || '').toLowerCase();
-  return booking.b2b_agent_id === agent.id || bookingName === agent.company_name.toLowerCase() || bookingEmail === agent.login_email.toLowerCase();
+  return booking.b2b_agent_id === agent.id;
 }
 
 function emptyStats(): AgentStats {
@@ -284,15 +282,15 @@ export function AdminB2BAgentsCleanPage() {
   async function loadRole() {
     const { data: sessionData } = await supabase.auth.getSession();
     const authUser = sessionData.session?.user;
-    const authEmail = authUser?.email || '';
     if (!authUser) {
       setRole('admin');
       setRoleReady(true);
       return;
     }
-    const filter = authEmail ? `auth_user_id.eq.${authUser.id},email.eq.${authEmail}` : `auth_user_id.eq.${authUser.id}`;
-    const { data } = await supabase.from('admin_users').select('role,status').or(filter).limit(1);
-    const profile = (data || [])[0] as { role?: string | null; status?: string | null } | undefined;
+    const { data } = await supabase.from('admin_users').select('role,status').eq('auth_user_id', authUser.id).limit(2);
+    const profile = data?.length === 1 && String(data[0]?.status || '').toLowerCase() === 'active'
+      ? data[0] as { role?: string | null; status?: string | null }
+      : undefined;
     setRole(String(profile?.role || 'admin'));
     setRoleReady(true);
   }
@@ -386,6 +384,8 @@ export function AdminB2BAgentsCleanPage() {
     try {
       const loginEmail = cleanEmail(form.login_email);
       const billingEmail = cleanEmail(form.billing_email) || loginEmail;
+      const authUserId = form.auth_user_id.trim();
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(authUserId)) throw new Error('A valid Supabase Auth user UUID is required.');
       if (!form.company_name.trim()) throw new Error('Company / Agent Name is required.');
       if (!form.contact_person.trim()) throw new Error('Contact person is required.');
       if (!form.phone.trim()) throw new Error('Phone / WhatsApp is required.');
@@ -408,47 +408,11 @@ export function AdminB2BAgentsCleanPage() {
         notes: form.notes.trim() || null
       };
 
-      const result = editingId
-        ? await supabase.from(tableName).update(payload).eq('id', editingId)
-        : await supabase.from(tableName).insert({ ...payload, is_test_record: false });
-
-      if (result.error) throw new Error(result.error.message);
+      await manageB2BAgentProfile(editingId || null, authUserId, payload);
       await loadAgents();
       resetForm();
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : 'Unable to save B2B agent.');
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function addTestAgents() {
-    if (!canManageAgents) return;
-    setSaving(true);
-    setError('');
-    try {
-      const { error: upsertError } = await supabase.from(tableName).upsert(testAgents, { onConflict: 'agent_code' });
-      if (upsertError) throw new Error(upsertError.message);
-      await loadAgents();
-    } catch (seedError) {
-      setError(seedError instanceof Error ? seedError.message : 'Unable to add test agents.');
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function deleteTestAgents() {
-    if (!canManageAgents) return;
-    if (!window.confirm('Delete all test B2B agents?')) return;
-    setSaving(true);
-    setError('');
-    try {
-      const { error: deleteError } = await supabase.from(tableName).delete().eq('is_test_record', true);
-      if (deleteError) throw new Error(deleteError.message);
-      await loadAgents();
-      resetForm();
-    } catch (deleteError) {
-      setError(deleteError instanceof Error ? deleteError.message : 'Unable to delete test agents.');
     } finally {
       setSaving(false);
     }
@@ -470,8 +434,6 @@ export function AdminB2BAgentsCleanPage() {
           </div>
           <div className="flex flex-wrap gap-2 sm:justify-end">
             <Button type="button" variant="outline" onClick={refreshAll} disabled={saving} className="rounded-full"><RefreshCw data-icon aria-hidden="true" />Refresh</Button>
-            {canManageAgents ? <Button type="button" variant="outline" onClick={addTestAgents} disabled={saving} className="rounded-full">Add Test Agents</Button> : null}
-            {canManageAgents ? <Button type="button" variant="danger" onClick={deleteTestAgents} disabled={saving} className="rounded-full"><Trash2 data-icon aria-hidden="true" />Delete Test Agents</Button> : null}
           </div>
         </div>
 
@@ -493,6 +455,8 @@ export function AdminB2BAgentsCleanPage() {
             </CardHeader>
             <CardContent className="p-4 sm:p-5">
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 sm:col-span-2 xl:col-span-3"><p className="font-bold">Supabase Authentication prerequisite</p><p className="mt-1 text-xs leading-5">First create the login in Supabase Dashboard {'->'} Authentication {'->'} Users. Then paste that user UUID below to link the database profile. Passwords and privileged keys are never handled here.</p></div>
+                <Field label="Auth User UUID"><Input value={form.auth_user_id} onChange={(event) => setField('auth_user_id', event.target.value)} placeholder="00000000-0000-0000-0000-000000000000" /></Field>
                 <Field label="Agent Code"><Input value={form.agent_code} onChange={(event) => setField('agent_code', event.target.value)} placeholder="B2B-001" /></Field>
                 <Field label="Company / Agent Name"><Input value={form.company_name} onChange={(event) => setField('company_name', event.target.value)} placeholder="SkyWay Travel LLC" /></Field>
                 <Field label="Agent Type"><Select value={form.agent_type} options={agentTypes} onChange={(value) => setField('agent_type', value as AgentType)} /></Field>
@@ -501,7 +465,7 @@ export function AdminB2BAgentsCleanPage() {
                 <Field label="Login Email"><Input type="email" value={form.login_email} onChange={(event) => setField('login_email', event.target.value)} placeholder="agent@test.com" /></Field>
                 <Field label="Billing Email"><Input type="email" value={form.billing_email} onChange={(event) => setField('billing_email', event.target.value)} placeholder="billing@test.com" /></Field>
                 <Field label="Payment Terms"><Select value={form.payment_terms} options={paymentTermsOptions} onChange={(value) => setField('payment_terms', value as PaymentTerms)} /></Field>
-                <Field label="Credit Limit / Allowed Balance"><Input type="number" min="0" value={form.credit_limit_aed} onChange={(event) => setField('credit_limit_aed', event.target.value)} placeholder="5000" /></Field>
+                <Field label="Credit Limit (not used)"><Input type="number" value="0" disabled /></Field>
                 <Field label="Status"><Select value={form.status} options={statusOptions} onChange={(value) => setField('status', value as AgentStatus)} /></Field>
                 <Field label="Rate Profile"><Input value={form.rate_profile} onChange={(event) => setField('rate_profile', event.target.value)} /></Field>
                 <div className="rounded-xl border border-border bg-[#F7FAFA] px-4 py-3">
@@ -608,7 +572,7 @@ function AdminHeader() {
 function SuperAdminRow({ agent, onEdit, onOpen }: { agent: AgentRow; onEdit: (agent: AgentRow) => void; onOpen: (agent: AgentRow, tab?: AgentTab) => void }) {
   return (
     <TableRow>
-      <TableCell className="align-top"><button type="button" onClick={() => onOpen(agent, 'profile')} className="w-full text-left"><CellTitle title={agent.company_name} subtitle={`${agent.agent_code || '-'} · ${agent.agent_type}`} /></button></TableCell>
+      <TableCell className="align-top"><button type="button" onClick={() => onOpen(agent, 'profile')} className="w-full text-left"><CellTitle title={agent.company_name} subtitle={`${agent.agent_code || '-'} | ${agent.agent_type}`} /></button></TableCell>
       <TableCell className="align-top"><CellTitle title={agent.contact_person || '-'} subtitle={agent.phone || '-'} /></TableCell>
       <TableCell className="align-top"><CellTitle title={agent.login_email || '-'} subtitle={`Billing: ${agent.billing_email || '-'}`} /></TableCell>
       <TableCell className="align-top"><CellTitle title={agent.payment_terms} subtitle={`Limit ${formatAed(agent.credit_limit_aed)}`} /></TableCell>
@@ -622,9 +586,9 @@ function SuperAdminRow({ agent, onEdit, onOpen }: { agent: AgentRow; onEdit: (ag
 function AdminRow({ agent, stats, onOpen }: { agent: AgentRow; stats: AgentStats; onOpen: (agent: AgentRow, tab?: AgentTab) => void }) {
   return (
     <TableRow>
-      <TableCell className="align-top"><button type="button" onClick={() => onOpen(agent, 'profile')} className="w-full text-left"><CellTitle title={agent.company_name} subtitle={`${agent.agent_code || '-'} · ${agent.agent_type}`} /></button></TableCell>
+      <TableCell className="align-top"><button type="button" onClick={() => onOpen(agent, 'profile')} className="w-full text-left"><CellTitle title={agent.company_name} subtitle={`${agent.agent_code || '-'} | ${agent.agent_type}`} /></button></TableCell>
       <TableCell className="align-top"><CellTitle title={agent.contact_person || '-'} subtitle={agent.phone || '-'} /></TableCell>
-      <TableCell className="align-top"><CellTitle title={`${stats.totalBookings} total · ${stats.pendingBookings} pending`} subtitle={`Last: ${stats.lastBookingDate}`} /></TableCell>
+      <TableCell className="align-top"><CellTitle title={`${stats.totalBookings} total | ${stats.pendingBookings} pending`} subtitle={`Last: ${stats.lastBookingDate}`} /></TableCell>
       <TableCell className="align-top"><CellTitle title={formatAed(stats.pendingAmount)} subtitle={`Total value ${formatAed(stats.totalAmount)}`} /></TableCell>
       <TableCell className="align-top"><Badge variant={statusBadge(agent.status)}>{agent.status}</Badge></TableCell>
       <TableCell className="align-top text-right"><RowActions agent={agent} onOpen={onOpen} /></TableCell>
@@ -649,7 +613,7 @@ function MobileAgentCard({ agent, stats, canManageAgents, onOpen, onEdit }: { ag
       <button type="button" onClick={() => onOpen(agent, 'profile')} className="flex w-full items-start justify-between gap-3 text-left">
         <div className="min-w-0">
           <h3 className="break-words font-heading text-base font-semibold text-foreground">{agent.company_name}</h3>
-          <p className="mt-1 text-xs text-muted-foreground">{agent.agent_code || '-'} · {agent.agent_type}</p>
+          <p className="mt-1 text-xs text-muted-foreground">{agent.agent_code || '-'} | {agent.agent_type}</p>
         </div>
         <Badge variant={statusBadge(agent.status)}>{agent.status}</Badge>
       </button>
@@ -704,7 +668,7 @@ function AgentProfileModal({ agent, stats, bookings, activeTab, onTabChange, onC
           <div className="min-w-0">
             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">B2B Partner Profile</p>
             <h2 className="mt-1 break-words font-heading text-xl font-semibold text-foreground sm:text-2xl">{agent.company_name}</h2>
-            <p className="mt-1 text-sm text-muted-foreground">{agent.agent_code} · {agent.agent_type}</p>
+            <p className="mt-1 text-sm text-muted-foreground">{agent.agent_code} | {agent.agent_type}</p>
           </div>
           <button type="button" onClick={onClose} className="flex size-9 shrink-0 items-center justify-center rounded-full border border-border bg-white text-muted-foreground" aria-label="Close">
             <X className="size-4" aria-hidden="true" />

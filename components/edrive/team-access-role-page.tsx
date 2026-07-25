@@ -16,7 +16,6 @@ const roleOptions = [
   { value: 'booking_staff', label: 'Booking Manager' },
   { value: 'manager', label: 'Ride Manager' },
   { value: 'finance', label: 'Finance' },
-  { value: 'maintenance_staff', label: 'Maintenance Staff' }
 ];
 
 const statusOptions = [
@@ -31,7 +30,6 @@ const accessByRole: Record<string, string[]> = {
   booking_staff: ['Booking dashboard', 'Bookings', 'Schedule', 'Customers', 'Packages & Fleet reference', 'Booking Activity'],
   manager: ['Today', 'My Rides', 'Schedule', 'Collections'],
   finance: ['Dashboard', 'Customers', 'Payments', 'Reports', 'Audit Log'],
-  maintenance_staff: ['Dashboard', 'Schedule', 'Fleet', 'Maintenance']
 };
 
 type TeamRow = {
@@ -253,7 +251,7 @@ export function TeamAccessRolePage() {
                   <p className="truncate text-xs text-muted-foreground">{row.email || '-'}</p>
                   <div className="mt-1 flex min-w-0 flex-wrap items-center gap-1 text-[11px] text-muted-foreground">
                     <span>{row.phone || 'No phone'}</span>
-                    <span>·</span>
+                    <span>|</span>
                     {row.nationality ? <><CountryFlagBadge nationality={row.nationality} /><span>{row.nationality}</span></> : <span>No nationality</span>}
                   </div>
                 </div>

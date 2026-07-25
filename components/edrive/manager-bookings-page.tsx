@@ -102,7 +102,7 @@ function packageLabel(booking: ManagerBooking) {
 
 function serviceDetail(booking: ManagerBooking) {
   const parts = [booking.service_type, booking.selected_package_capacity ? `${booking.selected_package_capacity} seater` : '', booking.duration_minutes ? `${booking.duration_minutes} min` : ''].filter(Boolean).map(String);
-  return parts.length ? parts.join(' · ') : 'Ride details pending';
+  return parts.length ? parts.join(' | ') : 'Ride details pending';
 }
 
 function totalAmount(booking: ManagerBooking) {
@@ -145,7 +145,7 @@ function isB2B(booking: ManagerBooking) {
 }
 
 function sourceLabel(booking: ManagerBooking) {
-  return isB2B(booking) ? `B2B${booking.b2b_agent_name ? ` · ${booking.b2b_agent_name}` : ''}` : 'Direct Sale';
+  return isB2B(booking) ? `B2B${booking.b2b_agent_name ? ` | ${booking.b2b_agent_name}` : ''}` : 'Direct Sale';
 }
 
 function isManagerProfile(profile: ManagerProfile | null) {
@@ -270,7 +270,7 @@ export function ManagerBookingsPage() {
     <section className="w-full overflow-hidden px-1 py-1 pb-28 sm:px-4 sm:py-4 lg:px-8 lg:py-8">
       <div className="flex items-start justify-between gap-3 rounded-[1.2rem] border border-white/70 bg-white/72 p-3.5 shadow-[0_12px_28px_rgba(8,37,50,0.05)] backdrop-blur-xl sm:p-5">
         <div className="min-w-0">
-          <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-primary">Today · {shortDate(today)}</p>
+          <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-primary">Today | {shortDate(today)}</p>
           <h1 className="mt-1 font-heading text-2xl font-semibold leading-tight text-foreground sm:text-3xl">{greeting()}, {firstName(profile)}</h1>
           <p className="mt-1 text-sm font-semibold text-muted-foreground">{metrics.today} rides today</p>
         </div>
@@ -292,7 +292,7 @@ export function ManagerBookingsPage() {
 
       <Card className="mt-3 overflow-hidden rounded-[1.35rem] border-border/80 bg-white shadow-[0_12px_28px_rgba(8,37,50,0.05)]">
         <CardHeader className="gap-3 border-b border-border/70 bg-[#F7FAFA] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-          <div><CardTitle className="font-heading text-xl font-semibold sm:text-2xl">Today&apos;s rides</CardTitle><p className="mt-0.5 text-xs font-semibold text-muted-foreground">{loading ? 'Loading...' : `${visibleToday.length} rides · ${niceDate(today)}`}</p></div>
+          <div><CardTitle className="font-heading text-xl font-semibold sm:text-2xl">Today&apos;s rides</CardTitle><p className="mt-0.5 text-xs font-semibold text-muted-foreground">{loading ? 'Loading...' : `${visibleToday.length} rides | ${niceDate(today)}`}</p></div>
           {todayItems.length > 0 ? <div className="relative w-full sm:max-w-xs"><Search className="pointer-events-none absolute left-3 top-3 size-4 text-muted-foreground" aria-hidden="true" /><Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search rides..." className="h-10 rounded-full bg-white pl-9" /></div> : null}
         </CardHeader>
         <CardContent className="grid gap-3 p-3 sm:p-4 xl:grid-cols-2">

@@ -206,7 +206,7 @@ export function AdminWorkflowCheckPage() {
       </div>
 
       <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <Metric title="Bookings" value={String(data.bookings.length)} helper={`${analysis.completed} completed · ${analysis.inProgress} in progress`} icon={Workflow} />
+        <Metric title="Bookings" value={String(data.bookings.length)} helper={`${analysis.completed} completed | ${analysis.inProgress} in progress`} icon={Workflow} />
         <Metric title="Active Managers" value={String(analysis.activeManagers.length)} helper={`${analysis.confirmedWithoutManager.length} confirmed unassigned`} icon={UsersRound} />
         <Metric title="Fleet Records" value={String(data.vehicles.length)} helper={`${analysis.inProgressWithoutVehicle.length} in-progress without vehicle`} icon={Ship} />
         <Metric title="Company Received" value={formatAed(analysis.ledgerTotal)} helper={`${formatAed(analysis.ledgerDifference)} ledger difference`} icon={WalletCards} />

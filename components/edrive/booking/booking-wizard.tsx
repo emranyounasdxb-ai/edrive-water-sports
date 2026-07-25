@@ -450,9 +450,9 @@ function PackageSelectionStep({ groups, selectedRateId, onSelect }: { groups: Pa
               <div className="flex items-start justify-between gap-3 p-4">
                 <div>
                   <div className="flex flex-wrap items-center gap-2"><TicketCheck className="size-4 text-primary" aria-hidden="true" /><h3 className="font-heading text-lg font-semibold text-foreground">{group.title}</h3></div>
-                  <p className="mt-1.5 text-xs leading-5 text-muted-foreground">{group.categoryLabel} · {group.capacity} seater</p>
+                  <p className="mt-1.5 text-xs leading-5 text-muted-foreground">{group.categoryLabel} | {group.capacity} seater</p>
                   <p className="mt-2 text-sm font-bold text-primary-900">From {formatAed(startingPrice)}</p>
-                  <div className="mt-3 flex flex-wrap gap-1.5">{group.rates.map((rate) => <span key={rate.id} className="rounded-full bg-primary-50 px-2 py-1 text-[10px] font-semibold text-primary-900">{rate.minutes} min · {formatAed(rate.price)}</span>)}</div>
+                  <div className="mt-3 flex flex-wrap gap-1.5">{group.rates.map((rate) => <span key={rate.id} className="rounded-full bg-primary-50 px-2 py-1 text-[10px] font-semibold text-primary-900">{rate.minutes} min | {formatAed(rate.price)}</span>)}</div>
                 </div>
                 <span className={cn('mt-1 flex size-5 shrink-0 items-center justify-center rounded-full border', active ? 'border-primary bg-primary text-white' : 'border-border bg-background')}>{active ? <Check className="size-3" aria-hidden="true" /> : null}</span>
               </div>

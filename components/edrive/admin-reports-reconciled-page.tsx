@@ -5,8 +5,8 @@ import type { LucideIcon } from 'lucide-react';
 import { BarChart3, Building2, CalendarDays, CheckCircle2, CreditCard, RefreshCw, Ship, UserRound, WalletCards } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { formatAed } from '@/lib/booking-data';
-import { bookingRequestsTable } from '@/lib/booking-records';
 import {
   type CompanyLedgerEntry,
   type OperationsBooking,
@@ -32,16 +32,39 @@ import {
 } from '@/lib/operations-reporting';
 import { supabase } from '@/lib/supabase-client';
 
-type PeriodFilter = 'all' | 'today' | 'month' | '30d';
-type SaleFilter = 'all' | 'direct' | 'b2b';
 type ReceiptRow = { id: string; received_amount: number | string | null; received_at: string | null };
 type VehicleRow = { id?: string | null; vehicle_code?: string | null; vehicle_name?: string | null; status?: string | null };
+type FilterOption = { id: string; label: string };
+type ReportFilters = {
+  dateFrom: string;
+  dateTo: string;
+  bookingSource: string;
+  bookingStatus: string;
+  paymentStatus: string;
+  agentId: string;
+  managerId: string;
+  vehicleId: string;
+  packageName: string;
+  vehicleType: string;
+};
+type ReportFilterOptions = {
+  bookingStatuses: string[];
+  paymentStatuses: string[];
+  agents: FilterOption[];
+  managers: FilterOption[];
+  vehicles: FilterOption[];
+  packages: string[];
+};
 
 type ReportData = {
   bookings: OperationsBooking[];
   ledger: CompanyLedgerEntry[];
   receipts: ReceiptRow[];
   vehicles: VehicleRow[];
+  walletCredits: number;
+  walletDebits: number;
+  approvedRefunds: number;
+  rejectedRefunds: number;
 };
 
 type ManagerSummary = { name: string; completed: number; inProgress: number; noShow: number; revenue: number; outstanding: number };
@@ -54,14 +77,20 @@ function niceDate(value: string) {
   return new Intl.DateTimeFormat('en-AE', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(`${value}T12:00:00`));
 }
 
-function dateInPeriod(value: string, period: PeriodFilter, today: string) {
-  if (period === 'all') return true;
-  if (!value) return false;
-  if (period === 'today') return value === today;
-  if (period === 'month') return value.slice(0, 7) === today.slice(0, 7);
-  const current = new Date(`${today}T12:00:00Z`).getTime();
-  const target = new Date(`${value}T12:00:00Z`).getTime();
-  return Number.isFinite(target) && target <= current && target >= current - (29 * 24 * 60 * 60 * 1000);
+function defaultFilters(): ReportFilters {
+  const today = dubaiTodayKey();
+  return {
+    dateFrom: `${today.slice(0, 7)}-01`,
+    dateTo: today,
+    bookingSource: '',
+    bookingStatus: '',
+    paymentStatus: '',
+    agentId: '',
+    managerId: '',
+    vehicleId: '',
+    packageName: '',
+    vehicleType: ''
+  };
 }
 
 function Metric({ title, value, helper, icon: Icon }: { title: string; value: string; helper: string; icon: LucideIcon }) {
@@ -76,45 +105,106 @@ function Bar({ value, max }: { value: number; max: number }) {
   return <div className="mt-2 h-2 overflow-hidden rounded-full bg-[#EAF3F4]"><div className="h-full rounded-full bg-primary" style={{ width: `${Math.max(max ? (value / max) * 100 : 0, value > 0 ? 6 : 0)}%` }} /></div>;
 }
 
+function FilterSelect({ label, value, options, onChange }: { label: string; value: string; options: Array<{ value: string; label: string }>; onChange: (value: string) => void }) {
+  return <label className="grid gap-1.5 text-xs font-bold text-muted-foreground"><span>{label}</span><select value={value} onChange={(event) => onChange(event.target.value)} className="h-10 min-w-0 rounded-xl border border-border bg-white px-3 text-sm font-semibold text-foreground outline-none focus:border-primary"><option value="">All</option>{options.map((option) => <option key={`${label}-${option.value}`} value={option.value}>{option.label}</option>)}</select></label>;
+}
+
 export function AdminReportsReconciledPage() {
-  const [data, setData] = useState<ReportData>({ bookings: [], ledger: [], receipts: [], vehicles: [] });
-  const [period, setPeriod] = useState<PeriodFilter>('month');
-  const [saleType, setSaleType] = useState<SaleFilter>('all');
+  const [data, setData] = useState<ReportData>({ bookings: [], ledger: [], receipts: [], vehicles: [], walletCredits: 0, walletDebits: 0, approvedRefunds: 0, rejectedRefunds: 0 });
+  const [draftFilters, setDraftFilters] = useState<ReportFilters>(defaultFilters);
+  const [appliedFilters, setAppliedFilters] = useState<ReportFilters>(defaultFilters);
+  const [filterOptions, setFilterOptions] = useState<ReportFilterOptions>({ bookingStatuses: [], paymentStatuses: [], agents: [], managers: [], vehicles: [], packages: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  async function load() {
+  async function load(filters: ReportFilters) {
     setLoading(true);
     setError('');
-    const [bookingResult, ledgerResult, receiptResult, vehicleResult] = await Promise.all([
-      supabase.from(bookingRequestsTable).select('*').order('created_at', { ascending: false }).limit(5000),
-      supabase.from('payment_ledger_entries').select('id,receipt_id,booking_code,account_type,account_name,entry_type,amount,narration,created_at').eq('account_type', 'company').eq('entry_type', 'company_in').order('created_at', { ascending: false }).limit(10000),
-      supabase.from('payment_receipts').select('id,received_amount,received_at').order('received_at', { ascending: false }).limit(10000),
-      supabase.from('vehicles').select('id,vehicle_code,vehicle_name,status').order('vehicle_code', { ascending: true }).limit(1000)
-    ]);
-    const firstError = bookingResult.error || ledgerResult.error || receiptResult.error || vehicleResult.error;
-    if (firstError) setError(firstError.message);
+    if (filters.dateFrom && filters.dateTo && filters.dateFrom > filters.dateTo) {
+      setError('Date From cannot be after Date To.');
+      setLoading(false);
+      return;
+    }
+    const { data: reportData, error: reportError } = await supabase.rpc('get_edrive_report_data', {
+      p_filters: {
+        date_from: filters.dateFrom || null,
+        date_to: filters.dateTo || null,
+        booking_source: filters.bookingSource || null,
+        booking_status: filters.bookingStatus || null,
+        payment_status: filters.paymentStatus || null,
+        agent_id: filters.agentId || null,
+        manager_id: filters.managerId || null,
+        vehicle_id: filters.vehicleId || null,
+        package: filters.packageName || null,
+        vehicle_type: filters.vehicleType || null
+      }
+    });
+    if (reportError) {
+      setError(reportError.message);
+      setData({ bookings: [], ledger: [], receipts: [], vehicles: [], walletCredits: 0, walletDebits: 0, approvedRefunds: 0, rejectedRefunds: 0 });
+      setLoading(false);
+      return;
+    }
+    const result = (reportData || {}) as {
+      bookings?: OperationsBooking[];
+      ledger?: CompanyLedgerEntry[];
+      receipts?: ReceiptRow[];
+      vehicles?: VehicleRow[];
+      wallet_credits_aed?: number;
+      wallet_debits_aed?: number;
+      approved_refunds_aed?: number;
+      rejected_refunds?: number;
+      filter_options?: {
+        booking_statuses?: string[];
+        payment_statuses?: string[];
+        agents?: FilterOption[];
+        managers?: FilterOption[];
+        vehicles?: FilterOption[];
+        packages?: string[];
+      };
+    };
     setData({
-      bookings: (bookingResult.data || []) as OperationsBooking[],
-      ledger: (ledgerResult.data || []) as CompanyLedgerEntry[],
-      receipts: (receiptResult.data || []) as ReceiptRow[],
-      vehicles: (vehicleResult.data || []) as VehicleRow[]
+      bookings: result.bookings || [],
+      ledger: result.ledger || [],
+      receipts: result.receipts || [],
+      vehicles: result.vehicles || [],
+      walletCredits: Number(result.wallet_credits_aed || 0),
+      walletDebits: Number(result.wallet_debits_aed || 0),
+      approvedRefunds: Number(result.approved_refunds_aed || 0),
+      rejectedRefunds: Number(result.rejected_refunds || 0)
+    });
+    setFilterOptions({
+      bookingStatuses: result.filter_options?.booking_statuses || [],
+      paymentStatuses: result.filter_options?.payment_statuses || [],
+      agents: result.filter_options?.agents || [],
+      managers: result.filter_options?.managers || [],
+      vehicles: result.filter_options?.vehicles || [],
+      packages: result.filter_options?.packages || []
     });
     setLoading(false);
   }
 
-  useEffect(() => { void load(); }, []);
+  useEffect(() => { void load(appliedFilters); }, []);
 
-  const today = dubaiTodayKey();
-  const filteredBookings = useMemo(() => data.bookings.filter((booking) => {
-    if (!dateInPeriod(bookingDateKey(booking), period, today)) return false;
-    if (saleType === 'b2b') return isB2BBooking(booking);
-    if (saleType === 'direct') return !isB2BBooking(booking);
-    return true;
-  }), [data.bookings, period, saleType, today]);
+  const filteredBookings = data.bookings;
+  const filteredLedger = data.ledger;
+  const filteredReceipts = data.receipts;
 
-  const filteredLedger = useMemo(() => data.ledger.filter((entry) => dateInPeriod(reportText(entry.created_at).slice(0, 10), period, today)), [data.ledger, period, today]);
-  const filteredReceipts = useMemo(() => data.receipts.filter((receipt) => dateInPeriod(reportText(receipt.received_at).slice(0, 10), period, today)), [data.receipts, period, today]);
+  function updateFilter<K extends keyof ReportFilters>(key: K, value: ReportFilters[K]) {
+    setDraftFilters((current) => ({ ...current, [key]: value }));
+  }
+
+  function applyFilters() {
+    setAppliedFilters(draftFilters);
+    void load(draftFilters);
+  }
+
+  function clearFilters() {
+    const cleared = { ...defaultFilters(), dateFrom: '', dateTo: '' };
+    setDraftFilters(cleared);
+    setAppliedFilters(cleared);
+    void load(cleared);
+  }
 
   const totals = useMemo(() => {
     const revenue = sumAmounts(filteredBookings, earnedRevenue);
@@ -129,7 +219,8 @@ export function AdminReportsReconciledPage() {
     const cash = filteredBookings.filter((row) => isCompleted(row) && !isB2BBooking(row) && reportText(row.payment_method).toLowerCase() === 'cash').reduce((sum, row) => sum + bookingReceived(row), 0);
     const card = filteredBookings.filter((row) => isCompleted(row) && !isB2BBooking(row) && reportText(row.payment_method).toLowerCase() === 'card').reduce((sum, row) => sum + bookingReceived(row), 0);
     const b2bSales = filteredBookings.filter((row) => isCompleted(row) && isB2BBooking(row)).reduce((sum, row) => sum + earnedRevenue(row), 0);
-    return { revenue, companyReceived, receipts, managerDue, b2bDue, directDue, completed, noShow, cancelled, cash, card, b2bSales };
+    const vat = filteredBookings.reduce((sum, row) => sum + reportAmount((row as OperationsBooking & { vat_amount?: number | string | null }).vat_amount), 0);
+    return { revenue, companyReceived, receipts, managerDue, b2bDue, directDue, completed, noShow, cancelled, cash, card, b2bSales, vat };
   }, [filteredBookings, filteredLedger, filteredReceipts]);
 
   const managers = useMemo(() => {
@@ -198,18 +289,37 @@ export function AdminReportsReconciledPage() {
     <section className="w-full overflow-hidden px-4 py-5 sm:px-6 sm:py-7 lg:px-8 xl:px-10">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Reports</p><h1 className="mt-2 font-heading text-3xl font-semibold text-foreground sm:text-4xl">Reconciled business reports</h1><p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">Completed sales, collections, receivables, manager performance and fleet activity using the same rules as the operations dashboard.</p></div>
-        <Button type="button" variant="outline" onClick={load} className="w-fit rounded-full bg-white"><RefreshCw className="size-4" aria-hidden="true" />Refresh</Button>
+        <Button type="button" variant="outline" onClick={() => void load(appliedFilters)} disabled={loading} className="w-fit rounded-full bg-white"><RefreshCw className="size-4" aria-hidden="true" />Refresh</Button>
       </div>
 
-      <div className="mt-4 flex flex-wrap gap-2">
-        {([['month', 'This Month'], ['today', 'Today'], ['30d', 'Last 30 Days'], ['all', 'All Time']] as Array<[PeriodFilter, string]>).map(([id, label]) => <button key={id} type="button" onClick={() => setPeriod(id)} className={`rounded-full border px-3 py-1.5 text-xs font-bold ${period === id ? 'border-primary bg-primary text-white' : 'border-border bg-white text-muted-foreground'}`}>{label}</button>)}
-        <span className="mx-1 hidden h-8 w-px bg-border sm:block" />
-        {([['all', 'All Sales'], ['direct', 'Direct'], ['b2b', 'B2B']] as Array<[SaleFilter, string]>).map(([id, label]) => <button key={id} type="button" onClick={() => setSaleType(id)} className={`rounded-full border px-3 py-1.5 text-xs font-bold ${saleType === id ? 'border-primary bg-primary text-white' : 'border-border bg-white text-muted-foreground'}`}>{label}</button>)}
-      </div>
+      <Card className="mt-5 rounded-[1.5rem] border-border/80 bg-white shadow-[0_12px_30px_rgba(8,37,50,0.05)]">
+        <CardHeader className="border-b border-border/70 bg-[#F7FAFA]"><CardTitle className="font-heading text-lg font-semibold">Report filters</CardTitle></CardHeader>
+        <CardContent className="p-4">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+            <label className="grid gap-1.5 text-xs font-bold text-muted-foreground"><span>Date From</span><Input type="date" value={draftFilters.dateFrom} max={draftFilters.dateTo || undefined} onChange={(event) => updateFilter('dateFrom', event.target.value)} className="h-10 rounded-xl" /></label>
+            <label className="grid gap-1.5 text-xs font-bold text-muted-foreground"><span>Date To</span><Input type="date" value={draftFilters.dateTo} min={draftFilters.dateFrom || undefined} onChange={(event) => updateFilter('dateTo', event.target.value)} className="h-10 rounded-xl" /></label>
+            <FilterSelect label="Booking Source" value={draftFilters.bookingSource} onChange={(value) => updateFilter('bookingSource', value)} options={[{ value: 'direct', label: 'Direct / B2C' }, { value: 'b2b', label: 'B2B' }]} />
+            <FilterSelect label="Booking Status" value={draftFilters.bookingStatus} onChange={(value) => updateFilter('bookingStatus', value)} options={filterOptions.bookingStatuses.map((value) => ({ value, label: value }))} />
+            <FilterSelect label="Payment Status" value={draftFilters.paymentStatus} onChange={(value) => updateFilter('paymentStatus', value)} options={filterOptions.paymentStatuses.map((value) => ({ value, label: value }))} />
+            <FilterSelect label="B2B Agent" value={draftFilters.agentId} onChange={(value) => updateFilter('agentId', value)} options={filterOptions.agents.map((option) => ({ value: option.id, label: option.label }))} />
+            <FilterSelect label="Ride Manager" value={draftFilters.managerId} onChange={(value) => updateFilter('managerId', value)} options={filterOptions.managers.map((option) => ({ value: option.id, label: option.label }))} />
+            <FilterSelect label="Vehicle Registration" value={draftFilters.vehicleId} onChange={(value) => updateFilter('vehicleId', value)} options={filterOptions.vehicles.map((option) => ({ value: option.id, label: option.label }))} />
+            <FilterSelect label="Package" value={draftFilters.packageName} onChange={(value) => updateFilter('packageName', value)} options={filterOptions.packages.map((value) => ({ value, label: value }))} />
+            <FilterSelect label="Vehicle Type" value={draftFilters.vehicleType} onChange={(value) => updateFilter('vehicleType', value)} options={[{ value: 'jet_ski', label: 'Jet Ski' }, { value: 'jet_car', label: 'Jet Car' }]} />
+          </div>
+          <div className="mt-4 flex flex-wrap gap-2"><Button type="button" onClick={applyFilters} disabled={loading} className="rounded-full">{loading ? 'Loading...' : 'Apply Filters'}</Button><Button type="button" variant="outline" onClick={clearFilters} disabled={loading} className="rounded-full bg-white">Clear Filters</Button></div>
+        </CardContent>
+      </Card>
 
       {error ? <p className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</p> : null}
+      {!loading && !error && filteredBookings.length === 0 ? <div className="mt-5"><Empty text="No report data matches the applied filters." /></div> : null}
 
       <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <Metric title="VAT" value={formatAed(totals.vat)} helper="VAT for filtered bookings" icon={BarChart3} />
+        <Metric title="Wallet Credits" value={formatAed(data.walletCredits)} helper="Filtered B2B wallet credits" icon={WalletCards} />
+        <Metric title="Wallet Debits" value={formatAed(data.walletDebits)} helper="Filtered B2B wallet debits" icon={CreditCard} />
+        <Metric title="Approved Refunds" value={formatAed(data.approvedRefunds)} helper="Approved filtered refund value" icon={RefreshCw} />
+        <Metric title="Rejected Refunds" value={String(data.rejectedRefunds)} helper="Rejected filtered requests" icon={RefreshCw} />
         <Metric title="Completed Revenue" value={formatAed(totals.revenue)} helper={`${totals.completed} completed rides`} icon={BarChart3} />
         <Metric title="Company Received" value={formatAed(totals.companyReceived)} helper="Company ledger credits" icon={WalletCards} />
         <Metric title="Total Outstanding" value={formatAed(totals.managerDue + totals.b2bDue + totals.directDue)} helper="Manager + B2B + direct" icon={CreditCard} />
@@ -227,13 +337,13 @@ export function AdminReportsReconciledPage() {
       </div>
 
       <div className="mt-5 grid gap-5 xl:grid-cols-2">
-        <Card className="rounded-[1.5rem] border-border/80 bg-white"><CardHeader className="border-b border-border/70 bg-[#F7FAFA]"><CardTitle className="font-heading text-xl font-semibold">Manager performance</CardTitle></CardHeader><CardContent className="grid gap-3 p-4">{loading ? <Empty text="Loading manager report..." /> : null}{!loading && !managers.length ? <Empty text="No manager activity in this period." /> : managers.map((row) => <div key={row.name} className="rounded-2xl border border-border p-3"><div className="flex items-start justify-between gap-3"><div><p className="font-heading text-base font-semibold">{row.name}</p><p className="mt-1 text-xs text-muted-foreground">{row.completed} completed · {row.inProgress} in progress · {row.noShow} no show</p></div><p className="font-heading text-lg font-semibold text-primary">{formatAed(row.revenue)}</p></div><div className="mt-2 flex items-center justify-between rounded-xl bg-[#F7FAFA] px-3 py-2 text-xs font-semibold"><span>Outstanding settlement</span><span className={row.outstanding > 0 ? 'text-red-700' : 'text-emerald-700'}>{formatAed(row.outstanding)}</span></div></div>)}</CardContent></Card>
+        <Card className="rounded-[1.5rem] border-border/80 bg-white"><CardHeader className="border-b border-border/70 bg-[#F7FAFA]"><CardTitle className="font-heading text-xl font-semibold">Manager performance</CardTitle></CardHeader><CardContent className="grid gap-3 p-4">{loading ? <Empty text="Loading manager report..." /> : null}{!loading && !managers.length ? <Empty text="No manager activity in this period." /> : managers.map((row) => <div key={row.name} className="rounded-2xl border border-border p-3"><div className="flex items-start justify-between gap-3"><div><p className="font-heading text-base font-semibold">{row.name}</p><p className="mt-1 text-xs text-muted-foreground">{row.completed} completed | {row.inProgress} in progress | {row.noShow} no show</p></div><p className="font-heading text-lg font-semibold text-primary">{formatAed(row.revenue)}</p></div><div className="mt-2 flex items-center justify-between rounded-xl bg-[#F7FAFA] px-3 py-2 text-xs font-semibold"><span>Outstanding settlement</span><span className={row.outstanding > 0 ? 'text-red-700' : 'text-emerald-700'}>{formatAed(row.outstanding)}</span></div></div>)}</CardContent></Card>
         <Card className="rounded-[1.5rem] border-border/80 bg-white"><CardHeader className="border-b border-border/70 bg-[#F7FAFA]"><CardTitle className="font-heading text-xl font-semibold">Package performance</CardTitle></CardHeader><CardContent className="grid gap-3 p-4">{!loading && !packages.length ? <Empty text="No completed package sales in this period." /> : packages.map((row) => <div key={row.name} className="rounded-2xl border border-border p-3"><div className="flex items-center justify-between gap-3"><div><p className="text-sm font-bold">{row.name}</p><p className="text-xs text-muted-foreground">{row.rides} completed rides</p></div><p className="font-heading text-base font-semibold text-primary">{formatAed(row.revenue)}</p></div><Bar value={row.revenue} max={maxPackageRevenue} /></div>)}</CardContent></Card>
       </div>
 
       <div className="mt-5 grid gap-5 xl:grid-cols-2">
         <Card className="rounded-[1.5rem] border-border/80 bg-white"><CardHeader className="border-b border-border/70 bg-[#F7FAFA]"><CardTitle className="font-heading text-xl font-semibold">Daily activity</CardTitle></CardHeader><CardContent className="grid gap-3 p-4">{!loading && !daily.length ? <Empty text="No daily activity in this period." /> : daily.map((row) => <div key={row.date} className="grid gap-2 rounded-2xl border border-border p-3 sm:grid-cols-[1fr_0.7fr_0.8fr_0.8fr]"><div><p className="text-sm font-bold">{row.date === 'No date' ? row.date : niceDate(row.date)}</p><p className="text-xs text-muted-foreground">{row.requests} requests</p></div><div><p className="text-[10px] font-bold uppercase text-muted-foreground">Completed</p><p className="mt-1 font-semibold">{row.completed}</p></div><div><p className="text-[10px] font-bold uppercase text-muted-foreground">No Show / Cancel</p><p className="mt-1 font-semibold">{row.noShow} / {row.cancelled}</p></div><div><p className="text-[10px] font-bold uppercase text-muted-foreground">Revenue</p><p className="mt-1 font-semibold text-primary">{formatAed(row.revenue)}</p></div></div>)}</CardContent></Card>
-        <Card className="rounded-[1.5rem] border-border/80 bg-white"><CardHeader className="border-b border-border/70 bg-[#F7FAFA]"><CardTitle className="font-heading text-xl font-semibold">Fleet activity</CardTitle></CardHeader><CardContent className="grid gap-3 p-4">{!loading && !fleet.length ? <Empty text="No assigned vehicle activity in this period." /> : fleet.map((row) => <div key={row.name} className="flex items-center justify-between gap-3 rounded-2xl border border-border p-3"><div><p className="text-sm font-bold">{row.name}</p><p className="text-xs text-muted-foreground">{row.rides} completed · {row.active} active</p></div><p className="font-heading text-base font-semibold text-primary">{formatAed(row.revenue)}</p></div>)}</CardContent></Card>
+        <Card className="rounded-[1.5rem] border-border/80 bg-white"><CardHeader className="border-b border-border/70 bg-[#F7FAFA]"><CardTitle className="font-heading text-xl font-semibold">Fleet activity</CardTitle></CardHeader><CardContent className="grid gap-3 p-4">{!loading && !fleet.length ? <Empty text="No assigned vehicle activity in this period." /> : fleet.map((row) => <div key={row.name} className="flex items-center justify-between gap-3 rounded-2xl border border-border p-3"><div><p className="text-sm font-bold">{row.name}</p><p className="text-xs text-muted-foreground">{row.rides} completed | {row.active} active</p></div><p className="font-heading text-base font-semibold text-primary">{formatAed(row.revenue)}</p></div>)}</CardContent></Card>
       </div>
     </section>
   );

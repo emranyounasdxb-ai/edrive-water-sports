@@ -22,6 +22,42 @@ export type BookingRequestVehicleAssignment = {
   is_active: boolean;
 };
 
+export type B2BWallet = {
+  id: string;
+  b2b_agent_id: string;
+  balance_aed: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type B2BWalletLedger = {
+  id: string;
+  wallet_id: string;
+  b2b_agent_id: string;
+  direction: 'credit' | 'debit';
+  transaction_type: 'wallet_top_up' | 'booking_debit' | 'refund_credit' | 'adjustment_credit' | 'adjustment_debit' | 'reversal';
+  amount_aed: number;
+  balance_after_aed: number;
+  booking_request_id: string | null;
+  refund_request_id: string | null;
+  description: string;
+  idempotency_key: string;
+  created_at: string;
+};
+
+export type B2BRefundRequest = {
+  id: string;
+  booking_request_id: string;
+  b2b_agent_id: string;
+  status: 'Pending' | 'Approved' | 'Rejected';
+  reason: string;
+  requested_amount_aed: number;
+  approved_amount_aed: number | null;
+  decision_note: string | null;
+  requested_at: string;
+  decided_at: string | null;
+};
+
 export type VehicleType = Database['public']['Enums']['vehicle_type'];
 export type BookingStatus = Database['public']['Enums']['booking_status'];
 export type DiscountType = Database['public']['Enums']['discount_type'];

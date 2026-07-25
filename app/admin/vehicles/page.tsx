@@ -325,7 +325,7 @@ function registrationNotice(record: FleetRecord) {
 
 export default function Page() {
   const { role, isSuperAdmin, loading: accessLoading } = usePortalAccess();
-  const canMaintain = isSuperAdmin || role === 'maintenance_staff';
+  const canMaintain = isSuperAdmin;
   const [items, setItems] = useState<FleetRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -632,7 +632,7 @@ export default function Page() {
                 const regNotice = registrationNotice(row);
                 const hasMenu = canMaintain || isSuperAdmin;
                 return <TableRow key={row.id} className={summary.issues.length ? 'bg-amber-50/20' : ''}>
-                  <TableCell className="py-3"><button type="button" onClick={() => openView(row)} className="flex min-w-0 items-center gap-3 text-left"><FleetThumbnail src={row.imageUrl} title={row.name} /><span className="min-w-0"><span className="block truncate font-semibold text-foreground">{row.name}</span><span className="mt-0.5 block truncate text-xs font-semibold text-primary">{row.code}<span className="font-normal text-muted-foreground"> · {row.capacity} seats</span></span></span></button></TableCell>
+                  <TableCell className="py-3"><button type="button" onClick={() => openView(row)} className="flex min-w-0 items-center gap-3 text-left"><FleetThumbnail src={row.imageUrl} title={row.name} /><span className="min-w-0"><span className="block truncate font-semibold text-foreground">{row.name}</span><span className="mt-0.5 block truncate text-xs font-semibold text-primary">{row.code}<span className="font-normal text-muted-foreground"> | {row.capacity} seats</span></span></span></button></TableCell>
                   <TableCell className="hidden py-3 md:table-cell"><Badge variant="secondary" className="font-semibold">{row.type}</Badge></TableCell>
                   <TableCell className="hidden truncate py-3 lg:table-cell">{row.location}</TableCell>
                   <TableCell className="hidden py-3 sm:table-cell"><p className={`truncate font-semibold ${row.regNo ? 'text-foreground' : 'text-red-700'}`}>{row.regNo || 'Not added'}</p>{regNotice ? <p className={`mt-1 truncate text-[10px] font-semibold ${regNotice === 'Expired' ? 'text-red-700' : 'text-amber-700'}`}>{regNotice}</p> : null}</TableCell>
@@ -710,7 +710,7 @@ function FleetDrawer({ record, isSuperAdmin, onEdit, onClose }: { record: FleetR
       }));
       const maintenanceItems = ((maintenanceResult.data || []) as Array<Record<string, unknown>>).map((item) => ({
         id: `maintenance-${toText(item.id)}`,
-        title: `${reverse(statusMap, toText(item.status_from)) || 'Status'} → ${reverse(statusMap, toText(item.status_to)) || toText(item.status_to)}`,
+        title: `${reverse(statusMap, toText(item.status_from)) || 'Status'} -> ${reverse(statusMap, toText(item.status_to)) || toText(item.status_to)}`,
         detail: toText(item.note) || 'Lifecycle status updated',
         createdAt: toText(item.created_at)
       }));
@@ -722,7 +722,7 @@ function FleetDrawer({ record, isSuperAdmin, onEdit, onClose }: { record: FleetR
   }, [record.id]);
 
   return <div className="fixed inset-0 z-[80] bg-primary-900/35 backdrop-blur-sm" onMouseDown={onClose}><aside className="ml-auto flex h-full w-full max-w-xl flex-col bg-white shadow-[-24px_0_70px_rgba(8,37,50,0.2)]" onMouseDown={(event) => event.stopPropagation()}>
-    <div className="flex items-start justify-between gap-4 border-b border-border/70 bg-[#F7FAFA] p-5"><div className="flex min-w-0 items-center gap-3"><FleetThumbnail src={record.imageUrl} title={record.name} /><div className="min-w-0"><p className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary">Fleet Profile</p><h2 className="truncate font-heading text-xl font-semibold text-foreground">{record.name}</h2><p className="mt-0.5 text-xs font-semibold text-muted-foreground">{record.code} · {record.type}</p></div></div><button type="button" onClick={onClose} className="flex size-9 shrink-0 items-center justify-center rounded-full border border-border bg-white text-muted-foreground hover:text-primary" aria-label="Close fleet details"><X className="size-4" aria-hidden="true" /></button></div>
+    <div className="flex items-start justify-between gap-4 border-b border-border/70 bg-[#F7FAFA] p-5"><div className="flex min-w-0 items-center gap-3"><FleetThumbnail src={record.imageUrl} title={record.name} /><div className="min-w-0"><p className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary">Fleet Profile</p><h2 className="truncate font-heading text-xl font-semibold text-foreground">{record.name}</h2><p className="mt-0.5 text-xs font-semibold text-muted-foreground">{record.code} | {record.type}</p></div></div><button type="button" onClick={onClose} className="flex size-9 shrink-0 items-center justify-center rounded-full border border-border bg-white text-muted-foreground hover:text-primary" aria-label="Close fleet details"><X className="size-4" aria-hidden="true" /></button></div>
     <div className="flex flex-wrap gap-2 border-b border-border/70 px-5 py-3"><span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-bold ${statusBadgeClass(record.status)}`}>{record.status}</span>{issues.length ? <span className="inline-flex rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-700">{issues.length} compliance issue{issues.length === 1 ? '' : 's'}</span> : <span className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700">Compliance complete</span>}</div>
     <div className="flex gap-1 overflow-x-auto border-b border-border/70 px-4 py-2">{([
       ['overview', 'Overview'],
@@ -815,7 +815,7 @@ function FleetFormModal({ initialValues, onClose, onSubmit }: { initialValues?: 
         <div>
           <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Fleet Asset Profile</p>
           <h2 className="mt-1 font-heading text-xl font-semibold text-foreground">{initialValues ? 'Edit Fleet Unit' : 'Add Fleet Unit'}</h2>
-          {initialValues ? <p className="mt-1 text-xs font-medium text-muted-foreground">{issues.length ? `Profile incomplete · ${issues.length} detail${issues.length === 1 ? '' : 's'} can be completed later.` : 'Fleet profile is complete.'}</p> : <p className="mt-1 text-xs font-medium text-muted-foreground">Create the core fleet record first. Additional details can be added later.</p>}
+          {initialValues ? <p className="mt-1 text-xs font-medium text-muted-foreground">{issues.length ? `Profile incomplete | ${issues.length} detail${issues.length === 1 ? '' : 's'} can be completed later.` : 'Fleet profile is complete.'}</p> : <p className="mt-1 text-xs font-medium text-muted-foreground">Create the core fleet record first. Additional details can be added later.</p>}
         </div>
         <button type="button" onClick={onClose} className="flex size-9 items-center justify-center rounded-full border border-border bg-white text-muted-foreground transition hover:text-primary"><X className="size-4" aria-hidden="true" /></button>
       </div>
@@ -865,7 +865,7 @@ function FleetFormModal({ initialValues, onClose, onSubmit }: { initialValues?: 
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">Current Image</p>
-                  <p className="mt-1 text-[11px] text-muted-foreground">JPG, PNG or WebP · maximum 5 MB</p>
+                  <p className="mt-1 text-[11px] text-muted-foreground">JPG, PNG or WebP | maximum 5 MB</p>
                 </div>
                 <ImageIcon className="size-4 text-muted-foreground" aria-hidden="true" />
               </div>
@@ -930,5 +930,5 @@ function ConfirmModal({ action, note, setNote, busy, onClose, onConfirm }: { act
     reactivate: 'The unit will return to Available. A valid unique registration number is still required.',
     delete: 'Delete is permanent and is allowed only when no booking, assignment, maintenance, tracker, document, expense, or audit-linked operational history exists.'
   };
-  return <div className="fixed inset-0 z-[90] flex items-center justify-center bg-primary-900/40 p-4 backdrop-blur-sm"><div className="w-full max-w-lg rounded-[1.5rem] border border-white/80 bg-white p-5 shadow-[0_28px_80px_rgba(8,37,50,0.28)]"><div className="flex items-start justify-between gap-4"><div><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Fleet Lifecycle Action</p><h2 className="mt-1 font-heading text-xl font-semibold text-foreground">{titles[action.type]}</h2></div><button type="button" onClick={onClose} className="flex size-9 items-center justify-center rounded-full border border-border bg-white"><X className="size-4" aria-hidden="true" /></button></div><p className="mt-3 text-sm leading-6 text-muted-foreground">{descriptions[action.type]}</p><div className="mt-4 rounded-xl bg-[#F7FAFA] px-4 py-3"><p className="font-semibold text-foreground">{action.record.code} · {action.record.name}</p><p className="mt-1 text-xs text-muted-foreground">Registration: {action.record.regNo || 'Missing'}</p></div>{action.type !== 'delete' ? <label className="mt-4 grid gap-1.5 text-sm font-semibold text-foreground">Action note<textarea value={note} onChange={(event) => setNote(event.target.value)} maxLength={1000} placeholder="Reason, work completed, or operational note..." className="min-h-24 rounded-xl border border-border bg-white px-3 py-3 text-sm outline-none focus:border-primary" /></label> : null}<div className="mt-5 flex justify-end gap-3"><Button type="button" variant="outline" onClick={onClose}>Cancel</Button><Button type="button" variant={action.type === 'delete' ? 'danger' : 'default'} disabled={busy} onClick={onConfirm}>{busy ? 'Processing...' : action.type === 'delete' ? 'Delete Permanently' : 'Confirm Action'}</Button></div></div></div>;
+  return <div className="fixed inset-0 z-[90] flex items-center justify-center bg-primary-900/40 p-4 backdrop-blur-sm"><div className="w-full max-w-lg rounded-[1.5rem] border border-white/80 bg-white p-5 shadow-[0_28px_80px_rgba(8,37,50,0.28)]"><div className="flex items-start justify-between gap-4"><div><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Fleet Lifecycle Action</p><h2 className="mt-1 font-heading text-xl font-semibold text-foreground">{titles[action.type]}</h2></div><button type="button" onClick={onClose} className="flex size-9 items-center justify-center rounded-full border border-border bg-white"><X className="size-4" aria-hidden="true" /></button></div><p className="mt-3 text-sm leading-6 text-muted-foreground">{descriptions[action.type]}</p><div className="mt-4 rounded-xl bg-[#F7FAFA] px-4 py-3"><p className="font-semibold text-foreground">{action.record.code} | {action.record.name}</p><p className="mt-1 text-xs text-muted-foreground">Registration: {action.record.regNo || 'Missing'}</p></div>{action.type !== 'delete' ? <label className="mt-4 grid gap-1.5 text-sm font-semibold text-foreground">Action note<textarea value={note} onChange={(event) => setNote(event.target.value)} maxLength={1000} placeholder="Reason, work completed, or operational note..." className="min-h-24 rounded-xl border border-border bg-white px-3 py-3 text-sm outline-none focus:border-primary" /></label> : null}<div className="mt-5 flex justify-end gap-3"><Button type="button" variant="outline" onClick={onClose}>Cancel</Button><Button type="button" variant={action.type === 'delete' ? 'danger' : 'default'} disabled={busy} onClick={onConfirm}>{busy ? 'Processing...' : action.type === 'delete' ? 'Delete Permanently' : 'Confirm Action'}</Button></div></div></div>;
 }

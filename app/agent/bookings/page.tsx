@@ -12,6 +12,7 @@ import { BrandMark } from '@/components/edrive/brand';
 import { bookingRequestsTable } from '@/lib/booking-records';
 import { formatAed } from '@/lib/booking-data';
 import { supabase } from '@/lib/supabase-client';
+import { requestB2BRefund, type B2BRefundRequest } from '@/services/b2b-finance';
 
 type AgentProfile = {
   id: string;
@@ -35,6 +36,9 @@ type BookingRow = {
   customer_name: string | null;
   customer_phone: string | null;
   total_amount: number | null;
+  base_amount_aed: number | null;
+  vat_amount: number | null;
+  total_refunded_aed: number | null;
   amount_received_aed: number | null;
   amount_pending_aed: number | null;
   payment_status: string | null;
@@ -42,6 +46,7 @@ type BookingRow = {
   status: string | null;
   admin_status: string | null;
   created_at: string | null;
+  ride_started_at: string | null;
 };
 
 function isActiveStatus(value: string | null | undefined) {
@@ -68,8 +73,28 @@ export default function B2BBookingsPage() {
   const router = useRouter();
   const [agent, setAgent] = useState<AgentProfile | null>(null);
   const [bookings, setBookings] = useState<BookingRow[]>([]);
+  const [requests, setRequests] = useState<B2BRefundRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [requestingRefundId, setRequestingRefundId] = useState('');
+
+  async function requestRefund(booking: BookingRow) {
+    const isNoShow = ['no show', 'no_show'].includes(String(booking.status || '').trim().toLowerCase());
+    const actionLabel = isNoShow ? 'refund' : 'cancellation';
+    const reason = window.prompt(`Enter the ${actionLabel} reason:`)?.trim();
+    if (!reason) return;
+    if (!window.confirm(`Submit a ${actionLabel} request for ${booking.booking_code || 'this booking'}?`)) return;
+    setRequestingRefundId(booking.id);
+    setError('');
+    try {
+      await requestB2BRefund(booking.id, reason);
+      await loadBookings();
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : 'Unable to submit refund request.');
+    } finally {
+      setRequestingRefundId('');
+    }
+  }
 
   async function loadBookings() {
     setLoading(true);
@@ -95,19 +120,26 @@ export default function B2BBookingsPage() {
       return;
     }
 
-    const agentEmail = nextAgent.login_email || nextAgent.email || '';
-    const { data, error: bookingError } = await supabase
-      .from(bookingRequestsTable)
-      .select('id,booking_code,selected_package_name,selected_package_category,duration_minutes,vehicle_quantity,guest_count,preferred_date,preferred_time,customer_name,customer_phone,total_amount,amount_received_aed,amount_pending_aed,payment_status,payment_workflow_status,status,admin_status,created_at')
-      .or(`b2b_agent_id.eq.${nextAgent.id},b2b_agent_email.eq.${agentEmail}`)
-      .order('created_at', { ascending: false });
+    const [bookingResult, requestResult] = await Promise.all([
+      supabase.from(bookingRequestsTable)
+        .select('id,booking_code,selected_package_name,selected_package_category,duration_minutes,vehicle_quantity,guest_count,preferred_date,preferred_time,customer_name,customer_phone,base_amount_aed,vat_amount,total_amount,amount_received_aed,amount_pending_aed,total_refunded_aed,payment_status,payment_workflow_status,status,admin_status,ride_started_at,created_at')
+        .eq('b2b_agent_id', nextAgent.id)
+        .order('created_at', { ascending: false }),
+      supabase.from('b2b_refund_requests')
+        .select('id,booking_request_id,b2b_agent_id,request_type,status,reason,requested_amount_aed,approved_amount_aed,decision_note,requested_at,decided_at')
+        .eq('b2b_agent_id', nextAgent.id)
+        .order('requested_at', { ascending: false })
+    ]);
+    const { data, error: bookingError } = bookingResult;
 
-    if (bookingError) {
-      setError(bookingError.message);
+    if (bookingError || requestResult.error) {
+      setError(bookingError?.message || requestResult.error?.message || 'Unable to load bookings.');
       setBookings([]);
+      setRequests([]);
     } else {
       setAgent(nextAgent);
       setBookings((data || []) as BookingRow[]);
+      setRequests((requestResult.data || []) as B2BRefundRequest[]);
     }
 
     setLoading(false);
@@ -174,13 +206,21 @@ export default function B2BBookingsPage() {
                   <TableHead>Total</TableHead>
                   <TableHead>Payment</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Refund</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {loading ? <TableRow><TableCell colSpan={7} className="py-8 text-center">Loading bookings...</TableCell></TableRow> : null}
-                {!loading && bookings.length === 0 ? <TableRow><TableCell colSpan={7} className="py-8 text-center">No B2B bookings yet.</TableCell></TableRow> : null}
+                {loading ? <TableRow><TableCell colSpan={8} className="py-8 text-center">Loading bookings...</TableCell></TableRow> : null}
+                {!loading && bookings.length === 0 ? <TableRow><TableCell colSpan={8} className="py-8 text-center">No B2B bookings yet.</TableCell></TableRow> : null}
                 {bookings.map((booking) => {
                   const pending = Number(booking.amount_pending_aed ?? Math.max(Number(booking.total_amount || 0) - Number(booking.amount_received_aed || 0), 0));
+                  const latestRequest = requests.find((request) => request.booking_request_id === booking.id);
+                  const bookingStatus = String(booking.status || '').trim().toLowerCase();
+                  const requestIsBlocking = latestRequest?.status === 'Pending' || latestRequest?.status === 'Approved';
+                  const canRequest = !booking.ride_started_at
+                    && !['completed', 'ride in progress', 'ride_in_progress', 'cancelled'].includes(bookingStatus)
+                    && !requestIsBlocking;
+                  const requestLabel = ['no show', 'no_show'].includes(bookingStatus) ? 'Request Refund' : 'Request Cancellation';
                   return (
                     <TableRow key={booking.id}>
                       <TableCell>
@@ -193,12 +233,13 @@ export default function B2BBookingsPage() {
                       </TableCell>
                       <TableCell>
                         <div className="font-semibold text-foreground">{booking.selected_package_name || '-'}</div>
-                        <div className="text-xs text-muted-foreground">{categoryLabel(booking.selected_package_category)} · {booking.duration_minutes || '-'} min</div>
+                        <div className="text-xs text-muted-foreground">{categoryLabel(booking.selected_package_category)} | {booking.duration_minutes || '-'} min</div>
                       </TableCell>
                       <TableCell>{niceDate(booking.preferred_date)}<div className="text-xs text-muted-foreground">{booking.preferred_time || '-'}</div></TableCell>
-                      <TableCell>{formatAed(Number(booking.total_amount || 0))}<div className="text-xs text-muted-foreground">Pending {formatAed(pending)}</div></TableCell>
+                      <TableCell>{formatAed(Number(booking.total_amount || 0))}<div className="text-xs text-muted-foreground">Base {formatAed(Number(booking.base_amount_aed || 0))} | VAT 5% {formatAed(Number(booking.vat_amount || 0))}</div><div className="text-xs text-muted-foreground">Paid {formatAed(Number(booking.amount_received_aed || 0))} | Pending {formatAed(pending)} | Refunded {formatAed(Number(booking.total_refunded_aed || 0))}</div></TableCell>
                       <TableCell><div className="font-semibold text-foreground">{booking.payment_status || 'Not Paid'}</div><div className="text-xs text-muted-foreground">{String(booking.payment_workflow_status || 'pending').replace(/_/g, ' ')}</div></TableCell>
                       <TableCell><Badge variant={booking.status === 'Confirmed' ? 'success' : 'secondary'}>{booking.status || 'Pending'}</Badge></TableCell>
+                      <TableCell><div>{latestRequest ? <><Badge variant={latestRequest.status === 'Approved' ? 'success' : latestRequest.status === 'Rejected' ? 'destructive' : 'secondary'}>{latestRequest.status}</Badge><div className="mt-1 text-xs text-muted-foreground">{latestRequest.request_type === 'no_show_refund' ? 'No Show refund' : 'Cancellation'} | {formatAed(latestRequest.requested_amount_aed)}</div>{latestRequest.decision_note ? <div className="mt-1 text-xs text-muted-foreground">{latestRequest.decision_note}</div> : null}</> : null}{canRequest ? <Button type="button" size="sm" variant="outline" className={latestRequest ? 'mt-2' : ''} disabled={requestingRefundId === booking.id} onClick={() => requestRefund(booking)}>{requestingRefundId === booking.id ? 'Submitting...' : requestLabel}</Button> : !latestRequest ? <span className="text-xs text-muted-foreground">Not eligible</span> : null}</div></TableCell>
                     </TableRow>
                   );
                 })}

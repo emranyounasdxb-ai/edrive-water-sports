@@ -72,7 +72,7 @@ export function AdminBookingsPage() {
                       <TableRow key={booking.id} className={cn(selectedId === booking.id && 'bg-primary-50')}>
                         <TableCell className="font-semibold text-foreground">{booking.bookingCode}<span className="mt-1 block text-xs font-normal text-muted-foreground">{booking.source}</span></TableCell>
                         <TableCell><span className="font-medium text-foreground">{booking.customerName}</span><span className="mt-1 block text-xs">{booking.customerPhone}</span></TableCell>
-                        <TableCell><span className="text-foreground">{booking.serviceType}</span><span className="mt-1 block text-xs">{booking.durationMinutes} min · {booking.guestCount} guests</span></TableCell>
+                        <TableCell><span className="text-foreground">{booking.serviceType}</span><span className="mt-1 block text-xs">{booking.durationMinutes} min | {booking.guestCount} guests</span></TableCell>
                         <TableCell><span className="text-foreground">{formatBookingDate(booking.preferredDate)}</span><span className="mt-1 block text-xs">{formatTime(booking.preferredTime)}</span></TableCell>
                         <TableCell><StatusBadge status={booking.bookingStatus} /></TableCell>
                         <TableCell><PaymentBadge status={booking.paymentStatus} /><span className="mt-1 block text-xs">{booking.collectionStatus}</span></TableCell>
@@ -87,7 +87,7 @@ export function AdminBookingsPage() {
                 {filteredBookings.map((booking) => (
                   <button key={booking.id} type="button" onClick={() => setSelectedId(booking.id)} className="rounded-2xl border border-border bg-white p-4 text-left shadow-sm transition hover:border-primary/40">
                     <div className="flex items-start justify-between gap-3"><div><p className="text-xs font-semibold text-primary">{booking.bookingCode}</p><p className="mt-1 font-semibold text-foreground">{booking.customerName}</p></div><StatusBadge status={booking.bookingStatus} /></div>
-                    <div className="mt-4 grid grid-cols-2 gap-3 text-xs text-muted-foreground"><span>{booking.serviceType} · {booking.durationMinutes} min</span><span className="text-right">{formatAed(booking.finalAmount)}</span><span>{formatBookingDate(booking.preferredDate)}</span><span className="text-right">{formatTime(booking.preferredTime)}</span></div>
+                    <div className="mt-4 grid grid-cols-2 gap-3 text-xs text-muted-foreground"><span>{booking.serviceType} | {booking.durationMinutes} min</span><span className="text-right">{formatAed(booking.finalAmount)}</span><span>{formatBookingDate(booking.preferredDate)}</span><span className="text-right">{formatTime(booking.preferredTime)}</span></div>
                     <div className="mt-4 flex items-center justify-between"><PaymentBadge status={booking.paymentStatus} /><span className="text-xs font-medium text-gold-deep">{formatAed(booking.amountPending)} due</span></div>
                   </button>
                 ))}

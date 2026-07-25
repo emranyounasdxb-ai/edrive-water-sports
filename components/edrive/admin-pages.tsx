@@ -15,7 +15,7 @@ type Field = { name: string; label: string; type: FieldType; options?: string[];
 type RecordItem = Record<string, string> & { id: string };
 type TableState = { items: RecordItem[]; loading: boolean; error: string; refresh: () => Promise<void> };
 
-const roleMap: Record<string, string> = { 'Super Admin': 'super_admin', Admin: 'admin', 'Booking Staff': 'booking_staff', 'Manager / Operations': 'manager', Finance: 'finance', 'Maintenance Staff': 'maintenance_staff' };
+const roleMap: Record<string, string> = { 'Super Admin': 'super_admin', Admin: 'admin', 'Booking Staff': 'booking_staff', 'Manager / Operations': 'manager', Finance: 'finance' };
 const statusMap: Record<string, string> = { Active: 'active', Inactive: 'inactive', Suspended: 'suspended', Draft: 'draft', Available: 'available', Booked: 'booked', Maintenance: 'maintenance', 'For Sale': 'for_sale' };
 const categoryMap: Record<string, string> = { 'Jet Ski Rental': 'jet_ski_rental', 'Jet Car Rental': 'jet_car_rental', 'Yacht Rental': 'yacht_rental' };
 const typeMap: Record<string, string> = { 'Jet Ski': 'jet_ski', 'Jet Car': 'jet_car', Yacht: 'yacht' };

@@ -88,7 +88,7 @@ export function BookingDetailPanel({ booking, mode, onClose }: BookingDetailPane
             <Badge variant="secondary">{draft.source}</Badge>
           </div>
           <SheetTitle className="mt-2">{mode === 'manager' ? 'Edit booking' : 'Booking details'}: {draft.bookingCode}</SheetTitle>
-          <SheetDescription>{draft.customerName} · {draft.serviceType} · Updated {new Date(draft.updatedAt).toLocaleString('en-AE')}</SheetDescription>
+          <SheetDescription>{draft.customerName} | {draft.serviceType} | Updated {new Date(draft.updatedAt).toLocaleString('en-AE')}</SheetDescription>
         </SheetHeader>
 
         <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-5">
@@ -99,7 +99,7 @@ export function BookingDetailPanel({ booking, mode, onClose }: BookingDetailPane
                 <InfoRow label="Phone" value={draft.customerPhone} />
                 <InfoRow label="Email" value={draft.customerEmail} />
                 <InfoRow label="Guests" value={`${draft.guestCount}`} />
-                <InfoRow label="Schedule" value={`${draft.preferredDate} · ${draft.preferredTime}`} />
+                <InfoRow label="Schedule" value={`${draft.preferredDate} | ${draft.preferredTime}`} />
                 <InfoRow label="Meeting point" value={draft.meetingLocation} />
               </div>
               {draft.customerNote ? <p className="mt-3 rounded-xl bg-muted/70 p-3 text-xs leading-5 text-muted-foreground">Customer note: {draft.customerNote}</p> : null}
@@ -131,7 +131,7 @@ export function BookingDetailPanel({ booking, mode, onClose }: BookingDetailPane
                   <FieldLabel htmlFor="assigned-vehicle">Assigned vehicle</FieldLabel>
                   <select id="assigned-vehicle" className={nativeSelectClassName} value={draft.assignedVehicleId ?? ''} disabled={mode === 'admin'} onChange={(event) => updateDraft('assignedVehicleId', event.target.value || null)}>
                     <option value="">Select vehicle</option>
-                    {vehicles.filter((vehicle) => vehicle.type === draft.serviceType || vehicle.id === draft.assignedVehicleId).map((vehicle) => <option key={vehicle.id} value={vehicle.id}>{vehicle.name} · {vehicle.status}</option>)}
+                    {vehicles.filter((vehicle) => vehicle.type === draft.serviceType || vehicle.id === draft.assignedVehicleId).map((vehicle) => <option key={vehicle.id} value={vehicle.id}>{vehicle.name} | {vehicle.status}</option>)}
                   </select>
                 </Field>
                 {(draft.vehicleType === 'jet_car' || draft.vehicleType === 'boat') ? (
@@ -235,7 +235,7 @@ export function BookingDetailPanel({ booking, mode, onClose }: BookingDetailPane
                   <li key={item.id} className="relative pb-5 pl-5 last:pb-0">
                     <span className="absolute -left-1.5 top-1.5 size-3 rounded-full border-2 border-white bg-primary" />
                     <div className="flex flex-wrap items-start justify-between gap-2">
-                      <div><p className="text-sm font-semibold text-foreground">{item.action}</p><p className="mt-1 text-xs text-muted-foreground">{item.actor} · {item.role.replaceAll('_', ' ')}</p></div>
+                      <div><p className="text-sm font-semibold text-foreground">{item.action}</p><p className="mt-1 text-xs text-muted-foreground">{item.actor} | {item.role.replaceAll('_', ' ')}</p></div>
                       <time className="text-[11px] text-muted-foreground">{new Date(item.createdAt).toLocaleString('en-AE')}</time>
                     </div>
                     {item.note ? <p className="mt-1 text-xs leading-5 text-muted-foreground">{item.note}</p> : null}

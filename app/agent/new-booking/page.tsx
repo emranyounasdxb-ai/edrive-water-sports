@@ -9,9 +9,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { BrandMark } from '@/components/edrive/brand';
-import { bookingRequestsTable } from '@/lib/booking-records';
-import { formatAed, generateBookingCode, timeSlots } from '@/lib/booking-data';
+import { formatAed, timeSlots } from '@/lib/booking-data';
 import { supabase } from '@/lib/supabase-client';
+import { createB2BBooking } from '@/services/b2b-finance';
 
 type AgentProfile = {
   id: string;
@@ -65,11 +65,6 @@ const emptyForm: FormState = {
 
 function isActiveStatus(value: string | null | undefined) {
   return String(value || '').trim().toLowerCase() === 'active';
-}
-
-function serviceFromCategory(category: string) {
-  if (category === 'jet_car_rental') return 'jet-car-rental';
-  return 'jet-ski-rental';
 }
 
 function categoryLabel(category: string) {
@@ -180,60 +175,20 @@ export default function B2BNewBookingPage() {
       if (!form.preferredTime) throw new Error('Preferred time is required.');
       if (unitPrice <= 0) throw new Error('B2B price is not set for selected package.');
 
-      const now = new Date().toISOString();
-      const bookingCode = generateBookingCode();
-      const agentEmail = agent.login_email || agent.email || '';
-      const packageCategory = selectedPackage.category;
-
-      const { error: insertError } = await supabase.from(bookingRequestsTable).insert({
-        booking_code: bookingCode,
-        booking_number: bookingCode,
-        source: 'b2b',
-        booking_source: 'b2b',
-        status: 'Pending',
-        admin_status: 'New',
-        manager_status: 'Pending',
-        selected_package_name: selectedPackage.title,
-        selected_package_slug: selectedPackage.slug,
-        selected_package_category: packageCategory,
-        selected_package_price: Number(selectedPackage.base_price || 0),
-        selected_package_b2b_price: unitPrice,
-        selected_package_capacity: Number(selectedPackage.capacity || 2),
-        experience_type: serviceFromCategory(packageCategory),
-        service_type: 'rental',
-        duration_minutes: Number(selectedPackage.duration_minutes || 0),
-        inquiry_type: null,
+      const created = await createB2BBooking({
+        package_id: selectedPackage.id,
         vehicle_quantity: vehicleQuantity,
         guest_count: guestCount,
         preferred_date: form.preferredDate,
         preferred_time: form.preferredTime,
-        meeting_point_name: 'Dubai Islands Marina',
-        meeting_point_address: 'Dubai Islands Marina',
         customer_name: form.customerName.trim(),
         customer_phone: form.customerPhone.trim(),
         customer_email: form.customerEmail.trim() || null,
         customer_hotel_or_area: form.customerHotelOrArea.trim() || null,
-        customer_notes: form.customerNotes.trim() || null,
-        subtotal,
-        vat_amount: vatAmount,
-        total_amount: totalAmount,
-        payment_status: 'Not Paid',
-        payment_method: 'B2B Invoice',
-        payment_source: 'b2b',
-        payment_workflow_status: 'pending_from_b2b_agent',
-        collection_status: 'with_b2b_agent',
-        amount_received_aed: 0,
-        amount_pending_aed: totalAmount,
-        b2b_agent_id: agent.id,
-        b2b_agent_code: agent.agent_code,
-        b2b_agent_name: agent.company_name,
-        b2b_agent_email: agentEmail,
-        customer_arrived: false,
-        created_at: now,
-        updated_at: now
+        customer_notes: form.customerNotes.trim() || null
       });
-
-      if (insertError) throw new Error(insertError.message);
+      const bookingCode = String(created.booking_code || '');
+      if (!bookingCode) throw new Error('Booking was created without a booking reference.');
       setSuccessCode(bookingCode);
       setForm({ ...emptyForm, packageId: packages[0]?.id || '' });
     } catch (submitError) {

@@ -161,8 +161,7 @@ function roleLabel(role: string) {
     admin: 'Admin',
     booking_staff: 'Booking Manager',
     manager: 'Ride Manager',
-    finance: 'Finance',
-    maintenance_staff: 'Maintenance Staff'
+    finance: 'Finance'
   };
   return labels[role] ?? 'Admin';
 }

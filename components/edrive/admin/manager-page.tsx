@@ -74,7 +74,7 @@ export function ManagerOperationsPage() {
               <div className="grid gap-3 md:hidden">{visible.map((booking) => (
                 <button key={booking.id} type="button" onClick={() => setSelectedId(booking.id)} className="rounded-2xl border border-border bg-white p-4 text-left shadow-sm">
                   <div className="flex items-start justify-between gap-3"><div><p className="text-xs font-semibold text-primary">{booking.bookingCode}</p><p className="mt-1 font-semibold text-foreground">{booking.customerName}</p></div><StatusBadge status={booking.bookingStatus} /></div>
-                  <p className="mt-3 text-sm text-muted-foreground">{booking.serviceType} · {booking.assignedVehicleName ?? 'Vehicle not assigned'}</p>
+                  <p className="mt-3 text-sm text-muted-foreground">{booking.serviceType} | {booking.assignedVehicleName ?? 'Vehicle not assigned'}</p>
                   <div className="mt-4 flex flex-wrap items-center gap-2"><PaymentBadge status={booking.paymentStatus} /><CollectionBadge status={booking.collectionStatus} /></div>
                 </button>
               ))}</div>

@@ -255,7 +255,7 @@ function PaymentDetailsModal({ booking, onClose }: { booking: BookingRow; onClos
     <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm">
       <div className="max-h-[86vh] w-full max-w-4xl overflow-hidden rounded-[1.5rem] border border-border bg-white shadow-[0_28px_90px_rgba(8,37,50,0.24)]">
         <div className="flex items-start justify-between gap-4 border-b border-border/70 bg-[#F7FAFA] p-5">
-          <div className="min-w-0"><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Payment Record</p><h2 className="mt-1 break-words font-heading text-2xl font-semibold text-foreground">{bookingCode(booking)}</h2><p className="mt-1 text-sm text-muted-foreground">{asText(booking.customer_name, 'Guest')} · {packageLabel(booking)}</p></div>
+          <div className="min-w-0"><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Payment Record</p><h2 className="mt-1 break-words font-heading text-2xl font-semibold text-foreground">{bookingCode(booking)}</h2><p className="mt-1 text-sm text-muted-foreground">{asText(booking.customer_name, 'Guest')} | {packageLabel(booking)}</p></div>
           <button type="button" onClick={onClose} className="flex size-9 shrink-0 items-center justify-center rounded-full bg-white text-muted-foreground shadow-sm hover:text-foreground" aria-label="Close"><X className="size-4" aria-hidden="true" /></button>
         </div>
         <div className="grid max-h-[calc(86vh-5.5rem)] gap-3 overflow-y-auto p-5 sm:grid-cols-2 lg:grid-cols-4">
@@ -360,7 +360,7 @@ function PaymentReceiveModal({ target, onClose, onSaved }: { target: ReceiveTarg
           booking_request_id: asText(item.booking.id) || null,
           booking_code: bookingCode(item.booking),
           amount: item.allocated,
-          narration: `${receiptNumber} · ${sourceLabel(target.type)} payment received`
+          narration: `${receiptNumber} | ${sourceLabel(target.type)} payment received`
         };
         return [
           { ...base, account_type: target.type, account_name: target.name, entry_type: 'source_out' },
@@ -414,7 +414,7 @@ function PaymentReceiveModal({ target, onClose, onSaved }: { target: ReceiveTarg
     <div className="fixed inset-0 z-[90] flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm">
       <div className="max-h-[88vh] w-full max-w-2xl overflow-hidden rounded-[1.5rem] border border-border bg-white shadow-[0_28px_90px_rgba(8,37,50,0.24)]">
         <div className="flex items-start justify-between gap-4 border-b border-border/70 bg-[#F7FAFA] p-5">
-          <div><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Receive Payment</p><h2 className="mt-1 font-heading text-xl font-semibold text-foreground">{target.title}</h2><p className="mt-1 text-sm text-muted-foreground">{target.bookings.length} booking{target.bookings.length === 1 ? '' : 's'} · Due {formatAed(totalDue)}</p></div>
+          <div><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Receive Payment</p><h2 className="mt-1 font-heading text-xl font-semibold text-foreground">{target.title}</h2><p className="mt-1 text-sm text-muted-foreground">{target.bookings.length} booking{target.bookings.length === 1 ? '' : 's'} | Due {formatAed(totalDue)}</p></div>
           <button type="button" onClick={onClose} className="flex size-9 shrink-0 items-center justify-center rounded-full bg-white text-muted-foreground shadow-sm hover:text-foreground" aria-label="Close"><X className="size-4" aria-hidden="true" /></button>
         </div>
         <div className="grid max-h-[calc(88vh-9rem)] gap-4 overflow-y-auto p-5">
@@ -436,14 +436,14 @@ function PaymentReceiveModal({ target, onClose, onSaved }: { target: ReceiveTarg
 function targetForBooking(booking: BookingRow): ReceiveTarget {
   const type = receiveTypeForBooking(booking);
   const name = type === 'b2b_agent' ? b2bAgentName(booking) : type === 'direct_customer' ? asText(booking.customer_name, 'Customer') : managerName(booking);
-  return { type, name, title: `${sourceLabel(type)} · ${name}`, bookings: [booking] };
+  return { type, name, title: `${sourceLabel(type)} | ${name}`, bookings: [booking] };
 }
 
 function PaymentRow({ booking, onView, onReceive }: { booking: BookingRow; onView: () => void; onReceive: () => void }) {
   const stage = collectionStage(booking);
   return (
     <div className="grid gap-3 border-b border-border/70 px-4 py-3 last:border-b-0 lg:grid-cols-[1.1fr_0.9fr_1fr_0.9fr_0.75fr_0.75fr_0.75fr_1fr_0.9fr] lg:items-center">
-      <div className="min-w-0"><p className="break-words text-xs font-bold uppercase tracking-[0.12em] text-primary">{bookingCode(booking)}</p><p className="mt-1 break-words font-heading text-sm font-semibold text-foreground">{packageLabel(booking)}</p><p className="mt-0.5 text-xs text-muted-foreground">{niceDate(booking.preferred_date)} · {asText(booking.preferred_time, '-')}</p></div>
+      <div className="min-w-0"><p className="break-words text-xs font-bold uppercase tracking-[0.12em] text-primary">{bookingCode(booking)}</p><p className="mt-1 break-words font-heading text-sm font-semibold text-foreground">{packageLabel(booking)}</p><p className="mt-0.5 text-xs text-muted-foreground">{niceDate(booking.preferred_date)} | {asText(booking.preferred_time, '-')}</p></div>
       <div className="min-w-0"><p className="break-words text-sm font-bold text-foreground">{asText(booking.customer_name, 'Guest')}</p><p className="break-words text-xs text-muted-foreground">{asText(booking.customer_phone || booking.customer_email, '-')}</p></div>
       <div className="min-w-0"><p className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">Collect from</p><p className="mt-1 break-words text-sm font-bold text-foreground">{collectFrom(booking)}</p><Badge>{isB2B(booking) ? 'B2B' : isManagerHandled(booking) ? 'Manager' : 'Direct'}</Badge></div>
       <div className="min-w-0"><p className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">Handled by</p><p className="mt-1 break-words text-sm font-bold text-foreground">{handledBy(booking)}</p><p className="mt-1 text-[11px] font-semibold text-muted-foreground">{lockReason(booking)}</p></div>
@@ -491,7 +491,7 @@ function MiniGroupCard({ title, empty, groups, type, onReceive }: { title: strin
         {!groups.length ? <div className="rounded-xl border border-dashed border-border bg-[#F7FAFA] px-3 py-4 text-center text-xs font-semibold text-muted-foreground">{empty}</div> : groups.slice(0, 5).map((group) => (
           <div key={group.name} className="rounded-xl border border-border/70 bg-white px-3 py-2 shadow-sm">
             <div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="break-words text-sm font-bold text-foreground">{group.name}</p><p className="mt-0.5 text-xs font-semibold text-muted-foreground">{group.bookings} booking{group.bookings === 1 ? '' : 's'}</p></div><p className="shrink-0 text-sm font-bold text-primary">{formatAed(type === 'manager' ? group.total : group.due)}</p></div>
-            {type === 'manager' ? <p className="mt-1 text-[11px] font-semibold text-muted-foreground">Cash {formatAed(group.cash)} · Card {formatAed(group.card)}</p> : <p className="mt-1 text-[11px] font-semibold text-muted-foreground">Invoice total {formatAed(group.total)}</p>}
+            {type === 'manager' ? <p className="mt-1 text-[11px] font-semibold text-muted-foreground">Cash {formatAed(group.cash)} | Card {formatAed(group.card)}</p> : <p className="mt-1 text-[11px] font-semibold text-muted-foreground">Invoice total {formatAed(group.total)}</p>}
             <Button type="button" size="sm" onClick={() => onReceive(group)} className="mt-2 w-full rounded-full"><Save className="size-4" aria-hidden="true" />Receive Payment</Button>
           </div>
         ))}
@@ -551,12 +551,12 @@ export function AdminPaymentsPage() {
 
   function openManagerGroup(group: GroupSummary) {
     const groupBookings = bookings.filter((booking) => managerName(booking) === group.name && (isManagerCash(booking) || isManagerCard(booking)));
-    setReceiveTarget({ type: 'manager', name: group.name, title: `Manager · ${group.name}`, bookings: groupBookings });
+    setReceiveTarget({ type: 'manager', name: group.name, title: `Manager | ${group.name}`, bookings: groupBookings });
   }
 
   function openB2BGroup(group: GroupSummary) {
     const groupBookings = bookings.filter((booking) => b2bAgentName(booking) === group.name && isB2BDue(booking));
-    setReceiveTarget({ type: 'b2b_agent', name: group.name, title: `B2B Agent · ${group.name}`, bookings: groupBookings });
+    setReceiveTarget({ type: 'b2b_agent', name: group.name, title: `B2B Agent | ${group.name}`, bookings: groupBookings });
   }
 
   const filterOptions: Array<{ id: PaymentFilter; label: string; count: number }> = [

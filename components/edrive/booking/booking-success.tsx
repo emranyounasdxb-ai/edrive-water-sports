@@ -39,7 +39,7 @@ export function BookingSuccess({ request, onAnother }: { request: BookingRequest
   const isSales = savedRequest.serviceType === 'sales_inquiry';
   const durationLabel = isSales ? savedRequest.inquiryType ?? 'Sales inquiry' : shortDuration(savedRequest.durationMinutes);
   const totalLabel = isSales ? 'Request quote' : formatAed(savedRequest.totalAmount);
-  const partyLabel = `${savedRequest.vehicleQuantity} ${savedRequest.vehicleQuantity === 1 ? 'vehicle' : 'vehicles'} · ${savedRequest.guestCount} guests`;
+  const partyLabel = `${savedRequest.vehicleQuantity} ${savedRequest.vehicleQuantity === 1 ? 'vehicle' : 'vehicles'} | ${savedRequest.guestCount} guests`;
   const whatsappMessage = useMemo(() => encodeURIComponent(`Hello eDrive, I need help with booking request ${savedRequest.bookingCode}.`), [savedRequest.bookingCode]);
 
   useEffect(() => {

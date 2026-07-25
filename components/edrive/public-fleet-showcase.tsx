@@ -72,7 +72,7 @@ function fallbackImage(unit: PublicFleetUnit) {
 }
 
 function unitDetails(unit: PublicFleetUnit) {
-  return [unit.brand, unit.model, unit.year ? String(unit.year) : ''].filter(Boolean).join(' · ');
+  return [unit.brand, unit.model, unit.year ? String(unit.year) : ''].filter(Boolean).join(' | ');
 }
 
 export function PublicFleetShowcase() {

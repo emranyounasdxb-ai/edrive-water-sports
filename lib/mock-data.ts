@@ -29,7 +29,7 @@ export type TestimonialItem = {
   rating: number;
 };
 
-export type AdminNavRole = 'super_admin' | 'admin' | 'booking_staff' | 'finance' | 'maintenance_staff';
+export type AdminNavRole = 'super_admin' | 'admin' | 'booking_staff' | 'finance';
 export type AdminNavItem = {
   href: string;
   label: string;
@@ -38,7 +38,7 @@ export type AdminNavItem = {
   roles?: AdminNavRole[];
 };
 
-const allPortalRoles: AdminNavRole[] = ['super_admin', 'admin', 'booking_staff', 'finance', 'maintenance_staff'];
+const allPortalRoles: AdminNavRole[] = ['super_admin', 'admin', 'booking_staff', 'finance'];
 const ownerAndAdmin: AdminNavRole[] = ['super_admin', 'admin'];
 
 export const publicNavItems = [
@@ -56,9 +56,10 @@ export const adminNavItems: AdminNavItem[] = [
   { href: '/admin/customers', label: 'Customers', icon: 'UsersRound', section: 'Booking Operations', roles: ['super_admin', 'admin', 'booking_staff', 'finance'] },
   { href: '/admin/booking-activity', label: 'Booking Activity', icon: 'ClipboardCheck', section: 'Booking Operations', roles: ['super_admin', 'admin', 'booking_staff'] },
   { href: '/admin/b2b-agents', label: 'B2B Agents', icon: 'UsersRound', section: 'Partners & Sales', roles: ownerAndAdmin },
+  { href: '/admin/b2b-finance', label: 'B2B Finance', icon: 'CreditCard', section: 'Partners & Sales', roles: ['super_admin', 'admin', 'booking_staff', 'finance'] },
   { href: '/admin/packages', label: 'Packages', icon: 'Package', section: 'Partners & Sales', roles: ['super_admin', 'admin', 'booking_staff'] },
-  { href: '/admin/vehicles', label: 'Fleet', icon: 'Ship', section: 'Assets', roles: ['super_admin', 'admin', 'booking_staff', 'maintenance_staff'] },
-  { href: '/admin/maintenance', label: 'Maintenance', icon: 'Settings', section: 'Assets', roles: ['super_admin', 'admin', 'maintenance_staff'] },
+  { href: '/admin/vehicles', label: 'Fleet', icon: 'Ship', section: 'Assets', roles: ['super_admin'] },
+  { href: '/admin/maintenance', label: 'Maintenance', icon: 'Settings', section: 'Assets', roles: ['super_admin'] },
   { href: '/admin/payments', label: 'Payments', icon: 'CreditCard', section: 'Finance', roles: ['super_admin', 'admin', 'finance'] },
   { href: '/admin/reports', label: 'Reports', icon: 'BarChart3', section: 'Finance', roles: ['super_admin', 'admin', 'finance'] },
   { href: '/admin/staff-management', label: 'Team & Access', icon: 'UserCog', section: 'Team & System', roles: ownerAndAdmin },

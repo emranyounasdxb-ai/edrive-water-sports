@@ -85,7 +85,7 @@ function packageLabel(booking: BookingRow) {
 
 function serviceLabel(booking: BookingRow) {
   const parts = [booking.service_type, booking.selected_package_capacity ? `${booking.selected_package_capacity} seater` : '', booking.duration_minutes ? `${booking.duration_minutes} min` : ''].filter(Boolean).map(String);
-  return parts.length ? parts.join(' · ') : 'Ride details pending';
+  return parts.length ? parts.join(' | ') : 'Ride details pending';
 }
 
 function bookingTotal(booking: BookingRow) {
@@ -110,7 +110,7 @@ function isB2B(booking: BookingRow) {
 }
 
 function sourceLabel(booking: BookingRow) {
-  return isB2B(booking) ? `B2B${booking.b2b_agent_name ? ` · ${booking.b2b_agent_name}` : ''}` : 'Direct Sale';
+  return isB2B(booking) ? `B2B${booking.b2b_agent_name ? ` | ${booking.b2b_agent_name}` : ''}` : 'Direct Sale';
 }
 
 function statusTone(status: unknown) {
@@ -368,7 +368,7 @@ function AssignmentCard({ booking, managers, onSave }: { booking: BookingRow; ma
     <BookingCardShell booking={booking}>
       {error ? <p className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-xs font-semibold text-red-700">{error}</p> : null}
       <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
-        <label className="grid gap-1.5 text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">Ride Manager<select value={managerId} onChange={(event) => setManagerId(event.target.value)} className={selectClass}><option value="">Select active manager</option>{managers.map((item) => <option key={item.id} value={item.id}>{item.name}{item.email ? ` · ${item.email}` : ''}</option>)}</select><span className="normal-case tracking-normal text-muted-foreground">Current: {assignedManager?.name || booking.assigned_manager_name || 'Unassigned'}</span></label>
+        <label className="grid gap-1.5 text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">Ride Manager<select value={managerId} onChange={(event) => setManagerId(event.target.value)} className={selectClass}><option value="">Select active manager</option>{managers.map((item) => <option key={item.id} value={item.id}>{item.name}{item.email ? ` | ${item.email}` : ''}</option>)}</select><span className="normal-case tracking-normal text-muted-foreground">Current: {assignedManager?.name || booking.assigned_manager_name || 'Unassigned'}</span></label>
         <div className="rounded-xl bg-[#F7FAFA] px-3 py-2 text-xs font-semibold text-muted-foreground">Vehicle selection happens at Guest Received / Start Ride.</div>
       </div>
       <div className="mt-4 flex justify-end"><Button type="button" onClick={submit} disabled={saving || !managerId || booking.status !== 'Confirmed'} className="rounded-full"><ClipboardCheck className="size-4" aria-hidden="true" />{saving ? 'Saving...' : 'Assign Ride Manager'}</Button></div>

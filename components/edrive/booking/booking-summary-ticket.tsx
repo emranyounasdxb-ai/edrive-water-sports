@@ -16,7 +16,7 @@ export function BookingSummaryTicket({ draft, compact = false }: { draft: Bookin
   const packagePrice = getPackageUnitPrice(draft);
   const totalLabel = isSales ? 'Request quote' : formatAed(totals.totalAmount);
   const selectedTitle = draft.selectedPackageName || experience.title;
-  const party = `${draft.vehicleQuantity} ${draft.vehicleQuantity === 1 ? 'vehicle' : 'vehicles'} · ${draft.guestCount} ${draft.guestCount === 1 ? 'guest' : 'guests'}`;
+  const party = `${draft.vehicleQuantity} ${draft.vehicleQuantity === 1 ? 'vehicle' : 'vehicles'} | ${draft.guestCount} ${draft.guestCount === 1 ? 'guest' : 'guests'}`;
 
   return (
     <div className={cn('mx-auto w-full max-w-[19.5rem] overflow-hidden rounded-[1.65rem] border border-white/80 bg-white shadow-[0_20px_45px_rgba(8,37,50,0.12)]', compact && 'max-w-full rounded-[1.35rem]')}>
@@ -56,7 +56,7 @@ export function BookingSummaryTicket({ draft, compact = false }: { draft: Bookin
               <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-muted-foreground">Cost Breakdown</p>
               <span className="h-px flex-1 bg-border" />
             </div>
-            <BreakdownLine label={`${selectedTitle} · ${formatDuration(draft.durationMinutes)}`} value={formatAed(packagePrice)} />
+            <BreakdownLine label={`${selectedTitle} | ${formatDuration(draft.durationMinutes)}`} value={formatAed(packagePrice)} />
             <BreakdownLine label={`Vehicles × ${draft.vehicleQuantity}`} value={formatAed(totals.subtotal)} />
             <BreakdownLine label="Sub Total" value={formatAed(totals.subtotal)} strong />
             <BreakdownLine label="VAT (5%)" value={formatAed(totals.vatAmount)} />

@@ -238,7 +238,7 @@ export function B2BAgentCountryForm() {
       <Card className="mx-4 mt-5 overflow-hidden rounded-[1.5rem] border-border/80 bg-white sm:mx-6 lg:mx-8 xl:mx-10">
         <CardHeader className="gap-3 border-b border-border/70 bg-[#F7FAFA] px-4 py-4 sm:flex-row sm:items-end sm:justify-between sm:px-5">
           <div><CardTitle className="font-heading text-lg font-semibold sm:text-xl">{editingId ? 'Edit B2B agent' : 'Add B2B agent'}</CardTitle><CardDescription>Country selection is saved with the partner profile.</CardDescription></div>
-          <div className="w-full sm:max-w-sm"><label className="grid gap-1.5 text-xs font-bold text-muted-foreground">Edit Existing Agent<select value={editingId} onChange={(event) => selectAgent(event.target.value)} className={selectClass}><option value="">Add New Agent</option>{agents.map((agent) => <option key={agent.id} value={agent.id}>{agent.agent_code} · {agent.company_name}</option>)}</select></label></div>
+          <div className="w-full sm:max-w-sm"><label className="grid gap-1.5 text-xs font-bold text-muted-foreground">Edit Existing Agent<select value={editingId} onChange={(event) => selectAgent(event.target.value)} className={selectClass}><option value="">Add New Agent</option>{agents.map((agent) => <option key={agent.id} value={agent.id}>{agent.agent_code} | {agent.company_name}</option>)}</select></label></div>
         </CardHeader>
         <CardContent className="p-4 sm:p-5">
           {error ? <p className="mb-4 rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</p> : null}

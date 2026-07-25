@@ -125,7 +125,7 @@ export function AdminDashboardReconciledPage() {
 
       <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Metric title="Needs Action" value={String(summary.needsAction)} helper="Pending or confirmed without manager" icon={CalendarDays} />
-        <Metric title="Today Rides" value={String(summary.todayRides)} helper={`${summary.completedToday} completed · ${summary.noShowToday} no show`} icon={ClipboardCheck} />
+        <Metric title="Today Rides" value={String(summary.todayRides)} helper={`${summary.completedToday} completed | ${summary.noShowToday} no show`} icon={ClipboardCheck} />
         <Metric title="In Progress" value={String(summary.inProgress)} helper="Rides currently started" icon={Ship} />
         <Metric title="Completed Revenue" value={formatAed(summary.revenue)} helper="Completed rides only" icon={CheckCircle2} />
         <Metric title="Manager Outstanding" value={formatAed(summary.managerDue)} helper="Cash/card awaiting admin settlement" icon={WalletCards} />

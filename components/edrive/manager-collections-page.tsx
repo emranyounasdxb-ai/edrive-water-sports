@@ -99,7 +99,7 @@ function rideLine(booking: BookingRow) {
     booking.selected_package_capacity ? `${booking.selected_package_capacity} seater` : '',
     booking.duration_minutes ? `${booking.duration_minutes} min` : ''
   ].filter(Boolean).map(String);
-  return parts.length ? parts.join(' · ') : packageLabel(booking);
+  return parts.length ? parts.join(' | ') : packageLabel(booking);
 }
 
 function isCompanyReceived(booking: BookingRow) {
@@ -206,7 +206,7 @@ function CollectionCard({ booking, expanded, onToggle }: { booking: BookingRow; 
     <div className="rounded-[1.15rem] border border-border bg-white p-3 shadow-[0_10px_24px_rgba(8,37,50,0.05)] sm:p-4">
       <button type="button" onClick={onToggle} className="flex w-full items-start justify-between gap-3 text-left">
         <div className="min-w-0">
-          <p className="text-xs font-bold text-primary">{niceDate(booking.preferred_date)} · {asText(booking.preferred_time, '-')}</p>
+          <p className="text-xs font-bold text-primary">{niceDate(booking.preferred_date)} | {asText(booking.preferred_time, '-')}</p>
           <h3 className="mt-1 break-words font-heading text-base font-semibold leading-tight text-foreground">{packageLabel(booking)}</h3>
           <p className="mt-1 text-sm font-semibold text-muted-foreground">{asText(booking.customer_name, 'Guest')}</p>
         </div>

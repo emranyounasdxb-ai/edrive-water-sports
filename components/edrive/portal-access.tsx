@@ -35,8 +35,7 @@ function canMutatePath(role: string, pathname: string) {
   if (role === 'super_admin') return true;
   if (role === 'admin') return false;
   if (role === 'booking_staff') return path === '/admin/bookings' || path.startsWith('/admin/bookings/') || path === '/admin/inquiries' || path.startsWith('/admin/inquiries/');
-  if (role === 'finance') return path === '/admin/payments' || path.startsWith('/admin/payments/');
-  if (role === 'maintenance_staff') return path === '/admin/vehicles' || path.startsWith('/admin/vehicles/') || path === '/admin/maintenance' || path.startsWith('/admin/maintenance/');
+  if (role === 'finance') return false;
   if (role === 'manager') return path === '/admin/my-rides' || path.startsWith('/admin/my-rides/');
   return false;
 }
@@ -47,8 +46,7 @@ export function portalRoleLabel(role: string) {
     admin: 'Admin',
     booking_staff: 'Booking Manager',
     manager: 'Ride Manager',
-    finance: 'Finance',
-    maintenance_staff: 'Maintenance Staff'
+    finance: 'Finance'
   };
   return labels[role] || 'Portal User';
 }
@@ -77,12 +75,11 @@ export function PortalAccessProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      const email = user.email || '';
-      const filter = email ? `auth_user_id.eq.${user.id},email.eq.${email}` : `auth_user_id.eq.${user.id}`;
-      const { data } = await supabase.from('admin_users').select('role,status').or(filter).limit(1);
+      const { data } = await supabase.from('admin_users').select('role,status').eq('auth_user_id', user.id).limit(2);
       if (!active) return;
-      setRole(String(data?.[0]?.role || ''));
-      setStatus(String(data?.[0]?.status || ''));
+      const profile = data?.length === 1 && String(data[0]?.status || '').toLowerCase() === 'active' ? data[0] : null;
+      setRole(String(profile?.role || ''));
+      setStatus(String(profile?.status || ''));
       setLoading(false);
     }
 
@@ -146,6 +143,9 @@ function isMutationControl(target: HTMLElement) {
 
 export function PortalRoleBoundary({ children }: { children: ReactNode }) {
   const { loading, role, canMutateCurrentPage } = usePortalAccess();
+  if (!loading && role === 'maintenance_staff') {
+    return <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-4 text-sm font-semibold text-red-800">Maintenance Staff portal access is inactive. Fleet lifecycle and maintenance operations are restricted to Super Admin.</div>;
+  }
   const restricted = !loading && Boolean(role) && !canMutateCurrentPage;
 
   function blockClick(event: MouseEvent<HTMLDivElement>) {

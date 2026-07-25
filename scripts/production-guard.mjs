@@ -40,6 +40,10 @@ const fleetLegacyPreflight = read('supabase/fleet-legacy-data-preflight.sql');
 const fleetMigration = read('supabase/fleet-asset-hardening.sql');
 const fleetEditMigration = read('supabase/fleet-edit-partial-and-image-upload.sql');
 const fleetEditFinalMigration = read('supabase/fleet-edit-final-enum-fix.sql');
+const b2bMigration = read('supabase/02-b2b-wallet-refunds-reporting.sql');
+const maintenanceLockdownMigration = read('supabase/02a-super-admin-maintenance-lockdown.sql');
+const b2bFinanceService = read('services/b2b-finance.ts');
+const b2bFinancePage = read('components/edrive/admin-b2b-finance-page.tsx');
 
 assert(!packageShowcase.includes('b2b_price'), 'Public package showcase must not request B2B pricing.');
 assert(!bookingWizard.includes('b2b_price'), 'Public booking wizard must not request B2B pricing.');
@@ -131,7 +135,7 @@ assert(fleetPage.includes('Registration number is required for every new fleet u
 assert(fleetPage.includes("rpc('save_fleet_asset_entry'"), 'Fleet master writes must prefer the secured fleet RPC.');
 assert(fleetPage.includes("rpc('set_fleet_asset_status'"), 'Fleet lifecycle updates must use the secured status RPC.');
 assert(fleetPage.includes("rpc('delete_fleet_asset_if_unused'"), 'Fleet deletion must use the operational-history-aware RPC.');
-assert(fleetPage.includes("role === 'maintenance_staff'"), 'Maintenance Staff must have limited lifecycle controls.');
+assert(fleetPage.includes('const canMaintain = isSuperAdmin;') && !fleetPage.includes("role === 'maintenance_staff'"), 'Fleet lifecycle controls must be Super Admin only.');
 assert(fleetPage.includes('isSuperAdmin'), 'Fleet master edit and delete controls must remain restricted to Super Admin.');
 assert(fleetPage.includes('complianceIssues'), 'Fleet records must expose registration, insurance, tracker, and profile alerts.');
 assert(fleetPage.includes('Missing Registration'), 'Fleet filters must surface missing registration records.');
@@ -161,6 +165,15 @@ assert(fleetEditMigration.includes('type = v_type::public.vehicle_type'), 'Fleet
 assert(fleetEditFinalMigration.includes('type = v_type::public.vehicle_type'), 'Final fleet enum rollout must include the legacy type-column cast.');
 assert(fleetEditMigration.includes("'fleet-images'"), 'Fleet image storage bucket migration is required.');
 assert(fleetEditMigration.includes("tg_op = 'INSERT' and length(v_reg) < 3"), 'New fleet units must still require registration while legacy edits remain possible.');
+assert(maintenanceLockdownMigration.includes("if v_role <> 'super_admin'"), 'Active fleet lifecycle authorization must be Super Admin only.');
+assert(!maintenanceLockdownMigration.includes("array['super_admin', 'maintenance_staff"), 'Active fleet and maintenance read policies must exclude Maintenance Staff.');
+assert(maintenanceLockdownMigration.includes("drop policy if exists \"fleet_maintenance_staff_select\"") && maintenanceLockdownMigration.includes('create policy "fleet_maintenance_operational_select"'), 'Maintenance-log policy replacement must be rerunnable.');
+assert(b2bMigration.includes('as restrictive') && b2bMigration.includes('"booking_requests_b2b_identity_select_guard"'), 'B2B booking reads require a restrictive identity guard.');
+assert(b2bMigration.includes('revoke insert, update, delete on public.b2b_agents from public, anon, authenticated'), 'B2B profile tables must reject direct authenticated writes.');
+assert(b2bMigration.includes('reverse_b2b_wallet_entry') && b2bMigration.includes('reversal_of_entry_id'), 'Wallet reversals must be traceable through the secured RPC and source foreign key.');
+assert(b2bFinanceService.includes("rpc<B2BWalletLedgerEntry>('reverse_b2b_wallet_entry'"), 'Wallet reversals must use the secured RPC.');
+assert(!b2bFinancePage.includes(".from('b2b_wallets').update(") && !b2bFinancePage.includes(".from('b2b_wallet_ledger').insert("), 'The finance UI must not write wallet data directly.');
+assert(!portalAccess.includes("case 'maintenance_staff'") && !portalAccess.includes("role === 'maintenance_staff' &&"), 'Maintenance Staff must not receive active navigation or mutation permissions.');
 
 if (failures.length) {
   console.error('\nProduction guard failed:\n');

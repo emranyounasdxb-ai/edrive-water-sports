@@ -54,8 +54,7 @@ function roleLabel(value: unknown) {
     admin: 'Admin',
     booking_staff: 'Booking Manager',
     manager: 'Ride Manager',
-    finance: 'Finance',
-    maintenance_staff: 'Maintenance Staff'
+    finance: 'Finance'
   };
   const key = clean(value, '').toLowerCase();
   return labels[key] || titleCase(value);
@@ -243,7 +242,7 @@ function DetailsDrawer({ group, onClose }: { group: GroupedAuditRow; onClose: ()
 }
 
 function ActivityLine({ row, count }: { row: AuditRow; count: number }) {
-  const label = `${titleCase(row.module)} · ${titleCase(row.action)}`;
+  const label = `${titleCase(row.module)} | ${titleCase(row.action)}`;
   return (
     <div className="flex min-w-0 items-center gap-1.5" title={label}>
       <span className={`inline-flex shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-bold ${moduleTone(row.module)}`}>{titleCase(row.module)}</span>
@@ -436,9 +435,9 @@ export function AdminAuditLogPage() {
                 {!loading && visibleRows.map((group) => {
                   const row = group.primary;
                   const actorName = clean(row.actor_name);
-                  const actorTooltip = [actorName, clean(row.actor_email, ''), roleLabel(row.actor_role)].filter(Boolean).join(' · ');
+                  const actorTooltip = [actorName, clean(row.actor_email, ''), roleLabel(row.actor_role)].filter(Boolean).join(' | ');
                   const record = clean(row.entity_label || row.entity_id);
-                  const recordTooltip = `${record} · ${titleCase(row.entity_type)}`;
+                  const recordTooltip = `${record} | ${titleCase(row.entity_type)}`;
 
                   return (
                     <TableRow key={row.id} className="h-11 align-middle hover:bg-[#F7FAFA]">
@@ -472,7 +471,7 @@ export function AdminAuditLogPage() {
                     <Eye className="size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
                   </div>
                   <p className="mt-1 truncate text-xs font-semibold text-foreground">{row.summary}</p>
-                  <p className="mt-1 truncate text-[10px] font-semibold text-muted-foreground">{clean(row.actor_name)} · {formatCompactDateTime(row.created_at)}</p>
+                  <p className="mt-1 truncate text-[10px] font-semibold text-muted-foreground">{clean(row.actor_name)} | {formatCompactDateTime(row.created_at)}</p>
                 </button>
               );
             })}

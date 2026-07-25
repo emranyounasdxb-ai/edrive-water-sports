@@ -123,7 +123,7 @@ export function LiveWeatherPill() {
     if (loading) return 'Loading live weather';
     if (issue) return issue;
     if (!weather) return 'Dubai live weather';
-    return `${weather.condition} · Feels ${round(weather.feelsLike)}°C · ${round(weather.windSpeed * 3.6)} km/h · ${round(weather.humidity)}%`;
+    return `${weather.condition} | Feels ${round(weather.feelsLike)}°C | ${round(weather.windSpeed * 3.6)} km/h | ${round(weather.humidity)}%`;
   }, [issue, loading, weather]);
 
   return (

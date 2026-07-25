@@ -21,7 +21,7 @@ type AgentProfile = {
 const quickCards = [
   { title: 'New Booking', description: 'Create a request for your customer with B2B package price.', icon: CalendarPlus, href: '/agent/new-booking', action: 'Create Booking' },
   { title: 'My Bookings', description: 'Track your submitted booking requests and payment status.', icon: LayoutDashboard, href: '/agent/bookings', action: 'View Bookings' },
-  { title: 'Invoices', description: 'View payable, paid and pending balances.', icon: BadgeDollarSign, href: '', action: 'Coming Soon' },
+  { title: 'Wallet', description: 'View wallet balance, booking debits and refund credits.', icon: BadgeDollarSign, href: '/agent/wallet', action: 'View Wallet' },
   { title: 'Support', description: 'Contact eDrive operations team.', icon: Headphones, href: '', action: 'Coming Soon' }
 ];
 
