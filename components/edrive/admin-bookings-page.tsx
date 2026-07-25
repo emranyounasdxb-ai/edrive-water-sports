@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { formatAed } from '@/lib/booking-data';
 import { bookingRequestsTable } from '@/lib/booking-records';
 import { supabase } from '@/lib/supabase-client';
-import { setBookingManager } from '@/services/booking-assignments';
+import { confirmAndAssignBooking } from '@/services/booking-assignments';
 
 type BookingRow = {
   id: string;
@@ -216,7 +216,13 @@ export function AdminBookingsLivePage() {
 
   async function saveBookingStatus(booking: BookingRow, values: ManageValues) {
     if (isAdminLocked(booking)) throw new Error('This booking is already with the manager and is read-only for admin.');
-    if (values.assignedManagerId && values.status !== 'Confirmed') throw new Error('Confirm the booking before assigning a Ride Manager.');
+    if (values.status === 'Confirmed') {
+      if (!values.assignedManagerId) throw new Error('Select an active Ride Manager before confirming this booking.');
+      await confirmAndAssignBooking(booking.id, values.assignedManagerId, values.internalNote);
+      await refreshAll();
+      setSelectedBooking(null);
+      return;
+    }
     const now = new Date().toISOString();
     const payload: Record<string, unknown> = {
       status: values.status,
@@ -225,13 +231,9 @@ export function AdminBookingsLivePage() {
       internal_note: values.internalNote.trim() || null,
       updated_at: now
     };
-    if (values.status === 'Confirmed' && !booking.confirmed_at) payload.confirmed_at = now;
     const queryBuilder = supabase.from(bookingRequestsTable).update(payload);
     const result = booking.id ? await queryBuilder.eq('id', booking.id) : await queryBuilder.eq('booking_code', booking.booking_code);
     if (result.error) throw new Error(result.error.message);
-    if (values.assignedManagerId) {
-      await setBookingManager(booking.id, values.assignedManagerId);
-    }
     await refreshAll();
     setSelectedBooking(null);
   }
