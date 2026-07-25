@@ -43,6 +43,13 @@ export type B2BAgentDirectoryEntry = {
   status: string;
 };
 
+export type B2BBookingResult = {
+  id: string;
+  booking_code: string;
+  total_amount?: number;
+  amount_received_aed?: number;
+};
+
 async function rpc<T>(name: string, parameters: Record<string, unknown>): Promise<T> {
   const { data, error } = await supabase.rpc(name, parameters);
   if (error) {
@@ -111,7 +118,7 @@ export function getB2BAgentDirectory() {
 }
 
 export function createB2BBooking(payload: Record<string, unknown>) {
-  return rpc<Record<string, unknown>>('create_b2b_booking', {
+  return rpc<B2BBookingResult>('create_b2b_booking', {
     p_booking: payload
   });
 }
