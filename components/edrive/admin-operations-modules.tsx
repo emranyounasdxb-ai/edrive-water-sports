@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { formatAed } from '@/lib/booking-data';
 import { bookingRequestsTable } from '@/lib/booking-records';
 import { supabase } from '@/lib/supabase-client';
+import { setBookingManager } from '@/services/booking-assignments';
 
 type BookingRow = Record<string, unknown> & {
   id?: string | null;
@@ -37,6 +38,7 @@ type BookingRow = Record<string, unknown> & {
   collection_status?: string | null;
   amount_received_aed?: number | string | null;
   amount_pending_aed?: number | string | null;
+  assigned_manager_id?: string | null;
   assigned_manager_name?: string | null;
   assigned_vehicle_name?: string | null;
   b2b_agent_name?: string | null;
@@ -44,14 +46,12 @@ type BookingRow = Record<string, unknown> & {
   created_at?: string | null;
 };
 
-type ManagerOption = { name: string; email: string };
-type VehicleOption = { name: string; code: string; type: string; status: string };
+type ManagerOption = { id: string; name: string; email: string };
 type Metric = { title: string; value: string; icon: LucideIcon };
-type LoadState = { bookings: BookingRow[]; managers: ManagerOption[]; vehicles: VehicleOption[]; loading: boolean; error: string };
+type LoadState = { bookings: BookingRow[]; managers: ManagerOption[]; loading: boolean; error: string };
 
 const selectClass = 'h-10 w-full rounded-xl border border-border bg-white px-3 text-sm font-semibold text-foreground shadow-sm outline-none transition focus:border-primary/50 focus:ring-2 focus:ring-primary/10';
 const inputClass = 'h-10 rounded-xl bg-white text-sm font-semibold';
-const managerStatuses = ['Pending', 'Assigned', 'Checked-In', 'In Progress', 'Completed', 'No Show', 'Cancelled'];
 const paymentStatuses = ['Not Paid', 'Partial Paid', 'Paid', 'Refunded'];
 const paymentMethods = ['Cash', 'Card', 'Bank Transfer', 'Online Link', 'B2B Invoice'];
 
@@ -132,27 +132,19 @@ function isActiveManager(row: Record<string, unknown>) {
 }
 
 async function loadOperationsData(): Promise<Omit<LoadState, 'loading' | 'error'>> {
-  const [bookingResult, managerResult, vehicleResult] = await Promise.all([
+  const [bookingResult, managerResult] = await Promise.all([
     supabase.from(bookingRequestsTable).select('*').order('preferred_date', { ascending: true }).limit(500),
-    supabase.from('admin_users').select('full_name,email,role,status').order('full_name', { ascending: true }).limit(200),
-    supabase.from('vehicles').select('vehicle_code,vehicle_name,vehicle_type,status').order('vehicle_code', { ascending: true }).limit(200)
+    supabase.from('admin_users').select('id,full_name,email,role,status').order('full_name', { ascending: true }).limit(200)
   ]);
 
   if (bookingResult.error) throw new Error(bookingResult.error.message);
 
   const managers = ((managerResult.data || []) as Record<string, unknown>[])
     .filter(isActiveManager)
-    .map((row) => ({ name: asText(row.full_name || row.email, 'Manager'), email: asText(row.email, '') }));
+    .map((row) => ({ id: asText(row.id, ''), name: asText(row.full_name || row.email, 'Manager'), email: asText(row.email, '') }))
+    .filter((row) => row.id);
 
-  const vehicles = ((vehicleResult.data || []) as Record<string, unknown>[])
-    .map((row) => ({
-      code: asText(row.vehicle_code, ''),
-      name: asText(row.vehicle_name || row.vehicle_code, 'Vehicle'),
-      type: asText(row.vehicle_type, ''),
-      status: asText(row.status, '')
-    }));
-
-  return { bookings: (bookingResult.data || []) as BookingRow[], managers, vehicles };
+  return { bookings: (bookingResult.data || []) as BookingRow[], managers };
 }
 
 async function updateBooking(booking: BookingRow, payload: Record<string, unknown>) {
@@ -163,14 +155,14 @@ async function updateBooking(booking: BookingRow, payload: Record<string, unknow
 }
 
 function useOperationsData() {
-  const [state, setState] = useState<LoadState>({ bookings: [], managers: [], vehicles: [], loading: true, error: '' });
+  const [state, setState] = useState<LoadState>({ bookings: [], managers: [], loading: true, error: '' });
   async function refresh() {
     setState((current) => ({ ...current, loading: true, error: '' }));
     try {
       const data = await loadOperationsData();
       setState({ ...data, loading: false, error: '' });
     } catch (error) {
-      setState({ bookings: [], managers: [], vehicles: [], loading: false, error: error instanceof Error ? error.message : 'Unable to load records.' });
+      setState({ bookings: [], managers: [], loading: false, error: error instanceof Error ? error.message : 'Unable to load records.' });
     }
   }
   useEffect(() => { void refresh(); }, []);
@@ -287,7 +279,7 @@ export function AdminOperationsSchedulePage() {
 }
 
 export function AdminOperationsAssignmentsPage() {
-  const { bookings, managers, vehicles, loading, error, refresh } = useOperationsData();
+  const { bookings, managers, loading, error, refresh } = useOperationsData();
   const [filter, setFilter] = useState<'all' | 'unassigned' | 'assigned' | 'active'>('all');
   const [query, setQuery] = useState('');
 
@@ -295,18 +287,19 @@ export function AdminOperationsAssignmentsPage() {
   const visible = useMemo(() => {
     const term = query.trim().toLowerCase();
     return eligible.filter((booking) => {
-      const matches = !term || [bookingCode(booking), booking.customer_name, booking.customer_phone, packageLabel(booking), booking.assigned_manager_name, booking.assigned_vehicle_name].some((value) => String(value || '').toLowerCase().includes(term));
+      const managerName = managers.find((manager) => manager.id === booking.assigned_manager_id)?.name || booking.assigned_manager_name;
+      const matches = !term || [bookingCode(booking), booking.customer_name, booking.customer_phone, packageLabel(booking), managerName].some((value) => String(value || '').toLowerCase().includes(term));
       if (!matches) return false;
-      if (filter === 'unassigned') return !booking.assigned_manager_name || !booking.assigned_vehicle_name;
-      if (filter === 'assigned') return Boolean(booking.assigned_manager_name || booking.assigned_vehicle_name);
+      if (filter === 'unassigned') return !booking.assigned_manager_id;
+      if (filter === 'assigned') return Boolean(booking.assigned_manager_id);
       if (filter === 'active') return ['Checked-In', 'In Progress'].includes(asText(booking.manager_status, 'Pending'));
       return true;
     }).sort((a, b) => scheduleSortValue(a).localeCompare(scheduleSortValue(b)));
-  }, [eligible, filter, query]);
+  }, [eligible, filter, managers, query]);
 
   const metrics = useMemo<Metric[]>(() => {
-    const pending = eligible.filter((booking) => !booking.assigned_manager_name || !booking.assigned_vehicle_name).length;
-    const assignedToday = eligible.filter((booking) => asText(booking.preferred_date, '') === todayKey() && (booking.assigned_manager_name || booking.assigned_vehicle_name)).length;
+    const pending = eligible.filter((booking) => !booking.assigned_manager_id).length;
+    const assignedToday = eligible.filter((booking) => asText(booking.preferred_date, '') === todayKey() && booking.assigned_manager_id).length;
     const active = eligible.filter((booking) => ['Checked-In', 'In Progress'].includes(asText(booking.manager_status, 'Pending'))).length;
     const completed = bookings.filter((booking) => asText(booking.status, '') === 'Completed' || asText(booking.manager_status, '') === 'Completed').length;
     return [
@@ -317,63 +310,53 @@ export function AdminOperationsAssignmentsPage() {
     ];
   }, [bookings, eligible]);
 
-  async function saveAssignment(booking: BookingRow, values: { manager: string; vehicle: string; managerStatus: string }) {
-    const payload: Record<string, unknown> = {
-      assigned_manager_name: values.manager || null,
-      assigned_vehicle_name: values.vehicle || null,
-      manager_status: values.managerStatus
-    };
-    if (values.managerStatus === 'Completed') payload.status = 'Completed';
-    if (values.managerStatus === 'No Show') payload.status = 'No Show';
-    if (values.managerStatus === 'Cancelled') payload.status = 'Cancelled';
-    await updateBooking(booking, payload);
+  async function saveAssignment(booking: BookingRow, managerId: string) {
+    if (!booking.id) throw new Error('This booking does not have a stable ID.');
+    if (!managerId) throw new Error('Select an active Ride Manager.');
+    await setBookingManager(booking.id, managerId);
     await refresh();
   }
 
   return (
     <section className="w-full overflow-hidden px-4 py-5 sm:px-6 sm:py-7 lg:px-8 xl:px-10">
-      <PageHeader label="Assignments" title="Manager and vehicle assignment" text="Assign confirmed rides to managers and vehicles, then track ride stages." onRefresh={refresh} />
+      <PageHeader label="Assignments" title="Ride Manager assignment" text="Assign confirmed rides to an active Ride Manager. Vehicles are selected by that manager only when the ride starts." onRefresh={refresh} />
       <ErrorBox message={error} />
       <MetricGrid metrics={metrics} />
 
       <Card className="mt-5 overflow-hidden rounded-[1.5rem] border-border/80 bg-white">
         <CardHeader className="gap-4 border-b border-border/70 bg-[#F7FAFA] px-4 py-4 lg:flex-row lg:items-center lg:justify-between">
           <div><CardTitle className="font-heading text-lg font-semibold sm:text-xl">Assignment list</CardTitle><p className="mt-1 text-xs font-semibold text-muted-foreground">{loading ? 'Loading records...' : `${visible.length} bookings`}</p></div>
-          <div className="relative w-full lg:max-w-sm"><Search className="pointer-events-none absolute left-3 top-3 size-4 text-muted-foreground" aria-hidden="true" /><Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search booking, manager, vehicle..." className="h-10 rounded-full bg-white pl-9" /></div>
+          <div className="relative w-full lg:max-w-sm"><Search className="pointer-events-none absolute left-3 top-3 size-4 text-muted-foreground" aria-hidden="true" /><Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search booking or manager..." className="h-10 rounded-full bg-white pl-9" /></div>
         </CardHeader>
         <div className="flex gap-2 overflow-x-auto border-b border-border/70 bg-white px-4 py-3">
           {[
             ['all', 'All', eligible.length],
-            ['unassigned', 'Unassigned', eligible.filter((booking) => !booking.assigned_manager_name || !booking.assigned_vehicle_name).length],
-            ['assigned', 'Assigned', eligible.filter((booking) => booking.assigned_manager_name || booking.assigned_vehicle_name).length],
+            ['unassigned', 'Unassigned', eligible.filter((booking) => !booking.assigned_manager_id).length],
+            ['assigned', 'Assigned', eligible.filter((booking) => booking.assigned_manager_id).length],
             ['active', 'Active', eligible.filter((booking) => ['Checked-In', 'In Progress'].includes(asText(booking.manager_status, 'Pending'))).length]
           ].map(([id, label, count]) => <button key={String(id)} type="button" onClick={() => setFilter(id as typeof filter)} className={`whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-bold transition ${filter === id ? 'border-primary bg-primary text-white' : 'border-border bg-white text-muted-foreground hover:border-primary/40 hover:text-primary-900'}`}>{label} <span className={filter === id ? 'text-white/75' : 'text-muted-foreground'}>{count}</span></button>)}
         </div>
         <CardContent className="grid gap-3 p-4 xl:grid-cols-2">
           {loading ? <EmptyState title="Loading assignments" text="Please wait while records are loading." /> : null}
           {!loading && visible.length === 0 ? <EmptyState title="No assignments found" text="Confirmed and pending rides will appear here." /> : null}
-          {visible.map((booking, index) => <AssignmentCard key={String(booking.id || `${bookingCode(booking)}-${index}`)} booking={booking} managers={managers} vehicles={vehicles} onSave={saveAssignment} />)}
+          {visible.map((booking, index) => <AssignmentCard key={String(booking.id || `${bookingCode(booking)}-${index}`)} booking={booking} managers={managers} onSave={saveAssignment} />)}
         </CardContent>
       </Card>
     </section>
   );
 }
 
-function AssignmentCard({ booking, managers, vehicles, onSave }: { booking: BookingRow; managers: ManagerOption[]; vehicles: VehicleOption[]; onSave: (booking: BookingRow, values: { manager: string; vehicle: string; managerStatus: string }) => Promise<void> }) {
-  const [manager, setManager] = useState(asText(booking.assigned_manager_name, ''));
-  const [vehicle, setVehicle] = useState(asText(booking.assigned_vehicle_name, ''));
-  const [managerStatus, setManagerStatus] = useState(asText(booking.manager_status, 'Pending'));
+function AssignmentCard({ booking, managers, onSave }: { booking: BookingRow; managers: ManagerOption[]; onSave: (booking: BookingRow, managerId: string) => Promise<void> }) {
+  const [managerId, setManagerId] = useState(asText(booking.assigned_manager_id, ''));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-
-  const managerOptions = Array.from(new Set([manager, ...managers.map((item) => item.name)].filter(Boolean)));
-  const vehicleOptions = Array.from(new Set([vehicle, ...vehicles.map((item) => item.name || item.code)].filter(Boolean)));
+  const assignedManager = managers.find((manager) => manager.id === booking.assigned_manager_id);
 
   async function submit() {
     setSaving(true);
     setError('');
     try {
-      await onSave(booking, { manager, vehicle, managerStatus });
+      await onSave(booking, managerId);
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : 'Unable to save assignment.');
     } finally {
@@ -384,12 +367,11 @@ function AssignmentCard({ booking, managers, vehicles, onSave }: { booking: Book
   return (
     <BookingCardShell booking={booking}>
       {error ? <p className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-xs font-semibold text-red-700">{error}</p> : null}
-      <div className="mt-4 grid gap-3 sm:grid-cols-3">
-        <label className="grid gap-1.5 text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">Manager<select value={manager} onChange={(event) => setManager(event.target.value)} className={selectClass}><option value="">Select manager</option>{managerOptions.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
-        <label className="grid gap-1.5 text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">Vehicle<select value={vehicle} onChange={(event) => setVehicle(event.target.value)} className={selectClass}><option value="">Select vehicle</option>{vehicleOptions.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
-        <label className="grid gap-1.5 text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">Stage<select value={managerStatus} onChange={(event) => setManagerStatus(event.target.value)} className={selectClass}>{managerStatuses.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
+      <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
+        <label className="grid gap-1.5 text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">Ride Manager<select value={managerId} onChange={(event) => setManagerId(event.target.value)} className={selectClass}><option value="">Select active manager</option>{managers.map((item) => <option key={item.id} value={item.id}>{item.name}{item.email ? ` · ${item.email}` : ''}</option>)}</select><span className="normal-case tracking-normal text-muted-foreground">Current: {assignedManager?.name || booking.assigned_manager_name || 'Unassigned'}</span></label>
+        <div className="rounded-xl bg-[#F7FAFA] px-3 py-2 text-xs font-semibold text-muted-foreground">Vehicle selection happens at Guest Received / Start Ride.</div>
       </div>
-      <div className="mt-4 flex justify-end"><Button type="button" onClick={submit} disabled={saving} className="rounded-full"><ClipboardCheck className="size-4" aria-hidden="true" />{saving ? 'Saving...' : 'Save Assignment'}</Button></div>
+      <div className="mt-4 flex justify-end"><Button type="button" onClick={submit} disabled={saving || !managerId || booking.status !== 'Confirmed'} className="rounded-full"><ClipboardCheck className="size-4" aria-hidden="true" />{saving ? 'Saving...' : 'Assign Ride Manager'}</Button></div>
     </BookingCardShell>
   );
 }

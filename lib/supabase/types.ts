@@ -1,5 +1,27 @@
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
+export type PhaseBBookingRequestFields = {
+  assigned_manager_id: string | null;
+  assigned_manager_name: string | null;
+  assigned_vehicle_id: string | null;
+  assigned_vehicle_name: string | null;
+  ride_started_at: string | null;
+  ride_completed_at: string | null;
+};
+
+export type BookingRequestVehicleAssignment = {
+  id: string;
+  booking_request_id: string;
+  vehicle_id: string;
+  assignment_position: number;
+  assigned_at: string;
+  assigned_by: string;
+  released_at: string | null;
+  released_by: string | null;
+  release_reason: string | null;
+  is_active: boolean;
+};
+
 export type VehicleType = Database['public']['Enums']['vehicle_type'];
 export type BookingStatus = Database['public']['Enums']['booking_status'];
 export type DiscountType = Database['public']['Enums']['discount_type'];
