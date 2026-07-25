@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { formatAed } from '@/lib/booking-data';
 import { bookingRequestsTable } from '@/lib/booking-records';
 import { supabase } from '@/lib/supabase-client';
+import { confirmAndAssignBooking } from '@/services/booking-assignments';
 
 type BookingRow = Record<string, unknown> & {
   id?: string | null;
@@ -35,6 +36,7 @@ type BookingRow = Record<string, unknown> & {
   payment_source?: string | null;
   payment_workflow_status?: string | null;
   collection_status?: string | null;
+  assigned_manager_id?: string | null;
   assigned_manager_name?: string | null;
   assigned_vehicle_name?: string | null;
   b2b_agent_name?: string | null;
@@ -43,9 +45,9 @@ type BookingRow = Record<string, unknown> & {
   created_at?: string | null;
 };
 
-type ManagerOption = { name: string; email: string };
+type ManagerOption = { id: string; name: string; email: string };
 type BookingFilter = 'action' | 'all' | 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'no_show' | 'b2b' | 'direct';
-type ManageValues = { status: 'Pending' | 'Confirmed' | 'Cancelled'; managerName: string; note: string };
+type ManageValues = { status: 'Pending' | 'Confirmed' | 'Cancelled'; managerId: string; note: string };
 
 function text(value: unknown, fallback = '') {
   const clean = String(value ?? '').trim();
@@ -108,9 +110,13 @@ function finalBooking(booking: BookingRow) {
   return ['completed', 'no show', 'cancelled'].includes(status) || ['completed', 'no show'].includes(stage);
 }
 
+function hasAssignedManager(booking: BookingRow) {
+  return Boolean(booking.assigned_manager_id || text(booking.assigned_manager_name));
+}
+
 function adminLocked(booking: BookingRow) {
   if (finalBooking(booking) || rideStarted(booking)) return true;
-  return statusValue(booking) === 'Confirmed' && Boolean(text(booking.assigned_manager_name));
+  return statusValue(booking) === 'Confirmed' && hasAssignedManager(booking);
 }
 
 function stageLabel(booking: BookingRow) {
@@ -118,7 +124,7 @@ function stageLabel(booking: BookingRow) {
   if (statusValue(booking) === 'No Show') return 'No Show';
   if (statusValue(booking) === 'Cancelled') return 'Cancelled';
   if (rideStarted(booking)) return 'In Progress';
-  if (statusValue(booking) === 'Confirmed' && booking.assigned_manager_name) return 'Assigned';
+  if (statusValue(booking) === 'Confirmed' && hasAssignedManager(booking)) return 'Assigned';
   return 'Awaiting Confirmation';
 }
 
@@ -165,13 +171,13 @@ export function AdminBookingWorkflowPage() {
     setError('');
     const [bookingResult, managerResult] = await Promise.all([
       supabase.from(bookingRequestsTable).select('*').order('created_at', { ascending: false }).limit(1000),
-      supabase.from('admin_users').select('full_name,email,role,status').order('full_name', { ascending: true }).limit(200)
+      supabase.from('admin_users').select('id,full_name,email,role,status').order('full_name', { ascending: true }).limit(200)
     ]);
     if (bookingResult.error) setError(bookingResult.error.message);
     setBookings((bookingResult.data || []) as BookingRow[]);
-    const activeManagers = ((managerResult.data || []) as Array<{ full_name: string | null; email: string | null; role: string | null; status: string | null }>)
+    const activeManagers = ((managerResult.data || []) as Array<{ id: string; full_name: string | null; email: string | null; role: string | null; status: string | null }>)
       .filter((row) => text(row.role).toLowerCase() === 'manager' && text(row.status).toLowerCase() === 'active')
-      .map((row) => ({ name: text(row.full_name || row.email, 'Manager'), email: text(row.email) }));
+      .map((row) => ({ id: row.id, name: text(row.full_name || row.email, 'Manager'), email: text(row.email) }));
     setManagers(activeManagers);
     setLoading(false);
   }
@@ -179,8 +185,8 @@ export function AdminBookingWorkflowPage() {
   useEffect(() => { void load(); }, []);
 
   const stats = useMemo(() => ({
-    action: bookings.filter((booking) => statusValue(booking) === 'Pending' || (statusValue(booking) === 'Confirmed' && !booking.assigned_manager_name)).length,
-    assigned: bookings.filter((booking) => statusValue(booking) === 'Confirmed' && Boolean(booking.assigned_manager_name) && !rideStarted(booking)).length,
+    action: bookings.filter((booking) => statusValue(booking) === 'Pending' || (statusValue(booking) === 'Confirmed' && !hasAssignedManager(booking))).length,
+    assigned: bookings.filter((booking) => statusValue(booking) === 'Confirmed' && hasAssignedManager(booking) && !rideStarted(booking)).length,
     progress: bookings.filter(rideStarted).length,
     completed: bookings.filter((booking) => statusValue(booking) === 'Completed').length
   }), [bookings]);
@@ -200,7 +206,7 @@ export function AdminBookingWorkflowPage() {
   const visible = useMemo(() => {
     const term = query.trim().toLowerCase();
     return bookings.filter((booking) => {
-      if (filter === 'action' && !(statusValue(booking) === 'Pending' || (statusValue(booking) === 'Confirmed' && !booking.assigned_manager_name))) return false;
+      if (filter === 'action' && !(statusValue(booking) === 'Pending' || (statusValue(booking) === 'Confirmed' && !hasAssignedManager(booking)))) return false;
       if (filter === 'pending' && statusValue(booking) !== 'Pending') return false;
       if (filter === 'confirmed' && statusValue(booking) !== 'Confirmed') return false;
       if (filter === 'in_progress' && !rideStarted(booking)) return false;
@@ -214,7 +220,6 @@ export function AdminBookingWorkflowPage() {
   }, [bookings, filter, query]);
 
   async function saveBooking(booking: BookingRow, values: ManageValues) {
-    const managerName = values.managerName.trim();
     const key = booking.id ? 'id' : 'booking_code';
     const keyValue = booking.id || bookingCode(booking);
     const latestResult = await supabase.from(bookingRequestsTable).select('*').eq(key, keyValue).maybeSingle();
@@ -223,9 +228,13 @@ export function AdminBookingWorkflowPage() {
 
     if (adminLocked(latest)) throw new Error('This booking is already assigned or has started. Admin access is read-only.');
     if (values.status === 'Confirmed') {
-      if (!managerName) throw new Error('Select an active manager before confirming this booking.');
-      const validManager = managers.some((manager) => manager.name.toLowerCase() === managerName.toLowerCase());
-      if (!validManager) throw new Error('Selected manager is not active. Refresh and select an active manager.');
+      if (!values.managerId) throw new Error('Select an active manager before confirming this booking.');
+      if (!managers.some((manager) => manager.id === values.managerId)) throw new Error('Selected manager is not active. Refresh and select an active manager.');
+      if (!latest.id) throw new Error('This booking does not have a stable ID.');
+      await confirmAndAssignBooking(latest.id, values.managerId, values.note);
+      setSelected(null);
+      await load();
+      return;
     }
     if (values.status === 'Cancelled' && rideStarted(latest)) throw new Error('Ride has already started. This booking cannot be cancelled by admin.');
 
@@ -236,24 +245,15 @@ export function AdminBookingWorkflowPage() {
       updated_at: now
     };
 
-    if (values.status === 'Confirmed') {
-      Object.assign(basePayload, {
-        admin_status: 'Confirmed',
-        manager_status: 'Pending',
-        assigned_manager_name: managerName,
-        confirmed_at: latest.confirmed_at || now
-      });
-    } else if (values.status === 'Pending') {
+    if (values.status === 'Pending') {
       Object.assign(basePayload, {
         admin_status: 'New',
-        manager_status: 'Pending',
-        assigned_manager_name: null
+        manager_status: 'Pending'
       });
     } else {
       Object.assign(basePayload, {
         admin_status: 'Closed',
         manager_status: 'Cancelled',
-        assigned_manager_name: null,
         payment_workflow_status: 'Cancelled'
       });
       if (numberValue(latest.amount_received_aed) <= 0) {
@@ -331,13 +331,13 @@ function BookingWorkflowModal({ booking, managers, onClose, onSave }: { booking:
   const locked = adminLocked(booking);
   const [values, setValues] = useState<ManageValues>({
     status: (['Pending', 'Confirmed', 'Cancelled'].includes(statusValue(booking)) ? statusValue(booking) : 'Pending') as ManageValues['status'],
-    managerName: text(booking.assigned_manager_name),
+    managerId: booking.assigned_manager_id || '',
     note: text(booking.internal_note)
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const whatsapp = whatsappHref(booking);
-  const confirmReady = values.status !== 'Confirmed' || Boolean(values.managerName.trim());
+  const confirmReady = values.status !== 'Confirmed' || Boolean(values.managerId);
 
   async function submit() {
     setSaving(true);
@@ -370,8 +370,8 @@ function BookingWorkflowModal({ booking, managers, onClose, onSave }: { booking:
           ) : (
             <div className="mt-4 rounded-[1.2rem] border border-border bg-[#F7FAFA] p-4">
               <div className="grid gap-3 sm:grid-cols-2">
-                <label className="grid gap-1.5 text-sm font-semibold text-foreground">Booking Status<select value={values.status} onChange={(event) => { const status = event.target.value as ManageValues['status']; setValues((current) => ({ ...current, status, managerName: status === 'Confirmed' ? current.managerName : '' })); }} className="h-11 rounded-xl border border-border bg-white px-3 text-sm font-semibold"><option value="Pending">Pending</option><option value="Confirmed">Confirmed</option><option value="Cancelled">Cancelled</option></select></label>
-                <label className="grid gap-1.5 text-sm font-semibold text-foreground">Assigned Manager {values.status === 'Confirmed' ? <span className="text-red-600">*</span> : null}<select value={values.managerName} onChange={(event) => setValues((current) => ({ ...current, managerName: event.target.value }))} disabled={values.status !== 'Confirmed'} className="h-11 rounded-xl border border-border bg-white px-3 text-sm font-semibold disabled:bg-slate-100"><option value="">Select active manager</option>{managers.map((manager) => <option key={`${manager.name}-${manager.email}`} value={manager.name}>{manager.name}{manager.email ? ` · ${manager.email}` : ''}</option>)}</select></label>
+                <label className="grid gap-1.5 text-sm font-semibold text-foreground">Booking Status<select value={values.status} onChange={(event) => { const status = event.target.value as ManageValues['status']; setValues((current) => ({ ...current, status, managerId: status === 'Confirmed' ? current.managerId : '' })); }} className="h-11 rounded-xl border border-border bg-white px-3 text-sm font-semibold"><option value="Pending">Pending</option><option value="Confirmed">Confirmed</option><option value="Cancelled">Cancelled</option></select></label>
+                <label className="grid gap-1.5 text-sm font-semibold text-foreground">Assigned Manager {values.status === 'Confirmed' ? <span className="text-red-600">*</span> : null}<select value={values.managerId} onChange={(event) => setValues((current) => ({ ...current, managerId: event.target.value }))} disabled={values.status !== 'Confirmed'} className="h-11 rounded-xl border border-border bg-white px-3 text-sm font-semibold disabled:bg-slate-100"><option value="">Select active manager</option>{managers.map((manager) => <option key={manager.id} value={manager.id}>{manager.name}{manager.email ? ` · ${manager.email}` : ''}</option>)}</select></label>
               </div>
               {values.status === 'Confirmed' ? <p className={`mt-2 text-xs font-semibold ${confirmReady ? 'text-emerald-700' : 'text-red-700'}`}>{confirmReady ? 'Ready: booking will be confirmed and locked to the selected manager.' : 'Manager selection is required before confirmation.'}</p> : null}
               {values.status === 'Cancelled' ? <p className="mt-2 rounded-xl bg-red-50 px-3 py-2 text-xs font-semibold text-red-700">Cancellation is only allowed before manager assignment and before the ride starts.</p> : null}

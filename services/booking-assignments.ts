@@ -28,6 +28,18 @@ export type BookingAssignmentRpcResult = {
   [key: string]: unknown;
 };
 
+export type ConfirmedBookingResult = BookingAssignmentRpcResult & {
+  id: string;
+  status: string;
+  admin_status: string;
+  manager_status: string;
+  assigned_manager_id: string;
+  assigned_manager_name: string | null;
+  confirmed_at: string;
+  assignment_updated_at: string;
+  assignment_updated_by: string;
+};
+
 export class BookingAssignmentError extends Error {
   constructor(message: string, readonly rpc: string) {
     super(message);
@@ -48,6 +60,14 @@ export function setBookingManager(bookingRequestId: string, managerId: string) {
   return callRpc<BookingAssignmentRpcResult>('set_booking_manager', {
     p_booking_request_id: bookingRequestId,
     p_manager_id: managerId
+  });
+}
+
+export function confirmAndAssignBooking(bookingRequestId: string, managerId: string, internalNote?: string) {
+  return callRpc<ConfirmedBookingResult>('confirm_and_assign_booking', {
+    p_booking_request_id: bookingRequestId,
+    p_manager_id: managerId,
+    p_internal_note: internalNote?.trim() || null
   });
 }
 
