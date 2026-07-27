@@ -72,6 +72,11 @@ assert(!privilegedBrowserText.includes('SUPABASE_SERVICE_ROLE_KEY'), 'The Supaba
 assert(provisioningFunction.includes('auth.admin.createUser'), 'Portal provisioning must create Auth users inside the Edge Function.');
 assert(provisioningFunction.includes(".eq('auth_user_id', userData.user.id)") && provisioningFunction.includes("!== 'active'") && provisioningFunction.includes("!== 'super_admin'"), 'The provisioning Edge Function must require exactly one active Super Admin database profile.');
 assert(provisioningFunction.includes('auth.admin.deleteUser(authUserId)'), 'The provisioning Edge Function must roll back newly created Auth users after profile failure.');
+assert(!provisioningFunction.includes("from('admin_users').insert"), 'Internal provisioning must finalize the trigger-created admin_users profile instead of inserting a duplicate.');
+assert(provisioningFunction.includes("from('admin_users').update") && provisioningFunction.includes(".eq('auth_user_id', authUserId)"), 'Internal provisioning must finalize the trigger-created profile by auth_user_id.');
+const temporaryProfileCleanup = provisioningFunction.indexOf("from('admin_users').delete()");
+const b2bProfileRpc = provisioningFunction.indexOf("callerClient.rpc('manage_b2b_agent_profile'");
+assert(temporaryProfileCleanup >= 0 && b2bProfileRpc > temporaryProfileCleanup, 'B2B provisioning must remove the exact temporary trigger-created admin_users profile before calling the secured profile RPC.');
 assert(!/from\(['"](?:admin_users|b2b_agents)['"]\)\.insert\(\{[\s\S]{0,800}(?:initial_)?password/.test(provisioningFunction), 'Provisioning passwords must never be inserted into portal profile tables.');
 assert(!provisioningService.includes('localStorage') && !provisioningService.includes('sessionStorage'), 'Provisioning passwords must never be persisted in browser storage.');
 assert(provisioningService.includes("functions.invoke('provision-portal-user'"), 'Browser provisioning must use the secured Supabase Edge Function.');

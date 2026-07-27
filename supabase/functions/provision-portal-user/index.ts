@@ -32,6 +32,15 @@ function validPassword(value: string) {
   return value.length >= 12 && /[A-Z]/.test(value) && /[a-z]/.test(value) && /\d/.test(value) && /[^A-Za-z0-9]/.test(value);
 }
 
+function logFailure(stage: string, error: { code?: string; message?: string } | null | undefined) {
+  const sanitizedMessage = String(error?.message || 'Supabase operation failed.')
+    .replace(/[A-Fa-f0-9]{8}(?:-[A-Fa-f0-9]{4}){3}-[A-Fa-f0-9]{12}/g, '[id]')
+    .replace(/[^\s@]+@[^\s@]+\.[^\s@]+/g, '[email]')
+    .replace(/(["']).*?\1/g, '[value]')
+    .slice(0, 180);
+  console.error({ stage, code: error?.code || 'unknown', message: sanitizedMessage });
+}
+
 Deno.serve(async (request) => {
   const origin = request.headers.get('Origin');
   if (origin && !allowedOrigins.has(origin)) return response(origin, 403, { error: 'This origin is not allowed.' });
@@ -102,6 +111,7 @@ Deno.serve(async (request) => {
   }
 
   const authUserId = created.user.id;
+  let stage = 'profile_finalization';
   try {
     if (accountType === 'internal_user') {
       const role = clean(body.role);
@@ -112,8 +122,7 @@ Deno.serve(async (request) => {
       if (!fullName || !department || !nationality || !allowedRoles.has(role) || !allowedStatuses.has(status)) {
         throw new Error('Internal user profile fields are incomplete or invalid.');
       }
-      const { data: profile, error: profileError } = await adminClient.from('admin_users').insert({
-        auth_user_id: authUserId,
+      const profileValues = {
         full_name: fullName,
         email,
         phone: clean(body.phone) || null,
@@ -122,10 +131,20 @@ Deno.serve(async (request) => {
         department,
         status,
         avatar_url: clean(body.avatar_url) || null,
-        notes: clean(body.notes) || null
-      }).select('id').single();
+        notes: clean(body.notes) || null,
+        must_change_password: true
+      };
+      let { data: profile, error: profileError } = await adminClient.from('admin_users').update({
+        ...profileValues,
+        created_by: caller.id
+      }).eq('auth_user_id', authUserId).select('id').single();
+      if (profileError) {
+        ({ data: profile, error: profileError } = await adminClient.from('admin_users').update(profileValues)
+          .eq('auth_user_id', authUserId).select('id').single());
+      }
       if (profileError || !profile) throw new Error('Internal user profile creation failed.');
 
+      stage = 'audit_creation';
       const { error: auditError } = await adminClient.from('audit_logs').insert({
         module: 'team',
         action: 'portal_user_provisioned',
@@ -139,13 +158,20 @@ Deno.serve(async (request) => {
         summary: 'Provisioned an internal portal user.',
         metadata: { account_type: accountType, role, department, status }
       });
-      if (auditError) {
-        await adminClient.from('admin_users').delete().eq('id', profile.id);
-        throw new Error('Provisioning audit creation failed.');
-      }
+      if (auditError) throw auditError;
       return response(origin, 201, { account_type: accountType, auth_user_id: authUserId, profile_id: profile.id });
     }
 
+    stage = 'temporary_profile_cleanup';
+    const { data: removedProfiles, error: cleanupError } = await adminClient.from('admin_users').delete()
+      .eq('auth_user_id', authUserId)
+      .select('id');
+    if (cleanupError || !removedProfiles || removedProfiles.length !== 1) {
+      if (cleanupError) logFailure(stage, cleanupError);
+      throw new Error('Temporary profile cleanup failed.');
+    }
+
+    stage = 'b2b_profile_creation';
     const profileBody = typeof body.profile === 'object' && body.profile !== null ? body.profile as Record<string, unknown> : {};
     const { data: profile, error: profileError } = await callerClient.rpc('manage_b2b_agent_profile', {
       p_agent_id: null,
@@ -154,8 +180,10 @@ Deno.serve(async (request) => {
     });
     if (profileError || !profile?.id) throw new Error('B2B Agent profile creation failed.');
     return response(origin, 201, { account_type: accountType, auth_user_id: authUserId, profile_id: profile.id });
-  } catch {
-    await adminClient.auth.admin.deleteUser(authUserId);
-    return response(origin, 400, { error: 'The database profile could not be created. The new Auth user was rolled back.' });
+  } catch (provisioningError) {
+    logFailure(stage, provisioningError instanceof Error ? provisioningError : null);
+    const { error: rollbackError } = await adminClient.auth.admin.deleteUser(authUserId);
+    if (rollbackError) logFailure('auth_user_rollback', rollbackError);
+    return response(origin, 400, { error: 'The database profile could not be created. Auth rollback was attempted.' });
   }
 });
