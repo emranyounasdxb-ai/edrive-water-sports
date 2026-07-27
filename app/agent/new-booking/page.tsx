@@ -5,17 +5,19 @@ import { useEffect, useMemo, useState } from 'react';
 import { CalendarDays, Check, CheckCircle2, ChevronLeft, ChevronRight, Minus, Package, Plus, RefreshCw, UserRound, WalletCards } from 'lucide-react';
 import { AgentPageHeader } from '@/components/edrive/agent/agent-page-header';
 import { useAgentPortal } from '@/components/edrive/agent/agent-portal-provider';
+import { AgentSchedulePicker } from '@/components/edrive/agent/agent-schedule-picker';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { formatAed, timeSlots } from '@/lib/booking-data';
+import { formatAed } from '@/lib/booking-data';
+import { dubaiDateValue, isSelectableDubaiBookingTime } from '@/lib/public-request-validation';
 import { supabase } from '@/lib/supabase-client';
 import { createB2BBooking } from '@/services/b2b-finance';
 
 type PackageRow = { id: string; title: string; category: string; duration_minutes: number; b2b_price: number; capacity: number | null; image_url: string | null; short_description: string | null };
 type FormState = { packageId: string; vehicleQuantity: string; guestCount: string; preferredDate: string; preferredTime: string; customerName: string; customerPhone: string; customerEmail: string; customerHotelOrArea: string; customerNotes: string };
-const initial: FormState = { packageId: '', vehicleQuantity: '1', guestCount: '1', preferredDate: '', preferredTime: '09:00 AM', customerName: '', customerPhone: '', customerEmail: '', customerHotelOrArea: '', customerNotes: '' };
+const initial: FormState = { packageId: '', vehicleQuantity: '1', guestCount: '1', preferredDate: '', preferredTime: '', customerName: '', customerPhone: '', customerEmail: '', customerHotelOrArea: '', customerNotes: '' };
 const steps = [{ title: 'Package', icon: Package }, { title: 'Customer', icon: UserRound }, { title: 'Schedule', icon: CalendarDays }, { title: 'Review', icon: CheckCircle2 }];
 const packageCategories = [
   { id: 'jet_ski', label: 'Jet Ski' },
@@ -39,6 +41,7 @@ export default function AgentNewBookingPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [now, setNow] = useState(() => new Date());
   const [success, setSuccess] = useState<{ code: string; deducted: number; remaining: number } | null>(null);
 
   async function load() {
@@ -55,6 +58,10 @@ export default function AgentNewBookingPage() {
     finally { setLoading(false); }
   }
   useEffect(() => { void load(); }, []);
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(new Date()), 30_000);
+    return () => window.clearInterval(timer);
+  }, []);
   const selected = packages.find((item) => item.id === form.packageId) || null;
   const quantity = Math.max(Number(form.vehicleQuantity) || 1, 1);
   const unit = Number(selected?.b2b_price || 0);
@@ -65,6 +72,20 @@ export default function AgentNewBookingPage() {
   const shortfall = Math.max(-remaining, 0);
   const insufficient = total > balance;
   const update = (key: keyof FormState, value: string) => setForm((current) => ({ ...current, [key]: value }));
+  const scheduleError = useMemo(() => {
+    if (!form.preferredDate) return 'Select the booking date.';
+    if (form.preferredDate < dubaiDateValue(now)) return 'Select today or a future Dubai date.';
+    if (!form.preferredTime) return 'Select an available Dubai time.';
+    if (!isSelectableDubaiBookingTime(form.preferredDate, form.preferredTime, now)) return 'The selected Dubai time has already passed. Please choose an available time.';
+    return '';
+  }, [form.preferredDate, form.preferredTime, now]);
+  const scheduleInlineError = error === scheduleError || (form.preferredDate && form.preferredTime && scheduleError)
+    ? scheduleError
+    : '';
+  const updateSchedule = (preferredDate: string, preferredTime: string) => {
+    setForm((current) => ({ ...current, preferredDate, preferredTime }));
+    if (preferredDate && preferredTime && isSelectableDubaiBookingTime(preferredDate, preferredTime, now)) setError('');
+  };
   const selectCategory = (category: PackageCategory) => {
     setActiveCategory(category);
     const currentPackage = packages.find((item) => item.id === form.packageId);
@@ -76,12 +97,13 @@ export default function AgentNewBookingPage() {
   function validateStep() {
     if (step === 0 && !selected) return 'Select a B2B package.';
     if (step === 1 && (!form.customerName.trim() || !form.customerPhone.trim())) return 'Customer name and phone are required.';
-    if (step === 2 && (!form.preferredDate || !form.preferredTime)) return 'Select the booking date and time.';
+    if (step === 2) return scheduleError;
     return '';
   }
   function next() { const validation = validateStep(); if (validation) { setError(validation); return; } setError(''); setStep((current) => Math.min(current + 1, 3)); }
   async function submit() {
     if (!selected || insufficient || saving) return;
+    if (scheduleError) { setError(scheduleError); return; }
     setSaving(true); setError('');
     try {
       const created = await createB2BBooking({ package_id: selected.id, vehicle_quantity: quantity, guest_count: Math.max(Number(form.guestCount) || 1, 1), preferred_date: form.preferredDate, preferred_time: form.preferredTime, customer_name: form.customerName.trim(), customer_phone: form.customerPhone.trim(), customer_email: form.customerEmail.trim() || null, customer_hotel_or_area: form.customerHotelOrArea.trim() || null, customer_notes: form.customerNotes.trim() || null });
@@ -107,12 +129,12 @@ export default function AgentNewBookingPage() {
       <div>
         <div className="grid grid-cols-4 gap-2">{steps.map(({ title, icon: Icon }, index) => <button type="button" key={title} onClick={() => index < step && setStep(index)} className={`rounded-xl border p-3 text-left transition ${index === step ? 'border-teal-500 bg-teal-50 text-teal-800' : index < step ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-slate-200 bg-white text-slate-400'}`}><div className="flex items-center gap-2">{index < step ? <Check className="size-4" /> : <Icon className="size-4" />}<span className="hidden text-xs font-bold sm:inline">{index + 1}. {title}</span><span className="text-xs font-bold sm:hidden">{index + 1}</span></div></button>)}</div>
         <Card className="mt-3.5 rounded-xl border-slate-200"><CardContent className="p-4 sm:p-5">
-          {error ? <div role="alert" className="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-700">{error}</div> : null}
+          {error && step !== 2 ? <div role="alert" className="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-700">{error}</div> : null}
           {step === 0 ? <PackageStep packages={packages} activeCategory={activeCategory} onCategoryChange={selectCategory} selectedId={form.packageId} onSelect={(id) => update('packageId', id)} quantity={quantity} setQuantity={(value) => update('vehicleQuantity', String(value))} /> : null}
           {step === 1 ? <CustomerStep form={form} update={update} /> : null}
-          {step === 2 ? <ScheduleStep form={form} update={update} /> : null}
-          {step === 3 ? <ReviewStep form={form} selected={selected} quantity={quantity} total={total} /> : null}
-          <div className="mt-6 flex justify-between border-t border-slate-200 pt-5"><Button variant="outline" disabled={step === 0 || saving} onClick={() => { setError(''); setStep((current) => current - 1); }}><ChevronLeft className="size-4" />Back</Button>{step < 3 ? <Button onClick={next}>Continue<ChevronRight className="size-4" /></Button> : <Button disabled={saving || insufficient} onClick={submit}><WalletCards className="size-4" />{saving ? 'Creating booking...' : 'Confirm & Pay from Wallet'}</Button>}</div>
+          {step === 2 ? <AgentSchedulePicker date={form.preferredDate} time={form.preferredTime} now={now} error={scheduleInlineError || undefined} onChange={updateSchedule} /> : null}
+          {step === 3 ? <ReviewStep form={form} selected={selected} quantity={quantity} total={total} scheduleError={scheduleError} /> : null}
+          <div className="mt-6 flex justify-between border-t border-slate-200 pt-5"><Button variant="outline" disabled={step === 0 || saving} onClick={() => { setError(''); setStep((current) => current - 1); }}><ChevronLeft className="size-4" />Back</Button>{step < 3 ? <Button onClick={next}>Continue<ChevronRight className="size-4" /></Button> : <Button disabled={saving || insufficient || Boolean(scheduleError)} onClick={submit}><WalletCards className="size-4" />{saving ? 'Creating booking...' : 'Confirm & Pay from Wallet'}</Button>}</div>
         </CardContent></Card>
       </div>
       <aside className="lg:sticky lg:top-5 lg:self-start"><Card className="rounded-xl border-slate-200 shadow-md"><CardContent className="p-4"><div className="flex items-center gap-3"><span className="flex size-10 items-center justify-center rounded-xl bg-teal-50 text-teal-700"><WalletCards className="size-5" /></span><div><p className="text-xs font-semibold text-slate-500">Current wallet balance</p><p className="font-heading text-xl font-semibold">{formatAed(balance)}</p></div></div><div className="mt-4 space-y-2.5 border-t border-slate-200 pt-4"><Row label="B2B unit price" value={formatAed(unit)} /><Row label="Vehicle quantity" value={String(quantity)} /><Row label="Subtotal" value={formatAed(subtotal)} /><Row label="VAT 5%" value={formatAed(vat)} /><Row label="Total wallet debit" value={formatAed(total)} strong /><div className="flex items-center justify-between gap-3 rounded-lg border border-teal-200 bg-teal-50 p-3 text-sm font-bold text-teal-950"><span>Balance after booking</span><span className="shrink-0 whitespace-nowrap">{formatAed(Math.max(remaining, 0))}</span></div></div>{insufficient ? <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800"><p className="font-bold">Insufficient wallet balance</p><p className="mt-1">Shortfall: {formatAed(shortfall)}. Call +971 4 611 3114 for top-up assistance.</p></div> : <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs font-semibold text-emerald-800">Visible balance covers this booking. The secured RPC performs the final check.</div>}</CardContent></Card></aside>
@@ -156,8 +178,7 @@ function PackageStep({ packages, activeCategory, onCategoryChange, selectedId, o
   </section>;
 }
 function CustomerStep({ form, update }: { form: FormState; update: (key: keyof FormState, value: string) => void }) { return <section><h2 className="font-heading text-lg font-semibold">Customer details</h2><div className="mt-4 grid gap-3.5 sm:grid-cols-2"><Field label="Customer name" required value={form.customerName} onChange={(v) => update('customerName', v)} /><Field label="Phone number" required value={form.customerPhone} onChange={(v) => update('customerPhone', v)} /><Field label="Email" type="email" value={form.customerEmail} onChange={(v) => update('customerEmail', v)} /><Field label="Hotel or area" value={form.customerHotelOrArea} onChange={(v) => update('customerHotelOrArea', v)} /><Field label="Guest count" type="number" value={form.guestCount} onChange={(v) => update('guestCount', v)} /><label className="grid gap-2 text-sm font-semibold sm:col-span-2">Customer notes<Textarea value={form.customerNotes} onChange={(e) => update('customerNotes', e.target.value)} /></label></div></section>; }
-function ScheduleStep({ form, update }: { form: FormState; update: (key: keyof FormState, value: string) => void }) { return <section><h2 className="font-heading text-lg font-semibold">Schedule</h2><div className="mt-4 grid gap-3.5 sm:grid-cols-2"><Field label="Preferred date" type="date" min={new Date().toISOString().slice(0, 10)} value={form.preferredDate} onChange={(v) => update('preferredDate', v)} /><label className="grid gap-2 text-sm font-semibold">Preferred time<select value={form.preferredTime} onChange={(e) => update('preferredTime', e.target.value)} className="h-11 rounded-md border border-input bg-white px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400">{timeSlots.map((time) => <option key={time}>{time}</option>)}</select></label></div></section>; }
-function ReviewStep({ form, selected, quantity, total }: { form: FormState; selected: PackageRow | null; quantity: number; total: number }) { return <section><h2 className="font-heading text-lg font-semibold">Review & confirm</h2><div className="mt-4 grid gap-3 sm:grid-cols-2"><SummaryBox label="Package" value={selected?.title || '-'} /><SummaryBox label="Customer" value={form.customerName} /><SummaryBox label="Schedule" value={`${form.preferredDate} · ${form.preferredTime}`} /><SummaryBox label="Vehicles / Guests" value={`${quantity} / ${form.guestCount}`} /><SummaryBox label="Customer phone" value={form.customerPhone} /><SummaryBox label="Total wallet debit" value={formatAed(total)} /></div></section>; }
+function ReviewStep({ form, selected, quantity, total, scheduleError }: { form: FormState; selected: PackageRow | null; quantity: number; total: number; scheduleError: string }) { return <section><h2 className="font-heading text-lg font-semibold">Review & confirm</h2>{scheduleError ? <div role="alert" className="mt-3 rounded-xl border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-700">{scheduleError} Return to Schedule to choose an available slot.</div> : null}<div className="mt-4 grid gap-3 sm:grid-cols-2"><SummaryBox label="Package" value={selected?.title || '-'} /><SummaryBox label="Customer" value={form.customerName} /><SummaryBox label="Schedule" value={`${form.preferredDate} | ${form.preferredTime}`} /><SummaryBox label="Vehicles / Guests" value={`${quantity} / ${form.guestCount}`} /><SummaryBox label="Customer phone" value={form.customerPhone} /><SummaryBox label="Total wallet debit" value={formatAed(total)} /></div></section>; }
 function Field({ label, value, onChange, ...props }: { label: string; value: string; onChange: (value: string) => void } & Omit<React.InputHTMLAttributes<HTMLInputElement>, 'value' | 'onChange'>) { return <label className="grid gap-2 text-sm font-semibold">{label}<Input value={value} onChange={(e) => onChange(e.target.value)} {...props} /></label>; }
 function Row({ label, value, strong }: { label: string; value: string; strong?: boolean }) { return <div className={`flex justify-between gap-3 text-sm ${strong ? 'border-t-2 border-slate-300 pt-3 font-bold text-slate-950' : 'text-slate-600'}`}><span>{label}</span><span className="shrink-0 whitespace-nowrap">{value}</span></div>; }
 function SummaryBox({ label, value }: { label: string; value: string }) { return <div className="min-w-0 rounded-xl bg-slate-50 p-3.5 text-left"><p className="text-xs font-semibold text-slate-500">{label}</p><p className="mt-1 font-semibold text-slate-900">{value || '-'}</p></div>; }
