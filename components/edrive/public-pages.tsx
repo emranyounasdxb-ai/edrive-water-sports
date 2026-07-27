@@ -5,14 +5,12 @@ import {
   ArrowRight,
   CalendarCheck,
   Car,
-  Crown,
   Mail,
   MapPin,
   MessageCircle,
   Phone,
   ShieldCheck,
-  Sparkles,
-  Waves
+  Sparkles
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -22,7 +20,6 @@ import { cn } from '@/lib/utils';
 import { BookingForm } from './booking-form';
 import { ContactForm } from './contact-form';
 import { HeroVideoMedia } from './hero-video-media';
-import { LivePackageShowcase } from './live-package-showcase';
 import { MotionReveal } from './motion-reveal';
 import { PublicFleetShowcase } from './public-fleet-showcase';
 import { PublicVideoHero, publicHeroContentClass, publicHeroFrameClass, type PublicHeroAction } from './public-video-hero';
@@ -30,44 +27,6 @@ import { PublicVideoHero, publicHeroContentClass, publicHeroFrameClass, type Pub
 const sectionPad = 'py-10 sm:py-12 lg:py-14';
 
 type HeroAction = PublicHeroAction;
-
-const serviceCards = [
-  {
-    icon: Waves,
-    title: 'Jet Ski Rentals',
-    text: 'Premium jet ski rental in Dubai with clear duration options, safety briefing, and fast booking support from Dubai Islands.',
-    image: jetSkiLightImage,
-    href: '/jet-ski-rentals',
-    cta: 'View Jet Ski Packages'
-  },
-  {
-    icon: Car,
-    title: 'Jet Car Rentals',
-    text: 'Luxury jet car rides for couples, families, birthdays, photos, and unforgettable Dubai water sports moments.',
-    image: jetCarLightImage,
-    href: '/jet-car-rentals',
-    cta: 'View Jet Car Packages'
-  },
-  {
-    icon: Crown,
-    title: 'eDrive Signature Membership',
-    text: 'Priority benefits, exclusive offers, and dedicated ride support for repeat customers and VIP guests.',
-    image: '/images/edrive/home/home-membership-gold-card.webp',
-    href: '/membership',
-    cta: 'View Membership'
-  }
-];
-
-const homeServiceCardImages: Record<string, string> = {
-  'Jet Ski Rentals': '/images/edrive/home/home-jet-ski-rentals.webp',
-  'Jet Car Rentals': '/images/edrive/home/home-jet-car-rentals.webp',
-  'eDrive Signature Membership': '/images/edrive/home/home-membership-gold-card.webp'
-};
-
-const homeServiceCards = serviceCards.map((item) => ({
-  ...item,
-  image: homeServiceCardImages[item.title] ?? item.image
-}));
 
 const whyChoose = [
   { icon: MapPin, title: 'Dubai Islands Location', text: `Start your ride from ${companyInfo.locationName} with clear arrival guidance and team support.` },
@@ -87,30 +46,52 @@ export function HomePage() {
     <>
       <HomeHero />
 
-      <LivePackageShowcase
-        title="Dubai Water Sports Packages"
-        text="Choose from premium jet ski and jet car ride options with clear pricing, flexible durations, and fast booking support from Dubai Islands."
-        limit={6}
-        compact
-      />
-
-      <section className="bg-[#f4f5f5]">
+      <section className="bg-[#f4f5f5]" data-home-rides>
         <div className={cn('container-x', sectionPad)}>
-          <SectionHeader title="Premium Water Sports & Membership" text="Plan jet ski rentals, jet car rides, and eDrive Signature Membership benefits with one trusted Dubai Islands team." />
-          <div className="mt-7 grid gap-5 md:grid-cols-3">
-            {homeServiceCards.map((item) => <ServiceCard key={item.title} {...item} />)}
+          <SectionHeader title="Choose Your Water Experience" text="Start with a Jet Ski or Jet Car experience, then compare the available ride durations and prices." />
+          <div className="mt-7 grid gap-5 md:grid-cols-2">
+            <HomeRideCard
+              title="Book Jet Ski Ride"
+              text="Choose a premium Jet Ski experience, then compare available ride durations and seating options."
+              image="/images/edrive/home/home-jet-ski-rentals.webp"
+              href="/jet-ski-rentals"
+              cta="Explore Jet Ski Rides"
+              data-home-ride-card
+            />
+            <HomeRideCard
+              title="Book Jet Car Ride"
+              text="Discover a luxury Jet Car experience for couples, families, celebrations, and memorable Dubai moments."
+              image="/images/edrive/home/home-jet-car-rentals.webp"
+              href="/jet-car-rentals"
+              cta="Explore Jet Car Rides"
+              data-home-ride-card
+            />
           </div>
         </div>
       </section>
 
-      <section className="border-y border-border bg-white/70">
+      <section className="border-y border-border bg-white/70" data-home-membership>
+        <div className={cn('container-x', sectionPad)}>
+          <div className="grid overflow-hidden rounded-[1.6rem] bg-primary-950 text-white shadow-xl md:grid-cols-2 md:items-stretch">
+            <Image src="/images/edrive/home/home-membership-gold-card.webp" alt="eDrive Membership card" width={1200} height={800} className="h-full min-h-64 w-full object-cover" />
+            <div className="flex flex-col justify-center p-6 sm:p-8 lg:p-10">
+              <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-accent-300">eDrive Membership</p>
+              <h2 className="mt-3 font-heading text-3xl font-semibold leading-tight sm:text-4xl">Make Every Ride More Rewarding</h2>
+              <p className="mt-4 max-w-xl text-sm leading-7 text-white/75 sm:text-base">Discover priority benefits, exclusive offers, and dedicated support designed for returning eDrive guests.</p>
+              <Button asChild className="mt-6 w-fit rounded-full bg-white text-primary-950 hover:bg-primary-50"><Link href="/membership">Explore Membership<ArrowRight data-icon aria-hidden="true" /></Link></Button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="bg-white/70" data-home-why>
         <div className={cn('container-x', sectionPad)}>
           <SectionHeader title="Why Choose eDrive" text="A premium Dubai water sports experience built around clear packages, safety support, smooth booking, and guest-focused service." />
           <FeatureGrid items={whyChoose} className="mt-7 lg:grid-cols-4" />
         </div>
       </section>
 
-      <section className="bg-[#f4f5f5]">
+      <section className="bg-[#f4f5f5]" data-home-process>
         <div className={cn('container-x grid gap-7 lg:grid-cols-[0.78fr_1.22fr] lg:items-center', sectionPad)}>
           <div>
             <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-primary">How it works</p>
@@ -274,17 +255,18 @@ function SectionHeader({ title, text }: { title: string; text: string }) {
   );
 }
 
-function ServiceCard({ icon: Icon, title, text, image, href, cta }: { icon: LucideIcon; title: string; text: string; image: string; href: string; cta: string }) {
+function HomeRideCard({ title, text, image, href, cta, ...marker }: { title: string; text: string; image: string; href: string; cta: string; 'data-home-ride-card': true }) {
   return (
-    <Card className="premium-card-hover overflow-hidden rounded-[1.5rem]">
-      <Image src={image} alt={title} width={900} height={600} className="h-56 w-full object-cover" />
-      <CardContent className="p-5">
-        <span className="mb-4 flex size-11 items-center justify-center rounded-md bg-primary-50 text-primary"><Icon data-icon aria-hidden="true" /></span>
-        <h3 className="font-heading text-2xl font-semibold text-foreground">{title}</h3>
-        <p className="mt-3 min-h-[5.5rem] text-sm leading-7 text-muted-foreground">{text}</p>
-        <Button asChild className="mt-4 w-full rounded-full"><Link href={href}>{cta}<ArrowRight data-icon aria-hidden="true" /></Link></Button>
-      </CardContent>
-    </Card>
+    <Link href={href} className="premium-card-hover group flex h-full flex-col overflow-hidden rounded-[1.5rem] bg-white shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-4" {...marker}>
+      <div className="overflow-hidden">
+        <Image src={image} alt={title} width={1200} height={750} className="aspect-[16/9] w-full object-cover transition duration-500 group-hover:scale-[1.03]" />
+      </div>
+      <div className="flex flex-1 flex-col p-6 sm:p-7">
+        <h3 className="font-heading text-2xl font-semibold text-foreground sm:text-3xl">{title}</h3>
+        <p className="mt-3 flex-1 text-sm leading-7 text-muted-foreground sm:text-base">{text}</p>
+        <span className="mt-5 inline-flex items-center gap-2 font-semibold text-primary">{cta}<ArrowRight data-icon aria-hidden="true" /></span>
+      </div>
+    </Link>
   );
 }
 
@@ -307,7 +289,7 @@ function FeatureCard({ item }: { item: { icon: LucideIcon; title: string; text: 
 
 function HomeContactStrip() {
   return (
-    <section className="bg-[#f4f5f5] pb-10 sm:pb-12 lg:pb-14">
+    <section className="bg-[#f4f5f5] pb-10 sm:pb-12 lg:pb-14" data-home-contact>
       <div className="container-x">
         <div className="flex flex-col gap-4 rounded-[1.5rem] bg-primary-900 p-5 text-white shadow-xl lg:flex-row lg:items-center lg:justify-between">
           <div>

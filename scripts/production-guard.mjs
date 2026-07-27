@@ -79,7 +79,21 @@ assert(publicPages.match(/data-public-hero(?=[\s>])/g)?.length === 1, 'HomeHero 
 assert(publicVideoHero.includes('data-public-hero'), 'Shared PublicVideoHero must keep the stable public hero marker.');
 assert(heroCtaStyles.includes('[data-public-main] > [data-public-hero]:first-of-type'), 'Hero polish must target stable public layout markers.');
 assert(heroCtaStyles.includes('[data-public-main] > [data-public-hero]:first-of-type'), 'Public hero CSS must retain the direct-child data-public-main layout contract.');
-assert(homeResponsiveStyles.includes('[data-public-main] > #live-packages'), 'Public homepage responsive CSS must retain the direct-child data-public-main layout contract.');
+assert(!publicPages.includes('Dubai Water Sports Packages'), 'The homepage live package grid must not return.');
+assert(!publicPages.includes('LivePackageShowcase'), 'The homepage must not render or import the live package grid.');
+assert(publicPages.match(/data-home-ride-card/g)?.length === 3, 'The homepage must define exactly two primary ride cards and one shared card marker type.');
+const homeRideSection = publicPages.match(/<section className="bg-\[#f4f5f5\]" data-home-rides>[\s\S]*?<\/section>/)?.[0] || '';
+assert(homeRideSection.match(/data-home-ride-card/g)?.length === 2, 'The homepage ride section must contain exactly two primary ride cards.');
+assert(!homeRideSection.includes('/membership'), 'Membership must remain outside the homepage ride-card grid.');
+for (const marker of ['data-home-rides', 'data-home-membership', 'data-home-why', 'data-home-process', 'data-home-contact']) {
+  assert(publicPages.includes(marker), `Homepage markup must retain the stable ${marker} marker.`);
+  assert(homeResponsiveStyles.includes(`[data-public-main] > [${marker}]`), `Homepage responsive CSS must target ${marker} through the direct-child data-public-main contract.`);
+}
+assert(!homeResponsiveStyles.includes('#live-packages + section'), 'Homepage responsive CSS must not depend on live-package sibling positions.');
+assert(jetSkiRentalsPage.includes('sortByDuration'), 'Jet Ski package listings must enable duration sorting.');
+assert(jetCarRentalsPage.includes('sortByDuration'), 'Jet Car package listings must enable duration sorting.');
+assert(packageShowcase.includes('sortByDuration?: boolean'), 'LivePackageShowcase must expose controlled duration sorting.');
+assert(/if \(sortByDuration\) \{\s*return Number\(a\.duration_minutes/.test(packageShowcase), 'Duration sorting must prioritize duration_minutes before all other fields.');
 assert(heroCtaStyles.includes('margin-top: calc(-1 * var(--public-header-height))'), 'Public hero must overlap the shared header height without a blank strip.');
 assert(contactPolishStyles.includes('[data-public-main] > [data-public-hero]:first-of-type'), 'Contact polish must target stable public layout markers.');
 assert(heroVideoMedia.includes("'use client';"), 'Hero video media must manage browser playback readiness on the client.');

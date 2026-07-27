@@ -23,7 +23,7 @@ export default function Page() {
           { href: whatsappUrl, label: 'WhatsApp Team', icon: MessageCircle, variant: 'gold', external: true }
         ]}
       />
-      <LivePackageShowcase title="Jet Car Rental Packages" text="Choose a jet car ride by duration, seating capacity, and price. Perfect for couples, families, birthdays, photos, and premium Dubai water experiences." categories={['jet_car_rental']} />
+      <LivePackageShowcase title="Jet Car Rental Packages" text="Choose a jet car ride by duration, seating capacity, and price. Perfect for couples, families, birthdays, photos, and premium Dubai water experiences." categories={['jet_car_rental']} sortByDuration />
     </>
   );
 }

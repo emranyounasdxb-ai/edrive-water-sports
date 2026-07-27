@@ -33,6 +33,7 @@ type LivePackageShowcaseProps = {
   limit?: number;
   compact?: boolean;
   categories?: string[];
+  sortByDuration?: boolean;
 };
 
 function formatAed(value: number) {
@@ -67,8 +68,15 @@ function imageForLivePackage(item: LivePackage, index = 0) {
   return String(item.image_url || '').trim() || fallbackImageForPackage(item, index);
 }
 
-function sortedPackages(items: LivePackage[]) {
+function sortedPackages(items: LivePackage[], sortByDuration = false) {
   return [...items].sort((a, b) => {
+    if (sortByDuration) {
+      return Number(a.duration_minutes || 0) - Number(b.duration_minutes || 0)
+        || Number(a.capacity || 0) - Number(b.capacity || 0)
+        || Number(a.display_order || 100) - Number(b.display_order || 100)
+        || String(a.title).localeCompare(String(b.title));
+    }
+
     const featuredSort = Number(b.is_featured) - Number(a.is_featured);
     if (featuredSort !== 0) return featuredSort;
     return Number(a.display_order || 100) - Number(b.display_order || 100)
@@ -105,7 +113,7 @@ async function fetchPublicPackages(categories?: string[]) {
   return (fallbackResult.data || []) as LivePackage[];
 }
 
-export function LivePackageShowcase({ title = 'Ride Packages', text = '', limit, compact = false, categories }: LivePackageShowcaseProps) {
+export function LivePackageShowcase({ title = 'Ride Packages', text = '', limit, compact = false, categories, sortByDuration = false }: LivePackageShowcaseProps) {
   const [items, setItems] = useState<LivePackage[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
@@ -136,7 +144,7 @@ export function LivePackageShowcase({ title = 'Ride Packages', text = '', limit,
     return () => { active = false; };
   }, [categoriesKey, reloadKey]);
 
-  const visibleItems = useMemo(() => withDisplayImages(sortedPackages(items)), [items]);
+  const visibleItems = useMemo(() => withDisplayImages(sortedPackages(items, sortByDuration)), [items, sortByDuration]);
   const displayedItems = typeof limit === 'number' ? visibleItems.slice(0, limit) : visibleItems;
 
   if (!loading && !visibleItems.length) {

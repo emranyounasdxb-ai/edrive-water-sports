@@ -23,7 +23,7 @@ export default function Page() {
           { href: whatsappUrl, label: 'WhatsApp Team', icon: MessageCircle, variant: 'gold', external: true }
         ]}
       />
-      <LivePackageShowcase title="Jet Ski Rental Packages" text="Choose your jet ski ride by duration, seating capacity, and price. Our team will confirm the best available slot before your experience." categories={['jet_ski_rental']} />
+      <LivePackageShowcase title="Jet Ski Rental Packages" text="Choose your jet ski ride by duration, seating capacity, and price. Our team will confirm the best available slot before your experience." categories={['jet_ski_rental']} sortByDuration />
     </>
   );
 }
