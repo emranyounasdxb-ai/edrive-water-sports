@@ -1,13 +1,14 @@
 'use client';
 
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
-import { KeyRound, Pencil, Plus, RefreshCw, Search, ShieldCheck, UserRound, UsersRound, X } from 'lucide-react';
+import { Eye, EyeOff, KeyRound, Pencil, Plus, RefreshCw, Search, ShieldCheck, UserRound, UsersRound, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { recordAuditLog } from '@/lib/audit-log';
 import { countryFlagUrl, countryOptionsForValue } from '@/lib/country-options';
 import { supabase } from '@/lib/supabase-client';
+import { provisionInternalPortalUser, type InternalPortalUserInput } from '@/services/portal-user-provisioning';
 import { portalRoleLabel, usePortalAccess } from './portal-access';
 import { ContentAreaSkeleton } from './route-content-transition';
 
@@ -59,6 +60,8 @@ type TeamForm = {
   status: string;
   avatarUrl: string;
   notes: string;
+  initialPassword: string;
+  confirmPassword: string;
 };
 
 const emptyForm: TeamForm = {
@@ -71,7 +74,9 @@ const emptyForm: TeamForm = {
   department: 'Booking Operations',
   status: 'active',
   avatarUrl: '',
-  notes: ''
+  notes: '',
+  initialPassword: '',
+  confirmPassword: ''
 };
 
 function titleCase(value: string | null | undefined) {
@@ -105,8 +110,11 @@ function TeamModal({ row, saving, error, onClose, onSave }: { row: TeamRow | nul
     department: row.department || '',
     status: row.status || 'active',
     avatarUrl: row.avatar_url || '',
-    notes: row.notes || ''
+    notes: row.notes || '',
+    initialPassword: '',
+    confirmPassword: ''
   } : emptyForm);
+  const [showPassword, setShowPassword] = useState(false);
 
   const nationalityOptions = useMemo(() => countryOptionsForValue(form.nationality), [form.nationality]);
 
@@ -128,11 +136,16 @@ function TeamModal({ row, saving, error, onClose, onSave }: { row: TeamRow | nul
         </div>
         <form onSubmit={submit} className="max-h-[calc(92vh-5rem)] overflow-y-auto p-5">
           {error ? <p className="mb-4 rounded-xl bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">{error}</p> : null}
-          {!row ? <p className="mb-4 rounded-xl border border-primary/15 bg-primary-50 px-3 py-2 text-xs font-semibold leading-5 text-primary-900">Create the account in Supabase Authentication first, then paste its Auth User UID here.</p> : null}
+          {!row ? <p className="mb-4 rounded-xl border border-primary/15 bg-primary-50 px-3 py-2 text-xs font-semibold leading-5 text-primary-900">Super Admin will securely create the Auth account and linked portal profile together.</p> : null}
           <div className="grid gap-3 sm:grid-cols-2">
-            <label className="grid gap-1.5 text-sm font-semibold sm:col-span-2">Auth User UID<Input value={form.authUserId} onChange={(event) => change('authUserId', event.target.value)} required={!row} className="h-11 rounded-xl" /></label>
+            {row ? <label className="grid gap-1.5 text-sm font-semibold sm:col-span-2">Linked Auth User UID<Input value={form.authUserId} readOnly className="h-11 rounded-xl bg-muted" /></label> : null}
             <label className="grid gap-1.5 text-sm font-semibold">Full Name<Input value={form.fullName} onChange={(event) => change('fullName', event.target.value)} required className="h-11 rounded-xl" /></label>
             <label className="grid gap-1.5 text-sm font-semibold">Email<Input type="email" value={form.email} onChange={(event) => change('email', event.target.value)} required className="h-11 rounded-xl" /></label>
+            {!row ? <>
+              <label className="relative grid gap-1.5 text-sm font-semibold">Initial Password<Input type={showPassword ? 'text' : 'password'} autoComplete="new-password" value={form.initialPassword} onChange={(event) => change('initialPassword', event.target.value)} required className="h-11 rounded-xl pr-11" /><button type="button" aria-label={showPassword ? 'Hide password' : 'Show password'} onClick={() => setShowPassword((value) => !value)} className="absolute bottom-0 right-0 flex size-11 items-center justify-center text-muted-foreground">{showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}</button></label>
+              <label className="grid gap-1.5 text-sm font-semibold">Confirm Password<Input type={showPassword ? 'text' : 'password'} autoComplete="new-password" value={form.confirmPassword} onChange={(event) => change('confirmPassword', event.target.value)} required className="h-11 rounded-xl" /></label>
+              <p className="text-xs leading-5 text-muted-foreground sm:col-span-2">Use at least 12 characters with uppercase, lowercase, a number, and a special character.</p>
+            </> : null}
             <label className="grid gap-1.5 text-sm font-semibold">Phone<Input value={form.phone} onChange={(event) => change('phone', event.target.value)} className="h-11 rounded-xl" /></label>
             <label className="grid gap-1.5 text-sm font-semibold">Nationality<select value={form.nationality} onChange={(event) => change('nationality', event.target.value)} required className="h-11 rounded-xl border border-border bg-white px-3 text-sm font-semibold"><option value="">Select nationality</option>{nationalityOptions.map((option) => <option key={`${option.code}-${option.value}`} value={option.value}>{option.label}</option>)}</select></label>
             <label className="grid gap-1.5 text-sm font-semibold">Role<select value={form.role} onChange={(event) => change('role', event.target.value)} className="h-11 rounded-xl border border-border bg-white px-3 text-sm font-semibold">{roleOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
@@ -183,8 +196,32 @@ export function TeamAccessRolePage() {
     setSaving(true);
     setError('');
     try {
+      if (!editing) {
+        if (form.initialPassword !== form.confirmPassword) throw new Error('Passwords do not match.');
+        if (!(form.initialPassword.length >= 12 && /[A-Z]/.test(form.initialPassword) && /[a-z]/.test(form.initialPassword) && /\d/.test(form.initialPassword) && /[^A-Za-z0-9]/.test(form.initialPassword))) {
+          throw new Error('Password must be at least 12 characters and include uppercase, lowercase, a number, and a special character.');
+        }
+        await provisionInternalPortalUser({
+          full_name: form.fullName.trim(),
+          email: form.email.trim().toLowerCase(),
+          initial_password: form.initialPassword,
+          role: form.role as InternalPortalUserInput['role'],
+          department: form.department.trim(),
+          status: form.status as InternalPortalUserInput['status'],
+          nationality: form.nationality.trim(),
+          phone: form.phone.trim(),
+          avatar_url: form.avatarUrl.trim(),
+          notes: form.notes.trim()
+        });
+        form.initialPassword = '';
+        form.confirmPassword = '';
+        setModalOpen(false);
+        setEditing(null);
+        setNotice('Portal user created and linked successfully.');
+        await load();
+        return;
+      }
       const payload = {
-        auth_user_id: form.authUserId.trim() || null,
         full_name: form.fullName.trim(),
         email: form.email.trim().toLowerCase(),
         phone: form.phone.trim(),
@@ -196,9 +233,9 @@ export function TeamAccessRolePage() {
         notes: form.notes.trim(),
         updated_at: new Date().toISOString()
       };
-      const result = editing ? await supabase.from('admin_users').update(payload).eq('id', editing.id) : await supabase.from('admin_users').insert(payload);
+      const result = await supabase.from('admin_users').update(payload).eq('id', editing.id);
       if (result.error) throw new Error(result.error.message);
-      await recordAuditLog({ module: 'team', action: editing ? 'team_access_updated' : 'team_profile_created', entityType: 'admin_user', entityId: editing?.id || form.authUserId, entityLabel: form.fullName, summary: `${form.fullName} was assigned ${portalRoleLabel(form.role)} access.`, metadata: { role: form.role, status: form.status, nationality: form.nationality } });
+      await recordAuditLog({ module: 'team', action: 'team_access_updated', entityType: 'admin_user', entityId: editing.id, entityLabel: form.fullName, summary: `${form.fullName} was assigned ${portalRoleLabel(form.role)} access.`, metadata: { role: form.role, status: form.status, nationality: form.nationality } });
       setModalOpen(false);
       setEditing(null);
       setNotice('Team access saved.');

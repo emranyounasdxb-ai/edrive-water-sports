@@ -45,8 +45,40 @@ const b2bMigration = read('supabase/02-b2b-wallet-refunds-reporting.sql');
 const maintenanceLockdownMigration = read('supabase/02a-super-admin-maintenance-lockdown.sql');
 const b2bFinanceService = read('services/b2b-finance.ts');
 const b2bFinancePage = read('components/edrive/admin-b2b-finance-page.tsx');
+const provisioningFunction = read('supabase/functions/provision-portal-user/index.ts');
+const provisioningService = read('services/portal-user-provisioning.ts');
+const teamAccessPage = read('components/edrive/team-access-role-page.tsx');
+const b2bAgentsPage = read('components/edrive/admin-b2b-agents-polished-page.tsx');
+const nextConfig = read('next.config.mjs');
+const deployWorkflow = read('.github/workflows/static-export.yml');
+
+function sourceFiles(directory) {
+  const absolute = path.join(root, directory);
+  if (!fs.existsSync(absolute)) return [];
+  return fs.readdirSync(absolute, { withFileTypes: true }).flatMap((entry) => {
+    const relative = path.join(directory, entry.name);
+    return entry.isDirectory() ? sourceFiles(relative) : [relative];
+  });
+}
+
+const privilegedBrowserSources = ['app', 'components', 'lib', 'services'].flatMap(sourceFiles);
+const privilegedBrowserText = privilegedBrowserSources.map((file) => read(file)).join('\n');
+const createUserOutsideFunctions = [...privilegedBrowserSources, ...sourceFiles('supabase').filter((file) => !file.startsWith(path.join('supabase', 'functions')))]
+  .filter((file) => read(file).includes('auth.admin.createUser'));
 
 assert(!packageShowcase.includes('b2b_price'), 'Public package showcase must not request B2B pricing.');
+assert(createUserOutsideFunctions.length === 0, 'Privileged Auth user creation must exist only under supabase/functions/.');
+assert(!privilegedBrowserText.includes('SUPABASE_SERVICE_ROLE_KEY'), 'The Supabase service-role key must never appear in browser source code.');
+assert(provisioningFunction.includes('auth.admin.createUser'), 'Portal provisioning must create Auth users inside the Edge Function.');
+assert(provisioningFunction.includes(".eq('auth_user_id', userData.user.id)") && provisioningFunction.includes("!== 'active'") && provisioningFunction.includes("!== 'super_admin'"), 'The provisioning Edge Function must require exactly one active Super Admin database profile.');
+assert(provisioningFunction.includes('auth.admin.deleteUser(authUserId)'), 'The provisioning Edge Function must roll back newly created Auth users after profile failure.');
+assert(!/from\(['"](?:admin_users|b2b_agents)['"]\)\.insert\(\{[\s\S]{0,800}(?:initial_)?password/.test(provisioningFunction), 'Provisioning passwords must never be inserted into portal profile tables.');
+assert(!provisioningService.includes('localStorage') && !provisioningService.includes('sessionStorage'), 'Provisioning passwords must never be persisted in browser storage.');
+assert(provisioningService.includes("functions.invoke('provision-portal-user'"), 'Browser provisioning must use the secured Supabase Edge Function.');
+assert(teamAccessPage.includes('provisionInternalPortalUser') && !teamAccessPage.includes('Create the account in Supabase Authentication first'), 'Team & Access create mode must securely provision Auth and profile records without a manual Auth UUID prerequisite.');
+assert(b2bAgentsPage.includes('provisionB2BAgentUser') && !b2bAgentsPage.includes('paste the Auth user UUID'), 'B2B Agent create mode must securely provision Auth and profile records without manual Auth UUID entry.');
+assert(nextConfig.includes("output: 'export'"), 'The website must remain a Next.js static export.');
+assert(deployWorkflow.includes('local-dir: ./out/') && deployWorkflow.includes('SamKirkland/FTP-Deploy-Action'), 'The existing static-export FTP deployment architecture must remain unchanged.');
 assert(!bookingWizard.includes('b2b_price'), 'Public booking wizard must not request B2B pricing.');
 assert(packageShowcase.includes('package=${encodeURIComponent(item.id)}'), 'Package cards must preserve the exact package ID.');
 assert(bookingWizard.includes("params.get('duration')"), 'Booking wizard must preserve the selected duration.');

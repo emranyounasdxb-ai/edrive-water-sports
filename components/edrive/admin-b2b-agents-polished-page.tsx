@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
-import { Activity, Building2, CircleDollarSign, Eye, Link2, Pencil, Plus, RefreshCw, Search, ShieldCheck, UsersRound, WalletCards } from 'lucide-react';
+import { Activity, Building2, CircleDollarSign, Eye, EyeOff, Link2, Pencil, Plus, RefreshCw, Search, ShieldCheck, UsersRound, WalletCards } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -13,6 +13,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { formatAed } from '@/lib/booking-data';
 import { supabase } from '@/lib/supabase-client';
 import { manageB2BAgentProfile, setB2BAgentStatus } from '@/services/b2b-finance';
+import { provisionB2BAgentUser } from '@/services/portal-user-provisioning';
 import { usePortalAccess } from './portal-access';
 
 type Agent = {
@@ -25,9 +26,9 @@ type Wallet = { b2b_agent_id: string; balance_aed: number };
 type Booking = { id: string; b2b_agent_id: string; booking_code: string | null; customer_name: string | null; selected_package_name: string | null; total_amount: number | null; status: string | null; created_at: string | null };
 type Request = { id: string; b2b_agent_id: string; booking_request_id: string; status: string; requested_at: string };
 type Ledger = { id: string; b2b_agent_id: string; transaction_type: string; direction: string; amount_aed: number; description: string; created_at: string };
-type Form = { auth_user_id: string; company_name: string; agent_code: string; agent_type: string; contact_person: string; phone: string; billing_email: string; login_email: string; payment_terms: string; rate_profile: string; special_pricing: boolean; status: 'Active' | 'Suspended' | 'Inactive'; notes: string };
+type Form = { auth_user_id: string; company_name: string; agent_code: string; agent_type: string; contact_person: string; phone: string; billing_email: string; login_email: string; initial_password: string; confirm_password: string; payment_terms: string; rate_profile: string; special_pricing: boolean; status: 'Active' | 'Suspended' | 'Inactive'; notes: string };
 
-const blankForm: Form = { auth_user_id: '', company_name: '', agent_code: '', agent_type: 'B2B Agent', contact_person: '', phone: '', billing_email: '', login_email: '', payment_terms: 'Instant', rate_profile: 'Default B2B Package Rates', special_pricing: false, status: 'Active', notes: '' };
+const blankForm: Form = { auth_user_id: '', company_name: '', agent_code: '', agent_type: 'B2B Agent', contact_person: '', phone: '', billing_email: '', login_email: '', initial_password: '', confirm_password: '', payment_terms: 'Instant', rate_profile: 'Default B2B Package Rates', special_pricing: false, status: 'Active', notes: '' };
 const selectClass = 'h-11 w-full rounded-md border border-input bg-white px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25';
 
 export function AdminB2BAgentsPolishedPage() {
@@ -85,15 +86,20 @@ export function AdminB2BAgentsPolishedPage() {
 
   function openAdd() { setEditing(null); setForm(blankForm); setFormOpen(true); setError(''); setSuccess(''); }
   function openEdit(agent: Agent) {
-    setEditing(agent); setForm({ auth_user_id: agent.auth_user_id || '', company_name: agent.company_name || '', agent_code: agent.agent_code || '', agent_type: agent.agent_type || 'B2B Agent', contact_person: agent.contact_person || '', phone: agent.phone || '', billing_email: agent.billing_email || '', login_email: agent.login_email || '', payment_terms: agent.payment_terms || 'Instant', rate_profile: agent.rate_profile || 'Default B2B Package Rates', special_pricing: Boolean(agent.special_pricing), status: (agent.status as Form['status']) || 'Active', notes: agent.notes || '' }); setFormOpen(true); setProfileOpen(false); setError(''); setSuccess('');
+    setEditing(agent); setForm({ auth_user_id: agent.auth_user_id || '', company_name: agent.company_name || '', agent_code: agent.agent_code || '', agent_type: agent.agent_type || 'B2B Agent', contact_person: agent.contact_person || '', phone: agent.phone || '', billing_email: agent.billing_email || '', login_email: agent.login_email || '', initial_password: '', confirm_password: '', payment_terms: agent.payment_terms || 'Instant', rate_profile: agent.rate_profile || 'Default B2B Package Rates', special_pricing: Boolean(agent.special_pricing), status: (agent.status as Form['status']) || 'Active', notes: agent.notes || '' }); setFormOpen(true); setProfileOpen(false); setError(''); setSuccess('');
   }
   function field<K extends keyof Form>(key: K, value: Form[K]) { setForm((current) => ({ ...current, [key]: value })); }
   async function save() {
     if (!canManage || saving) return;
-    if (!form.company_name.trim() || !form.login_email.trim() || !form.auth_user_id.trim()) { setError('Company name, login email and Supabase Auth User UUID are required.'); return; }
+    if (!form.company_name.trim() || !form.login_email.trim() || (editing && !form.auth_user_id.trim())) { setError('Company name and login email are required.'); return; }
+    if (!editing && form.initial_password !== form.confirm_password) { setError('Passwords do not match.'); return; }
+    if (!editing && !(form.initial_password.length >= 12 && /[A-Z]/.test(form.initial_password) && /[a-z]/.test(form.initial_password) && /\d/.test(form.initial_password) && /[^A-Za-z0-9]/.test(form.initial_password))) { setError('Password must be at least 12 characters and include uppercase, lowercase, a number, and a special character.'); return; }
     setSaving(true); setError(''); setSuccess('');
     try {
-      await manageB2BAgentProfile(editing?.id || null, form.auth_user_id.trim(), { company_name: form.company_name.trim(), agent_code: form.agent_code.trim(), agent_type: form.agent_type, contact_person: form.contact_person.trim(), phone: form.phone.trim(), login_email: form.login_email.trim().toLowerCase(), email: form.login_email.trim().toLowerCase(), billing_email: form.billing_email.trim().toLowerCase() || form.login_email.trim().toLowerCase(), payment_terms: form.payment_terms, rate_profile: form.rate_profile.trim(), special_pricing: form.special_pricing, status: form.status, notes: form.notes.trim() || null });
+      const profile = { company_name: form.company_name.trim(), agent_code: form.agent_code.trim(), agent_type: form.agent_type, contact_person: form.contact_person.trim(), phone: form.phone.trim(), login_email: form.login_email.trim().toLowerCase(), email: form.login_email.trim().toLowerCase(), billing_email: form.billing_email.trim().toLowerCase() || form.login_email.trim().toLowerCase(), payment_terms: form.payment_terms, rate_profile: form.rate_profile.trim(), special_pricing: form.special_pricing, status: form.status, notes: form.notes.trim() || null };
+      if (editing) await manageB2BAgentProfile(editing.id, form.auth_user_id.trim(), profile);
+      else await provisionB2BAgentUser({ email: form.login_email, initial_password: form.initial_password, profile });
+      setForm(blankForm);
       setSuccess(editing ? 'Partner profile updated.' : 'Partner profile created and linked.'); await load(true); setFormOpen(false);
     } catch (saveError) { setError(saveError instanceof Error ? saveError.message : 'Unable to save partner profile.'); }
     finally { setSaving(false); }
@@ -119,9 +125,10 @@ export function AdminB2BAgentsPolishedPage() {
 }
 
 function AgentFormSheet({ open, onOpenChange, form, field, editing, saving, error, onSave }: { open: boolean; onOpenChange: (open: boolean) => void; form: Form; field: <K extends keyof Form>(key: K, value: Form[K]) => void; editing: boolean; saving: boolean; error: string; onSave: () => void }) {
-  return <Sheet open={open} onOpenChange={(next) => !saving && onOpenChange(next)}><SheetContent><SheetHeader><SheetTitle>{editing ? 'Edit B2B Agent' : 'Add B2B Agent'}</SheetTitle><SheetDescription>Manage the database profile linked to an existing Supabase Authentication user.</SheetDescription></SheetHeader><div className="flex-1 space-y-6 overflow-y-auto p-5">
+  const [showPassword, setShowPassword] = useState(false);
+  return <Sheet open={open} onOpenChange={(next) => !saving && onOpenChange(next)}><SheetContent><SheetHeader><SheetTitle>{editing ? 'Edit B2B Agent' : 'Add B2B Agent'}</SheetTitle><SheetDescription>{editing ? 'Manage the existing linked B2B Agent profile.' : 'Super Admin will securely create and link Auth access with the B2B Agent profile.'}</SheetDescription></SheetHeader><div className="flex-1 space-y-6 overflow-y-auto p-5">
     <FormSection title="Company Information"><Field label="Company / Agent Name" value={form.company_name} onChange={(value) => field('company_name', value)} /><Field label="Agent Code" value={form.agent_code} onChange={(value) => field('agent_code', value)} /><Select label="Agent Type" value={form.agent_type} options={['B2B Agent', 'Tour Operator', 'Hotel', 'Travel Desk', 'Vendor', 'Freelancer']} onChange={(value) => field('agent_type', value)} /><Field label="Contact Person" value={form.contact_person} onChange={(value) => field('contact_person', value)} /><Field label="Phone / WhatsApp" value={form.phone} onChange={(value) => field('phone', value)} /><Field label="Billing Email" type="email" value={form.billing_email} onChange={(value) => field('billing_email', value)} /><label className="grid gap-2 text-sm font-semibold sm:col-span-2">Notes<Textarea value={form.notes} onChange={(event) => field('notes', event.target.value)} /></label></FormSection>
-    <FormSection title="Login Access"><Field label="Login Email" type="email" value={form.login_email} onChange={(value) => field('login_email', value)} /><Field label="Supabase Auth User UUID" value={form.auth_user_id} onChange={(value) => field('auth_user_id', value)} /><div className="sm:col-span-2 rounded-xl border border-primary/15 bg-primary-50 p-3 text-xs leading-5 text-primary-900"><p className="font-bold">{form.auth_user_id ? 'Auth Linked' : 'Not Linked'}</p><p>Create the user manually in Supabase Authentication first, then paste the Auth user UUID here. Passwords are never stored in this profile.</p></div></FormSection>
+    <FormSection title="Login Access"><Field label="Login Email" type="email" value={form.login_email} onChange={(value) => field('login_email', value)} />{editing ? <Field label="Linked Auth User UUID" value={form.auth_user_id} onChange={() => undefined} readOnly /> : <><label className="relative grid gap-2 text-sm font-semibold">Initial Password<Input type={showPassword ? 'text' : 'password'} autoComplete="new-password" value={form.initial_password} onChange={(event) => field('initial_password', event.target.value)} className="pr-11" /><button type="button" aria-label={showPassword ? 'Hide password' : 'Show password'} onClick={() => setShowPassword((value) => !value)} className="absolute bottom-0 right-0 flex size-10 items-center justify-center text-muted-foreground">{showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}</button></label><Field label="Confirm Password" type={showPassword ? 'text' : 'password'} autoComplete="new-password" value={form.confirm_password} onChange={(value) => field('confirm_password', value)} /><p className="sm:col-span-2 text-xs leading-5 text-muted-foreground">Use at least 12 characters with uppercase, lowercase, a number, and a special character.</p></>}<div className="sm:col-span-2 rounded-xl border border-primary/15 bg-primary-50 p-3 text-xs leading-5 text-primary-900"><p className="font-bold">{editing ? 'Auth Linked' : 'Secure provisioning'}</p><p>{editing ? 'The linked Auth identity is retained while this profile is updated.' : 'Auth access and the B2B Agent profile will be created and linked securely by Super Admin.'}</p></div></FormSection>
     <FormSection title="Commercial Settings"><Select label="Payment Terms" value={form.payment_terms} options={['Instant', 'Daily', 'Weekly', 'Monthly', 'Custom']} onChange={(value) => field('payment_terms', value)} /><Field label="Rate Profile" value={form.rate_profile} onChange={(value) => field('rate_profile', value)} /><label className="flex items-center gap-3 rounded-xl border p-3 text-sm font-semibold"><input type="checkbox" checked={form.special_pricing} onChange={(event) => field('special_pricing', event.target.checked)} />Special Pricing</label><Select label="Status" value={form.status} options={['Active', 'Suspended', 'Inactive']} onChange={(value) => field('status', value as Form['status'])} /></FormSection>
     {error ? <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm font-semibold text-red-700">{error}</p> : null}
   </div><SheetFooter><Button variant="outline" disabled={saving} onClick={() => onOpenChange(false)}>Cancel</Button><Button disabled={saving} onClick={onSave}>{saving ? 'Saving...' : editing ? 'Save Changes' : 'Create & Link Agent'}</Button></SheetFooter></SheetContent></Sheet>;

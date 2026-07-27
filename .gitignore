@@ -10,3 +10,4 @@ out
 .vercel
 coverage
 *.tsbuildinfo
+supabase/.temp/
