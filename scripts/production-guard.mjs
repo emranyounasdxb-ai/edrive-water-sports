@@ -85,6 +85,13 @@ assert(publicPages.match(/data-home-ride-card/g)?.length === 3, 'The homepage mu
 const homeRideSection = publicPages.match(/<section className="bg-\[#f4f5f5\]" data-home-rides>[\s\S]*?<\/section>/)?.[0] || '';
 assert(homeRideSection.match(/data-home-ride-card/g)?.length === 2, 'The homepage ride section must contain exactly two primary ride cards.');
 assert(!homeRideSection.includes('/membership'), 'Membership must remain outside the homepage ride-card grid.');
+assert(homeRideSection.includes('View Jet Ski Packages'), 'The Jet Ski ride CTA must remain View Jet Ski Packages.');
+assert(homeRideSection.includes('View Jet Car Packages'), 'The Jet Car ride CTA must remain View Jet Car Packages.');
+assert(!publicPages.includes('bg-primary-950'), 'The homepage must not use the unsupported bg-primary-950 utility.');
+assert(!publicPages.includes('text-primary-950'), 'The homepage must not use the unsupported text-primary-950 utility.');
+const homeMembershipSection = publicPages.match(/<section className="border-y border-border bg-white\/70" data-home-membership>[\s\S]*?<\/section>/)?.[0] || '';
+assert(homeMembershipSection.includes('bg-primary-900'), 'The Membership panel must retain its supported dark primary-900 background.');
+assert(/<Button[^>]*\btext-primary-900\b[^>]*>[\s\S]*?href="\/membership"/.test(homeMembershipSection), 'The Membership CTA must retain a readable primary-900 text color.');
 for (const marker of ['data-home-rides', 'data-home-membership', 'data-home-why', 'data-home-process', 'data-home-contact']) {
   assert(publicPages.includes(marker), `Homepage markup must retain the stable ${marker} marker.`);
   assert(homeResponsiveStyles.includes(`[data-public-main] > [${marker}]`), `Homepage responsive CSS must target ${marker} through the direct-child data-public-main contract.`);

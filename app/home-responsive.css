@@ -46,10 +46,40 @@
   border-radius: 1.4rem !important;
 }
 
+[data-public-main] > [data-home-why] .premium-card-hover > div {
+  padding: 1.5rem !important;
+}
+
+[data-public-main] > [data-home-why] .premium-card-hover span.mb-4 {
+  width: 2.8rem !important;
+  height: 2.8rem !important;
+}
+
+[data-public-main] > [data-home-why] .premium-card-hover span.mb-4 svg {
+  width: 1.35rem;
+  height: 1.35rem;
+}
+
+[data-public-main] > [data-home-why] .premium-card-hover h3 {
+  margin-bottom: 0.7rem;
+  line-height: 1.4;
+}
+
+[data-public-main] > [data-home-why] .premium-card-hover p {
+  margin-top: 0;
+  font-size: 0.86rem !important;
+  line-height: 1.65 !important;
+}
+
 [data-public-main] > [data-home-process] > .container-x {
   display: grid !important;
-  grid-template-columns: minmax(0, 0.78fr) minmax(0, 1.22fr) !important;
+  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr) !important;
   gap: 2rem !important;
+}
+
+[data-public-main] > [data-home-process] > .container-x > div:first-child h2 {
+  max-width: 34rem;
+  font-size: clamp(1.85rem, 2.4vw, 2.35rem);
 }
 
 [data-public-main] > [data-home-process] .premium-card-hover {

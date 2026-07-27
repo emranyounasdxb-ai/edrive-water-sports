@@ -55,7 +55,7 @@ export function HomePage() {
               text="Choose a premium Jet Ski experience, then compare available ride durations and seating options."
               image="/images/edrive/home/home-jet-ski-rentals.webp"
               href="/jet-ski-rentals"
-              cta="Explore Jet Ski Rides"
+              cta="View Jet Ski Packages"
               data-home-ride-card
             />
             <HomeRideCard
@@ -63,7 +63,7 @@ export function HomePage() {
               text="Discover a luxury Jet Car experience for couples, families, celebrations, and memorable Dubai moments."
               image="/images/edrive/home/home-jet-car-rentals.webp"
               href="/jet-car-rentals"
-              cta="Explore Jet Car Rides"
+              cta="View Jet Car Packages"
               data-home-ride-card
             />
           </div>
@@ -72,13 +72,13 @@ export function HomePage() {
 
       <section className="border-y border-border bg-white/70" data-home-membership>
         <div className={cn('container-x', sectionPad)}>
-          <div className="grid overflow-hidden rounded-[1.6rem] bg-primary-950 text-white shadow-xl md:grid-cols-2 md:items-stretch">
+          <div className="grid overflow-hidden rounded-[1.6rem] bg-primary-900 text-white shadow-xl md:grid-cols-2 md:items-stretch">
             <Image src="/images/edrive/home/home-membership-gold-card.webp" alt="eDrive Membership card" width={1200} height={800} className="h-full min-h-64 w-full object-cover" />
             <div className="flex flex-col justify-center p-6 sm:p-8 lg:p-10">
               <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-accent-300">eDrive Membership</p>
               <h2 className="mt-3 font-heading text-3xl font-semibold leading-tight sm:text-4xl">Make Every Ride More Rewarding</h2>
-              <p className="mt-4 max-w-xl text-sm leading-7 text-white/75 sm:text-base">Discover priority benefits, exclusive offers, and dedicated support designed for returning eDrive guests.</p>
-              <Button asChild className="mt-6 w-fit rounded-full bg-white text-primary-950 hover:bg-primary-50"><Link href="/membership">Explore Membership<ArrowRight data-icon aria-hidden="true" /></Link></Button>
+              <p className="mt-4 max-w-xl text-sm leading-7 text-white/80 sm:text-base">Discover priority benefits, exclusive offers, and dedicated support designed for returning eDrive guests.</p>
+              <Button asChild className="mt-6 w-fit rounded-full bg-accent-500 text-primary-900 hover:bg-accent-100"><Link href="/membership">Explore Membership<ArrowRight data-icon aria-hidden="true" /></Link></Button>
             </div>
           </div>
         </div>
@@ -264,7 +264,7 @@ function HomeRideCard({ title, text, image, href, cta, ...marker }: { title: str
       <div className="flex flex-1 flex-col p-6 sm:p-7">
         <h3 className="font-heading text-2xl font-semibold text-foreground sm:text-3xl">{title}</h3>
         <p className="mt-3 flex-1 text-sm leading-7 text-muted-foreground sm:text-base">{text}</p>
-        <span className="mt-5 inline-flex items-center gap-2 font-semibold text-primary">{cta}<ArrowRight data-icon aria-hidden="true" /></span>
+        <span className="mt-5 inline-flex w-fit items-center gap-2 rounded-full bg-primary-900 px-5 py-2.5 text-sm font-semibold text-white transition group-hover:bg-primary-700 group-focus-visible:bg-primary-700">{cta}<ArrowRight data-icon aria-hidden="true" /></span>
       </div>
     </Link>
   );
