@@ -18,6 +18,8 @@ export type B2BWalletLedgerEntry = {
   booking_request_id: string | null;
   refund_request_id: string | null;
   reversal_of_entry_id: string | null;
+  idempotency_key?: string | null;
+  actor_admin_user_id?: string | null;
   description: string;
   created_at: string;
 };
