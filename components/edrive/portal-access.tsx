@@ -46,6 +46,9 @@ function normalizePath(pathname: string) {
 
 function canMutatePath(role: string, pathname: string) {
   const path = normalizePath(pathname);
+  const activePortalRoles = new Set(['super_admin', 'admin', 'booking_staff', 'manager', 'finance']);
+  const isSelfProfilePath = path === '/admin/my-profile' || path === '/admin/manager/my-profile';
+  if (isSelfProfilePath && activePortalRoles.has(role)) return true;
   if (role === 'super_admin') return true;
   if (role === 'admin') return false;
   if (role === 'booking_staff') return path === '/admin/bookings' || path.startsWith('/admin/bookings/') || path === '/admin/inquiries' || path.startsWith('/admin/inquiries/');

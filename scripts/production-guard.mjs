@@ -51,6 +51,8 @@ const teamAccessPage = read('components/edrive/team-access-role-page.tsx');
 const b2bAgentsPage = read('components/edrive/admin-b2b-agents-polished-page.tsx');
 const nextConfig = read('next.config.mjs');
 const deployWorkflow = read('.github/workflows/static-export.yml');
+const myProfilePage = read('components/edrive/my-profile-page.tsx');
+const myProfileAccessMigration = read('supabase/my-profile-access.sql');
 
 function sourceFiles(directory) {
   const absolute = path.join(root, directory);
@@ -84,6 +86,15 @@ assert(teamAccessPage.includes('provisionInternalPortalUser') && !teamAccessPage
 assert(b2bAgentsPage.includes('provisionB2BAgentUser') && !b2bAgentsPage.includes('paste the Auth user UUID'), 'B2B Agent create mode must securely provision Auth and profile records without manual Auth UUID entry.');
 assert(nextConfig.includes("output: 'export'"), 'The website must remain a Next.js static export.');
 assert(deployWorkflow.includes('local-dir: ./out/') && deployWorkflow.includes('SamKirkland/FTP-Deploy-Action'), 'The existing static-export FTP deployment architecture must remain unchanged.');
+assert(portalAccess.includes("path === '/admin/my-profile'") && portalAccess.includes("path === '/admin/manager/my-profile'"), 'Approved self-profile routes must retain their mutation exception.');
+assert(portalAccess.includes("['super_admin', 'admin', 'booking_staff', 'manager', 'finance']"), 'Every active supported portal role must retain self-profile mutation access.');
+assert(portalAccess.includes("if (role === 'admin') return false;") && portalAccess.includes("if (role === 'finance') return false;"), 'Admin and Finance must remain read-only outside approved self-profile routes.');
+assert(myProfilePage.includes("const avatarBucket = 'profile-avatars'"), 'Self-profile uploads must continue using the profile-avatars bucket.');
+assert(myProfilePage.includes('const maxAvatarSize = 3 * 1024 * 1024') && myProfilePage.includes("'image/jpeg', 'image/png', 'image/webp'"), 'Self-profile uploads must retain the 3 MB JPG, PNG, and WebP restrictions.');
+assert(myProfilePage.includes('`${userId}/profile-${Date.now()}') && myProfilePage.includes("rpc('update_my_admin_profile'"), 'Self-profile writes must use the authenticated user storage folder and secured profile RPC.');
+assert(myProfilePage.includes('refreshAccess()'), 'Successful self-profile updates must immediately refresh portal avatar context.');
+assert(myProfilePage.includes('newlyUploadedPath') && myProfilePage.includes('remove([newlyUploadedPath])'), 'Failed profile updates must remove newly uploaded unused avatars.');
+assert(myProfileAccessMigration.includes('where auth_user_id = auth.uid()'), 'The self-profile RPC must remain restricted to the authenticated user profile.');
 assert(!bookingWizard.includes('b2b_price'), 'Public booking wizard must not request B2B pricing.');
 assert(packageShowcase.includes('package=${encodeURIComponent(item.id)}'), 'Package cards must preserve the exact package ID.');
 assert(bookingWizard.includes("params.get('duration')"), 'Booking wizard must preserve the selected duration.');

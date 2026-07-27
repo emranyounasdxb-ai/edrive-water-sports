@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { countryFlagUrl, countryOptionsForValue } from '@/lib/country-options';
 import { recordAuditLog } from '@/lib/audit-log';
 import { supabase } from '@/lib/supabase-client';
-import { portalRoleLabel } from './portal-access';
+import { portalRoleLabel, usePortalAccess } from './portal-access';
 import { ContentAreaSkeleton } from './route-content-transition';
 
 type ProfileRow = {
@@ -55,6 +55,7 @@ function toneClass(tone: 'success' | 'error' | 'info') {
 }
 
 export function MyProfilePage() {
+  const { refreshAccess } = usePortalAccess();
   const [profile, setProfile] = useState<ProfileRow | null>(null);
   const [authEmail, setAuthEmail] = useState('');
   const [form, setForm] = useState<ProfileForm>({ fullName: '', phone: '', nationality: '', avatarUrl: '' });
@@ -165,6 +166,7 @@ export function MyProfilePage() {
 
     setSaving(true);
     setNotice(null);
+    let newlyUploadedPath = '';
 
     try {
       const { data: userData } = await supabase.auth.getUser();
@@ -173,6 +175,7 @@ export function MyProfilePage() {
 
       const previousAvatarUrl = form.avatarUrl;
       const avatarUrl = await uploadAvatar(user.id);
+      if (avatarFile && avatarUrl !== previousAvatarUrl) newlyUploadedPath = storagePathFromPublicUrl(avatarUrl);
       const { error: updateError } = await supabase.rpc('update_my_admin_profile', {
         p_full_name: form.fullName.trim(),
         p_phone: form.phone.trim(),
@@ -200,8 +203,10 @@ export function MyProfilePage() {
       setAvatarPreview(avatarUrl);
       setAvatarFile(null);
       setProfile((current) => current ? { ...current, full_name: form.fullName.trim(), phone: form.phone.trim(), nationality: form.nationality.trim(), avatar_url: avatarUrl } : current);
-      setNotice({ tone: 'success', text: 'Profile updated successfully. The sidebar will refresh on your next page load.' });
+      refreshAccess();
+      setNotice({ tone: 'success', text: 'Profile updated successfully.' });
     } catch (error) {
+      if (newlyUploadedPath) await supabase.storage.from(avatarBucket).remove([newlyUploadedPath]);
       setNotice({ tone: 'error', text: error instanceof Error ? error.message : 'Unable to update profile.' });
     } finally {
       setSaving(false);
