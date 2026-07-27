@@ -9,13 +9,6 @@ import { countryFlagUrl } from '@/lib/country-options';
 import { supabase } from '@/lib/supabase-client';
 import { portalRoleLabel, usePortalAccess } from './portal-access';
 
-type ProfileSummary = {
-  name: string;
-  email: string;
-  avatarUrl: string;
-  nationality: string;
-};
-
 const hiddenShellSelectors = [
   'aside .premium-surface',
   'aside .mt-auto.flex.flex-col.items-center.gap-2.pb-1',
@@ -61,15 +54,14 @@ function ensureTopbarMount() {
 export function TopbarProfileMenu() {
   const pathname = usePathname();
   const router = useRouter();
-  const { role, loading: roleLoading } = usePortalAccess();
+  const { role, loading: roleLoading, fullName, email, avatarUrl, nationality } = usePortalAccess();
   const [mount, setMount] = useState<HTMLElement | null>(null);
-  const [profile, setProfile] = useState<ProfileSummary>({ name: 'Portal User', email: '', avatarUrl: '', nationality: '' });
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   const isLoginPage = pathname === '/admin/login' || pathname === '/admin/login/';
   const profileHref = role === 'manager' ? '/admin/manager/my-profile/' : '/admin/my-profile/';
-  const flagUrl = countryFlagUrl(profile.nationality, 40);
+  const flagUrl = countryFlagUrl(nationality, 40);
 
   useEffect(() => {
     if (isLoginPage) return;
@@ -90,41 +82,6 @@ export function TopbarProfileMenu() {
       document.getElementById('edrive-topbar-profile-menu')?.remove();
     };
   }, [isLoginPage]);
-
-  useEffect(() => {
-    if (roleLoading || !role || isLoginPage) return;
-    let active = true;
-
-    async function loadProfile() {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const authUser = sessionData.session?.user;
-      if (!authUser || !active) return;
-
-      const authEmail = authUser.email || '';
-      const filter = authEmail
-        ? `auth_user_id.eq.${authUser.id},email.eq.${authEmail}`
-        : `auth_user_id.eq.${authUser.id}`;
-      const { data } = await supabase
-        .from('admin_users')
-        .select('full_name,email,avatar_url,nationality')
-        .or(filter)
-        .limit(1);
-      if (!active) return;
-
-      const row = data?.[0] as Record<string, unknown> | undefined;
-      setProfile({
-        name: String(row?.full_name || authEmail || 'Portal User'),
-        email: String(row?.email || authEmail || ''),
-        avatarUrl: String(row?.avatar_url || ''),
-        nationality: String(row?.nationality || '')
-      });
-    }
-
-    void loadProfile();
-    return () => {
-      active = false;
-    };
-  }, [isLoginPage, role, roleLoading, pathname]);
 
   useEffect(() => {
     setOpen(false);
@@ -159,8 +116,8 @@ export function TopbarProfileMenu() {
         aria-label="Open profile menu"
         className="flex h-10 items-center gap-1 rounded-full border border-border bg-white px-1.5 text-primary-900 shadow-sm transition hover:border-primary/35 hover:bg-primary-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20"
       >
-        {profile.avatarUrl ? (
-          <img src={profile.avatarUrl} alt={profile.name} className="size-8 rounded-full object-cover" />
+        {avatarUrl ? (
+          <img src={avatarUrl} alt={fullName || 'Portal User'} className="size-8 rounded-full object-cover" />
         ) : (
           <span className="flex size-8 items-center justify-center rounded-full bg-[#F0E6D7] text-primary"><User className="size-4" aria-hidden="true" /></span>
         )}
@@ -170,18 +127,18 @@ export function TopbarProfileMenu() {
       {open ? (
         <div className="absolute right-0 top-[calc(100%+0.65rem)] z-[100] w-72 overflow-hidden rounded-[1.25rem] border border-border/80 bg-white shadow-[0_22px_60px_rgba(8,37,50,0.18)]">
           <div className="flex items-center gap-3 bg-[linear-gradient(135deg,#EAF8FA,#FFFFFF_55%,#F4E7C7)] p-4">
-            {profile.avatarUrl ? (
-              <img src={profile.avatarUrl} alt={profile.name} className="size-12 rounded-full border-2 border-white object-cover shadow-sm" />
+            {avatarUrl ? (
+              <img src={avatarUrl} alt={fullName || 'Portal User'} className="size-12 rounded-full border-2 border-white object-cover shadow-sm" />
             ) : (
               <span className="flex size-12 items-center justify-center rounded-full bg-[#F0E6D7] text-primary shadow-sm"><User className="size-5" aria-hidden="true" /></span>
             )}
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5">
-                <p className="truncate text-sm font-bold text-primary-900">{profile.name}</p>
+                <p className="truncate text-sm font-bold text-primary-900">{fullName || 'Portal User'}</p>
                 {flagUrl ? <img src={flagUrl} alt="Nationality flag" className="h-3.5 w-5 rounded-[2px] object-cover shadow-sm" /> : null}
               </div>
               <p className="mt-0.5 text-xs font-semibold text-primary">{portalRoleLabel(role)}</p>
-              <p className="mt-0.5 truncate text-[11px] text-muted-foreground">{profile.email}</p>
+              <p className="mt-0.5 truncate text-[11px] text-muted-foreground">{email}</p>
             </div>
           </div>
 

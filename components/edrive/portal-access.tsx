@@ -1,14 +1,21 @@
 'use client';
 
 import { createContext, useContext, useEffect, useMemo, useState, type FormEvent, type MouseEvent, type ReactNode } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { ShieldCheck } from 'lucide-react';
 import { supabase } from '@/lib/supabase-client';
 
 type PortalAccessValue = {
+  userId: string;
+  fullName: string;
+  email: string;
+  avatarUrl: string;
+  nationality: string;
   role: string;
   status: string;
+  accessError: string;
   loading: boolean;
+  refreshAccess: () => void;
   isSuperAdmin: boolean;
   isReadOnlyAdmin: boolean;
   isBookingManager: boolean;
@@ -16,9 +23,16 @@ type PortalAccessValue = {
 };
 
 const PortalAccessContext = createContext<PortalAccessValue>({
+  userId: '',
+  fullName: '',
+  email: '',
+  avatarUrl: '',
+  nationality: '',
   role: '',
   status: '',
+  accessError: '',
   loading: true,
+  refreshAccess: () => undefined,
   isSuperAdmin: false,
   isReadOnlyAdmin: false,
   isBookingManager: false,
@@ -60,32 +74,64 @@ function legacyRoleLabel(role: string) {
 
 export function PortalAccessProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [role, setRole] = useState('');
   const [status, setStatus] = useState('');
+  const [profile, setProfile] = useState({ userId: '', fullName: '', email: '', avatarUrl: '', nationality: '' });
+  const [accessError, setAccessError] = useState('');
   const [loading, setLoading] = useState(true);
+  const [loadVersion, setLoadVersion] = useState(0);
+  const isLoginPage = normalizePath(pathname) === '/admin/login';
 
   useEffect(() => {
     let active = true;
 
     async function loadRole() {
+      if (isLoginPage) {
+        if (active) {
+          setProfile({ userId: '', fullName: '', email: '', avatarUrl: '', nationality: '' });
+          setRole('');
+          setStatus('');
+          setAccessError('');
+          setLoading(false);
+        }
+        return;
+      }
+      setLoading(true);
+      setAccessError('');
       const { data: sessionData } = await supabase.auth.getSession();
       const user = sessionData.session?.user;
       if (!user) {
-        if (active) setLoading(false);
+        if (active) {
+          setProfile({ userId: '', fullName: '', email: '', avatarUrl: '', nationality: '' });
+          setRole('');
+          setStatus('');
+          setLoading(false);
+          router.replace('/admin/login');
+        }
         return;
       }
 
-      const { data } = await supabase.from('admin_users').select('role,status').eq('auth_user_id', user.id).limit(2);
+      const { data, error } = await supabase.from('admin_users').select('full_name,email,role,status,avatar_url,nationality').eq('auth_user_id', user.id).limit(2);
       if (!active) return;
-      const profile = data?.length === 1 && String(data[0]?.status || '').toLowerCase() === 'active' ? data[0] : null;
-      setRole(String(profile?.role || ''));
-      setStatus(String(profile?.status || ''));
+      if (error) setAccessError(`Profile read error: ${error.message}`);
+      const row = !error && data?.length === 1 && String(data[0]?.status || '').toLowerCase() === 'active' ? data[0] : null;
+      if (!row && !error) setAccessError('No active portal profile is linked to this account.');
+      setProfile({
+        userId: row ? user.id : '',
+        fullName: String(row?.full_name || user.email || ''),
+        email: String(row?.email || user.email || ''),
+        avatarUrl: String(row?.avatar_url || ''),
+        nationality: String(row?.nationality || '')
+      });
+      setRole(String(row?.role || ''));
+      setStatus(String(row?.status || ''));
       setLoading(false);
     }
 
     void loadRole();
     return () => { active = false; };
-  }, []);
+  }, [isLoginPage, loadVersion, router]);
 
   useEffect(() => {
     if (loading || !role) return;
@@ -105,15 +151,19 @@ export function PortalAccessProvider({ children }: { children: ReactNode }) {
     return () => observer.disconnect();
   }, [loading, role]);
 
+  const effectiveLoading = loading || (!isLoginPage && !role && !accessError);
   const value = useMemo<PortalAccessValue>(() => ({
+    ...profile,
     role,
     status,
-    loading,
+    accessError,
+    loading: effectiveLoading,
+    refreshAccess: () => setLoadVersion((value) => value + 1),
     isSuperAdmin: role === 'super_admin',
     isReadOnlyAdmin: role === 'admin',
     isBookingManager: role === 'booking_staff',
     canMutateCurrentPage: canMutatePath(role, pathname)
-  }), [loading, pathname, role, status]);
+  }), [accessError, effectiveLoading, pathname, profile, role, status]);
 
   return <PortalAccessContext.Provider value={value}>{children}</PortalAccessContext.Provider>;
 }

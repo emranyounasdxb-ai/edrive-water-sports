@@ -9,6 +9,7 @@ import { countryFlagUrl, countryOptionsForValue } from '@/lib/country-options';
 import { recordAuditLog } from '@/lib/audit-log';
 import { supabase } from '@/lib/supabase-client';
 import { portalRoleLabel } from './portal-access';
+import { ContentAreaSkeleton } from './route-content-transition';
 
 type ProfileRow = {
   id: string;
@@ -282,7 +283,7 @@ export function MyProfilePage() {
     setResetSending(false);
   }
 
-  if (loading) return <div className="p-6 text-sm font-semibold text-muted-foreground">Loading your profile...</div>;
+  if (loading) return <ContentAreaSkeleton label="Loading your profile" cards={2} />;
   if (!profile) return <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-sm font-semibold text-red-700">Your linked staff profile could not be loaded.</div>;
 
   return (

@@ -9,6 +9,7 @@ import { recordAuditLog } from '@/lib/audit-log';
 import { countryFlagUrl, countryOptionsForValue } from '@/lib/country-options';
 import { supabase } from '@/lib/supabase-client';
 import { portalRoleLabel, usePortalAccess } from './portal-access';
+import { ContentAreaSkeleton } from './route-content-transition';
 
 const roleOptions = [
   { value: 'super_admin', label: 'Super Admin' },
@@ -216,7 +217,7 @@ export function TeamAccessRolePage() {
     else setNotice(`Password reset email sent to ${row.email}.`);
   }
 
-  if (roleLoading || loading) return <div className="p-6 text-sm font-semibold text-muted-foreground">Loading team access...</div>;
+  if (roleLoading || loading) return <ContentAreaSkeleton label="Loading team access" />;
   if (!isSuperAdmin && !isReadOnlyAdmin) return <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-sm font-semibold text-red-700">This page is available to Super Admin and Admin accounts.</div>;
 
   return (

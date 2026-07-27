@@ -62,7 +62,6 @@ export default function Page() {
 
       setLoading(false);
       router.push('/admin');
-      router.refresh();
       return;
     }
 
@@ -81,7 +80,6 @@ export default function Page() {
 
     setLoading(false);
     router.push('/agent');
-    router.refresh();
   }
 
   async function handlePasswordReset() {

@@ -1,15 +1,19 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { RefreshCw, RotateCcw, LogIn } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/supabase-client';
+import { usePortalAccess } from './portal-access';
 
 function portalIsStillLoading() {
   return Array.from(document.querySelectorAll('div')).some((element) => element.textContent?.trim() === 'Loading portal...');
 }
 
 export function PortalLoadingRecovery() {
+  const router = useRouter();
+  const { refreshAccess } = usePortalAccess();
   const [show, setShow] = useState(false);
   const [working, setWorking] = useState(false);
 
@@ -34,14 +38,16 @@ export function PortalLoadingRecovery() {
         await Promise.all(keys.map((key) => caches.delete(key)));
       }
     } finally {
-      window.location.reload();
+      setShow(false);
+      setWorking(false);
+      refreshAccess();
     }
   }
 
   async function signInAgain() {
     setWorking(true);
     await supabase.auth.signOut();
-    window.location.assign('/admin/login/');
+    router.replace('/admin/login');
   }
 
   if (!show) return null;
@@ -53,7 +59,7 @@ export function PortalLoadingRecovery() {
         <h1 className="mt-4 font-heading text-2xl font-semibold text-primary-900">Portal is taking longer than expected</h1>
         <p className="mt-2 text-sm leading-6 text-muted-foreground">Your saved session or browser cache may need a refresh.</p>
         <div className="mt-5 grid gap-2">
-          <Button type="button" disabled={working} onClick={() => window.location.reload()} className="rounded-full"><RefreshCw className="size-4" aria-hidden="true" />Retry Portal</Button>
+          <Button type="button" disabled={working} onClick={() => { setShow(false); refreshAccess(); }} className="rounded-full"><RefreshCw className="size-4" aria-hidden="true" />Retry Portal</Button>
           <Button type="button" disabled={working} variant="outline" onClick={clearCacheAndRetry} className="rounded-full bg-white"><RotateCcw className="size-4" aria-hidden="true" />Clear Cache & Retry</Button>
           <Button type="button" disabled={working} variant="ghost" onClick={signInAgain} className="rounded-full"><LogIn className="size-4" aria-hidden="true" />Sign In Again</Button>
         </div>

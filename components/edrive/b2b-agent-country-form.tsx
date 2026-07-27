@@ -222,7 +222,6 @@ export function B2BAgentCountryForm() {
       setEditingId('');
       await loadAgents();
       setForm((current) => ({ ...emptyForm, agent_code: nextAgentCode(agents), country: current.country }));
-      window.setTimeout(() => window.location.reload(), 500);
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : 'Unable to save B2B agent.');
     } finally {

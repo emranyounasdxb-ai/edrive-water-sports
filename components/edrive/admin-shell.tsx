@@ -37,8 +37,8 @@ import { cn } from '@/lib/utils';
 import { LiveWeatherPill } from './admin/live-weather-pill';
 import { OperationsProvider } from './admin/operations-store';
 import { BrandMark } from './brand';
-
-const portalLoadTimeoutMs = 12000;
+import { RouteContentTransition } from './route-content-transition';
+import { usePortalAccess } from './portal-access';
 
 const iconMap = {
   LayoutDashboard,
@@ -117,7 +117,6 @@ const countryAliasByCode: Record<string, string> = {
 type NavItem = { href: string; label: string; icon: string; section?: string; roles?: AdminNavRole[] };
 type NavGroup = { section: string; items: NavItem[] };
 type PortalUser = { name: string; email: string; role: string; roleLabel: string; avatarUrl: string; nationality: string };
-type AdminProfile = { full_name: string | null; email: string | null; role: string | null; status: string | null; avatar_url: string | null; nationality: string | null };
 
 function normalizePath(pathname: string) {
   if (!pathname || pathname === '/') return '/';
@@ -135,10 +134,6 @@ function displayName(value: string) {
 
 function isManagerRole(role: string) {
   return role === 'manager';
-}
-
-function isActiveStatus(status: string | null | undefined) {
-  return String(status || '').trim().toLowerCase() === 'active';
 }
 
 function matchesPath(pathname: string, href: string) {
@@ -214,13 +209,6 @@ function activeSectionForPath(items: NavItem[], currentPath: string) {
   return items.find((item) => item.section && matchesPath(currentPath, item.href))?.section || '';
 }
 
-function withTimeout<T>(promise: Promise<T>, message: string) {
-  return new Promise<T>((resolve, reject) => {
-    const timeout = window.setTimeout(() => reject(new Error(message)), portalLoadTimeoutMs);
-    promise.then(resolve, reject).finally(() => window.clearTimeout(timeout));
-  });
-}
-
 function ProfileFlag({ nationality, compact = false }: { nationality?: string; compact?: boolean }) {
   const code = countryCode(nationality || '');
   if (!code) return null;
@@ -247,75 +235,22 @@ function ProfileAvatar({ src, size = 'md' }: { src?: string; size?: 'sm' | 'md' 
 export function AdminShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  const { loading: accessLoading, accessError, refreshAccess, fullName, email, avatarUrl, nationality, role } = usePortalAccess();
   const currentPath = normalizePath(pathname);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [openSection, setOpenSection] = useState('');
-  const [user, setUser] = useState<PortalUser | null>(null);
-  const [ready, setReady] = useState(false);
-  const [accessIssue, setAccessIssue] = useState('');
-  const [loadVersion, setLoadVersion] = useState(0);
   const isLoginPage = currentPath === '/admin/login';
-
-  useEffect(() => {
-    let active = true;
-
-    async function loadUser() {
-      if (isLoginPage) {
-        if (active) setReady(true);
-        return;
-      }
-
-      setReady(false);
-      setAccessIssue('');
-
-      try {
-        const sessionResult = await withTimeout(supabase.auth.getSession(), 'Session check timed out.');
-        if (!active) return;
-
-        const authUser = sessionResult.data.session?.user;
-        if (!authUser) {
-          setReady(true);
-          router.replace('/admin/login');
-          return;
-        }
-
-        const authEmail = authUser.email || '';
-        const queryFilter = authEmail ? `auth_user_id.eq.${authUser.id},email.eq.${authEmail}` : `auth_user_id.eq.${authUser.id}`;
-        const profileResult = await withTimeout(
-          supabase.from('admin_users').select('full_name,email,role,status,avatar_url,nationality').or(queryFilter).limit(1),
-          'Profile check timed out.'
-        );
-        if (!active) return;
-
-        if (profileResult.error) throw new Error(`Profile read error: ${profileResult.error.message}`);
-
-        const profile = (profileResult.data?.[0] ?? null) as AdminProfile | null;
-        if (!profile) throw new Error(`No active admin profile found for ${authEmail || authUser.id}.`);
-        if (!isActiveStatus(profile.status)) throw new Error(`Admin profile status is ${profile.status || 'empty'}.`);
-
-        setUser({
-          name: profile.full_name ? displayName(profile.full_name) : authEmail || 'Admin',
-          email: profile.email || authEmail || '',
-          role: profile.role || 'admin',
-          roleLabel: roleLabel(profile.role || 'admin'),
-          avatarUrl: profile.avatar_url || '',
-          nationality: profile.nationality || ''
-        });
-      } catch (loadError) {
-        if (!active) return;
-        setUser(null);
-        setAccessIssue(loadError instanceof Error ? loadError.message : 'Portal access could not be loaded.');
-      } finally {
-        if (active) setReady(true);
-      }
-    }
-
-    void loadUser();
-    return () => {
-      active = false;
-    };
-  }, [isLoginPage, loadVersion, router]);
+  const ready = isLoginPage || !accessLoading;
+  const accessIssue = accessError;
+  const user = useMemo<PortalUser | null>(() => role ? ({
+    name: fullName ? displayName(fullName) : email || 'Admin',
+    email,
+    role,
+    roleLabel: roleLabel(role),
+    avatarUrl,
+    nationality
+  }) : null, [avatarUrl, email, fullName, nationality, role]);
 
   const navItems = useMemo(() => {
     if (!user) return [] as NavItem[];
@@ -352,10 +287,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
   };
 
   function retryPortal() {
-    setAccessIssue('');
-    setUser(null);
-    setReady(false);
-    setLoadVersion((value) => value + 1);
+    refreshAccess();
   }
 
   function toggleSection(section: string) {
@@ -485,7 +417,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
               ) : null}
             </header>
 
-            <main className={cn('px-2 pb-28 pt-3 sm:px-4 sm:pb-28 sm:pt-5 lg:px-8 lg:pb-8 lg:pt-8', isManager && 'manager-mobile-app')}>{children}</main>
+            <main className={cn('px-2 pb-28 pt-3 sm:px-4 sm:pb-28 sm:pt-5 lg:px-8 lg:pb-8 lg:pt-8', isManager && 'manager-mobile-app')}><RouteContentTransition>{children}</RouteContentTransition></main>
           </div>
         </div>
 

@@ -8,6 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { recordAuditLog } from '@/lib/audit-log';
 import { supabase } from '@/lib/supabase-client';
+import { ContentAreaSkeleton } from './route-content-transition';
+import { usePortalAccess } from './portal-access';
 
 const roleOptions = [
   { value: 'super_admin', label: 'Super Admin' },
@@ -189,9 +191,9 @@ function TeamModal({ row, saving, error, onClose, onSave }: { row: TeamRow | nul
 }
 
 export function TeamAccessPage() {
+  const { loading: accessLoading, isSuperAdmin } = usePortalAccess();
   const [rows, setRows] = useState<TeamRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [allowed, setAllowed] = useState(false);
   const [query, setQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -204,21 +206,7 @@ export function TeamAccessPage() {
   async function load() {
     setLoading(true);
     setError('');
-    const { data: userData } = await supabase.auth.getUser();
-    const authUser = userData.user;
-    if (!authUser) {
-      setAllowed(false);
-      setLoading(false);
-      return;
-    }
-
-    const authEmail = authUser.email || '';
-    const filter = authEmail ? `auth_user_id.eq.${authUser.id},email.eq.${authEmail}` : `auth_user_id.eq.${authUser.id}`;
-    const { data: profiles } = await supabase.from('admin_users').select('role,status').or(filter).limit(1);
-    const profile = (profiles?.[0] || null) as { role?: string | null; status?: string | null } | null;
-    const canManage = profile?.role === 'super_admin' && profile?.status === 'active';
-    setAllowed(canManage);
-    if (!canManage) {
+    if (!isSuperAdmin) {
       setLoading(false);
       return;
     }
@@ -229,7 +217,7 @@ export function TeamAccessPage() {
     setLoading(false);
   }
 
-  useEffect(() => { void load(); }, []);
+  useEffect(() => { if (!accessLoading) void load(); }, [accessLoading, isSuperAdmin]);
 
   const metrics = useMemo(() => ({
     total: rows.length,
@@ -313,8 +301,8 @@ export function TeamAccessPage() {
     setNotice(`Password reset email sent to ${email}.`);
   }
 
-  if (loading) return <div className="p-6 text-sm font-semibold text-muted-foreground">Loading team access...</div>;
-  if (!allowed) return <div className="rounded-[1.5rem] border border-red-200 bg-red-50 p-6"><h1 className="font-heading text-2xl font-semibold text-red-800">Super Admin access required</h1><p className="mt-2 text-sm text-red-700">Only an active Super Admin can manage team profiles and portal access.</p></div>;
+  if (accessLoading || loading) return <ContentAreaSkeleton label="Loading team access" />;
+  if (!isSuperAdmin) return <div className="rounded-[1.5rem] border border-red-200 bg-red-50 p-6"><h1 className="font-heading text-2xl font-semibold text-red-800">Super Admin access required</h1><p className="mt-2 text-sm text-red-700">Only an active Super Admin can manage team profiles and portal access.</p></div>;
 
   return (
     <section className="w-full py-4 sm:py-6">

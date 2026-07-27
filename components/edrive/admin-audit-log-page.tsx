@@ -7,6 +7,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { supabase } from '@/lib/supabase-client';
+import { ContentAreaSkeleton } from './route-content-transition';
+import { usePortalAccess } from './portal-access';
 
 const allowedRoles = new Set(['super_admin', 'admin', 'finance']);
 const duplicateWindowMs = 10 * 60 * 1000;
@@ -24,11 +26,6 @@ type AuditRow = {
   summary: string;
   metadata: Record<string, unknown> | null;
   created_at: string;
-};
-
-type ProfileRow = {
-  role: string | null;
-  status: string | null;
 };
 
 type GroupedAuditRow = {
@@ -253,10 +250,9 @@ function ActivityLine({ row, count }: { row: AuditRow; count: number }) {
 }
 
 export function AdminAuditLogPage() {
+  const { loading: accessLoading, role, status } = usePortalAccess();
   const [rows, setRows] = useState<AuditRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [accessReady, setAccessReady] = useState(false);
-  const [allowed, setAllowed] = useState(false);
   const [error, setError] = useState('');
   const [query, setQuery] = useState('');
   const [moduleFilter, setModuleFilter] = useState('all');
@@ -267,29 +263,12 @@ export function AdminAuditLogPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [selected, setSelected] = useState<GroupedAuditRow | null>(null);
 
-  async function checkAccess() {
-    const { data: sessionData } = await supabase.auth.getSession();
-    const authUser = sessionData.session?.user;
-    if (!authUser) {
-      setAllowed(false);
-      setAccessReady(true);
-      return false;
-    }
-    const authEmail = authUser.email || '';
-    const filter = authEmail ? `auth_user_id.eq.${authUser.id},email.eq.${authEmail}` : `auth_user_id.eq.${authUser.id}`;
-    const { data } = await supabase.from('admin_users').select('role,status').or(filter).limit(1);
-    const profile = (data?.[0] || null) as ProfileRow | null;
-    const canRead = Boolean(profile && String(profile.status || '').toLowerCase() === 'active' && allowedRoles.has(String(profile.role || '').toLowerCase()));
-    setAllowed(canRead);
-    setAccessReady(true);
-    return canRead;
-  }
+  const allowed = String(status).toLowerCase() === 'active' && allowedRoles.has(String(role).toLowerCase());
 
   async function loadLogs() {
     setLoading(true);
     setError('');
-    const canRead = accessReady ? allowed : await checkAccess();
-    if (!canRead) {
+    if (!allowed) {
       setLoading(false);
       return;
     }
@@ -303,7 +282,7 @@ export function AdminAuditLogPage() {
     setLoading(false);
   }
 
-  useEffect(() => { void loadLogs(); }, []);
+  useEffect(() => { if (!accessLoading) void loadLogs(); }, [accessLoading, allowed]);
 
   const modules = useMemo(() => Array.from(new Set(rows.map((row) => row.module).filter(Boolean))).sort(), [rows]);
   const actions = useMemo(() => Array.from(new Set(rows.map((row) => row.action).filter(Boolean))).sort(), [rows]);
@@ -342,9 +321,9 @@ export function AdminAuditLogPage() {
     setQuickRange('all');
   }
 
-  if (!accessReady && loading) return <div className="p-6 text-sm font-semibold text-muted-foreground">Loading audit access...</div>;
+  if (accessLoading && loading) return <ContentAreaSkeleton label="Loading audit access" />;
 
-  if (accessReady && !allowed) {
+  if (!accessLoading && !allowed) {
     return (
       <section className="w-full px-4 py-6 sm:px-6 lg:px-8">
         <Card className="mx-auto max-w-xl rounded-[1.5rem] border-border bg-white text-center shadow-[0_18px_45px_rgba(8,37,50,0.07)]">

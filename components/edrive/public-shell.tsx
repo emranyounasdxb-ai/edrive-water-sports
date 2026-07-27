@@ -9,6 +9,7 @@ import { companyInfo, whatsappUrl } from '@/lib/company-info';
 import { publicNavItems } from '@/lib/mock-data';
 import { cn } from '@/lib/utils';
 import { BrandMark } from './brand';
+import { RouteContentTransition } from './route-content-transition';
 import styles from './public-shell.module.css';
 
 const menuPillClass = 'border border-white/75 bg-white/72 shadow-[inset_0_1px_0_rgba(255,255,255,0.95),inset_0_-8px_14px_rgba(8,37,50,0.025),0_5px_14px_rgba(8,37,50,0.045)] hover:border-primary/15 hover:bg-primary-50/80 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.95),inset_0_-8px_14px_rgba(8,37,50,0.025),0_8px_18px_rgba(8,37,50,0.07)]';
@@ -55,7 +56,7 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
                 : 'border border-white bg-white ring-black/5'
             )}
           >
-            <Link href="/" aria-label="eDrive Water Sports home" className="z-10 flex shrink-0 items-center">
+            <Link href="/" prefetch aria-label="eDrive Water Sports home" className="z-10 flex shrink-0 items-center">
               <BrandMark className="[&_img]:h-9 [&_img]:w-auto" />
             </Link>
 
@@ -64,7 +65,7 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
                 {publicNavItems.map((item) => {
                   const active = currentPath === normalizePath(item.href);
                   return (
-                    <Link key={item.href} href={item.href} aria-current={active ? 'page' : undefined} className={cn('inline-flex h-8 shrink-0 items-center justify-center whitespace-nowrap rounded-full px-3 text-center text-[11px] font-bold leading-none text-slate-700 transition-all duration-200 xl:px-4 xl:text-xs', menuPillClass, active && activeMenuClass)}>
+                    <Link key={item.href} href={item.href} prefetch aria-current={active ? 'page' : undefined} className={cn('inline-flex h-8 shrink-0 items-center justify-center whitespace-nowrap rounded-full px-3 text-center text-[11px] font-bold leading-none text-slate-700 transition-all duration-200 xl:px-4 xl:text-xs', menuPillClass, active && activeMenuClass)}>
                       <span className="relative -top-px block leading-none">{item.label}</span>
                     </Link>
                   );
@@ -73,8 +74,8 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
             </div>
 
             <div className="z-10 ml-auto hidden shrink-0 items-center gap-2 md:flex">
-              <Link href="/my-booking" className={cn('hidden lg:inline-flex', myBookingActionClass)}><TicketCheck className="size-3.5" aria-hidden="true" /><span>My Booking</span></Link>
-              <Link href="/admin" className={staffActionClass}><LockKeyhole className="size-3.5" aria-hidden="true" /><span>Staff Login</span></Link>
+              <Link href="/my-booking" prefetch className={cn('hidden lg:inline-flex', myBookingActionClass)}><TicketCheck className="size-3.5" aria-hidden="true" /><span>My Booking</span></Link>
+              <Link href="/admin" prefetch className={staffActionClass}><LockKeyhole className="size-3.5" aria-hidden="true" /><span>Staff Login</span></Link>
             </div>
 
             <Button variant="outline" size="icon" className={cn('z-10 size-9 shrink-0 rounded-full lg:hidden', scrolled ? 'bg-white/90 backdrop-blur-sm' : 'bg-white')} onClick={() => setOpen((value) => !value)} aria-label="Toggle navigation">
@@ -88,10 +89,10 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
             <div className="premium-surface flex flex-col gap-1 rounded-[1.5rem] p-3 shadow-[0_18px_45px_rgba(8,37,50,0.16)]">
               {publicNavItems.map((item) => {
                 const active = currentPath === normalizePath(item.href);
-                return <Link key={item.href} href={item.href} onClick={() => setOpen(false)} aria-current={active ? 'page' : undefined} className={cn('inline-flex h-10 items-center justify-center whitespace-nowrap rounded-2xl px-4 text-sm font-bold text-muted-foreground transition hover:bg-white hover:text-foreground', active && activeMenuClass)}><span className="relative -top-px block leading-none">{item.label}</span></Link>;
+                return <Link key={item.href} href={item.href} prefetch onClick={() => setOpen(false)} aria-current={active ? 'page' : undefined} className={cn('inline-flex h-10 items-center justify-center whitespace-nowrap rounded-2xl px-4 text-sm font-bold text-muted-foreground transition hover:bg-white hover:text-foreground', active && activeMenuClass)}><span className="relative -top-px block leading-none">{item.label}</span></Link>;
               })}
               <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                <Link href="/my-booking" className={myBookingActionClass} onClick={() => setOpen(false)}><TicketCheck className="size-3.5" aria-hidden="true" /><span>My Booking</span></Link>
+                <Link href="/my-booking" prefetch className={myBookingActionClass} onClick={() => setOpen(false)}><TicketCheck className="size-3.5" aria-hidden="true" /><span>My Booking</span></Link>
                 <Link href="/admin" onClick={() => setOpen(false)} className={staffActionClass}><LockKeyhole className="size-3.5" aria-hidden="true" /><span>Staff Login</span></Link>
               </div>
             </div>
@@ -99,7 +100,7 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
         ) : null}
       </header>
 
-      <main className={styles.main} data-public-main>{children}</main>
+      <main className={styles.main} data-public-main><RouteContentTransition>{children}</RouteContentTransition></main>
       <PublicFooter />
     </div>
   );
@@ -118,7 +119,7 @@ function PublicFooter() {
           <h3 className="text-sm font-semibold text-foreground">Explore</h3>
           {publicNavItems.map((item) => <Link key={item.href} href={item.href} className="text-sm text-muted-foreground transition hover:text-primary">{item.label}</Link>)}
           <Link href="/booking" className="text-sm text-muted-foreground transition hover:text-primary">Book Ride</Link>
-          <Link href="/my-booking" className="text-sm text-muted-foreground transition hover:text-primary">Track My Booking</Link>
+          <Link href="/my-booking" prefetch className="text-sm text-muted-foreground transition hover:text-primary">Track My Booking</Link>
         </div>
         <div className="flex flex-col gap-4">
           <h3 className="text-sm font-semibold text-foreground">Contact</h3>

@@ -1,49 +1,17 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { AdminPaymentsControlCenter } from './admin-payments-control-center';
-import { ManagerCollectionsPage, type ManagerIdentity } from './manager-collections-page';
-import { supabase } from '@/lib/supabase-client';
-
-type AdminProfile = {
-  full_name: string | null;
-  email: string | null;
-  role: string | null;
-  status: string | null;
-};
+import { ManagerCollectionsPage } from './manager-collections-page';
+import { usePortalAccess } from './portal-access';
 
 export function PaymentsRoutePage() {
-  const [loading, setLoading] = useState(true);
-  const [role, setRole] = useState('admin');
-  const [manager, setManager] = useState<ManagerIdentity>({ name: '', email: '' });
+  const { loading, role, fullName, email } = usePortalAccess();
 
-  useEffect(() => {
-    let active = true;
-
-    async function loadProfile() {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const authUser = sessionData.session?.user;
-      const authEmail = authUser?.email || '';
-      if (!authUser) {
-        if (active) setLoading(false);
-        return;
-      }
-
-      const filter = authEmail ? `auth_user_id.eq.${authUser.id},email.eq.${authEmail}` : `auth_user_id.eq.${authUser.id}`;
-      const { data } = await supabase.from('admin_users').select('full_name,email,role,status').or(filter).limit(1);
-      const profile = (data || [])[0] as AdminProfile | undefined;
-      if (!active) return;
-
-      setRole(profile?.role || 'admin');
-      setManager({ name: profile?.full_name || authEmail, email: profile?.email || authEmail });
-      setLoading(false);
-    }
-
-    void loadProfile();
-    return () => { active = false; };
-  }, []);
-
-  if (loading) return <div className="p-6 text-sm font-semibold text-muted-foreground">Loading payments...</div>;
-  if (role === 'manager') return <ManagerCollectionsPage manager={manager} />;
+  if (loading) return <PaymentsSkeleton />;
+  if (role === 'manager') return <ManagerCollectionsPage manager={{ name: fullName, email }} />;
   return <AdminPaymentsControlCenter />;
+}
+
+function PaymentsSkeleton() {
+  return <section className="animate-pulse space-y-4"><div><div className="h-3 w-24 rounded bg-primary-100" /><div className="mt-3 h-9 w-72 max-w-full rounded bg-slate-200" /><div className="mt-2 h-4 w-[30rem] max-w-full rounded bg-slate-100" /></div><div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{Array.from({ length: 4 }).map((_, index) => <div key={index} className="h-24 rounded-2xl bg-white shadow-sm" />)}</div><div className="h-80 rounded-2xl bg-white shadow-sm" /></section>;
 }
