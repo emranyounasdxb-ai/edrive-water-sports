@@ -69,15 +69,15 @@ export default function AgentWalletPage() {
   return <AgentPortalShell profile={profile} walletBalance={summary?.wallet_balance_aed}>
     <AgentPageHeader eyebrow="Wallet & ledger" title="Financial activity" description="A read-only record of wallet credits, booking debits, refund credits and corrections." actions={<Button variant="outline" disabled={refreshing} onClick={() => load(true)}><RefreshCw className={`size-4 ${refreshing ? 'animate-spin' : ''}`} />Refresh</Button>} />
     {error ? <div role="alert" className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-700">{error}</div> : null}
-    <section className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+    <section className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
       <AgentMetricCard label="Current Balance" value={formatAed(summary?.wallet_balance_aed || 0)} icon={WalletCards} tone="teal" />
       <AgentMetricCard label="Total Credits" value={formatAed(summary?.wallet_credits_aed || 0)} icon={CircleDollarSign} tone="green" />
       <AgentMetricCard label="Booking Debits" value={formatAed(bookingDebits)} icon={CircleDollarSign} tone="red" />
       <AgentMetricCard label="Refund Credits" value={formatAed(refundCredits)} icon={RotateCcw} tone="green" />
       <AgentMetricCard label="Pending Refunds" value={String(summary?.pending_refunds || 0)} icon={RotateCcw} tone="gold" />
     </section>
-    <Card className="mt-5 rounded-2xl border-slate-200"><CardContent className="p-4"><div className="grid gap-3 lg:grid-cols-[1fr_auto_auto]"><label className="relative"><Search className="absolute left-3 top-3.5 size-4 text-slate-400" /><Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search booking reference or description" className="pl-9" /></label><Input aria-label="From date" type="date" value={from} onChange={(e) => setFrom(e.target.value)} /><Input aria-label="To date" type="date" value={to} onChange={(e) => setTo(e.target.value)} /></div><div className="mt-4 flex gap-2 overflow-x-auto pb-1">{filters.map(([label, value]) => <Button key={value} size="sm" variant={filter === value ? 'default' : 'outline'} onClick={() => setFilter(value)} className="shrink-0">{label}</Button>)}</div></CardContent></Card>
-    <div className="mt-5 overflow-hidden rounded-2xl border border-slate-200 bg-white"><AgentWalletLedger entries={visible} bookingCodes={bookingCodes} /></div>
+    <Card className="mt-4 rounded-xl border-slate-200"><CardContent className="p-4"><div className="grid gap-3 lg:grid-cols-[1fr_auto_auto]"><label className="relative"><Search className="absolute left-3 top-3.5 size-4 text-slate-400" /><Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search booking reference or description" className="pl-9" /></label><Input aria-label="From date" type="date" value={from} onChange={(e) => setFrom(e.target.value)} /><Input aria-label="To date" type="date" value={to} onChange={(e) => setTo(e.target.value)} /></div><div className="mt-4 flex gap-2 overflow-x-auto pb-1">{filters.map(([label, value]) => <Button key={value} size="sm" variant={filter === value ? 'default' : 'outline'} onClick={() => setFilter(value)} className="shrink-0">{label}</Button>)}</div></CardContent></Card>
+    <div className="mt-4 overflow-hidden rounded-xl border border-slate-200 bg-white"><AgentWalletLedger entries={visible} bookingCodes={bookingCodes} /></div>
     <p className="mt-4 text-xs leading-5 text-slate-500">Wallet entries are immutable and read-only. For top-up assistance, call eDrive on <a className="font-semibold text-teal-700" href="tel:+97146113114">+971 4 611 3114</a>.</p>
   </AgentPortalShell>;
 }

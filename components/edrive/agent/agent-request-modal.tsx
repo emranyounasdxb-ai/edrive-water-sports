@@ -35,17 +35,17 @@ export function AgentRequestModal({ booking, open, onOpenChange, onSuccess }: {
     } finally { setSaving(false); }
   }
 
-  return <Sheet open={open} onOpenChange={(next) => { if (!saving) onOpenChange(next); }}><SheetContent>
+  return <Sheet open={open} onOpenChange={(next) => { if (!saving) onOpenChange(next); }}><SheetContent className="sm:max-w-xl xl:max-w-[620px]">
     <SheetHeader><SheetTitle>Request {action}</SheetTitle><SheetDescription>Submit this request for Super Admin review. Approval and the final eligible amount are controlled by the secured booking workflow.</SheetDescription></SheetHeader>
-    {booking ? <div className="flex-1 space-y-5 overflow-y-auto p-5">
-      <div className="grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:grid-cols-2">
+    {booking ? <div className="flex-1 space-y-4 overflow-y-auto p-4">
+      <div className="grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3.5 sm:grid-cols-2">
         <Detail label="Booking" value={booking.booking_code || booking.id} /><Detail label="Customer" value={booking.customer_name || '-'} />
         <Detail label="Package" value={booking.selected_package_name || '-'} /><Detail label="Schedule" value={`${booking.preferred_date || '-'} · ${booking.preferred_time || '-'}`} />
         <Detail label="Original wallet debit" value={formatAed(booking.total_amount || 0)} /><Detail label="Eligible requested amount" value={formatAed(Math.max(Number(booking.amount_received_aed || booking.total_amount || 0), 0))} />
       </div>
       <label className="grid gap-2 text-sm font-semibold text-slate-800">Reason <span className="font-normal text-slate-500">Required</span><Textarea value={reason} onChange={(event) => setReason(event.target.value)} maxLength={500} placeholder={`Explain why this ${action.toLowerCase()} is being requested.`} autoFocus /></label>
       <label className="grid gap-2 text-sm font-semibold text-slate-800">Additional note <span className="font-normal text-slate-500">Optional</span><Textarea value={note} onChange={(event) => setNote(event.target.value)} maxLength={500} placeholder="Add any useful operational context." /></label>
-      <div className="flex gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900"><AlertCircle className="mt-0.5 size-5 shrink-0" /><p>Submitting does not immediately cancel the booking or credit the wallet. Super Admin approval and backend eligibility checks remain final.</p></div>
+      <div className="flex gap-3 rounded-xl border border-amber-200 bg-amber-50 p-3.5 text-sm leading-5 text-amber-900"><AlertCircle className="mt-0.5 size-5 shrink-0" /><p>Submitting does not immediately cancel the booking or credit the wallet. Super Admin approval and backend eligibility checks remain final.</p></div>
       {error ? <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</div> : null}
     </div> : null}
     <SheetFooter><Button type="button" variant="outline" disabled={saving} onClick={() => onOpenChange(false)}>Cancel</Button><Button type="button" disabled={saving || !reason.trim()} onClick={submit}><Send className="size-4" />{saving ? 'Submitting...' : `Submit ${action} Request`}</Button></SheetFooter>

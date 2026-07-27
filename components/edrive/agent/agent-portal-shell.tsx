@@ -45,24 +45,24 @@ export function AgentPortalShell({ profile, walletBalance, children }: {
   }
 
   const nav = (
-    <nav aria-label="Agent portal navigation" className="space-y-1">
+    <nav aria-label="Agent portal navigation" className="space-y-0.5">
       {navigation.map(({ label, href, icon: Icon, exact }) => {
         const active = exact ? pathname === href : pathname.startsWith(href);
-        return <Link key={href} href={href} onClick={() => setMobileOpen(false)} className={cn('relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400', active ? 'bg-teal-50 font-bold text-teal-950 shadow-[inset_0_0_0_1px_rgba(13,148,136,0.08)] before:absolute before:inset-y-2 before:left-0 before:w-1 before:rounded-full before:bg-teal-600' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950')}><Icon className={cn('size-4', active && 'text-teal-800')} aria-hidden="true" />{label}</Link>;
+        return <Link key={href} href={href} onClick={() => setMobileOpen(false)} className={cn('relative flex items-center gap-2.5 rounded-xl px-3 py-2 text-[13px] font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400', active ? 'bg-teal-50 font-bold text-teal-950 shadow-[inset_0_0_0_1px_rgba(13,148,136,0.08)] before:absolute before:inset-y-1.5 before:left-0 before:w-1 before:rounded-full before:bg-teal-600' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950')}><Icon className={cn('size-4', active && 'text-teal-800')} aria-hidden="true" />{label}</Link>;
       })}
     </nav>
   );
 
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top_right,rgba(20,184,166,0.10),transparent_30%),#f4f7f8] text-slate-950">
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 border-r border-slate-200 bg-white/95 p-4 backdrop-blur-xl lg:flex lg:flex-col">
-        <Link href="/agent" className="flex min-h-16 items-center rounded-lg px-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400"><BrandMark className="py-2" /></Link>
-        <div className="mt-3 rounded-2xl border border-slate-200 bg-[linear-gradient(145deg,#f8fafc,#f0fdfa)] p-4">
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-60 border-r border-slate-200 bg-white/95 p-3 backdrop-blur-xl lg:flex lg:flex-col">
+        <Link href="/agent" className="flex min-h-14 items-center rounded-lg px-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400"><BrandMark className="py-1" /></Link>
+        <div className="mt-2 rounded-xl border border-slate-200 bg-[linear-gradient(145deg,#f8fafc,#f0fdfa)] p-3">
           <p className="truncate text-sm font-bold text-slate-950">{profile.company_name}</p>
-          <div className="mt-3 flex flex-wrap items-center gap-2"><span className="rounded-md border border-slate-200 bg-white px-2 py-1 font-mono text-[11px] font-semibold text-slate-600">{profile.agent_code || 'Partner'}</span><AgentStatusBadge status={profile.status} /></div>
-          {walletBalance !== undefined ? <div className="mt-4 border-t border-teal-100 pt-3"><p className="text-[10px] font-bold uppercase tracking-[0.14em] text-teal-700">Available balance</p><p className="mt-1 font-heading text-2xl font-semibold tracking-tight text-slate-950">{formatAed(walletBalance || 0)}</p></div> : null}
+          <div className="mt-2 flex flex-wrap items-center gap-1.5"><span className="rounded-md border border-slate-200 bg-white px-2 py-0.5 font-mono text-[10px] font-semibold text-slate-600">{profile.agent_code || 'Partner'}</span><AgentStatusBadge status={profile.status} /></div>
+          {walletBalance !== undefined ? <div className="mt-3 border-t border-teal-100 pt-2.5"><p className="text-[9px] font-bold uppercase tracking-[0.14em] text-teal-700">Available balance</p><p className="mt-0.5 whitespace-nowrap font-heading text-xl font-semibold tracking-tight text-slate-950">{formatAed(walletBalance || 0)}</p></div> : null}
         </div>
-        <div className="mt-5 flex-1">{nav}</div>
+        <div className="mt-3 flex-1">{nav}</div>
         <div className="space-y-1 border-t border-slate-200 pt-4">
           <Link href="/contact" className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-teal-50 hover:text-teal-900"><Headphones className="size-4 text-teal-700" />Support</Link>
           <button type="button" onClick={logout} className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold text-red-700 hover:bg-red-50"><LogOut className="size-4" />Logout</button>
@@ -76,7 +76,7 @@ export function AgentPortalShell({ profile, walletBalance, children }: {
       </header>
       {mobileOpen ? <div className="fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-sm lg:hidden" onMouseDown={() => setMobileOpen(false)}><aside className="h-full w-[86%] max-w-sm overflow-y-auto bg-white p-4 shadow-2xl" onMouseDown={(event) => event.stopPropagation()}><div className="flex items-center justify-between"><BrandMark compact /><Button type="button" variant="ghost" size="icon" aria-label="Close portal menu" onClick={() => setMobileOpen(false)}><X /></Button></div><div className="my-5 rounded-2xl border border-teal-100 bg-teal-50/60 p-4"><p className="truncate font-bold">{profile.company_name}</p><div className="mt-2 flex items-center gap-2"><span className="font-mono text-xs text-slate-600">{profile.agent_code || 'B2B Partner'}</span><AgentStatusBadge status={profile.status} /></div><p className="mt-3 border-t border-teal-100 pt-3 text-xs font-semibold text-slate-500">Available balance</p><p className="font-heading text-xl font-semibold">{walletBalance === undefined ? '-' : formatAed(walletBalance || 0)}</p></div>{nav}<div className="mt-6 border-t pt-4"><Link href="/contact" onClick={() => setMobileOpen(false)} className="flex items-center gap-2 py-2 text-sm font-semibold text-teal-800"><Headphones className="size-4" />Support</Link><button type="button" onClick={logout} className="mt-2 flex items-center gap-2 py-2 text-sm font-semibold text-red-700"><LogOut className="size-4" />Logout</button></div></aside></div> : null}
 
-      <main className="pb-24 lg:ml-64 lg:pb-8"><div className="mx-auto max-w-[1500px] p-4 sm:p-6 lg:p-8">{children}</div></main>
+      <main className="pb-24 lg:ml-60 lg:pb-5"><div className="mx-auto max-w-[1440px] p-3 sm:p-4 lg:p-5 xl:p-6">{children}</div></main>
       <nav aria-label="Mobile portal navigation" className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-5 border-t border-slate-200 bg-white/95 px-1 py-1.5 shadow-[0_-8px_25px_rgba(15,23,42,0.08)] backdrop-blur lg:hidden">
         {navigation.map(({ label, href, icon: Icon, exact }) => { const active = exact ? pathname === href : pathname.startsWith(href); return <Link key={href} href={href} className={cn('flex min-w-0 flex-col items-center gap-1 rounded-lg px-1 py-1.5 text-[10px] font-semibold', active ? 'text-teal-700' : 'text-slate-500')}><Icon className="size-4" /><span className="truncate">{label === 'Wallet & Ledger' ? 'Wallet' : label}</span></Link>; })}
       </nav>
