@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { CalendarRange, Eye, FileSearch, RefreshCw, Search } from 'lucide-react';
+import { CalendarDays, CalendarRange, Eye, FileSearch, RefreshCw, Search, X } from 'lucide-react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { AgentBookingDrawer, type AgentBookingView } from '@/components/edrive/agent/agent-booking-drawer';
 import { AgentEmptyState } from '@/components/edrive/agent/agent-empty-state';
@@ -62,6 +63,12 @@ export default function AgentBookingsPage() {
     const tabMatch = tab === 'All' || (tab === 'Active' ? !['completed', 'cancelled', 'no show', 'no_show'].includes(status) : status === tab.toLowerCase());
     return value.includes(search.toLowerCase()) && tabMatch && (!dateFrom || String(booking.preferred_date) >= dateFrom) && (!dateTo || String(booking.preferred_date) <= dateTo);
   }), [bookings, search, tab, dateFrom, dateTo]);
+  const filtersActive = Boolean(search || dateFrom || dateTo || tab !== 'All');
+  const clearFilters = () => { setSearch(''); setDateFrom(''); setDateTo(''); setTab('All'); };
+  const tabCount = (item: string) => bookings.filter((booking) => {
+    const status = String(booking.status || '').toLowerCase();
+    return item === 'All' || (item === 'Active' ? !['completed', 'cancelled', 'no show', 'no_show'].includes(status) : status === item.toLowerCase());
+  }).length;
 
   function latestRequest(id: string) { return requests.find((request) => request.booking_request_id === id); }
   function isEligible(booking: Booking) {
@@ -76,12 +83,17 @@ export default function AgentBookingsPage() {
   return <AgentPortalShell profile={profile} walletBalance={balance}>
     <AgentPageHeader eyebrow="Bookings" title="My bookings" description="Search, filter and review every booking submitted by your company." actions={<Button variant="outline" disabled={refreshing} onClick={() => load(true)}><RefreshCw className={`size-4 ${refreshing ? 'animate-spin' : ''}`} />Refresh</Button>} />
     {error ? <div role="alert" className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-700">{error}</div> : null}
-    <Card className="mt-4 rounded-xl border-slate-200"><CardContent className="p-4">
-      <div className="grid gap-3 lg:grid-cols-[1fr_auto_auto]"><label className="relative"><Search className="absolute left-3 top-3.5 size-4 text-slate-400" /><Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search booking, customer or package" className="pl-9" /></label><label className="flex items-center gap-2 text-xs font-semibold text-slate-500"><span>From</span><Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-auto" /></label><label className="flex items-center gap-2 text-xs font-semibold text-slate-500"><span>To</span><Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-auto" /></label></div>
-      <div className="mt-4 flex gap-2 overflow-x-auto pb-1">{tabs.map((item) => <Button key={item} size="sm" variant={tab === item ? 'default' : 'outline'} onClick={() => setTab(item)} className="shrink-0">{item}</Button>)}</div>
+    <Card className="mt-4 rounded-xl border-slate-200 shadow-sm"><CardContent className="p-4">
+      <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-[minmax(260px,1fr)_auto_auto_auto] lg:items-end">
+        <label className="grid gap-1.5 text-xs font-semibold text-slate-600"><span>Search</span><span className="relative"><Search className="absolute left-3 top-3 size-4 text-slate-400" /><Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Booking, customer or package" className="h-10 pl-9" /></span></label>
+        <DateFilter label="From Date" value={dateFrom} onChange={setDateFrom} />
+        <DateFilter label="To Date" value={dateTo} onChange={setDateTo} />
+        <Button type="button" size="sm" variant="ghost" className="h-10 justify-self-start lg:justify-self-auto" onClick={clearFilters} disabled={!filtersActive}><X className="size-4" />Clear Filters</Button>
+      </div>
+      <div className="mt-3 flex gap-2 overflow-x-auto pb-1">{tabs.map((item) => <Button key={item} size="sm" variant={tab === item ? 'default' : 'outline'} onClick={() => setTab(item)} className="shrink-0">{item}<span className="rounded-full bg-black/10 px-1.5 text-[10px]">{tabCount(item)}</span></Button>)}</div>
     </CardContent></Card>
     <div className="mt-4 overflow-hidden rounded-xl border border-slate-200 bg-white">
-      {!filtered.length ? <AgentEmptyState icon={FileSearch} title="No matching bookings" description="Adjust your search, status or date filters." /> : <div className="divide-y divide-slate-100">{filtered.map((booking) => {
+      {!filtered.length ? <AgentEmptyState compact icon={FileSearch} title={filtersActive ? 'No matching bookings' : 'No bookings yet'} description={filtersActive ? 'Adjust or clear your current filters.' : 'Create your first partner booking to get started.'} action={filtersActive ? <Button size="sm" variant="outline" onClick={clearFilters}>Clear Filters</Button> : <Button asChild size="sm"><Link href="/agent/new-booking">Create Booking</Link></Button>} /> : <div className="divide-y divide-slate-100">{filtered.map((booking) => {
         const request = latestRequest(booking.id);
         return <article key={booking.id} className="grid min-w-0 gap-3 p-4 transition hover:bg-slate-50 lg:grid-cols-[1.2fr_1fr_1fr_0.8fr_auto] lg:items-center">
           <div><p className="font-mono text-xs font-bold text-teal-700">{booking.booking_code || booking.id}</p><p className="mt-1 font-semibold">{booking.customer_name || '-'}</p><p className="text-xs text-slate-500">{booking.customer_phone || '-'}</p></div>
@@ -96,4 +108,7 @@ export default function AgentBookingsPage() {
     <AgentBookingDrawer booking={selected} open={Boolean(selected)} onOpenChange={(open) => { if (!open) setSelected(null); }} requestStatus={selected && latestRequest(selected.id) ? <AgentStatusBadge status={latestRequest(selected.id)?.status} /> : undefined} />
     <AgentRequestModal booking={requestBooking} open={Boolean(requestBooking)} onOpenChange={(open) => { if (!open) setRequestBooking(null); }} onSuccess={() => load(true)} />
   </AgentPortalShell>;
+}
+function DateFilter({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+  return <label className="grid gap-1.5 text-xs font-semibold text-slate-600"><span>{label}</span><span className="relative"><CalendarDays className="pointer-events-none absolute left-3 top-3 size-4 text-slate-400" /><Input aria-label={label} type="date" value={value} onChange={(event) => onChange(event.target.value)} className="h-10 w-full pl-9 lg:w-40" /></span></label>;
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { CircleDollarSign, RefreshCw, RotateCcw, Search, WalletCards } from 'lucide-react';
+import { CalendarDays, CircleDollarSign, RefreshCw, RotateCcw, Search, WalletCards, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { AgentMetricCard } from '@/components/edrive/agent/agent-metric-card';
 import { AgentPageHeader } from '@/components/edrive/agent/agent-page-header';
@@ -62,6 +62,8 @@ export default function AgentWalletPage() {
   }), [entries, filter, search, from, to, bookingCodes]);
   const bookingDebits = entries.filter((entry) => entry.transaction_type === 'booking_debit' && entry.direction === 'debit').reduce((sum, entry) => sum + Number(entry.amount_aed), 0);
   const refundCredits = entries.filter((entry) => entry.transaction_type === 'refund_credit' && entry.direction === 'credit').reduce((sum, entry) => sum + Number(entry.amount_aed), 0);
+  const filtersActive = Boolean(search || from || to || filter !== 'all');
+  const clearFilters = () => { setSearch(''); setFrom(''); setTo(''); setFilter('all'); };
 
   if (loading) return <div className="min-h-screen animate-pulse bg-slate-50 p-6"><div className="mx-auto h-96 max-w-6xl rounded-2xl bg-slate-200" /></div>;
   if (!profile) return <div className="flex min-h-screen items-center justify-center text-sm font-semibold text-red-700">{error || 'Wallet access unavailable.'}</div>;
@@ -76,8 +78,12 @@ export default function AgentWalletPage() {
       <AgentMetricCard label="Refund Credits" value={formatAed(refundCredits)} icon={RotateCcw} tone="green" />
       <AgentMetricCard label="Pending Refunds" value={String(summary?.pending_refunds || 0)} icon={RotateCcw} tone="gold" />
     </section>
-    <Card className="mt-4 rounded-xl border-slate-200"><CardContent className="p-4"><div className="grid gap-3 lg:grid-cols-[1fr_auto_auto]"><label className="relative"><Search className="absolute left-3 top-3.5 size-4 text-slate-400" /><Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search booking reference or description" className="pl-9" /></label><Input aria-label="From date" type="date" value={from} onChange={(e) => setFrom(e.target.value)} /><Input aria-label="To date" type="date" value={to} onChange={(e) => setTo(e.target.value)} /></div><div className="mt-4 flex gap-2 overflow-x-auto pb-1">{filters.map(([label, value]) => <Button key={value} size="sm" variant={filter === value ? 'default' : 'outline'} onClick={() => setFilter(value)} className="shrink-0">{label}</Button>)}</div></CardContent></Card>
+    <Card className="mt-4 rounded-xl border-slate-200 shadow-sm"><CardContent className="p-4"><div className="grid gap-3 md:grid-cols-2 lg:grid-cols-[minmax(260px,1fr)_auto_auto_auto] lg:items-end"><label className="grid gap-1.5 text-xs font-semibold text-slate-600"><span>Search</span><span className="relative"><Search className="absolute left-3 top-3 size-4 text-slate-400" /><Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Booking reference or description" className="h-10 pl-9" /></span></label><DateFilter label="From Date" value={from} onChange={setFrom} /><DateFilter label="To Date" value={to} onChange={setTo} /><Button type="button" size="sm" variant="ghost" className="h-10 justify-self-start lg:justify-self-auto" onClick={clearFilters} disabled={!filtersActive}><X className="size-4" />Clear Filters</Button></div><div className="mt-3 flex gap-2 overflow-x-auto pb-1">{filters.map(([label, value]) => <Button key={value} size="sm" variant={filter === value ? 'default' : 'outline'} onClick={() => setFilter(value)} className="shrink-0">{label}</Button>)}</div></CardContent></Card>
     <div className="mt-4 overflow-hidden rounded-xl border border-slate-200 bg-white"><AgentWalletLedger entries={visible} bookingCodes={bookingCodes} /></div>
     <p className="mt-4 text-xs leading-5 text-slate-500">Wallet entries are immutable and read-only. For top-up assistance, call eDrive on <a className="font-semibold text-teal-700" href="tel:+97146113114">+971 4 611 3114</a>.</p>
   </AgentPortalShell>;
+}
+
+function DateFilter({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+  return <label className="grid gap-1.5 text-xs font-semibold text-slate-600"><span>{label}</span><span className="relative"><CalendarDays className="pointer-events-none absolute left-3 top-3 size-4 text-slate-400" /><Input aria-label={label} type="date" value={value} onChange={(event) => onChange(event.target.value)} className="h-10 w-full pl-9 lg:w-40" /></span></label>;
 }

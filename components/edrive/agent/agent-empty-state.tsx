@@ -1,6 +1,6 @@
 import type { LucideIcon } from 'lucide-react';
 
-export function AgentEmptyState({ icon: Icon, title, description, action, compact = false }: {
+export function AgentEmptyState({ icon: Icon, title, description, action, compact = true }: {
   icon: LucideIcon;
   title: string;
   description: string;

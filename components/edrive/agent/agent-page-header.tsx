@@ -20,7 +20,7 @@ export function AgentPageHeader({ eyebrow, title, description, icon: Icon, actio
         <p className="mt-0.5 max-w-3xl text-[13px] leading-5 text-slate-600">{description}</p>
       </div>
       {actions || walletBalance !== undefined ? <div className="flex shrink-0 flex-wrap items-center gap-2">
-        {walletBalance !== undefined ? <div className="flex items-center gap-2 rounded-xl border border-teal-200 bg-teal-50 px-3 py-2 shadow-sm"><WalletCards className="size-4 text-teal-700" /><div><p className="text-[10px] font-bold uppercase tracking-wider text-teal-700">Available Balance</p><p className="font-heading text-sm font-semibold text-slate-950">{formatAed(walletBalance || 0)}</p></div></div> : null}
+        {walletBalance !== undefined ? <div className="flex items-center gap-2 rounded-xl border border-teal-200 bg-teal-50 px-3 py-2 shadow-sm lg:hidden"><WalletCards className="size-4 text-teal-700" /><div><p className="text-[10px] font-bold uppercase tracking-wider text-teal-700">Available Balance</p><p className="font-heading text-sm font-semibold text-slate-950">{formatAed(walletBalance || 0)}</p></div></div> : null}
         {actions}
       </div> : null}
     </div>
