@@ -9,7 +9,6 @@ import { companyInfo, whatsappUrl } from '@/lib/company-info';
 import { publicNavItems } from '@/lib/mock-data';
 import { cn } from '@/lib/utils';
 import { BrandMark } from './brand';
-import { RouteContentTransition } from './route-content-transition';
 import styles from './public-shell.module.css';
 
 const menuPillClass = 'border border-white/75 bg-white/72 shadow-[inset_0_1px_0_rgba(255,255,255,0.95),inset_0_-8px_14px_rgba(8,37,50,0.025),0_5px_14px_rgba(8,37,50,0.045)] hover:border-primary/15 hover:bg-primary-50/80 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.95),inset_0_-8px_14px_rgba(8,37,50,0.025),0_8px_18px_rgba(8,37,50,0.07)]';
@@ -100,7 +99,9 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
         ) : null}
       </header>
 
-      <main className={styles.main} data-public-main><RouteContentTransition>{children}</RouteContentTransition></main>
+      <main className={styles.main} data-public-main>
+        {children}
+      </main>
       <PublicFooter />
     </div>
   );
