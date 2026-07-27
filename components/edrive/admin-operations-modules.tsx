@@ -12,6 +12,7 @@ import { formatAed } from '@/lib/booking-data';
 import { bookingRequestsTable } from '@/lib/booking-records';
 import { supabase } from '@/lib/supabase-client';
 import { setBookingManager } from '@/services/booking-assignments';
+import { AppDatePicker } from './shared/app-date-picker';
 
 type BookingRow = Record<string, unknown> & {
   id?: string | null;
@@ -263,7 +264,7 @@ export function AdminOperationsSchedulePage() {
         <CardHeader className="gap-4 border-b border-border/70 bg-[#F7FAFA] px-4 py-4 md:flex-row md:items-center md:justify-between">
           <div><CardTitle className="font-heading text-lg font-semibold sm:text-xl">Schedule board</CardTitle><p className="mt-1 text-xs font-semibold text-muted-foreground">{loading ? 'Loading records...' : `${visible.length} bookings`}</p></div>
           <div className="flex w-full flex-col gap-2 sm:flex-row md:max-w-2xl">
-            <Input type="date" value={selectedDate} onChange={(event) => setSelectedDate(event.target.value)} className={inputClass} />
+            <AppDatePicker label="Schedule date" value={selectedDate} placeholder="Select date" onChange={setSelectedDate} triggerClassName={inputClass} />
             <div className="relative w-full"><Search className="pointer-events-none absolute left-3 top-3 size-4 text-muted-foreground" aria-hidden="true" /><Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search schedule..." className="h-10 rounded-xl bg-white pl-9" /></div>
             <Button type="button" variant="outline" className="rounded-xl bg-white" onClick={() => setSelectedDate('')}>All dates</Button>
           </div>

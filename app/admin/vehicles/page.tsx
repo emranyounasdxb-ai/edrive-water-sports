@@ -27,6 +27,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { usePortalAccess } from '@/components/edrive/portal-access';
+import { AppDatePicker } from '@/components/edrive/shared/app-date-picker';
 import { supabase } from '@/lib/supabase-client';
 
 const locations = ['Dubai', 'Jumeirah', 'Dubai Marina', 'Dubai Harbour', 'Dubai Islands', 'Fishing Harbour'];
@@ -843,9 +844,9 @@ function FleetFormModal({ initialValues, onClose, onSubmit }: { initialValues?: 
                 <span className="hidden text-xs font-semibold text-primary group-open:inline">Hide</span>
               </summary>
               <div className="grid gap-3 border-t border-border/70 p-4 sm:grid-cols-2">
-                <FormInput label="Registration Expiry" type="date" value={values.registrationExpiry} onChange={(value) => updateField('registrationExpiry', value)} />
+                <AppDatePicker label="Registration Expiry" value={values.registrationExpiry} placeholder="Select expiry date" onChange={(value) => updateField('registrationExpiry', value)} />
                 <FormInput label="Insurance Number" value={values.insuranceNumber} maxLength={80} onChange={(value) => updateField('insuranceNumber', value)} />
-                <FormInput label="Insurance Expiry" type="date" value={values.insuranceExpiry} onChange={(value) => updateField('insuranceExpiry', value)} />
+                <AppDatePicker label="Insurance Expiry" value={values.insuranceExpiry} placeholder="Select expiry date" onChange={(value) => updateField('insuranceExpiry', value)} />
                 <FormInput label="Tracker IMEI" value={values.deviceImei} inputMode="numeric" maxLength={20} onChange={(value) => updateField('deviceImei', value)} />
                 <FormInput label="Chassis / VIN" value={values.chassisVin} maxLength={80} onChange={(value) => updateField('chassisVin', value)} />
                 <FormInput label="Engine / Serial Number" value={values.engineSerial} maxLength={80} onChange={(value) => updateField('engineSerial', value)} />
@@ -853,7 +854,7 @@ function FleetFormModal({ initialValues, onClose, onSubmit }: { initialValues?: 
                 <FormInput label="Model" value={values.model} maxLength={80} onChange={(value) => updateField('model', value)} />
                 <FormInput label="Year" type="number" value={values.year} min="1990" max={String(new Date().getFullYear() + 1)} onChange={(value) => updateField('year', value)} />
                 <FormInput label="Color" value={values.color} maxLength={60} onChange={(value) => updateField('color', value)} />
-                <FormInput label="Date of Installation" type="date" value={values.installationDate} onChange={(value) => updateField('installationDate', value)} />
+                <AppDatePicker label="Date of Installation" value={values.installationDate} placeholder="Select installation date" onChange={(value) => updateField('installationDate', value)} />
                 <FormInput label="Display Order" type="number" value={values.sortOrder} min="0" max="9999" onChange={(value) => updateField('sortOrder', value)} />
                 <label className="grid gap-1.5 text-sm font-semibold text-foreground sm:col-span-2">Notes<textarea maxLength={2000} value={values.notes} onChange={(event) => updateField('notes', event.target.value)} className="min-h-24 rounded-xl border border-border bg-white px-3 py-3 text-sm text-foreground outline-none focus:border-primary" /></label>
               </div>

@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { supabase } from '@/lib/supabase-client';
 import { ContentAreaSkeleton } from './route-content-transition';
 import { usePortalAccess } from './portal-access';
+import { AppDatePicker } from './shared/app-date-picker';
 
 const allowedRoles = new Set(['super_admin', 'admin', 'finance']);
 const duplicateWindowMs = 10 * 60 * 1000;
@@ -382,7 +383,7 @@ export function AdminAuditLogPage() {
               {actions.map((action) => <option key={action} value={action}>{titleCase(action)}</option>)}
             </select>
 
-            <Input type="date" value={dateFilter} onChange={(event) => { setDateFilter(event.target.value); setQuickRange('all'); }} className="h-8 min-w-0 rounded-lg bg-white px-2 text-[11px]" />
+            <AppDatePicker label="Audit date" value={dateFilter} placeholder="Select date" onChange={(value) => { setDateFilter(value); setQuickRange('all'); }} triggerClassName="h-8 min-w-40 rounded-lg text-[11px]" />
 
             <select value={quickRange} onChange={(event) => { setQuickRange(event.target.value as QuickRange); setDateFilter(''); }} className="h-8 min-w-0 rounded-lg border border-border bg-white px-2 text-[11px] font-semibold text-foreground">
               <option value="all">All time</option>

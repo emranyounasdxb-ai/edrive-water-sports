@@ -6,6 +6,7 @@ import { BarChart3, Building2, CalendarDays, CheckCircle2, CreditCard, RefreshCw
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { AppDatePicker } from '@/components/edrive/shared/app-date-picker';
 import { formatAed } from '@/lib/booking-data';
 import {
   type CompanyLedgerEntry,
@@ -194,6 +195,20 @@ export function AdminReportsReconciledPage() {
     setDraftFilters((current) => ({ ...current, [key]: value }));
   }
 
+  function updateDateFrom(value: string) {
+    setDraftFilters((current) => ({
+      ...current,
+      dateFrom: value,
+      dateTo: value && current.dateTo && value > current.dateTo ? '' : current.dateTo
+    }));
+  }
+
+  function updateDateTo(value: string) {
+    setDraftFilters((current) => value && current.dateFrom && value < current.dateFrom
+      ? current
+      : { ...current, dateTo: value });
+  }
+
   function applyFilters() {
     setAppliedFilters(draftFilters);
     void load(draftFilters);
@@ -296,8 +311,8 @@ export function AdminReportsReconciledPage() {
         <CardHeader className="border-b border-border/70 bg-[#F7FAFA]"><CardTitle className="font-heading text-lg font-semibold">Report filters</CardTitle></CardHeader>
         <CardContent className="p-4">
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-            <label className="grid gap-1.5 text-xs font-bold text-muted-foreground"><span>Date From</span><Input type="date" value={draftFilters.dateFrom} max={draftFilters.dateTo || undefined} onChange={(event) => updateFilter('dateFrom', event.target.value)} className="h-10 rounded-xl" /></label>
-            <label className="grid gap-1.5 text-xs font-bold text-muted-foreground"><span>Date To</span><Input type="date" value={draftFilters.dateTo} min={draftFilters.dateFrom || undefined} onChange={(event) => updateFilter('dateTo', event.target.value)} className="h-10 rounded-xl" /></label>
+            <AppDatePicker label="Date From" value={draftFilters.dateFrom} placeholder="Select start date" maxDate={draftFilters.dateTo || undefined} onChange={updateDateFrom} />
+            <AppDatePicker label="Date To" value={draftFilters.dateTo} placeholder="Select end date" minDate={draftFilters.dateFrom || undefined} onChange={updateDateTo} />
             <FilterSelect label="Booking Source" value={draftFilters.bookingSource} onChange={(value) => updateFilter('bookingSource', value)} options={[{ value: 'direct', label: 'Direct / B2C' }, { value: 'b2b', label: 'B2B' }]} />
             <FilterSelect label="Booking Status" value={draftFilters.bookingStatus} onChange={(value) => updateFilter('bookingStatus', value)} options={filterOptions.bookingStatuses.map((value) => ({ value, label: value }))} />
             <FilterSelect label="Payment Status" value={draftFilters.paymentStatus} onChange={(value) => updateFilter('paymentStatus', value)} options={filterOptions.paymentStatuses.map((value) => ({ value, label: value }))} />

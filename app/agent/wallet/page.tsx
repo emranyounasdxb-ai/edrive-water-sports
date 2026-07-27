@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { CalendarDays, CircleDollarSign, RefreshCw, RotateCcw, Search, WalletCards, X } from 'lucide-react';
+import { CircleDollarSign, RefreshCw, RotateCcw, Search, WalletCards, X } from 'lucide-react';
+import { AgentDateFilterPicker } from '@/components/edrive/agent/agent-date-filter-picker';
 import { AgentMetricCard } from '@/components/edrive/agent/agent-metric-card';
 import { AgentPageHeader } from '@/components/edrive/agent/agent-page-header';
 import { useAgentPortal } from '@/components/edrive/agent/agent-portal-provider';
@@ -55,6 +56,14 @@ export default function AgentWalletPage() {
   const refundCredits = entries.filter((entry) => entry.transaction_type === 'refund_credit' && entry.direction === 'credit').reduce((sum, entry) => sum + Number(entry.amount_aed), 0);
   const filtersActive = Boolean(search || from || to || filter !== 'all');
   const clearFilters = () => { setSearch(''); setFrom(''); setTo(''); setFilter('all'); };
+  const changeFrom = (value: string) => {
+    setFrom(value);
+    if (value && to && value > to) setTo('');
+  };
+  const changeTo = (value: string) => {
+    if (value && from && value < from) return;
+    setTo(value);
+  };
 
   if (loading) return <><AgentPageHeader eyebrow="Wallet & ledger" title="Financial activity" description="A read-only record of wallet credits, booking debits, refund credits and corrections." /><WalletSkeleton /></>;
 
@@ -68,13 +77,10 @@ export default function AgentWalletPage() {
       <AgentMetricCard label="Refund Credits" value={formatAed(refundCredits)} icon={RotateCcw} tone="green" />
       <AgentMetricCard label="Pending Refunds" value={String(summary?.pending_refunds || 0)} icon={RotateCcw} tone="gold" />
     </section>
-    <Card className="mt-4 rounded-xl border-slate-200 shadow-sm"><CardContent className="p-4"><div className="grid gap-3 md:grid-cols-2 lg:grid-cols-[minmax(260px,1fr)_auto_auto_auto] lg:items-end"><label className="grid gap-1.5 text-xs font-semibold text-slate-600"><span>Search</span><span className="relative"><Search className="absolute left-3 top-3 size-4 text-slate-400" /><Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Booking reference or description" className="h-10 pl-9" /></span></label><DateFilter label="From Date" value={from} onChange={setFrom} /><DateFilter label="To Date" value={to} onChange={setTo} /><Button type="button" size="sm" variant="ghost" className="h-10 justify-self-start lg:justify-self-auto" onClick={clearFilters} disabled={!filtersActive}><X className="size-4" />Clear Filters</Button></div><div className="mt-3 flex gap-2 overflow-x-auto pb-1">{filters.map(([label, value]) => <Button key={value} size="sm" variant={filter === value ? 'default' : 'outline'} onClick={() => setFilter(value)} className="shrink-0">{label}</Button>)}</div></CardContent></Card>
+    <Card className="mt-4 rounded-xl border-slate-200 shadow-sm"><CardContent className="p-4"><div className="grid gap-3 md:grid-cols-2 lg:grid-cols-[minmax(260px,1fr)_auto_auto_auto] lg:items-end"><label className="grid gap-1.5 text-xs font-semibold text-slate-600"><span>Search</span><span className="relative"><Search className="absolute left-3 top-3 size-4 text-slate-400" /><Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Booking reference or description" className="h-10 pl-9" /></span></label><AgentDateFilterPicker label="From Date" value={from} placeholder="Select start date" maxDate={to || undefined} onChange={changeFrom} /><AgentDateFilterPicker label="To Date" value={to} placeholder="Select end date" minDate={from || undefined} onChange={changeTo} /><Button type="button" size="sm" variant="ghost" className="h-10 justify-self-start lg:justify-self-auto" onClick={clearFilters} disabled={!filtersActive}><X className="size-4" />Clear Filters</Button></div><div className="mt-3 flex gap-2 overflow-x-auto pb-1">{filters.map(([label, value]) => <Button key={value} size="sm" variant={filter === value ? 'default' : 'outline'} onClick={() => setFilter(value)} className="shrink-0">{label}</Button>)}</div></CardContent></Card>
     <div className="mt-4 overflow-hidden rounded-xl border border-slate-200 bg-white"><AgentWalletLedger entries={visible} bookingCodes={bookingCodes} /></div>
     <p className="mt-4 text-xs leading-5 text-slate-500">Wallet entries are immutable and read-only. For top-up assistance, call eDrive on <a className="font-semibold text-teal-700" href="tel:+97146113114">+971 4 611 3114</a>.</p>
   </>;
 }
 
-function DateFilter({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
-  return <label className="grid gap-1.5 text-xs font-semibold text-slate-600"><span>{label}</span><span className="relative"><CalendarDays className="pointer-events-none absolute left-3 top-3 size-4 text-slate-400" /><Input aria-label={label} type="date" value={value} onChange={(event) => onChange(event.target.value)} className="h-10 w-full pl-9 lg:w-40" /></span></label>;
-}
 function WalletSkeleton() { return <div className="mt-4 animate-pulse space-y-4"><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{Array.from({ length: 5 }).map((_, index) => <div key={index} className="h-20 rounded-xl bg-white shadow-sm" />)}</div><div className="h-28 rounded-xl bg-white" /><div className="h-72 rounded-xl bg-white" /></div>; }
