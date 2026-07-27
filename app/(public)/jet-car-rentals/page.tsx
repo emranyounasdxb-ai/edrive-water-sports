@@ -19,7 +19,7 @@ export default function Page() {
         fallbackImage={jetCarLightImage}
         fallbackAlt="eDrive jet car rental in Dubai"
         actions={[
-          { href: '/booking', label: 'Book Jet Car', icon: CalendarCheck },
+          { href: '/booking', label: 'Book Ride', icon: CalendarCheck },
           { href: whatsappUrl, label: 'WhatsApp Team', icon: MessageCircle, variant: 'gold', external: true }
         ]}
       />
