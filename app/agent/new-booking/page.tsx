@@ -1,18 +1,17 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { CalendarDays, Check, CheckCircle2, ChevronLeft, ChevronRight, Minus, Package, Plus, RefreshCw, UserRound, WalletCards } from 'lucide-react';
 import { AgentPageHeader } from '@/components/edrive/agent/agent-page-header';
-import { AgentPortalShell, type AgentPortalProfile } from '@/components/edrive/agent/agent-portal-shell';
+import { useAgentPortal } from '@/components/edrive/agent/agent-portal-provider';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { formatAed, timeSlots } from '@/lib/booking-data';
 import { supabase } from '@/lib/supabase-client';
-import { createB2BBooking, getB2BFinanceSummary } from '@/services/b2b-finance';
+import { createB2BBooking } from '@/services/b2b-finance';
 
 type PackageRow = { id: string; title: string; category: string; duration_minutes: number; b2b_price: number; capacity: number | null; image_url: string | null; short_description: string | null };
 type FormState = { packageId: string; vehicleQuantity: string; guestCount: string; preferredDate: string; preferredTime: string; customerName: string; customerPhone: string; customerEmail: string; customerHotelOrArea: string; customerNotes: string };
@@ -32,10 +31,8 @@ function packageCategory(item: PackageRow): PackageCategory {
 }
 
 export default function AgentNewBookingPage() {
-  const router = useRouter();
-  const [profile, setProfile] = useState<AgentPortalProfile | null>(null);
+  const { walletBalance: balance, refreshingPortal, refreshPortal } = useAgentPortal();
   const [packages, setPackages] = useState<PackageRow[]>([]);
-  const [balance, setBalance] = useState(0);
   const [form, setForm] = useState<FormState>(initial);
   const [activeCategory, setActiveCategory] = useState<PackageCategory>('jet_ski');
   const [step, setStep] = useState(0);
@@ -47,22 +44,13 @@ export default function AgentNewBookingPage() {
   async function load() {
     setLoading(true); setError('');
     try {
-      const { data: session } = await supabase.auth.getSession();
-      if (!session.session?.user) { router.replace('/admin/login'); return; }
-      const profileResult = await supabase.from('b2b_agents').select('id,agent_code,company_name,contact_person,status').eq('auth_user_id', session.session.user.id).maybeSingle();
-      if (profileResult.error) throw new Error(profileResult.error.message);
-      const next = profileResult.data as AgentPortalProfile | null;
-      if (!next || String(next.status).toLowerCase() !== 'active') throw new Error('An active B2B Agent profile is required.');
-      const [summary, packageResult] = await Promise.all([
-        getB2BFinanceSummary(),
-        supabase.from('packages').select('id,title,category,duration_minutes,b2b_price,capacity,image_url,short_description,status,display_order').eq('status', 'active').gt('b2b_price', 0).order('display_order')
-      ]);
+      const packageResult = await supabase.from('packages').select('id,title,category,duration_minutes,b2b_price,capacity,image_url,short_description,status,display_order').eq('status', 'active').gt('b2b_price', 0).order('display_order');
       if (packageResult.error) throw new Error(packageResult.error.message);
       const rows = (packageResult.data || []) as PackageRow[];
       const currentPackage = rows.find((item) => item.id === form.packageId);
       const firstCategory = currentPackage ? packageCategory(currentPackage) : packageCategories.find((category) => rows.some((item) => packageCategory(item) === category.id))?.id || 'jet_ski';
       const firstPackage = rows.find((item) => packageCategory(item) === firstCategory);
-      setProfile(next); setBalance(summary.wallet_balance_aed); setPackages(rows); setActiveCategory(firstCategory); setForm((current) => ({ ...current, packageId: current.packageId || firstPackage?.id || rows[0]?.id || '' }));
+      setPackages(rows); setActiveCategory(firstCategory); setForm((current) => ({ ...current, packageId: current.packageId || firstPackage?.id || rows[0]?.id || '' }));
     } catch (loadError) { setError(loadError instanceof Error ? loadError.message : 'Unable to load booking form.'); }
     finally { setLoading(false); }
   }
@@ -93,14 +81,14 @@ export default function AgentNewBookingPage() {
   }
   function next() { const validation = validateStep(); if (validation) { setError(validation); return; } setError(''); setStep((current) => Math.min(current + 1, 3)); }
   async function submit() {
-    if (!profile || !selected || insufficient || saving) return;
+    if (!selected || insufficient || saving) return;
     setSaving(true); setError('');
     try {
       const created = await createB2BBooking({ package_id: selected.id, vehicle_quantity: quantity, guest_count: Math.max(Number(form.guestCount) || 1, 1), preferred_date: form.preferredDate, preferred_time: form.preferredTime, customer_name: form.customerName.trim(), customer_phone: form.customerPhone.trim(), customer_email: form.customerEmail.trim() || null, customer_hotel_or_area: form.customerHotelOrArea.trim() || null, customer_notes: form.customerNotes.trim() || null });
       const code = String(created.booking_code || '');
       if (!code) throw new Error('Booking created without a booking reference.');
-      const nextSummary = await getB2BFinanceSummary();
-      setBalance(nextSummary.wallet_balance_aed); setSuccess({ code, deducted: total, remaining: nextSummary.wallet_balance_aed });
+      const nextSummary = await refreshPortal();
+      setSuccess({ code, deducted: total, remaining: nextSummary?.wallet_balance_aed ?? Math.max(balance - total, 0) });
     } catch (submitError) { setError(submitError instanceof Error ? submitError.message : 'Unable to create booking.'); }
     finally { setSaving(false); }
   }
@@ -109,12 +97,11 @@ export default function AgentNewBookingPage() {
     setActiveCategory(firstCategory); setForm({ ...initial, packageId: packages.find((item) => packageCategory(item) === firstCategory)?.id || packages[0]?.id || '' }); setStep(0); setSuccess(null); setError('');
   }
 
-  if (loading) return <div className="min-h-screen animate-pulse bg-slate-50 p-6"><div className="mx-auto h-[32rem] max-w-6xl rounded-2xl bg-slate-200" /></div>;
-  if (!profile) return <div className="flex min-h-screen items-center justify-center text-sm font-semibold text-red-700">{error || 'Booking access unavailable.'}</div>;
-  if (success) return <AgentPortalShell profile={profile} walletBalance={balance}><div className="mx-auto max-w-xl py-7"><Card className="rounded-2xl border-emerald-200 shadow-xl"><CardContent className="p-6 text-center"><span className="mx-auto flex size-14 items-center justify-center rounded-full bg-emerald-50 text-emerald-700"><CheckCircle2 className="size-8" /></span><p className="mt-4 text-xs font-bold uppercase tracking-[0.18em] text-emerald-700">Booking confirmed</p><h1 className="mt-2 font-heading text-2xl font-semibold">{success.code}</h1><div className="mt-5 grid grid-cols-2 gap-3 text-left"><SummaryBox label="Wallet deducted" value={formatAed(success.deducted)} /><SummaryBox label="Remaining balance" value={formatAed(success.remaining)} /></div><div className="mt-5 flex flex-col justify-center gap-2 sm:flex-row"><Button asChild><Link href="/agent/bookings">View Booking</Link></Button><Button variant="outline" onClick={reset}>Create Another Booking</Button></div></CardContent></Card></div></AgentPortalShell>;
+  if (loading) return <><AgentPageHeader eyebrow="New booking" title="Create a partner booking" description="Complete four concise steps. Final pricing and wallet eligibility remain controlled by the secured booking RPC." /><BookingSkeleton /></>;
+  if (success) return <div className="mx-auto max-w-xl py-7"><Card className="rounded-2xl border-emerald-200 shadow-xl"><CardContent className="p-6 text-center"><span className="mx-auto flex size-14 items-center justify-center rounded-full bg-emerald-50 text-emerald-700"><CheckCircle2 className="size-8" /></span><p className="mt-4 text-xs font-bold uppercase tracking-[0.18em] text-emerald-700">Booking confirmed</p><h1 className="mt-2 font-heading text-2xl font-semibold">{success.code}</h1><div className="mt-5 grid grid-cols-2 gap-3 text-left"><SummaryBox label="Wallet deducted" value={formatAed(success.deducted)} /><SummaryBox label="Remaining balance" value={formatAed(success.remaining)} /></div><div className="mt-5 flex flex-col justify-center gap-2 sm:flex-row"><Button asChild><Link href="/agent/bookings">View Booking</Link></Button><Button variant="outline" onClick={reset}>Create Another Booking</Button></div></CardContent></Card></div>;
 
-  return <AgentPortalShell profile={profile} walletBalance={balance}>
-    <AgentPageHeader eyebrow="New booking" title="Create a partner booking" description="Complete four concise steps. Final pricing and wallet eligibility remain controlled by the secured booking RPC." walletBalance={balance} actions={<Button variant="outline" onClick={load}><RefreshCw className="size-4" />Refresh balance</Button>} />
+  return <>
+    <AgentPageHeader eyebrow="New booking" title="Create a partner booking" description="Complete four concise steps. Final pricing and wallet eligibility remain controlled by the secured booking RPC." walletBalance={balance} actions={<Button variant="outline" disabled={refreshingPortal} onClick={() => refreshPortal()}><RefreshCw className={`size-4 ${refreshingPortal ? 'animate-spin' : ''}`} />Refresh balance</Button>} />
     {balance <= 0 ? <div className="mt-4 flex flex-col gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-900 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-bold">Wallet funding is required</p><p className="mt-1 leading-6 text-red-800">Your current balance is AED 0.00. You may review available packages, but a booking cannot be submitted until the wallet is funded.</p></div><Button asChild variant="outline" className="shrink-0 border-red-300 bg-white text-red-800 hover:bg-red-100"><a href="tel:+97146113114">Contact for Top-up</a></Button></div> : null}
     <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_310px]">
       <div>
@@ -130,7 +117,7 @@ export default function AgentNewBookingPage() {
       </div>
       <aside className="lg:sticky lg:top-5 lg:self-start"><Card className="rounded-xl border-slate-200 shadow-md"><CardContent className="p-4"><div className="flex items-center gap-3"><span className="flex size-10 items-center justify-center rounded-xl bg-teal-50 text-teal-700"><WalletCards className="size-5" /></span><div><p className="text-xs font-semibold text-slate-500">Current wallet balance</p><p className="font-heading text-xl font-semibold">{formatAed(balance)}</p></div></div><div className="mt-4 space-y-2.5 border-t border-slate-200 pt-4"><Row label="B2B unit price" value={formatAed(unit)} /><Row label="Vehicle quantity" value={String(quantity)} /><Row label="Subtotal" value={formatAed(subtotal)} /><Row label="VAT 5%" value={formatAed(vat)} /><Row label="Total wallet debit" value={formatAed(total)} strong /><div className="flex items-center justify-between gap-3 rounded-lg border border-teal-200 bg-teal-50 p-3 text-sm font-bold text-teal-950"><span>Balance after booking</span><span className="shrink-0 whitespace-nowrap">{formatAed(Math.max(remaining, 0))}</span></div></div>{insufficient ? <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800"><p className="font-bold">Insufficient wallet balance</p><p className="mt-1">Shortfall: {formatAed(shortfall)}. Call +971 4 611 3114 for top-up assistance.</p></div> : <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs font-semibold text-emerald-800">Visible balance covers this booking. The secured RPC performs the final check.</div>}</CardContent></Card></aside>
     </div>
-  </AgentPortalShell>;
+  </>;
 }
 
 function PackageStep({ packages, activeCategory, onCategoryChange, selectedId, onSelect, quantity, setQuantity }: {
@@ -174,3 +161,4 @@ function ReviewStep({ form, selected, quantity, total }: { form: FormState; sele
 function Field({ label, value, onChange, ...props }: { label: string; value: string; onChange: (value: string) => void } & Omit<React.InputHTMLAttributes<HTMLInputElement>, 'value' | 'onChange'>) { return <label className="grid gap-2 text-sm font-semibold">{label}<Input value={value} onChange={(e) => onChange(e.target.value)} {...props} /></label>; }
 function Row({ label, value, strong }: { label: string; value: string; strong?: boolean }) { return <div className={`flex justify-between gap-3 text-sm ${strong ? 'border-t-2 border-slate-300 pt-3 font-bold text-slate-950' : 'text-slate-600'}`}><span>{label}</span><span className="shrink-0 whitespace-nowrap">{value}</span></div>; }
 function SummaryBox({ label, value }: { label: string; value: string }) { return <div className="min-w-0 rounded-xl bg-slate-50 p-3.5 text-left"><p className="text-xs font-semibold text-slate-500">{label}</p><p className="mt-1 font-semibold text-slate-900">{value || '-'}</p></div>; }
+function BookingSkeleton() { return <div className="mt-4 grid animate-pulse gap-4 lg:grid-cols-[minmax(0,1fr)_310px]"><div><div className="grid grid-cols-4 gap-2">{Array.from({ length: 4 }).map((_, index) => <div key={index} className="h-10 rounded-xl bg-slate-200" />)}</div><div className="mt-4 h-80 rounded-xl bg-white shadow-sm" /></div><div className="h-72 rounded-xl bg-white shadow-sm" /></div>; }

@@ -1,27 +1,24 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { ArrowRight, BookCheck, CalendarPlus, CircleAlert, CircleDollarSign, Clock3, Headphones, ReceiptText, RefreshCw, ShipWheel, WalletCards } from 'lucide-react';
 import { AgentEmptyState } from '@/components/edrive/agent/agent-empty-state';
 import { AgentMetricCard } from '@/components/edrive/agent/agent-metric-card';
 import { AgentPageHeader } from '@/components/edrive/agent/agent-page-header';
-import { AgentPortalShell, type AgentPortalProfile } from '@/components/edrive/agent/agent-portal-shell';
+import { useAgentPortal } from '@/components/edrive/agent/agent-portal-provider';
 import { AgentStatusBadge } from '@/components/edrive/agent/agent-status-badge';
 import { AgentWalletLedger } from '@/components/edrive/agent/agent-wallet-ledger';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatAed } from '@/lib/booking-data';
 import { supabase } from '@/lib/supabase-client';
-import { getB2BFinanceSummary, type B2BFinanceSummary, type B2BRefundRequest, type B2BWalletLedgerEntry } from '@/services/b2b-finance';
+import type { B2BRefundRequest, B2BWalletLedgerEntry } from '@/services/b2b-finance';
 
 type Booking = { id: string; booking_code: string | null; customer_name: string | null; selected_package_name: string | null; preferred_date: string | null; preferred_time: string | null; status: string | null; created_at: string | null };
 
 export default function AgentDashboardPage() {
-  const router = useRouter();
-  const [profile, setProfile] = useState<AgentPortalProfile | null>(null);
-  const [summary, setSummary] = useState<B2BFinanceSummary | null>(null);
+  const { profile, agentId, walletBalance, financeSummary: summary, refreshPortal } = useAgentPortal();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [requests, setRequests] = useState<B2BRefundRequest[]>([]);
   const [ledger, setLedger] = useState<B2BWalletLedgerEntry[]>([]);
@@ -32,24 +29,18 @@ export default function AgentDashboardPage() {
   async function load(refresh = false) {
     refresh ? setRefreshing(true) : setLoading(true); setError('');
     try {
-      const { data: session } = await supabase.auth.getSession();
-      if (!session.session?.user) { router.replace('/admin/login'); return; }
-      const profileResult = await supabase.from('b2b_agents').select('id,agent_code,company_name,contact_person,login_email,email,phone,status').eq('auth_user_id', session.session.user.id).maybeSingle();
-      if (profileResult.error) throw new Error(profileResult.error.message);
-      const nextProfile = profileResult.data as AgentPortalProfile | null;
-      if (!nextProfile || String(nextProfile.status).toLowerCase() !== 'active') throw new Error('An active B2B Agent profile is required to access this portal.');
-      const [nextSummary, bookingResult, requestResult, ledgerResult] = await Promise.all([
-        getB2BFinanceSummary(),
-        supabase.from('booking_requests').select('id,booking_code,customer_name,selected_package_name,preferred_date,preferred_time,status,created_at').eq('b2b_agent_id', nextProfile.id).order('created_at', { ascending: false }),
-        supabase.from('b2b_refund_requests').select('id,booking_request_id,b2b_agent_id,request_type,status,reason,requested_amount_aed,approved_amount_aed,decision_note,requested_at,decided_at').eq('b2b_agent_id', nextProfile.id).order('requested_at', { ascending: false }),
-        supabase.from('b2b_wallet_ledger').select('id,direction,transaction_type,amount_aed,balance_after_aed,booking_request_id,refund_request_id,reversal_of_entry_id,description,created_at').eq('b2b_agent_id', nextProfile.id).order('created_at', { ascending: false }).limit(6)
+      const [bookingResult, requestResult, ledgerResult] = await Promise.all([
+        supabase.from('booking_requests').select('id,booking_code,customer_name,selected_package_name,preferred_date,preferred_time,status,created_at').eq('b2b_agent_id', agentId).order('created_at', { ascending: false }),
+        supabase.from('b2b_refund_requests').select('id,booking_request_id,b2b_agent_id,request_type,status,reason,requested_amount_aed,approved_amount_aed,decision_note,requested_at,decided_at').eq('b2b_agent_id', agentId).order('requested_at', { ascending: false }),
+        supabase.from('b2b_wallet_ledger').select('id,direction,transaction_type,amount_aed,balance_after_aed,booking_request_id,refund_request_id,reversal_of_entry_id,description,created_at').eq('b2b_agent_id', agentId).order('created_at', { ascending: false }).limit(6)
       ]);
       if (bookingResult.error || requestResult.error || ledgerResult.error) throw new Error(bookingResult.error?.message || requestResult.error?.message || ledgerResult.error?.message);
-      setProfile(nextProfile); setSummary(nextSummary); setBookings((bookingResult.data || []) as Booking[]); setRequests((requestResult.data || []) as B2BRefundRequest[]); setLedger((ledgerResult.data || []) as B2BWalletLedgerEntry[]);
+      setBookings((bookingResult.data || []) as Booking[]); setRequests((requestResult.data || []) as B2BRefundRequest[]); setLedger((ledgerResult.data || []) as B2BWalletLedgerEntry[]);
+      if (refresh) await refreshPortal();
     } catch (loadError) { setError(loadError instanceof Error ? loadError.message : 'Unable to load the partner dashboard.'); }
     finally { setLoading(false); setRefreshing(false); }
   }
-  useEffect(() => { void load(); }, []);
+  useEffect(() => { void load(); }, [agentId]);
 
   const stats = useMemo(() => ({
     active: bookings.filter((b) => !['completed', 'cancelled', 'no show', 'no_show'].includes(String(b.status || '').toLowerCase())).length,
@@ -58,12 +49,11 @@ export default function AgentDashboardPage() {
   }), [bookings, requests, ledger]);
   const bookingCodes = Object.fromEntries(bookings.map((b) => [b.id, b.booking_code || b.id]));
 
-  if (loading) return <DashboardSkeleton />;
-  if (!profile) return <AccessError message={error} />;
-  const walletBalance = summary?.wallet_balance_aed || 0;
   const walletFunded = walletBalance > 0;
 
-  return <AgentPortalShell profile={profile} walletBalance={summary?.wallet_balance_aed}>
+  if (loading) return <><AgentPageHeader eyebrow="Partner dashboard" title={`Welcome back, ${profile.contact_person || profile.company_name}`} description="A live view of bookings, wallet activity and partner requests." /><DashboardSkeleton /></>;
+
+  return <>
     <AgentPageHeader eyebrow="Partner dashboard" title={`Welcome back, ${profile.contact_person || profile.company_name}`} description="A live view of bookings, wallet activity and partner requests." actions={<Button variant="outline" onClick={() => load(true)} disabled={refreshing}><RefreshCw className={`size-4 ${refreshing ? 'animate-spin' : ''}`} />Refresh</Button>} />
     {error ? <div role="alert" className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-700">{error}</div> : null}
     <section className="mt-4 rounded-xl bg-[linear-gradient(120deg,#082f49_0%,#0f4c5c_52%,#0f766e_100%)] p-4 text-white shadow-[0_12px_28px_rgba(15,76,92,0.18)] sm:flex sm:items-center sm:justify-between sm:gap-5">
@@ -84,8 +74,7 @@ export default function AgentDashboardPage() {
       <Card className="overflow-hidden rounded-2xl border-slate-200 shadow-[0_8px_22px_rgba(15,23,42,0.04)]"><CardHeader className="flex flex-row items-center justify-between p-4"><CardTitle>Recent wallet activity</CardTitle><Button asChild variant="ghost" size="sm"><Link href="/agent/wallet">View all <ArrowRight className="size-4" /></Link></Button></CardHeader><CardContent className="p-0">{ledger.length ? <AgentWalletLedger entries={ledger.slice(0, 5)} bookingCodes={bookingCodes} compact /> : <AgentEmptyState compact icon={WalletCards} title="No wallet transactions" description="Top-ups, booking debits and refund credits will appear here." />}</CardContent></Card>
     </section>
     <section className="mt-4 grid items-stretch gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(260px,1fr)]"><Card className="h-full rounded-2xl border-slate-200 shadow-[0_8px_22px_rgba(15,23,42,0.04)]"><CardHeader className="flex flex-row items-center justify-between p-4"><CardTitle>Pending requests</CardTitle><Button asChild variant="ghost" size="sm"><Link href="/agent/requests">View requests <ArrowRight className="size-4" /></Link></Button></CardHeader><CardContent>{requests.filter((r) => r.status === 'Pending').length ? <div className="space-y-3">{requests.filter((r) => r.status === 'Pending').slice(0, 3).map((r) => <div key={r.id} className="flex items-center justify-between rounded-xl bg-slate-50 p-3"><div><p className="text-sm font-semibold">{r.request_type === 'no_show_refund' ? 'Refund request' : 'Cancellation request'}</p><p className="text-xs text-slate-500">Submitted {new Date(r.requested_at).toLocaleDateString('en-AE')}</p></div><AgentStatusBadge status={r.status} /></div>)}</div> : <AgentEmptyState compact icon={Clock3} title="No pending requests" description="Cancellation and refund requests awaiting review will appear here." action={<Button asChild size="sm" variant="outline"><Link href="/agent/requests">View All Requests</Link></Button>} />}</CardContent></Card><Card className="h-full rounded-2xl border-teal-200 bg-white shadow-[0_8px_22px_rgba(15,23,42,0.04)]"><CardContent className="flex h-full flex-col p-4"><span className="flex size-10 items-center justify-center rounded-xl bg-teal-50 text-teal-700"><Headphones className="size-5" /></span><h3 className="mt-4 font-heading text-lg font-semibold text-slate-950">Partner Support</h3><p className="mt-2 text-sm leading-6 text-slate-600">Get help with partner bookings or arrange wallet top-up assistance with the eDrive team.</p><a href="tel:+97146113114" className="mt-4 text-lg font-bold text-teal-700">+971 4 611 3114</a><div className="mt-auto pt-4"><Button asChild variant="outline" className="w-full border-teal-200 text-teal-800 hover:bg-teal-50"><Link href="/contact">Contact eDrive</Link></Button></div></CardContent></Card></section>
-  </AgentPortalShell>;
+  </>;
 }
 
-function DashboardSkeleton() { return <div className="min-h-screen bg-slate-50 p-6"><div className="mx-auto max-w-6xl animate-pulse space-y-5"><div className="h-16 rounded-2xl bg-slate-200" /><div className="h-32 rounded-2xl bg-slate-200" /><div className="grid grid-cols-2 gap-3 lg:grid-cols-6">{Array.from({ length: 6 }).map((_, i) => <div key={i} className="h-28 rounded-2xl bg-slate-200" />)}</div></div></div>; }
-function AccessError({ message }: { message: string }) { return <main className="flex min-h-screen items-center justify-center bg-slate-50 p-4"><div className="max-w-md rounded-2xl border border-red-200 bg-white p-6 text-center shadow-xl"><CircleAlert className="mx-auto size-8 text-red-600" /><h1 className="mt-4 font-heading text-xl font-semibold">Portal access unavailable</h1><p className="mt-2 text-sm text-slate-600">{message || 'Your B2B Agent profile could not be loaded.'}</p><Button asChild className="mt-5"><Link href="/admin/login">Return to login</Link></Button></div></main>; }
+function DashboardSkeleton() { return <div className="mt-4 animate-pulse space-y-4"><div className="h-28 rounded-xl bg-slate-200" /><div className="grid grid-cols-2 gap-3 lg:grid-cols-3">{Array.from({ length: 6 }).map((_, i) => <div key={i} className="h-20 rounded-xl bg-white shadow-sm" />)}</div><div className="grid gap-4 lg:grid-cols-2"><div className="h-52 rounded-xl bg-white" /><div className="h-52 rounded-xl bg-white" /></div></div>; }
