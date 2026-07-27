@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { CalendarDays, CalendarRange, Eye, FileSearch, RefreshCw, Search, X } from 'lucide-react';
+import { CalendarRange, Eye, FileSearch, RefreshCw, Search, X } from 'lucide-react';
 import Link from 'next/link';
 import { AgentBookingDrawer, type AgentBookingView } from '@/components/edrive/agent/agent-booking-drawer';
+import { AgentDateFilterPicker } from '@/components/edrive/agent/agent-date-filter-picker';
 import { AgentEmptyState } from '@/components/edrive/agent/agent-empty-state';
 import { AgentPageHeader } from '@/components/edrive/agent/agent-page-header';
 import { useAgentPortal } from '@/components/edrive/agent/agent-portal-provider';
@@ -56,6 +57,14 @@ export default function AgentBookingsPage() {
   }), [bookings, search, tab, dateFrom, dateTo]);
   const filtersActive = Boolean(search || dateFrom || dateTo || tab !== 'All');
   const clearFilters = () => { setSearch(''); setDateFrom(''); setDateTo(''); setTab('All'); };
+  const changeDateFrom = (value: string) => {
+    setDateFrom(value);
+    if (value && dateTo && value > dateTo) setDateTo('');
+  };
+  const changeDateTo = (value: string) => {
+    if (value && dateFrom && value < dateFrom) return;
+    setDateTo(value);
+  };
   const tabCount = (item: string) => bookings.filter((booking) => {
     const status = String(booking.status || '').toLowerCase();
     return item === 'All' || (item === 'Active' ? !['completed', 'cancelled', 'no show', 'no_show'].includes(status) : status === item.toLowerCase());
@@ -76,8 +85,8 @@ export default function AgentBookingsPage() {
     <Card className="mt-4 rounded-xl border-slate-200 shadow-sm"><CardContent className="p-4">
       <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-[minmax(260px,1fr)_auto_auto_auto] lg:items-end">
         <label className="grid gap-1.5 text-xs font-semibold text-slate-600"><span>Search</span><span className="relative"><Search className="absolute left-3 top-3 size-4 text-slate-400" /><Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Booking, customer or package" className="h-10 pl-9" /></span></label>
-        <DateFilter label="From Date" value={dateFrom} onChange={setDateFrom} />
-        <DateFilter label="To Date" value={dateTo} onChange={setDateTo} />
+        <AgentDateFilterPicker label="From Date" value={dateFrom} placeholder="Select start date" maxDate={dateTo || undefined} onChange={changeDateFrom} />
+        <AgentDateFilterPicker label="To Date" value={dateTo} placeholder="Select end date" minDate={dateFrom || undefined} onChange={changeDateTo} />
         <Button type="button" size="sm" variant="ghost" className="h-10 justify-self-start lg:justify-self-auto" onClick={clearFilters} disabled={!filtersActive}><X className="size-4" />Clear Filters</Button>
       </div>
       <div className="mt-3 flex gap-2 overflow-x-auto pb-1">{tabs.map((item) => <Button key={item} size="sm" variant={tab === item ? 'default' : 'outline'} onClick={() => setTab(item)} className="shrink-0">{item}<span className="rounded-full bg-black/10 px-1.5 text-[10px]">{tabCount(item)}</span></Button>)}</div>
@@ -98,8 +107,5 @@ export default function AgentBookingsPage() {
     <AgentBookingDrawer booking={selected} open={Boolean(selected)} onOpenChange={(open) => { if (!open) setSelected(null); }} requestStatus={selected && latestRequest(selected.id) ? <AgentStatusBadge status={latestRequest(selected.id)?.status} /> : undefined} />
     <AgentRequestModal booking={requestBooking} open={Boolean(requestBooking)} onOpenChange={(open) => { if (!open) setRequestBooking(null); }} onSuccess={() => load(true)} />
   </>;
-}
-function DateFilter({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
-  return <label className="grid gap-1.5 text-xs font-semibold text-slate-600"><span>{label}</span><span className="relative"><CalendarDays className="pointer-events-none absolute left-3 top-3 size-4 text-slate-400" /><Input aria-label={label} type="date" value={value} onChange={(event) => onChange(event.target.value)} className="h-10 w-full pl-9 lg:w-40" /></span></label>;
 }
 function PageSkeleton() { return <div className="mt-4 animate-pulse space-y-4"><div className="h-28 rounded-xl bg-white shadow-sm" /><div className="space-y-px overflow-hidden rounded-xl border border-slate-200 bg-white">{Array.from({ length: 4 }).map((_, index) => <div key={index} className="h-24 bg-slate-50" />)}</div></div>; }
