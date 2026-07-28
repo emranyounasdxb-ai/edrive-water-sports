@@ -1,7 +1,11 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { ChevronLeft, ChevronRight, ClipboardCheck, Eye, RefreshCw, Search, ShieldCheck, X } from 'lucide-react';
+import {
+  BadgeDollarSign, CalendarPlus, ChevronLeft, ChevronRight, CircleAlert, CircleCheck,
+  ClipboardCheck, Eye, FileDown, Pencil, PlayCircle, ReceiptText, RefreshCw, Search,
+  ShieldCheck, UserCheck, UserPlus, WalletCards, type LucideIcon
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -11,6 +15,12 @@ import { safeUiError, uiLabel } from '@/lib/ui-labels';
 import { ContentAreaSkeleton } from './route-content-transition';
 import { usePortalAccess } from './portal-access';
 import { AppDatePicker } from './shared/app-date-picker';
+import {
+  AppInspectorBody, AppInspectorFooter, AppInspectorHeader, AppInspectorRow,
+  AppInspectorSection, AppInspectorSheet, AppInspectorTechnicalDetails,
+  AppInspectorTimeline, CopyInspectorButton
+} from './shared/app-inspector-sheet';
+import { OverflowText } from './shared/overflow-text';
 
 const allowedRoles = new Set(['super_admin', 'admin', 'finance']);
 const duplicateWindowMs = 10 * 60 * 1000;
@@ -116,20 +126,10 @@ function moduleTone(moduleName: string) {
 
 function MetricPill({ label, value }: { label: string; value: number }) {
   return (
-    <span className="inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-full border border-border/80 bg-white px-3 text-[11px] font-semibold text-muted-foreground shadow-sm">
+    <span className="inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-lg border border-border/80 bg-white px-2.5 text-[11px] font-semibold text-muted-foreground">
       <span>{label}</span>
       <strong className="font-heading text-sm font-semibold text-foreground">{value}</strong>
     </span>
-  );
-}
-
-function Detail({ label, value, helper }: { label: string; value: string; helper?: string }) {
-  return (
-    <div className="min-w-0 rounded-xl border border-border/70 bg-[#F7FAFA] px-3 py-2.5">
-      <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-muted-foreground">{label}</p>
-      <p className="mt-1 break-words text-sm font-bold text-foreground">{value}</p>
-      {helper ? <p className="mt-0.5 break-words text-xs text-muted-foreground">{helper}</p> : null}
-    </div>
   );
 }
 
@@ -163,88 +163,94 @@ function groupDuplicateEvents(rows: AuditRow[]) {
   return groups;
 }
 
+function eventIcon(row: AuditRow): LucideIcon {
+  const value = `${row.module} ${row.action}`.toLowerCase();
+  if (value.includes('no show')) return CircleAlert;
+  if (value.includes('ride started')) return PlayCircle;
+  if (value.includes('completed') || value.includes('confirmed')) return CircleCheck;
+  if (value.includes('manager') && value.includes('assign')) return UserCheck;
+  if (value.includes('payment')) return BadgeDollarSign;
+  if (value.includes('receipt')) return ReceiptText;
+  if (value.includes('wallet')) return WalletCards;
+  if (value.includes('export')) return FileDown;
+  if (value.includes('provision') || value.includes('user created')) return UserPlus;
+  if (value.includes('access') || value.includes('security') || value.includes('auth')) return ShieldCheck;
+  if (value.includes('booking') && value.includes('created')) return CalendarPlus;
+  return Pencil;
+}
+
+function metadataLabel(key: string) {
+  const labels: Record<string, string> = {
+    format: 'Format',
+    row_count: 'Rows Exported',
+    report_type: 'Report',
+    applied_filter_names: 'Filters'
+  };
+  return labels[key] || titleCase(key);
+}
+
+function metadataValue(key: string, value: unknown): string {
+  if (value === null || value === undefined || value === '' || value === '-') return 'Not specified';
+  if (key === 'format') return String(value).toUpperCase();
+  if (Array.isArray(value)) return value.length ? value.map((item) => uiLabel(String(item))).join(', ') : 'No filters applied';
+  if (typeof value === 'object') return Object.entries(value as Record<string, unknown>).map(([name, item]) => `${uiLabel(name)}: ${metadataValue(name, item)}`).join(' · ') || 'Not specified';
+  return key.includes('type') || key.includes('status') ? uiLabel(String(value)) : String(value);
+}
+
+function humanMetadata(row: AuditRow) {
+  const metadata = row.metadata || {};
+  const entries = Object.entries(metadata).filter(([key]) => !['date_from', 'date_to'].includes(key)).map(([key, value]) => ({ label: metadataLabel(key), value: metadataValue(key, value) }));
+  if ('date_from' in metadata || 'date_to' in metadata) {
+    const from = clean(metadata.date_from, '');
+    const to = clean(metadata.date_to, '');
+    entries.splice(Math.min(2, entries.length), 0, { label: 'Date Range', value: from || to ? `${from || 'Start'} to ${to || 'Present'}` : 'All dates' });
+  }
+  return entries;
+}
+
 function DetailsDrawer({ group, onClose }: { group: GroupedAuditRow; onClose: () => void }) {
   const row = group.primary;
-  const entries = Object.entries(row.metadata || {});
-
-  useEffect(() => {
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = previousOverflow; };
-  }, []);
+  const entries = humanMetadata(row);
+  const Icon = eventIcon(row);
+  const record = clean(row.entity_label || row.entity_id);
+  const copyText = `Event: ${uiLabel(row.action)}\nActor: ${clean(row.actor_name)}\nRecord: ${record}\nTime: ${formatFullDateTime(row.created_at)}\nSummary: ${row.summary}`;
 
   return (
-    <div className="fixed inset-0 z-[90] bg-slate-950/35 backdrop-blur-[2px]" onMouseDown={onClose}>
-      <aside
-        className="ml-auto flex h-full w-full max-w-xl flex-col border-l border-border bg-white shadow-[-24px_0_70px_rgba(8,37,50,0.18)]"
-        onMouseDown={(event) => event.stopPropagation()}
-        aria-label="Audit event details"
-      >
-        <div className="flex items-start justify-between gap-4 border-b border-border/70 bg-[#F7FAFA] px-5 py-4">
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className={`inline-flex rounded-full border px-2.5 py-1 text-[10px] font-bold ${moduleTone(row.module)}`}>{uiLabel(row.module)}</span>
-              {group.count > 1 ? <span className="rounded-full bg-primary-900 px-2.5 py-1 text-[10px] font-bold text-white">Repeated ×{group.count}</span> : null}
-            </div>
-            <h2 className="mt-3 break-words font-heading text-xl font-semibold leading-7 text-foreground">{uiLabel(row.action)}</h2>
-            <p className="mt-1 text-xs font-semibold text-muted-foreground">Latest event: {formatFullDateTime(row.created_at)}</p>
-          </div>
-          <button type="button" onClick={onClose} className="flex size-9 shrink-0 items-center justify-center rounded-full border border-border bg-white text-muted-foreground shadow-sm transition hover:text-primary" aria-label="Close details">
-            <X className="size-4" aria-hidden="true" />
-          </button>
-        </div>
-
-        <div className="flex-1 overflow-y-auto p-5">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <Detail label="Actor" value={clean(row.actor_name)} helper={clean(row.actor_email)} />
-            <Detail label="Role" value={roleLabel(row.actor_role)} />
-            <Detail label="Record" value={clean(row.entity_label || row.entity_id)} helper={titleCase(row.entity_type)} />
-            <Detail label="Event ID" value={row.id} />
-          </div>
-
-          <div className="mt-4 rounded-xl border border-border/70 bg-white p-4 shadow-sm">
-            <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-muted-foreground">Summary</p>
-            <p className="mt-2 text-sm font-semibold leading-6 text-foreground">{row.summary}</p>
-          </div>
-
-          {group.count > 1 ? (
-            <div className="mt-4 rounded-xl border border-border/70 bg-[#F7FAFA] p-4">
-              <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-muted-foreground">Repeated occurrences</p>
-              <div className="mt-2 grid gap-2">
-                {group.rows.map((event, index) => (
-                  <div key={event.id} className="flex items-center justify-between gap-4 rounded-lg bg-white px-3 py-2 text-xs shadow-sm">
-                    <span className="font-bold text-foreground">Occurrence {group.count - index}</span>
-                    <span className="font-semibold text-muted-foreground">{formatFullDateTime(event.created_at)}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ) : null}
-
-          <div className="mt-4 rounded-xl border border-border/70 bg-[#F7FAFA] p-4">
-            <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-muted-foreground">Event data</p>
-            {entries.length ? (
-              <div className="mt-2 grid gap-2">
-                {entries.map(([key, value]) => (
-                  <div key={key} className="grid gap-1 rounded-lg border border-border/70 bg-white px-3 py-2 sm:grid-cols-[9rem_1fr]">
-                    <span className="text-xs font-bold text-muted-foreground">{titleCase(key)}</span>
-                    <span className="break-words text-sm font-semibold text-foreground">{typeof value === 'object' ? JSON.stringify(value) : clean(value)}</span>
-                  </div>
-                ))}
-              </div>
-            ) : <p className="mt-2 text-sm text-muted-foreground">No additional data recorded.</p>}
-          </div>
-        </div>
-      </aside>
-    </div>
+    <AppInspectorSheet open size="md" onOpenChange={(open) => { if (!open) onClose(); }}>
+      <AppInspectorHeader eyebrow={uiLabel(row.module)} title={uiLabel(row.action)} description={`${record} · ${formatFullDateTime(row.created_at)}`} icon={Icon} badges={group.count > 1 ? <span className="rounded-full bg-primary-900 px-2 py-0.5 text-[9px] font-bold text-white">Repeated {group.count} times</span> : null} />
+      <AppInspectorBody>
+        <div className="flex items-start gap-3 rounded-xl border border-primary/15 bg-primary-50/70 p-3"><span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-white text-primary"><Icon className="size-4" /></span><p className="text-sm font-semibold leading-6 text-foreground">{row.summary}</p></div>
+        <AppInspectorSection title="Event Details">
+          <AppInspectorRow label="Actor" value={clean(row.actor_name)} />
+          <AppInspectorRow label="Email" value={clean(row.actor_email, 'Not specified')} copyable />
+          <AppInspectorRow label="Role" value={roleLabel(row.actor_role)} />
+          <AppInspectorRow label="Record" value={record} copyable />
+          <AppInspectorRow label="Time" value={formatFullDateTime(row.created_at)} />
+        </AppInspectorSection>
+        <AppInspectorSection title="Event Data">
+          {entries.length ? entries.map((entry) => <AppInspectorRow key={entry.label} label={entry.label} value={entry.value} />) : <p className="px-3 py-4 text-xs text-muted-foreground">No additional data recorded.</p>}
+        </AppInspectorSection>
+        {group.count > 1 ? <AppInspectorSection title={`Repeated ${group.count} times`}><AppInspectorTimeline items={group.rows.map((event, index) => ({ label: `Occurrence ${group.count - index}`, time: formatFullDateTime(event.created_at) }))} /></AppInspectorSection> : null}
+        <AppInspectorTechnicalDetails>
+          <AppInspectorRow label="Event ID" value={row.id} copyable mono />
+          <AppInspectorRow label="Entity Type" value={clean(row.entity_type, 'Not specified')} />
+          <AppInspectorRow label="Entity ID" value={clean(row.entity_id, 'Not specified')} copyable mono />
+          <AppInspectorRow label="Raw Timestamp" value={row.created_at} copyable mono />
+          {row.metadata ? <AppInspectorRow label="Raw Metadata" value={JSON.stringify(row.metadata)} copyable mono /> : null}
+        </AppInspectorTechnicalDetails>
+      </AppInspectorBody>
+      <AppInspectorFooter><CopyInspectorButton text={copyText} /><Button type="button" size="sm" onClick={onClose}>Close</Button></AppInspectorFooter>
+    </AppInspectorSheet>
   );
 }
 
 function ActivityLine({ row, count }: { row: AuditRow; count: number }) {
   const label = `${uiLabel(row.module)} | ${uiLabel(row.action)}`;
+  const Icon = eventIcon(row);
   return (
     <div className="flex min-w-0 items-center gap-1.5" title={label}>
-      <span className={`inline-flex shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-bold ${moduleTone(row.module)}`}>{uiLabel(row.module)}</span>
+      <span className={`inline-flex size-6 shrink-0 items-center justify-center rounded-lg border ${moduleTone(row.module)}`}><Icon className="size-3" aria-hidden="true" /></span>
+      <span className="shrink-0 text-[10px] font-semibold text-muted-foreground">{uiLabel(row.module)}</span>
       <span className="truncate text-xs font-bold text-foreground">{uiLabel(row.action)}</span>
       {count > 1 ? <span className="shrink-0 rounded-full bg-primary-900 px-1.5 py-0.5 text-[9px] font-bold text-white">×{count}</span> : null}
     </div>
@@ -350,7 +356,7 @@ export function AdminAuditLogPage() {
           <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
             <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-primary">Team & System</p>
             <h1 className="font-heading text-2xl font-semibold leading-none text-foreground">Audit Log</h1>
-            <p className="truncate text-xs font-semibold text-muted-foreground">Operational activity, access changes and security history.</p>
+            <p className="truncate text-xs font-semibold text-muted-foreground">Track operational actions, access changes and security events.</p>
           </div>
         </div>
 
@@ -408,7 +414,7 @@ export function AdminAuditLogPage() {
                 <TableRow className="sticky top-0 z-10 h-8 bg-white shadow-[0_1px_0_rgba(8,37,50,0.08)] hover:bg-white">
                   <TableHead className="w-[132px] px-3 text-[10px]">Time</TableHead>
                   <TableHead className="w-[170px] px-3 text-[10px]">Actor</TableHead>
-                  <TableHead className="w-[220px] px-3 text-[10px]">Activity</TableHead>
+                  <TableHead className="w-[220px] px-3 text-[10px]">Event</TableHead>
                   <TableHead className="w-[205px] px-3 text-[10px]">Record</TableHead>
                   <TableHead className="px-3 text-[10px]">Summary</TableHead>
                   <TableHead className="w-[48px] px-2 text-right text-[10px]">View</TableHead>
@@ -434,8 +440,8 @@ export function AdminAuditLogPage() {
                         </div>
                       </TableCell>
                       <TableCell className="px-3 py-1.5"><ActivityLine row={row} count={group.count} /></TableCell>
-                      <TableCell className="truncate px-3 py-1.5 text-xs font-bold text-foreground" title={recordTooltip}>{record}</TableCell>
-                      <TableCell className="truncate px-3 py-1.5 text-xs font-semibold text-foreground" title={row.summary}>{row.summary}</TableCell>
+                      <TableCell className="px-3 py-1.5 text-xs font-bold text-foreground" title={recordTooltip}><OverflowText value={record} maxWidth="max-w-full" /></TableCell>
+                      <TableCell className="px-3 py-1.5 text-xs font-semibold text-foreground"><OverflowText value={row.summary} maxWidth="max-w-full" maxCharacters={90} /></TableCell>
                       <TableCell className="px-2 py-1.5 text-right"><button type="button" onClick={() => setSelected(group)} className="inline-flex size-7 items-center justify-center rounded-full border border-border bg-white text-muted-foreground shadow-sm transition hover:border-primary/30 hover:text-primary" aria-label="View audit details"><Eye className="size-3" aria-hidden="true" /></button></TableCell>
                     </TableRow>
                   );

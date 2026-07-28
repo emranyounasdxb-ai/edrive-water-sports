@@ -70,7 +70,10 @@ const uiLabels = read('lib/ui-labels.ts');
   const financeDashboard = read('components/edrive/finance-dashboard-page.tsx');
   const adminDashboard = read('components/edrive/admin-dashboard-reconciled-page.tsx');
   const bookingManagerDashboard = read('components/edrive/booking-manager-dashboard-page.tsx');
-  const agentDashboard = read('app/agent/page.tsx');
+const agentDashboard = read('app/agent/page.tsx');
+const sheetPrimitive = read('components/ui/sheet.tsx');
+const inspectorSheet = read('components/edrive/shared/app-inspector-sheet.tsx');
+const agentBookingDrawer = read('components/edrive/agent/agent-booking-drawer.tsx');
 const tablePrimitive = read('components/ui/table.tsx');
 
 function sourceFiles(directory) {
@@ -116,6 +119,10 @@ assert(uiLabels.includes('export function safeUiError') && !financeBookings.incl
   assert(dashboardVisuals.includes('DashboardAreaChart') && dashboardVisuals.includes('role="img"') && dashboardVisuals.includes('DashboardActionList') && dashboardVisuals.includes('DashboardActivityList'), 'Role dashboards must retain the shared accessible SVG visualization, attention and activity system.');
   assert(!financeDashboard.includes('quickLinks') && financeDashboard.includes('Revenue & Collections') && financeDashboard.includes('Needs Attention'), 'Finance Dashboard must remain a role-specific command center without duplicate sidebar shortcut cards.');
   assert(adminDashboard.includes('Bookings & Revenue Trend') && bookingManagerDashboard.includes('Today’s Schedule') && agentDashboard.includes('Booking Activity'), 'Admin, Booking Manager and B2B Agent dashboards must retain role-specific operational hierarchy.');
+assert(sheetPrimitive.includes("type SheetSize = 'sm' | 'md' | 'lg' | 'xl'") && sheetPrimitive.includes('sm:bottom-3') && sheetPrimitive.includes('motion-reduce:transition-none'), 'Shared Sheets must retain typed sizing, floating desktop insets and reduced-motion support.');
+assert(inspectorSheet.includes('AppInspectorTechnicalDetails') && inspectorSheet.includes('aria-expanded') && inspectorSheet.includes('CopyInspectorButton'), 'Shared inspectors must retain collapsed technical details and accessible copy actions.');
+assert(financeAudit.includes('<AppInspectorSheet') && !financeAudit.includes('document.body.style.overflow') && !financeAudit.includes('ml-auto flex h-full'), 'Audit details must use the shared Radix inspector without custom scroll locking or a custom fixed aside.');
+assert(agentBookingDrawer.includes('<AppInspectorSheet') && agentBookingDrawer.includes('AppInspectorTimeline'), 'Agent booking details must retain the shared inspector structure and timeline.');
 assert(tablePrimitive.includes('whitespace-nowrap') && tablePrimitive.includes("text-[10px]"), 'Portal table headers and cells must retain compact single-line defaults.');
 assert(portalAccess.includes("if (role === 'admin') return false;") && portalAccess.includes("if (role === 'finance') return path === '/admin/payments'"), 'Admin must remain read-only and Finance mutations must remain limited to Payments and self-profile.');
 assert(myProfilePage.includes("const avatarBucket = 'profile-avatars'"), 'Self-profile uploads must continue using the profile-avatars bucket.');
