@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Check, Copy } from 'lucide-react';
+import { Check, Copy, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export function OverflowText({
@@ -77,6 +77,48 @@ export function OverflowText({
           ) : null}
         </span>
       ) : null}
+    </span>
+  );
+}
+
+export function CompactInfoTooltip({ content, label = 'More information' }: { content: string; label?: string }) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLSpanElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const closeOutside = (event: PointerEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
+    };
+    const closeEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setOpen(false);
+    };
+    document.addEventListener('pointerdown', closeOutside);
+    document.addEventListener('keydown', closeEscape);
+    return () => {
+      document.removeEventListener('pointerdown', closeOutside);
+      document.removeEventListener('keydown', closeEscape);
+    };
+  }, [open]);
+
+  return (
+    <span ref={rootRef} className="relative inline-flex shrink-0">
+      <button
+        type="button"
+        aria-label={label}
+        aria-expanded={open}
+        className="inline-flex size-5 items-center justify-center rounded-full text-muted-foreground outline-none hover:bg-primary-50 hover:text-primary focus-visible:ring-2 focus-visible:ring-primary/35"
+        onClick={() => setOpen((current) => !current)}
+        onMouseEnter={() => setOpen(true)}
+        onMouseLeave={() => setOpen(false)}
+        onFocus={() => setOpen(true)}
+        onBlur={(event) => {
+          if (!rootRef.current?.contains(event.relatedTarget as Node)) setOpen(false);
+        }}
+      >
+        <Info className="size-3.5" aria-hidden="true" />
+      </button>
+      {open ? <span role="tooltip" className="absolute right-0 top-[calc(100%+0.3rem)] z-[120] w-64 max-w-[calc(100vw-2rem)] rounded-lg border border-slate-200 bg-slate-950 px-3 py-2 text-left text-xs font-medium leading-5 text-white shadow-xl">{content}</span> : null}
     </span>
   );
 }

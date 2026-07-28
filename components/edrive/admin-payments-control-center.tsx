@@ -12,6 +12,7 @@ import { supabase } from '@/lib/supabase-client';
 import { exportFinanceCsv, exportFinancePdf, type ExportColumn } from '@/lib/finance-report-export';
 import { AdminPaymentsPage } from './admin-payments-page';
 import { usePortalAccess } from './portal-access';
+import { CompactEmptyState, CompactKpiCard, CompactOperationalRow, CompactPageHeader, CompactSegmentedTabs } from './shared/compact-presentation';
 
 type PaymentTab = 'overview' | 'manager' | 'b2b' | 'receipts' | 'ledger';
 type ReceivableKind = 'manager' | 'b2b_agent';
@@ -193,14 +194,7 @@ function buildGroups(bookings: BookingRow[], kind: ReceivableKind) {
 }
 
 function Metric({ label, value, helper, icon: Icon }: { label: string; value: string; helper: string; icon: LucideIcon }) {
-  return (
-    <Card className="rounded-[1.25rem] border-border/80 bg-white shadow-[0_10px_28px_rgba(8,37,50,0.05)]">
-      <CardContent className="flex items-start gap-3 p-4">
-        <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-primary-50 text-primary"><Icon className="size-5" aria-hidden="true" /></span>
-        <div className="min-w-0"><p className="text-xs font-semibold text-muted-foreground">{label}</p><p className="mt-1 font-heading text-xl font-semibold text-foreground sm:text-2xl">{value}</p><p className="mt-1 text-[11px] font-semibold text-muted-foreground">{helper}</p></div>
-      </CardContent>
-    </Card>
-  );
+  return <CompactKpiCard label={label} value={value} detail={helper} icon={Icon} />;
 }
 
 function Detail({ label, value, sub }: { label: string; value: ReactNode; sub?: ReactNode }) {
@@ -285,9 +279,9 @@ function ReceivableTab({ kind, groups, query, onQuery, onReceive }: { kind: Rece
   const totalDue = groups.reduce((sum, group) => sum + group.due, 0);
   const bookingCount = groups.reduce((sum, group) => sum + group.bookings.length, 0);
   return (
-    <section className="px-4 py-5 sm:px-6 lg:px-8">
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4"><Metric label={kind === 'manager' ? 'Manager Outstanding' : 'B2B Outstanding'} value={formatAed(totalDue)} helper={`${bookingCount} unsettled bookings`} icon={kind === 'manager' ? WalletCards : Building2} /><Metric label={kind === 'manager' ? 'Managers To Settle' : 'Agents To Collect'} value={String(groups.length)} helper="Grouped by responsible account" icon={kind === 'manager' ? CreditCard : Landmark} />{kind === 'manager' ? <><Metric label="Cash Handover" value={formatAed(groups.reduce((sum, group) => sum + group.cash, 0))} helper="Cash currently with managers" icon={WalletCards} /><Metric label="Card Settlement" value={formatAed(groups.reduce((sum, group) => sum + group.card, 0))} helper="Card payments pending verification" icon={CreditCard} /></> : <><Metric label="Open Invoices" value={String(bookingCount)} helper="Completed B2B bookings with balance" icon={FileText} /><Metric label="Average Due" value={formatAed(groups.length ? totalDue / groups.length : 0)} helper="Average outstanding per agent" icon={Building2} /></>}</div>
-      <Card className="mt-4 overflow-hidden rounded-[1.35rem] border-border/80 bg-white"><CardHeader className="border-b border-border/70 bg-[#F7FAFA] px-4 py-3"><div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><CardTitle className="font-heading text-xl font-semibold">{kind === 'manager' ? 'Manager settlements' : 'B2B receivables'}</CardTitle><p className="mt-1 text-xs font-semibold text-muted-foreground">{visible.length} accounts</p></div><label className="relative w-full sm:max-w-sm"><Search className="pointer-events-none absolute left-3 top-3 size-4 text-muted-foreground" aria-hidden="true" /><Input value={query} onChange={(event) => onQuery(event.target.value)} placeholder="Search account or booking..." className="h-10 rounded-full bg-white pl-9" /></label></div></CardHeader><CardContent className="grid gap-3 p-3 sm:p-4">{!visible.length ? <div className="rounded-2xl border border-dashed border-border bg-[#F7FAFA] px-4 py-8 text-center text-sm font-semibold text-muted-foreground">No outstanding accounts.</div> : visible.map((group) => <div key={group.name} className="rounded-[1.15rem] border border-border/70 bg-white p-3 shadow-sm"><div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"><div><p className="font-heading text-base font-semibold text-foreground">{group.name}</p><p className="mt-1 text-xs font-semibold text-muted-foreground">{group.bookings.length} booking{group.bookings.length === 1 ? '' : 's'}{kind === 'manager' ? ` | Cash ${formatAed(group.cash)} | Card ${formatAed(group.card)}` : ''}</p></div><div className="flex items-center gap-3"><p className="font-heading text-lg font-semibold text-primary">{formatAed(group.due)}</p><Button type="button" size="sm" onClick={() => onReceive(group)} className="rounded-full"><Save className="size-4" aria-hidden="true" />Receive</Button></div></div><div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-3">{group.bookings.map((booking) => <div key={bookingCode(booking)} className="rounded-xl bg-[#F7FAFA] px-3 py-2"><div className="flex items-start justify-between gap-2"><div><p className="text-xs font-bold text-primary">{bookingCode(booking)}</p><p className="mt-1 text-sm font-semibold text-foreground">{text(booking.customer_name, 'Guest')}</p><p className="mt-0.5 text-[11px] text-muted-foreground">{niceDate(booking.preferred_date)} | {text(booking.preferred_time, '-')}</p></div><p className="shrink-0 text-sm font-bold text-foreground">{formatAed(kind === 'manager' ? bookingReceived(booking) : bookingPending(booking))}</p></div></div>)}</div></div>)}</CardContent></Card>
+    <section className="px-4 py-3 sm:px-6 lg:px-8">
+      <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4"><Metric label={kind === 'manager' ? 'Outstanding' : 'B2B Due'} value={formatAed(totalDue)} helper={`${bookingCount} unsettled bookings`} icon={kind === 'manager' ? WalletCards : Building2} /><Metric label={kind === 'manager' ? 'Managers' : 'Agents'} value={String(groups.length)} helper="Grouped by responsible account" icon={kind === 'manager' ? CreditCard : Landmark} />{kind === 'manager' ? <><Metric label="Cash" value={formatAed(groups.reduce((sum, group) => sum + group.cash, 0))} helper="Cash currently with managers" icon={WalletCards} /><Metric label="Card" value={formatAed(groups.reduce((sum, group) => sum + group.card, 0))} helper="Card payments pending verification" icon={CreditCard} /></> : <><Metric label="Invoices" value={String(bookingCount)} helper="Completed B2B bookings with balance" icon={FileText} /><Metric label="Average" value={formatAed(groups.length ? totalDue / groups.length : 0)} helper="Average outstanding per agent" icon={Building2} /></>}</div>
+      <Card className="mt-3 overflow-hidden rounded-2xl border-border/80 bg-white"><CardHeader className="border-b border-border/70 bg-[#F7FAFA] px-4 py-2.5"><div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"><div><CardTitle className="font-heading text-base font-semibold">{kind === 'manager' ? 'Manager settlements' : 'B2B receivables'}</CardTitle><p className="text-[11px] font-semibold text-muted-foreground">{visible.length} accounts</p></div><label className="relative w-full sm:max-w-xs"><Search className="pointer-events-none absolute left-3 top-2.5 size-4 text-muted-foreground" aria-hidden="true" /><Input value={query} onChange={(event) => onQuery(event.target.value)} placeholder="Search account or booking..." className="h-9 rounded-full bg-white pl-9" /></label></div></CardHeader><CardContent className="grid gap-2 p-3">{!visible.length ? <CompactEmptyState>No outstanding accounts.</CompactEmptyState> : visible.map((group) => <CompactOperationalRow key={group.name} title={group.name} secondary={<>{group.bookings.length} booking{group.bookings.length === 1 ? '' : 's'}{kind === 'manager' ? ` | Cash ${formatAed(group.cash)} | Card ${formatAed(group.card)}` : ''}</>} value={formatAed(group.due)} action={<Button type="button" size="sm" onClick={() => onReceive(group)}><Save className="size-4" aria-hidden="true" />Receive</Button>} />)}</CardContent></Card>
     </section>
   );
 }
@@ -313,7 +307,7 @@ function LedgerTab({ ledger, receipts, query, onQuery }: { ledger: LedgerRow[]; 
 }
 
 export function AdminPaymentsControlCenter() {
-  const { fullName, email, role } = usePortalAccess();
+  const { fullName, email } = usePortalAccess();
   const [activeTab, setActiveTab] = useState<PaymentTab>('overview');
   const [bookings, setBookings] = useState<BookingRow[]>([]);
   const [receipts, setReceipts] = useState<ReceiptRow[]>([]);
@@ -391,14 +385,13 @@ export function AdminPaymentsControlCenter() {
   return (
     <section className="w-full overflow-hidden">
       <div className="px-4 pt-5 sm:px-6 sm:pt-7 lg:px-8 xl:px-10">
-        <div className="flex flex-col gap-4 rounded-[1.5rem] border border-white/80 bg-white/85 p-4 shadow-[0_18px_45px_rgba(8,37,50,0.055)] lg:flex-row lg:items-end lg:justify-between"><div><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Finance</p><h1 className="mt-2 font-heading text-2xl font-semibold text-foreground sm:text-3xl">Payment workspace</h1><p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">Track outstanding accounts, receive settlements, review receipts and reconcile company collections.</p></div><Button type="button" variant="outline" onClick={load} disabled={loading} className="w-fit rounded-full bg-white"><RefreshCw className={`size-4 ${loading ? 'animate-spin' : ''}`} aria-hidden="true" />Refresh</Button></div>
+        <CompactPageHeader eyebrow="Finance" title="Payments & Collections" description="Receive settlements, track receivables and reconcile payments." actions={<Button type="button" size="sm" variant="outline" onClick={load} disabled={loading}><RefreshCw className={`size-4 ${loading ? 'animate-spin' : ''}`} aria-hidden="true" />Refresh</Button>} />
         {error ? <p className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</p> : null}
-        <div className="mt-4 flex gap-2 overflow-x-auto rounded-[1.15rem] border border-border/70 bg-white p-2 shadow-sm">{tabItems.map((item) => { const Icon = item.icon; const active = activeTab === item.id; return <button key={item.id} type="button" onClick={() => setActiveTab(item.id)} className={`inline-flex shrink-0 items-center gap-2 rounded-xl px-3 py-2 text-xs font-bold transition ${active ? 'bg-primary text-white shadow-sm' : 'text-muted-foreground hover:bg-primary-50 hover:text-primary-900'}`}><Icon className="size-4" aria-hidden="true" />{item.label}<span className={`rounded-full px-1.5 py-0.5 text-[9px] ${active ? 'bg-white/15 text-white' : 'bg-[#F4F7F8] text-muted-foreground'}`}>{tabCounts[item.id]}</span></button>; })}</div>
+        <CompactSegmentedTabs className="mt-3" value={activeTab} onChange={setActiveTab} items={tabItems.map((item) => ({ value: item.id, label: item.label, icon: item.icon, count: tabCounts[item.id] }))} />
         {activeTab === 'receipts' || activeTab === 'ledger' ? <div className="mt-3 flex flex-wrap gap-2"><Button variant="outline" disabled={!exportRows.length} onClick={() => void exportFinanceCsv(exportContext as never)}><Download className="size-4" />Export CSV</Button><Button variant="outline" disabled={!exportRows.length} onClick={() => void exportFinancePdf(exportContext as never)}><FileDown className="size-4" />Download PDF</Button>{activeTab === 'receipts' ? <Button variant="outline" disabled={!exportRows.length} onClick={printCurrentReceipts}><Printer className="size-4" />Print Receipts</Button> : null}</div> : null}
-        {role === 'finance' ? <p className="mt-3 text-xs font-semibold text-muted-foreground">Finance access is limited to payment receipts, settlement allocations and company ledger collection fields.</p> : null}
       </div>
 
-      {activeTab === 'overview' ? <AdminPaymentsPage /> : null}
+      {activeTab === 'overview' ? <AdminPaymentsPage embedded /> : null}
       {activeTab === 'manager' ? <ReceivableTab kind="manager" groups={managerGroups} query={query} onQuery={setQuery} onReceive={setSettlement} /> : null}
       {activeTab === 'b2b' ? <ReceivableTab kind="b2b_agent" groups={b2bGroups} query={query} onQuery={setQuery} onReceive={setSettlement} /> : null}
       {activeTab === 'receipts' ? <ReceiptsTab receipts={receipts} allocations={allocations} query={query} onQuery={setQuery} /> : null}

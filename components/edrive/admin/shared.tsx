@@ -3,6 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { uiLabel } from '@/lib/ui-labels';
+import { CompactInfoTooltip } from '../shared/overflow-text';
 import type { BookingStatus, CollectionStatus, PaymentStatus } from './operations-data';
 
 type BadgeVariant = 'success' | 'warning' | 'gold' | 'destructive' | 'secondary' | 'default';
@@ -56,15 +57,14 @@ export function PageHeader({ title, description, actions }: { title: string; des
 
 export function SummaryTile({ label, value, detail, icon: Icon, tone = 'aqua' }: { label: string; value: string; detail: string; icon: LucideIcon; tone?: 'aqua' | 'gold' | 'red' }) {
   return (
-    <Card className="overflow-hidden rounded-2xl">
-      <CardContent className="flex min-h-[82px] items-center gap-3 p-3.5">
-        <div className={cn('flex size-9 shrink-0 items-center justify-center rounded-xl shadow-sm', tone === 'aqua' && 'bg-primary text-primary-foreground', tone === 'gold' && 'bg-accent text-accent-foreground', tone === 'red' && 'bg-destructive text-destructive-foreground')}>
-          <Icon aria-hidden="true" className="size-[18px]" />
+    <Card className="overflow-hidden rounded-xl">
+      <CardContent className="flex min-h-14 items-center gap-2.5 p-2.5">
+        <div className={cn('flex size-8 shrink-0 items-center justify-center rounded-lg', tone === 'aqua' && 'bg-primary text-primary-foreground', tone === 'gold' && 'bg-accent text-accent-foreground', tone === 'red' && 'bg-destructive text-destructive-foreground')}>
+          <Icon aria-hidden="true" className="size-4" />
         </div>
-        <div className="min-w-0">
-          <p className="truncate whitespace-nowrap text-[11px] font-medium text-muted-foreground">{label}</p>
-          <p className="mt-0.5 truncate whitespace-nowrap font-heading text-xl font-semibold tabular-nums text-foreground">{value}</p>
-          <p className="mt-0.5 truncate whitespace-nowrap text-[10px] font-medium text-primary">{detail}</p>
+        <div className="flex min-w-0 flex-1 items-center justify-between gap-2">
+          <p className="flex min-w-0 items-center gap-1 truncate whitespace-nowrap text-[11px] font-medium text-muted-foreground">{label}<CompactInfoTooltip content={detail} /></p>
+          <p className="shrink-0 whitespace-nowrap font-heading text-lg font-semibold tabular-nums text-foreground">{value}</p>
         </div>
       </CardContent>
     </Card>

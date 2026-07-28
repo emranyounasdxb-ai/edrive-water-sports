@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { formatAed } from '@/lib/booking-data';
 import { bookingRequestsTable } from '@/lib/booking-records';
 import { supabase } from '@/lib/supabase-client';
+import { CompactKpiCard } from './shared/compact-presentation';
 
 type PaymentFilter = 'all' | 'manager_cash' | 'manager_card' | 'b2b_due' | 'direct_due' | 'not_due' | 'collected' | 'no_collection';
 type SourceType = 'manager' | 'b2b_agent' | 'direct_customer';
@@ -236,14 +237,7 @@ function Badge({ children, tone }: { children: ReactNode; tone?: string }) {
 }
 
 function MetricCard({ title, value, helper, icon: Icon }: { title: string; value: string; helper: string; icon: LucideIcon }) {
-  return (
-    <Card className="rounded-[1.25rem] border-border/80 bg-white shadow-[0_12px_32px_rgba(8,37,50,0.055)]">
-      <CardContent className="flex min-w-0 items-start gap-3 p-4">
-        <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-primary-50 text-primary"><Icon className="size-5" aria-hidden="true" /></span>
-        <div className="min-w-0"><p className="truncate text-xs font-semibold text-muted-foreground">{title}</p><p className="mt-1 break-words font-heading text-xl font-semibold leading-tight text-foreground sm:text-2xl">{value}</p><p className="mt-1 text-[11px] font-semibold leading-4 text-muted-foreground">{helper}</p></div>
-      </CardContent>
-    </Card>
-  );
+  return <CompactKpiCard label={title} value={value} detail={helper} icon={Icon} />;
 }
 
 function Detail({ label, value, sub }: { label: string; value: ReactNode; sub?: ReactNode }) {
@@ -500,7 +494,7 @@ function MiniGroupCard({ title, empty, groups, type, onReceive }: { title: strin
   );
 }
 
-export function AdminPaymentsPage() {
+export function AdminPaymentsPage({ embedded = false }: { embedded?: boolean }) {
   const [bookings, setBookings] = useState<BookingRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -571,17 +565,17 @@ export function AdminPaymentsPage() {
   ];
 
   return (
-    <section className="w-full overflow-hidden px-4 py-5 sm:px-6 sm:py-7 lg:px-8 xl:px-10">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between"><div><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Payments</p><h1 className="mt-2 font-heading text-2xl font-semibold leading-tight text-foreground sm:text-3xl lg:text-4xl">Payment control center</h1><p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">Receive manager handovers, B2B agent payments, and direct customer balances into the company account.</p></div><Button type="button" variant="outline" onClick={refresh} className="w-fit rounded-full bg-white"><RefreshCw className="size-4" aria-hidden="true" />Refresh</Button></div>
+    <section className={`w-full overflow-hidden px-4 ${embedded ? 'py-3' : 'py-5 sm:py-7'} sm:px-6 lg:px-8 xl:px-10`}>
+      {!embedded ? <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between"><div><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Payments</p><h1 className="mt-2 font-heading text-2xl font-semibold leading-tight text-foreground sm:text-3xl lg:text-4xl">Payment control center</h1><p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">Receive manager handovers, B2B agent payments, and direct customer balances into the company account.</p></div><Button type="button" variant="outline" onClick={refresh} className="w-fit rounded-full bg-white"><RefreshCw className="size-4" aria-hidden="true" />Refresh</Button></div> : null}
       {error ? <p className="mt-5 rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</p> : null}
 
-      <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
-        <MetricCard title="Ready To Collect" value={formatAed(readyToCollect)} helper="Manager cash + B2B due + direct due" icon={CheckCircle2} />
-        <MetricCard title="Cash With Managers" value={formatAed(cashWithManagers)} helper="Receive handover from managers" icon={WalletCards} />
-        <MetricCard title="B2B Agent Due" value={formatAed(b2bDue)} helper="Receivable from B2B agents" icon={Building2} />
-        <MetricCard title="Direct Customer Due" value={formatAed(directDue)} helper="Completed direct rides with balance" icon={UserRound} />
-        <MetricCard title="Card Collected" value={formatAed(managerCard)} helper="Verify card/reference payments" icon={CreditCard} />
-        <MetricCard title="Upcoming / Not Due" value={formatAed(notDue)} helper={`${noCollectionCount} no-collection records`} icon={FileText} />
+      <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
+        <MetricCard title="Ready" value={formatAed(readyToCollect)} helper="Manager cash + B2B due + direct due" icon={CheckCircle2} />
+        <MetricCard title="Managers" value={formatAed(cashWithManagers)} helper="Receive handover from managers" icon={WalletCards} />
+        <MetricCard title="B2B" value={formatAed(b2bDue)} helper="Receivable from B2B agents" icon={Building2} />
+        <MetricCard title="Direct" value={formatAed(directDue)} helper="Completed direct rides with balance" icon={UserRound} />
+        <MetricCard title="Card" value={formatAed(managerCard)} helper="Verify card/reference payments" icon={CreditCard} />
+        <MetricCard title="Upcoming" value={formatAed(notDue)} helper={`${noCollectionCount} no-collection records`} icon={FileText} />
       </div>
 
       <div className="mt-5 grid gap-4 xl:grid-cols-2">

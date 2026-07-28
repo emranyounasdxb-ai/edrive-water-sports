@@ -16,10 +16,10 @@ const buttonVariants = cva(
         danger: 'bg-destructive text-destructive-foreground shadow-sm hover:bg-red-700'
       },
       size: {
-        default: 'h-11 px-5 py-2',
-        sm: 'h-9 px-4 text-xs',
+        default: 'h-9 px-4 py-1.5',
+        sm: 'h-8 px-3 text-xs',
         lg: 'h-12 px-7',
-        icon: 'size-10 rounded-full'
+        icon: 'size-9 rounded-full'
       }
     },
     defaultVariants: {

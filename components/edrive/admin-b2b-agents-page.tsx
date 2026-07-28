@@ -12,6 +12,7 @@ import { formatAed } from '@/lib/booking-data';
 import { bookingRequestsTable } from '@/lib/booking-records';
 import { supabase } from '@/lib/supabase-client';
 import { manageB2BAgentProfile } from '@/services/b2b-finance';
+import { CompactKpiCard } from './shared/compact-presentation';
 
 type AgentStatus = 'Active' | 'Inactive' | 'Suspended';
 type AgentType = 'B2B Agent' | 'Tour Operator' | 'Hotel' | 'Travel Desk' | 'Vendor' | 'Freelancer';
@@ -810,17 +811,7 @@ function Info({ label, value }: { label: string; value: string }) {
 }
 
 function Metric({ title, value, icon: Icon }: { title: string; value: string; icon: typeof Building2 }) {
-  return (
-    <Card className="rounded-[1.25rem] border-border/80">
-      <CardContent className="flex min-w-0 items-center gap-3 p-4">
-        <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-primary-50 text-primary"><Icon className="size-5" aria-hidden="true" /></span>
-        <div className="min-w-0">
-          <p className="truncate text-xs font-semibold text-muted-foreground">{title}</p>
-          <p className="mt-1 break-words font-heading text-xl font-semibold leading-tight text-foreground sm:text-2xl">{value}</p>
-        </div>
-      </CardContent>
-    </Card>
-  );
+  return <CompactKpiCard label={title} value={value} icon={Icon} />;
 }
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
