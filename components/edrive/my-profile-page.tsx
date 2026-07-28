@@ -298,7 +298,7 @@ export function MyProfilePage() {
     <section className="mx-auto w-full max-w-6xl px-1 py-1 sm:px-2">
       <div>
         <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">My Profile</p>
-        <h1 className="mt-2 font-heading text-3xl font-semibold text-foreground sm:text-4xl">Personal details and security</h1>
+        <h1 className="mt-1 truncate whitespace-nowrap font-heading text-2xl font-semibold text-foreground">Personal details & security</h1>
         <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">Update your own contact details, profile photo and password. Account permissions remain controlled by Super Admin.</p>
       </div>
 

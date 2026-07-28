@@ -64,6 +64,9 @@ const financeMigration = read('supabase/04-finance-portal-rbac-reporting.sql');
 const financeAudit = read('components/edrive/admin-audit-log-page.tsx');
 const adminPaymentsControlCenter = read('components/edrive/admin-payments-control-center.tsx');
 const uiLabels = read('lib/ui-labels.ts');
+const compactPresentation = read('components/edrive/shared/compact-presentation.tsx');
+const overflowText = read('components/edrive/shared/overflow-text.tsx');
+const tablePrimitive = read('components/ui/table.tsx');
 
 function sourceFiles(directory) {
   const absolute = path.join(root, directory);
@@ -102,6 +105,9 @@ assert(portalAccess.includes("['super_admin', 'admin', 'booking_staff', 'manager
 assert(!portalAccess.includes('Role-based access') && !portalAccess.includes('Database security policies'), 'Portal authorization must remain enforced without exposing implementation banners.');
 assert(uiLabels.includes("super_admin: 'Super Admin'") && uiLabels.includes("booking_staff: 'Booking Manager'") && uiLabels.includes("b2b_agent: 'B2B Agent'"), 'Shared portal labels must preserve approved business terminology.');
 assert(uiLabels.includes('export function safeUiError') && !financeBookings.includes('public.booking_requests'), 'Portal pages must use safe presentation errors and avoid visible database identifiers.');
+assert(compactPresentation.includes('CompactPageHeader') && compactPresentation.includes('CompactKpiCard'), 'Portal density standards must retain shared compact headers and KPI cards.');
+assert(overflowText.includes('role="tooltip"') && overflowText.includes("event.key === 'Escape'") && overflowText.includes('aria-expanded'), 'Overflow text must remain accessible by pointer, keyboard and touch.');
+assert(tablePrimitive.includes('whitespace-nowrap') && tablePrimitive.includes("text-[10px]"), 'Portal table headers and cells must retain compact single-line defaults.');
 assert(portalAccess.includes("if (role === 'admin') return false;") && portalAccess.includes("if (role === 'finance') return path === '/admin/payments'"), 'Admin must remain read-only and Finance mutations must remain limited to Payments and self-profile.');
 assert(myProfilePage.includes("const avatarBucket = 'profile-avatars'"), 'Self-profile uploads must continue using the profile-avatars bucket.');
 assert(myProfilePage.includes('const maxAvatarSize = 3 * 1024 * 1024') && myProfilePage.includes("'image/jpeg', 'image/png', 'image/webp'"), 'Self-profile uploads must retain the 3 MB JPG, PNG, and WebP restrictions.');

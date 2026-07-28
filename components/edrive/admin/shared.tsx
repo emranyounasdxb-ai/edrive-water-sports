@@ -44,27 +44,27 @@ export function CollectionBadge({ status }: { status: CollectionStatus }) {
 
 export function PageHeader({ title, description, actions }: { title: string; description: string; actions?: React.ReactNode }) {
   return (
-    <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
-      <div>
-        <h2 className="font-heading text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">{title}</h2>
-        <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">{description}</p>
+    <div className="flex min-w-0 flex-col justify-between gap-3 lg:flex-row lg:items-end">
+      <div className="min-w-0">
+        <h2 className="truncate whitespace-nowrap font-heading text-2xl font-semibold tracking-tight text-foreground">{title}</h2>
+        <p className="mt-1 max-w-3xl truncate text-[13px] text-muted-foreground">{description}</p>
       </div>
-      {actions ? <div className="flex flex-wrap gap-2">{actions}</div> : null}
+      {actions ? <div className="flex shrink-0 flex-wrap gap-2">{actions}</div> : null}
     </div>
   );
 }
 
 export function SummaryTile({ label, value, detail, icon: Icon, tone = 'aqua' }: { label: string; value: string; detail: string; icon: LucideIcon; tone?: 'aqua' | 'gold' | 'red' }) {
   return (
-    <Card className="overflow-hidden">
-      <CardContent className="flex items-center gap-4 p-4">
-        <div className={cn('flex size-11 shrink-0 items-center justify-center rounded-full shadow-sm', tone === 'aqua' && 'bg-primary text-primary-foreground', tone === 'gold' && 'bg-accent text-accent-foreground', tone === 'red' && 'bg-destructive text-destructive-foreground')}>
-          <Icon aria-hidden="true" className="size-5" />
+    <Card className="overflow-hidden rounded-2xl">
+      <CardContent className="flex min-h-[82px] items-center gap-3 p-3.5">
+        <div className={cn('flex size-9 shrink-0 items-center justify-center rounded-xl shadow-sm', tone === 'aqua' && 'bg-primary text-primary-foreground', tone === 'gold' && 'bg-accent text-accent-foreground', tone === 'red' && 'bg-destructive text-destructive-foreground')}>
+          <Icon aria-hidden="true" className="size-[18px]" />
         </div>
         <div className="min-w-0">
-          <p className="truncate text-xs font-medium text-muted-foreground">{label}</p>
-          <p className="mt-0.5 truncate font-heading text-2xl font-semibold text-foreground">{value}</p>
-          <p className="mt-0.5 truncate text-[11px] font-medium text-primary">{detail}</p>
+          <p className="truncate whitespace-nowrap text-[11px] font-medium text-muted-foreground">{label}</p>
+          <p className="mt-0.5 truncate whitespace-nowrap font-heading text-xl font-semibold tabular-nums text-foreground">{value}</p>
+          <p className="mt-0.5 truncate whitespace-nowrap text-[10px] font-medium text-primary">{detail}</p>
         </div>
       </CardContent>
     </Card>

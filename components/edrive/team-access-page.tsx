@@ -309,7 +309,7 @@ export function TeamAccessPage() {
   return (
     <section className="w-full py-4 sm:py-6">
       <div className="flex flex-col gap-4 rounded-[1.5rem] border border-white/80 bg-white/85 p-5 shadow-[0_18px_45px_rgba(8,37,50,0.06)] lg:flex-row lg:items-end lg:justify-between">
-        <div><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Team & Access</p><h1 className="mt-2 font-heading text-3xl font-semibold text-foreground">Portal users and permissions</h1><p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">Manage linked staff profiles, roles, status and password reset emails without exposing any privileged key in the website.</p></div>
+        <div className="min-w-0"><p className="truncate text-[10px] font-bold uppercase tracking-[0.14em] text-primary">Team & Access</p><h1 className="mt-1 truncate whitespace-nowrap font-heading text-2xl font-semibold text-foreground">Portal Users</h1><p className="mt-1 max-w-3xl truncate text-[13px] text-muted-foreground">Manage staff profiles, roles, status and password reset emails.</p></div>
         <div className="flex gap-2"><Button type="button" variant="outline" onClick={load} className="rounded-full"><RefreshCw className="size-4" aria-hidden="true" />Refresh</Button><Button type="button" onClick={openAdd} className="rounded-full"><Plus className="size-4" aria-hidden="true" />Add Profile</Button></div>
       </div>
 

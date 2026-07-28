@@ -261,7 +261,7 @@ export function TeamAccessRolePage() {
   return (
     <section className="w-full overflow-hidden px-1 py-1 sm:px-2">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Team & Access</p><h1 className="mt-2 font-heading text-3xl font-semibold text-foreground sm:text-4xl">Portal users and permissions</h1><p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">{isSuperAdmin ? 'Manage linked accounts, roles and access status.' : 'View the complete team directory and assigned portal permissions.'}</p></div>
+        <div className="min-w-0"><p className="truncate text-[10px] font-bold uppercase tracking-[0.14em] text-primary">Team & Access</p><h1 className="mt-1 truncate whitespace-nowrap font-heading text-2xl font-semibold text-foreground">Portal Users</h1><p className="mt-1 max-w-3xl truncate text-[13px] text-muted-foreground">{isSuperAdmin ? 'Manage linked accounts, roles and access status.' : 'View the team directory and assigned access.'}</p></div>
         <div className="flex gap-2"><Button type="button" variant="outline" onClick={load} data-readonly-allow="true" className="rounded-full bg-white"><RefreshCw className="size-4" />Refresh</Button>{isSuperAdmin ? <Button type="button" onClick={() => { setEditing(null); setModalOpen(true); }} className="rounded-full"><Plus className="size-4" />Add Profile</Button> : null}</div>
       </div>
 

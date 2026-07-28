@@ -87,14 +87,14 @@ export function FinanceDashboardPage() {
   if (loading) return <section className="space-y-4 animate-pulse"><div className="h-12 w-72 rounded bg-slate-200" /><div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">{Array.from({ length: 10 }, (_, i) => <div key={i} className="h-24 rounded-3xl bg-white" />)}</div></section>;
 
   return (
-    <section className="space-y-5">
+    <section className="space-y-4">
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div><p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">Finance Portal</p><h1 className="mt-1 font-heading text-2xl font-semibold text-primary-900">Finance Dashboard</h1><p className="mt-1 text-sm text-muted-foreground">Revenue, collections and receivables for the current Dubai month.</p></div>
         <Button variant="outline" onClick={() => void load()}><RefreshCw className="size-4" />Refresh</Button>
       </header>
       {error ? <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-800">{error} <button className="ml-2 underline" onClick={() => void load()}>Retry</button></div> : null}
-      {!error && !bookings.length ? <div className="rounded-3xl border border-border bg-white p-8 text-center text-sm text-muted-foreground">No financial activity exists for the selected month.</div> : null}
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">{metrics.map(([label, value]) => <Card key={label} className="rounded-3xl border-0 shadow-sm"><CardContent className="p-4"><p className="text-xs font-bold text-muted-foreground">{label}</p><p className="mt-2 font-heading text-xl font-semibold text-primary-900">{value}</p></CardContent></Card>)}</div>
+      {!error && !bookings.length ? <div className="rounded-2xl border border-border bg-white p-6 text-center text-sm text-muted-foreground">No financial activity exists for the selected month.</div> : null}
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">{metrics.map(([label, value]) => <Card key={label} className="rounded-2xl border-0 shadow-sm"><CardContent className="min-h-[82px] p-3.5"><p className="truncate whitespace-nowrap text-[11px] font-bold text-muted-foreground">{label}</p><p className="mt-1.5 truncate whitespace-nowrap font-heading text-xl font-semibold tabular-nums text-primary-900">{value}</p></CardContent></Card>)}</div>
       <div className="grid gap-4 xl:grid-cols-[1.5fr_1fr]">
         <Card className="rounded-3xl border-0 shadow-sm"><CardContent className="p-5"><h2 className="font-heading text-lg font-semibold">Revenue trend</h2><div className="mt-5 flex h-48 items-end gap-2">{daily.length ? daily.map(([day, value]) => <div key={day} className="flex min-w-0 flex-1 flex-col items-center gap-2"><span className="text-[9px] font-bold text-muted-foreground">{money(value)}</span><div className="w-full rounded-t-lg bg-primary" style={{ height: `${Math.max(4, (value / maxDay) * 140)}px` }} /><span className="text-[9px] text-muted-foreground">{day.slice(5)}</span></div>) : <p className="m-auto text-sm text-muted-foreground">No earned revenue in this period.</p>}</div></CardContent></Card>
         <Card className="rounded-3xl border-0 shadow-sm"><CardContent className="p-5"><h2 className="font-heading text-lg font-semibold">Receivables breakdown</h2>{[
