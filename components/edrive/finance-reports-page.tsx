@@ -12,6 +12,7 @@ import {
 } from '@/lib/operations-reporting';
 import { exportFinanceCsv, exportFinancePdf, type ExportColumn } from '@/lib/finance-report-export';
 import { getAllFinanceReportData, getFinanceReportData, type FinanceReportData, type FinanceReportFilters } from '@/services/finance-reporting';
+import { safeUiError, uiLabel } from '@/lib/ui-labels';
 
 const reportTypes = ['Financial Summary', 'Daily Collection Report', 'Revenue Report', 'Payment Transaction Report', 'Outstanding Receivables Report', 'VAT Report', 'Refund Report', 'B2B Wallet Ledger Report', 'B2B Agent Sales Report', 'Package Revenue Report', 'Jet Ski vs Jet Car Revenue Report', 'Customer Payment Statement', 'User / Cashier Collection Report', 'Monthly Financial Summary'];
 const money = (value: number) => new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED' }).format(value);
@@ -20,8 +21,8 @@ const initial = (): FinanceReportFilters => ({ date_from: `${today().slice(0, 7)
 const bookingColumns: ExportColumn<OperationsBooking>[] = [
   { heading: 'Booking Reference', value: bookingCode }, { heading: 'Date', value: (row) => String(row.preferred_date || row.created_at || '').slice(0, 10) },
   { heading: 'Customer', value: (row) => String(row.customer_name || '-') }, { heading: 'Package', value: packageName },
-  { heading: 'Source', value: (row) => String(row.booking_source || row.source || '-') }, { heading: 'Status', value: (row) => String(row.status || '-') },
-  { heading: 'Payment Method', value: (row) => String(row.payment_method || '-') }, { heading: 'Payment Status', value: (row) => String(row.payment_status || '-') },
+  { heading: 'Source', value: (row) => uiLabel(row.booking_source || row.source) }, { heading: 'Status', value: (row) => uiLabel(row.status) },
+  { heading: 'Payment Method', value: (row) => uiLabel(row.payment_method) }, { heading: 'Payment Status', value: (row) => uiLabel(row.payment_status) },
   { heading: 'Total AED', value: bookingTotal }, { heading: 'Received AED', value: bookingReceived }, { heading: 'Outstanding AED', value: bookingPending },
   { heading: 'VAT AED', value: (row) => reportAmount(row.vat_amount) }, { heading: 'Refunded AED', value: (row) => reportAmount(row.total_refunded_aed) }
 ];
@@ -38,15 +39,15 @@ const receiptColumns: ExportColumn<GenericExportRow>[] = [
 const ledgerColumns: ExportColumn<GenericExportRow>[] = [
   { heading: 'Booking', value: (row) => String(row.booking_code || '-') },
   { heading: 'Account', value: (row) => String(row.account_name || '-') },
-  { heading: 'Entry Type', value: (row) => String(row.entry_type || '-') },
+  { heading: 'Entry Type', value: (row) => uiLabel(row.entry_type) },
   { heading: 'Amount AED', value: (row) => Number(row.amount || 0) },
   { heading: 'Narration', value: (row) => String(row.narration || '-') },
   { heading: 'Created At', value: (row) => String(row.created_at || '-') }
 ];
 const walletColumns: ExportColumn<GenericExportRow>[] = [
   { heading: 'Agent', value: (row) => String(row.b2b_agent_name || row.b2b_agent_id || '-') },
-  { heading: 'Direction', value: (row) => String(row.direction || '-') },
-  { heading: 'Transaction Type', value: (row) => String(row.transaction_type || '-') },
+  { heading: 'Direction', value: (row) => uiLabel(row.direction) },
+  { heading: 'Transaction Type', value: (row) => uiLabel(row.transaction_type) },
   { heading: 'Amount AED', value: (row) => Number(row.amount_aed || 0) },
   { heading: 'Balance After AED', value: (row) => Number(row.balance_after_aed || 0) },
   { heading: 'Booking ID', value: (row) => String(row.booking_request_id || '-') },
@@ -56,8 +57,8 @@ const walletColumns: ExportColumn<GenericExportRow>[] = [
 const refundColumns: ExportColumn<GenericExportRow>[] = [
   { heading: 'Agent', value: (row) => String(row.b2b_agent_name || row.b2b_agent_id || '-') },
   { heading: 'Booking ID', value: (row) => String(row.booking_request_id || '-') },
-  { heading: 'Request Type', value: (row) => String(row.request_type || '-') },
-  { heading: 'Status', value: (row) => String(row.status || '-') },
+  { heading: 'Request Type', value: (row) => uiLabel(row.request_type) },
+  { heading: 'Status', value: (row) => uiLabel(row.status) },
   { heading: 'Requested AED', value: (row) => Number(row.requested_amount_aed || 0) },
   { heading: 'Approved AED', value: (row) => Number(row.approved_amount_aed || 0) },
   { heading: 'Requested At', value: (row) => String(row.requested_at || '-') },
@@ -96,7 +97,7 @@ export function FinanceReportsPage() {
   const [exporting, setExporting] = useState('');
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
-  const load = useCallback(async () => { setLoading(true); setError(''); try { setData(await getFinanceReportData(applied)); } catch (cause) { setError(cause instanceof Error ? cause.message : 'Unable to load finance report.'); } finally { setLoading(false); } }, [applied]);
+  const load = useCallback(async () => { setLoading(true); setError(''); try { setData(await getFinanceReportData(applied)); } catch (cause) { console.error('Finance report load failed', cause); setError(safeUiError(cause, 'load')); } finally { setLoading(false); } }, [applied]);
   useEffect(() => { void load(); }, [load]);
   const rows = data?.bookings || [];
   const summary = useMemo(() => [
@@ -116,23 +117,19 @@ export function FinanceReportsPage() {
   const options = data?.filter_options || {};
 
   return <section className="space-y-5">
-    <header><p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">Finance Portal</p><h1 className="mt-1 font-heading text-3xl font-semibold text-primary-900">Financial Reports</h1><p className="mt-1 text-sm text-muted-foreground">Secured, filter-aware reporting from live booking and finance records.</p></header>
-    <div className="grid gap-3 rounded-3xl bg-white p-4 shadow-sm md:grid-cols-3 xl:grid-cols-5">
+    <header><p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">Finance Portal</p><h1 className="mt-1 font-heading text-2xl font-semibold text-primary-900">Financial Reports</h1><p className="mt-1 text-sm text-muted-foreground">Review and export filtered booking and finance records.</p></header>
+    <div className="grid gap-3 rounded-2xl bg-white p-4 shadow-sm md:grid-cols-3 xl:grid-cols-5">
       <Select label="Report Type" value={reportType} onChange={setReportType} values={reportTypes} all={false} />
       <AppDatePicker label="Date From" value={draft.date_from || ''} placeholder="Select start date" maxDate={draft.date_to} onChange={(v) => field('date_from', v)} />
       <AppDatePicker label="Date To" value={draft.date_to || ''} placeholder="Select end date" minDate={draft.date_from} onChange={(v) => field('date_to', v)} />
       <Select label="Booking Source" value={draft.booking_source || ''} onChange={(v) => field('booking_source', v)} values={['Website', 'B2B']} />
       <Select label="Booking Status" value={draft.booking_status || ''} onChange={(v) => field('booking_status', v)} values={options.booking_statuses} />
       <Select label="Payment Status" value={draft.payment_status || ''} onChange={(v) => field('payment_status', v)} values={options.payment_statuses} />
-      <Text label="Payment Method" value={draft.payment_method || ''} onChange={(v) => field('payment_method', v)} />
-      <Text label="Customer" value={draft.customer || ''} onChange={(v) => field('customer', v)} />
       <Text label="Booking Reference" value={draft.booking_reference || ''} onChange={(v) => field('booking_reference', v)} />
       <Select label="B2B Agent" value={draft.agent_id || ''} onChange={(v) => field('agent_id', v)} options={options.agents} />
       <Select label="Package" value={draft.package || ''} onChange={(v) => field('package', v)} values={options.packages} />
-      <Text label="Vehicle Type" value={draft.vehicle_type || ''} onChange={(v) => field('vehicle_type', v)} />
-      <Text label="Processed By" value={draft.processed_by || ''} onChange={(v) => field('processed_by', v)} />
-      <Text label="Refund Status" value={draft.refund_status || ''} onChange={(v) => field('refund_status', v)} />
       <div className="flex items-end gap-2"><Button onClick={() => setApplied({ ...draft })}>Apply Filters</Button><Button variant="outline" onClick={() => { const reset = initial(); setDraft(reset); setApplied(reset); }}>Clear</Button></div>
+      <details className="md:col-span-3 xl:col-span-5"><summary className="cursor-pointer text-sm font-bold text-primary">More Filters</summary><div className="mt-3 grid gap-3 md:grid-cols-3 xl:grid-cols-5"><Text label="Payment Method" value={draft.payment_method || ''} onChange={(v) => field('payment_method', v)} /><Text label="Customer" value={draft.customer || ''} onChange={(v) => field('customer', v)} /><Text label="Vehicle Type" value={draft.vehicle_type || ''} onChange={(v) => field('vehicle_type', v)} /><Text label="Processed By" value={draft.processed_by || ''} onChange={(v) => field('processed_by', v)} /><Text label="Refund Status" value={draft.refund_status || ''} onChange={(v) => field('refund_status', v)} /></div></details>
     </div>
     <div className="flex flex-wrap items-center gap-2"><Button variant="outline" onClick={() => void load()}><RefreshCw className="size-4" />Refresh</Button><Button variant="outline" disabled={Boolean(exporting) || !selectedExportRows.length} onClick={() => void runExport('csv')}><Download className="size-4" />Export CSV</Button><Button variant="outline" disabled={Boolean(exporting) || !selectedExportRows.length} onClick={() => void runExport('pdf')}><FileDown className="size-4" />Export PDF</Button>{notice ? <span role="alert" className="text-xs font-semibold text-amber-700">{notice}</span> : null}</div>
     {error ? <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-800">{error} <button className="underline" onClick={() => void load()}>Retry</button></div> : null}
@@ -142,4 +139,4 @@ export function FinanceReportsPage() {
 }
 
 function Text({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) { return <label className="grid gap-1 text-xs font-bold text-muted-foreground">{label}<Input value={value} onChange={(event) => onChange(event.target.value)} /></label>; }
-function Select({ label, value, onChange, values = [], options = [], all = true }: { label: string; value: string; onChange: (value: string) => void; values?: string[]; options?: Array<{ id: string; label: string }>; all?: boolean }) { return <label className="grid gap-1 text-xs font-bold text-muted-foreground">{label}<select className="h-10 rounded-md border border-input bg-white px-3 text-sm" value={value} onChange={(event) => onChange(event.target.value)}>{all ? <option value="">All</option> : null}{options.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}{values.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>; }
+function Select({ label, value, onChange, values = [], options = [], all = true }: { label: string; value: string; onChange: (value: string) => void; values?: string[]; options?: Array<{ id: string; label: string }>; all?: boolean }) { return <label className="grid gap-1 text-xs font-bold text-muted-foreground">{label}<select className="h-10 rounded-md border border-input bg-white px-3 text-sm" value={value} onChange={(event) => onChange(event.target.value)}>{all ? <option value="">All</option> : null}{options.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}{values.map((item) => <option key={item} value={item}>{uiLabel(item)}</option>)}</select></label>; }

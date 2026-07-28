@@ -51,7 +51,7 @@ export function BookingManagerDashboardPage() {
       supabase.from('admin_users').select('full_name,email,status,role').eq('role', 'manager').eq('status', 'active').order('full_name', { ascending: true }).limit(200)
     ]);
     const firstError = bookingResult.error || managerResult.error;
-    if (firstError) setError(firstError.message);
+    if (firstError) { console.error('Booking Manager dashboard load failed', firstError); setError('Unable to load dashboard information. Please try again.'); }
     setBookings((bookingResult.data || []) as OperationsBooking[]);
     setManagers((managerResult.data || []) as ManagerRow[]);
     setLoading(false);

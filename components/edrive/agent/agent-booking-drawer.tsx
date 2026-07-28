@@ -4,6 +4,7 @@ import { CalendarDays, Clock3, UserRound, WalletCards } from 'lucide-react';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { formatAed } from '@/lib/booking-data';
 import { AgentStatusBadge } from './agent-status-badge';
+import { uiLabel } from '@/lib/ui-labels';
 
 export type AgentBookingView = {
   id: string; booking_code: string | null; customer_name: string | null; customer_phone: string | null;
@@ -29,7 +30,7 @@ export function AgentBookingDrawer({ booking, open, onOpenChange, requestStatus 
       <Info icon={WalletCards} label="Package" value={booking.selected_package_name || '-'} detail={`${booking.vehicle_quantity || 1} vehicle(s) · ${booking.guest_count || '-'} guest(s)`} />
     </section>
     <section className="rounded-xl border border-slate-200 bg-slate-50 p-3.5"><h3 className="font-semibold">Pricing breakdown</h3><Price label="B2B subtotal" value={booking.base_amount_aed || 0} /><Price label="VAT 5%" value={booking.vat_amount || 0} /><Price label="Total wallet debit" value={booking.total_amount || 0} strong /><Price label="Paid" value={booking.amount_received_aed || 0} /><Price label="Pending" value={booking.amount_pending_aed || 0} /></section>
-    <section className="rounded-xl border border-slate-200 p-3.5"><h3 className="font-semibold">Booking timeline</h3><Timeline label="Booking submitted" value={booking.created_at} /><Timeline label="Booking status" value={booking.status} /><Timeline label="Ride started" value={booking.ride_started_at || 'Not started'} /></section>
+    <section className="rounded-xl border border-slate-200 p-3.5"><h3 className="font-semibold">Booking timeline</h3><Timeline label="Booking submitted" value={booking.created_at} /><Timeline label="Booking status" value={uiLabel(booking.status)} /><Timeline label="Ride started" value={booking.ride_started_at || 'Not started'} /></section>
   </div> : null}</SheetContent></Sheet>;
 }
 

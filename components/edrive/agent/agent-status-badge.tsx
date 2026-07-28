@@ -1,4 +1,5 @@
 import { Badge } from '@/components/ui/badge';
+import { uiLabel } from '@/lib/ui-labels';
 
 export function AgentStatusBadge({ status }: { status: string | null | undefined }) {
   const value = String(status || 'Pending');
@@ -10,5 +11,5 @@ export function AgentStatusBadge({ status }: { status: string | null | undefined
       : ['pending', 'no show', 'no_show', 'suspended'].includes(normalized)
         ? 'warning'
         : 'secondary';
-  return <Badge variant={variant}>{value.replaceAll('_', ' ')}</Badge>;
+  return <Badge variant={variant}>{uiLabel(value)}</Badge>;
 }

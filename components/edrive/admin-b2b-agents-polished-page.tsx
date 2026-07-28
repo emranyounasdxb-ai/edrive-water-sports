@@ -66,7 +66,7 @@ export function AdminB2BAgentsPolishedPage() {
       const failure = agentResult.error || walletResult.error || bookingResult.error || requestResult.error || ledgerResult.error;
       if (failure) throw new Error(failure.message);
       setAgents((agentResult.data || []) as Agent[]); setWallets((walletResult.data || []) as Wallet[]); setBookings((bookingResult.data || []) as Booking[]); setRequests((requestResult.data || []) as Request[]); setLedger((ledgerResult.data || []) as Ledger[]);
-    } catch (loadError) { setError(loadError instanceof Error ? loadError.message : 'Unable to load B2B partner accounts.'); }
+    } catch (loadError) { console.error('B2B partner load failed', loadError); setError('Unable to load B2B partner accounts. Please try again.'); }
     finally { setLoading(false); setRefreshing(false); }
   }
   useEffect(() => { void load(); }, []);
@@ -101,7 +101,7 @@ export function AdminB2BAgentsPolishedPage() {
       else await provisionB2BAgentUser({ email: form.login_email, initial_password: form.initial_password, profile });
       setForm(blankForm);
       setSuccess(editing ? 'Partner profile updated.' : 'Partner profile created and linked.'); await load(true); setFormOpen(false);
-    } catch (saveError) { setError(saveError instanceof Error ? saveError.message : 'Unable to save partner profile.'); }
+    } catch (saveError) { console.error('B2B partner save failed', saveError); setError('The partner profile could not be saved. Please try again.'); }
     finally { setSaving(false); }
   }
   async function changeStatus(agent: Agent) {
@@ -109,7 +109,7 @@ export function AdminB2BAgentsPolishedPage() {
     const next = agent.status === 'Active' ? 'Suspended' : 'Active';
     setSaving(true); setError('');
     try { await setB2BAgentStatus(agent.id, next); await load(true); if (selected?.id === agent.id) setSelected({ ...agent, status: next }); }
-    catch (statusError) { setError(statusError instanceof Error ? statusError.message : 'Unable to change partner status.'); }
+    catch (statusError) { console.error('B2B partner status change failed', statusError); setError('The partner status could not be changed. Please try again.'); }
     finally { setSaving(false); }
   }
 

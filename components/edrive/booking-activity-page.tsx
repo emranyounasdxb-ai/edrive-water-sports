@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/lib/supabase-client';
+import { safeUiError, uiLabel } from '@/lib/ui-labels';
 
 type ActivityRow = {
   id: string;
@@ -63,7 +64,8 @@ export function BookingActivityPage() {
       .order('created_at', { ascending: false })
       .limit(1000);
     if (loadError) {
-      setError(loadError.message);
+      console.error('Booking activity load failed', loadError);
+      setError(safeUiError(loadError, 'load'));
       setRows([]);
     } else setRows((data || []) as ActivityRow[]);
     setLoading(false);
@@ -103,7 +105,7 @@ export function BookingActivityPage() {
       <Card className="mt-5 overflow-hidden rounded-[1.5rem] border-border/80 bg-white">
         <CardHeader className="gap-4 border-b border-border/70 bg-[#F7FAFA] px-4 py-4 lg:flex-row lg:items-center lg:justify-between"><div><CardTitle className="font-heading text-xl font-semibold">Operational timeline</CardTitle><p className="mt-1 text-xs font-semibold text-muted-foreground">{loading ? 'Loading activity...' : `${visible.length} events`}</p></div><label className="relative w-full lg:max-w-sm"><Search className="pointer-events-none absolute left-3 top-3 size-4 text-muted-foreground" /><Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search booking, action or user..." className="h-10 rounded-full bg-white pl-9" /></label></CardHeader>
         <div className="flex gap-2 overflow-x-auto border-b border-border/70 px-4 py-3">{filters.map((item) => <button key={item.id} type="button" onClick={() => setFilter(item.id)} data-readonly-allow="true" className={`whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-bold ${filter === item.id ? 'border-primary bg-primary text-white' : 'border-border bg-white text-muted-foreground'}`}>{item.label}</button>)}</div>
-        <CardContent className="grid gap-3 p-4">{!loading && !visible.length ? <div className="rounded-2xl border border-dashed border-border bg-[#F7FAFA] px-4 py-8 text-center text-sm font-semibold text-muted-foreground">No booking activity found.</div> : visible.map((row) => <div key={row.id} className="grid gap-3 rounded-2xl border border-border/70 bg-white p-4 lg:grid-cols-[1.2fr_1.5fr_1fr_auto] lg:items-center"><div><p className="text-xs font-bold text-primary">{row.entity_label || 'Booking'}</p><p className="mt-1 text-xs text-muted-foreground">{niceDateTime(row.created_at)}</p></div><div><p className="text-sm font-semibold leading-6 text-foreground">{row.summary}</p><p className="mt-1 text-xs text-muted-foreground">{row.module === 'rides' ? 'Ride operations' : 'Booking operations'}</p></div><div><p className="text-xs font-semibold text-foreground">{row.actor_name || row.actor_email || 'System'}</p><p className="mt-1 text-[11px] text-muted-foreground">{row.actor_role || 'system'}</p></div><span className={`w-fit rounded-full border px-2.5 py-1 text-xs font-bold ${tone(row.action)}`}>{prettyAction(row.action)}</span></div>)}</CardContent>
+        <CardContent className="grid gap-3 p-4">{!loading && !visible.length ? <div className="rounded-2xl border border-dashed border-border bg-[#F7FAFA] px-4 py-8 text-center text-sm font-semibold text-muted-foreground">No booking activity found.</div> : visible.map((row) => <div key={row.id} className="grid gap-3 rounded-2xl border border-border/70 bg-white p-4 lg:grid-cols-[1.2fr_1.5fr_1fr_auto] lg:items-center"><div><p className="text-xs font-bold text-primary">{row.entity_label || 'Booking'}</p><p className="mt-1 text-xs text-muted-foreground">{niceDateTime(row.created_at)}</p></div><div><p className="text-sm font-semibold leading-6 text-foreground">{row.summary}</p><p className="mt-1 text-xs text-muted-foreground">{row.module === 'rides' ? 'Ride operations' : 'Booking operations'}</p></div><div><p className="text-xs font-semibold text-foreground">{row.actor_name || row.actor_email || 'System'}</p><p className="mt-1 text-[11px] text-muted-foreground">{uiLabel(row.actor_role, 'System')}</p></div><span className={`w-fit rounded-full border px-2.5 py-1 text-xs font-bold ${tone(row.action)}`}>{uiLabel(row.action)}</span></div>)}</CardContent>
       </Card>
     </section>
   );

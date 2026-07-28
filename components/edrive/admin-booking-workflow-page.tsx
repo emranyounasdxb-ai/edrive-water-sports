@@ -173,7 +173,7 @@ export function AdminBookingWorkflowPage() {
       supabase.from(bookingRequestsTable).select('*').order('created_at', { ascending: false }).limit(1000),
       supabase.from('admin_users').select('id,full_name,email,role,status').order('full_name', { ascending: true }).limit(200)
     ]);
-    if (bookingResult.error) setError(bookingResult.error.message);
+    if (bookingResult.error) { console.error('Booking workflow load failed', bookingResult.error); setError('Unable to load bookings. Please try again.'); }
     setBookings((bookingResult.data || []) as BookingRow[]);
     const activeManagers = ((managerResult.data || []) as Array<{ id: string; full_name: string | null; email: string | null; role: string | null; status: string | null }>)
       .filter((row) => text(row.role).toLowerCase() === 'manager' && text(row.status).toLowerCase() === 'active')
@@ -345,7 +345,8 @@ function BookingWorkflowModal({ booking, managers, onClose, onSave }: { booking:
     try {
       await onSave(booking, values);
     } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : 'Unable to update booking.');
+      console.error('Booking workflow update failed', saveError);
+      setError('The booking could not be updated. Please try again.');
     } finally {
       setSaving(false);
     }

@@ -300,7 +300,8 @@ export function AdminB2BAgentsCleanPage() {
     setError('');
     const { data, error: queryError } = await supabase.from(tableName).select('*').order('created_at', { ascending: false });
     if (queryError) {
-      setError(queryError.message);
+      console.error('B2B agent load failed', queryError);
+      setError('Unable to load B2B agents. Please try again.');
       setAgents([]);
     } else {
       const rows = ((data || []) as Record<string, unknown>[]).map(mapAgent);
@@ -385,7 +386,7 @@ export function AdminB2BAgentsCleanPage() {
       const loginEmail = cleanEmail(form.login_email);
       const billingEmail = cleanEmail(form.billing_email) || loginEmail;
       const authUserId = form.auth_user_id.trim();
-      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(authUserId)) throw new Error('A valid Supabase Auth user UUID is required.');
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(authUserId)) throw new Error('A valid portal login ID is required.');
       if (!form.company_name.trim()) throw new Error('Company / Agent Name is required.');
       if (!form.contact_person.trim()) throw new Error('Contact person is required.');
       if (!form.phone.trim()) throw new Error('Phone / WhatsApp is required.');
@@ -412,7 +413,8 @@ export function AdminB2BAgentsCleanPage() {
       await loadAgents();
       resetForm();
     } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : 'Unable to save B2B agent.');
+      console.error('B2B agent save failed', saveError);
+      setError('The B2B agent could not be saved. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -455,7 +457,7 @@ export function AdminB2BAgentsCleanPage() {
             </CardHeader>
             <CardContent className="p-4 sm:p-5">
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 sm:col-span-2 xl:col-span-3"><p className="font-bold">Supabase Authentication prerequisite</p><p className="mt-1 text-xs leading-5">First create the login in Supabase Dashboard {'->'} Authentication {'->'} Users. Then paste that user UUID below to link the database profile. Passwords and privileged keys are never handled here.</p></div>
+                <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 sm:col-span-2 xl:col-span-3"><p className="font-bold">Portal login prerequisite</p><p className="mt-1 text-xs leading-5">First create the portal login in the administration console. Then enter its user ID below to link the agent profile.</p></div>
                 <Field label="Auth User UUID"><Input value={form.auth_user_id} onChange={(event) => setField('auth_user_id', event.target.value)} placeholder="00000000-0000-0000-0000-000000000000" /></Field>
                 <Field label="Agent Code"><Input value={form.agent_code} onChange={(event) => setField('agent_code', event.target.value)} placeholder="B2B-001" /></Field>
                 <Field label="Company / Agent Name"><Input value={form.company_name} onChange={(event) => setField('company_name', event.target.value)} placeholder="SkyWay Travel LLC" /></Field>
@@ -480,7 +482,7 @@ export function AdminB2BAgentsCleanPage() {
               <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
                 <Button type="button" onClick={saveAgent} disabled={saving} className="rounded-full"><Save data-icon aria-hidden="true" />{saving ? 'Saving...' : editingId ? 'Update Agent' : 'Save Agent'}</Button>
                 {editingId ? <Button type="button" variant="outline" onClick={resetForm} className="rounded-full">Cancel Edit</Button> : null}
-                <p className="text-xs leading-5 text-muted-foreground">Portal password is managed in Supabase Auth and is not saved in this form.</p>
+                <p className="text-xs leading-5 text-muted-foreground">The portal password is managed separately and is not saved in this form.</p>
               </div>
             </CardContent>
           </Card>

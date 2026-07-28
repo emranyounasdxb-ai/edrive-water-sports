@@ -127,7 +127,7 @@ async function uploadPackageImage(file: File, packageSlug: string): Promise<Uplo
   if (uploadResult.error) {
     const message = uploadResult.error.message || 'Package image upload failed.';
     if (message.toLowerCase().includes('bucket not found')) {
-      throw new Error('Package image storage is not active yet. Run supabase/package-image-upload.sql in Supabase SQL Editor first.');
+      throw new Error('Package image upload is currently unavailable. Please contact an administrator.');
     }
     throw new Error(message);
   }
@@ -250,7 +250,7 @@ export default function Page() {
       .order('capacity')
       .order('duration_minutes');
 
-    if (queryError) setError(queryError.message);
+    if (queryError) { console.error('Package load failed', queryError); setError('Unable to load packages. Please try again.'); }
     else setItems(((data || []) as Array<Record<string, unknown>>).map(mapPackage));
     setLoading(false);
   }
@@ -385,7 +385,8 @@ export default function Page() {
     setActionBusy(false);
     setConfirmAction(null);
     if (updateError) {
-      setError(updateError.message);
+      console.error('Package update failed', updateError);
+      setError('The package could not be updated. Please try again.');
       return;
     }
     setSuccess(nextStatus === 'active' ? 'Package activated and restored to the live catalog.' : 'Package deactivated. Existing bookings remain unchanged.');
@@ -410,7 +411,8 @@ export default function Page() {
     if (rpcResult.error && !rpcUnavailable(rpcResult.error.message || '', 'delete_package_if_unused')) {
       setActionBusy(false);
       setConfirmAction(null);
-      setError(rpcResult.error.message);
+      console.error('Package status update failed', rpcResult.error);
+      setError('The package status could not be updated. Please try again.');
       return;
     }
 
@@ -426,7 +428,8 @@ export default function Page() {
       if (deleteResult.error) {
         setActionBusy(false);
         setConfirmAction(null);
-        setError(deleteResult.error.message);
+        console.error('Package removal failed', deleteResult.error);
+        setError('The package could not be removed. Please try again.');
         return;
       }
     }

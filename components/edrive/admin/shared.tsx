@@ -2,6 +2,7 @@ import type { LucideIcon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+import { uiLabel } from '@/lib/ui-labels';
 import type { BookingStatus, CollectionStatus, PaymentStatus } from './operations-data';
 
 type BadgeVariant = 'success' | 'warning' | 'gold' | 'destructive' | 'secondary' | 'default';
@@ -30,15 +31,15 @@ export function collectionVariant(status: CollectionStatus): BadgeVariant {
 }
 
 export function StatusBadge({ status }: { status: BookingStatus }) {
-  return <Badge variant={statusVariant(status)}>{status}</Badge>;
+  return <Badge variant={statusVariant(status)}>{uiLabel(status)}</Badge>;
 }
 
 export function PaymentBadge({ status }: { status: PaymentStatus }) {
-  return <Badge variant={paymentVariant(status)}>{status}</Badge>;
+  return <Badge variant={paymentVariant(status)}>{uiLabel(status)}</Badge>;
 }
 
 export function CollectionBadge({ status }: { status: CollectionStatus }) {
-  return <Badge variant={collectionVariant(status)}>{status}</Badge>;
+  return <Badge variant={collectionVariant(status)}>{uiLabel(status)}</Badge>;
 }
 
 export function PageHeader({ title, description, actions }: { title: string; description: string; actions?: React.ReactNode }) {

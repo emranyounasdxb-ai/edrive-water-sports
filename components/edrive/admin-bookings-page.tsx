@@ -202,7 +202,8 @@ export function AdminBookingsLivePage() {
     setError('');
     const { data, error: queryError } = await supabase.from(bookingRequestsTable).select('*').order('created_at', { ascending: false }).limit(200);
     if (queryError) {
-      setError(queryError.message);
+      console.error('Booking load failed', queryError);
+      setError('Unable to load bookings. Please try again.');
       setBookings([]);
     } else {
       setBookings((data || []) as BookingRow[]);
@@ -400,7 +401,8 @@ function ManageBookingModal({ booking, managers, onClose, onSave }: { booking: B
     try {
       await onSave(booking, values);
     } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : 'Failed to update booking.');
+      console.error('Booking update failed', saveError);
+      setError('The booking could not be updated. Please try again.');
     } finally {
       setSaving(false);
     }

@@ -49,7 +49,8 @@ export default function StaffPasswordPage() {
     const redirectTo = `${window.location.origin}/admin/reset-password/`;
     const { error: resetError } = await supabase.auth.resetPasswordForEmail(cleanEmail, { redirectTo });
     if (resetError) {
-      setError(resetError.message);
+      console.error('Staff password reset failed', resetError);
+      setError('The reset email could not be sent. Please try again.');
       setLoading(false);
       return;
     }
@@ -80,7 +81,7 @@ export default function StaffPasswordPage() {
           <div className="rounded-[1.25rem] border border-primary/15 bg-primary-50 p-5">
             <span className="flex size-10 items-center justify-center rounded-2xl bg-white text-primary"><ShieldCheck className="size-5" aria-hidden="true" /></span>
             <h2 className="mt-3 font-heading text-lg font-semibold text-primary-900">Secure static flow</h2>
-            <p className="mt-2 text-sm leading-6 text-muted-foreground">The reset email is handled directly by Supabase Auth. The website never reads or sets the staff member's password.</p>
+            <p className="mt-2 text-sm leading-6 text-muted-foreground">A secure reset link will be emailed to the staff member. Their password is never displayed here.</p>
           </div>
         </CardContent>
       </Card>

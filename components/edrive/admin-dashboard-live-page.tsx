@@ -48,7 +48,7 @@ export function AdminDashboardLivePage() {
       .order('created_at', { ascending: false })
       .limit(8);
 
-    if (queryError) setError(queryError.message);
+    if (queryError) { console.error('Dashboard load failed', queryError); setError('Unable to load dashboard information. Please try again.'); }
     else setBookings((data || []) as DashboardBooking[]);
     setLoading(false);
   }

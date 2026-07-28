@@ -12,6 +12,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { formatAed } from '@/lib/booking-data';
 import { supabase } from '@/lib/supabase-client';
+import { safeUiError } from '@/lib/ui-labels';
 import type { B2BWalletLedgerEntry } from '@/services/b2b-finance';
 
 const filters = [
@@ -41,7 +42,7 @@ export default function AgentWalletPage() {
       if (ledgerResult.error || bookingResult.error) throw new Error(ledgerResult.error?.message || bookingResult.error?.message);
       setEntries((ledgerResult.data || []) as B2BWalletLedgerEntry[]); setBookingCodes(Object.fromEntries((bookingResult.data || []).map((row: { id: string; booking_code: string }) => [row.id, row.booking_code])));
       if (refresh) await refreshPortal();
-    } catch (loadError) { setError(loadError instanceof Error ? loadError.message : 'Unable to load wallet activity.'); }
+    } catch (loadError) { console.error('Wallet activity load failed', loadError); setError(safeUiError(loadError, 'load')); }
     finally { setLoading(false); setRefreshing(false); }
   }
   useEffect(() => { void load(); }, [agentId]);

@@ -90,7 +90,7 @@ async function uploadFleetImage(file: File, code: string) {
   if (uploadResult.error) {
     const message = uploadResult.error.message || 'Fleet image upload failed.';
     if (message.toLowerCase().includes('bucket not found')) {
-      throw new Error('Fleet image storage is not active yet. Apply supabase/fleet-edit-partial-and-image-upload.sql first.');
+      throw new Error('Fleet image upload is currently unavailable. Please contact an administrator.');
     }
     throw new Error(message);
   }
@@ -353,7 +353,7 @@ export default function Page() {
     setLoading(true);
     setError('');
     const { data, error: queryError } = await supabase.from('vehicles').select('*').order('sort_order', { ascending: true }).order('vehicle_code', { ascending: true });
-    if (queryError) setError(queryError.message);
+    if (queryError) { console.error('Fleet load failed', queryError); setError('Unable to load fleet information. Please try again.'); }
     else setItems(((data || []) as Array<Record<string, unknown>>).map(mapFleet));
     setLoading(false);
   }
@@ -502,7 +502,8 @@ export default function Page() {
     if (rpcResult.error && !rpcUnavailable(rpcResult.error.message || '', 'set_fleet_asset_status')) {
       setActionBusy(false);
       setConfirmAction(null);
-      setError(rpcResult.error.message);
+      console.error('Fleet status update failed', rpcResult.error);
+      setError('The fleet status could not be updated. Please try again.');
       return;
     }
     if (rpcResult.error) {
@@ -515,7 +516,8 @@ export default function Page() {
       if (result.error) {
         setActionBusy(false);
         setConfirmAction(null);
-        setError(result.error.message);
+        console.error('Fleet status update failed', result.error);
+        setError('The fleet status could not be updated. Please try again.');
         return;
       }
     }
@@ -536,7 +538,7 @@ export default function Page() {
     setActionNote('');
     if (rpcResult.error) {
       setError(rpcUnavailable(rpcResult.error.message || '', 'delete_fleet_asset_if_unused')
-        ? 'Fleet delete protection is not active in the database yet. Apply supabase/fleet-asset-hardening.sql before deleting.'
+        ? 'Fleet deletion is currently unavailable. Please contact an administrator.'
         : rpcResult.error.message);
       return;
     }

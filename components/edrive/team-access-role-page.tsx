@@ -138,7 +138,7 @@ function TeamModal({ row, saving, error, onClose, onSave }: { row: TeamRow | nul
           {error ? <p className="mb-4 rounded-xl bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">{error}</p> : null}
           {!row ? <p className="mb-4 rounded-xl border border-primary/15 bg-primary-50 px-3 py-2 text-xs font-semibold leading-5 text-primary-900">Super Admin will securely create the Auth account and linked portal profile together.</p> : null}
           <div className="grid gap-3 sm:grid-cols-2">
-            {row ? <label className="grid gap-1.5 text-sm font-semibold sm:col-span-2">Linked Auth User UID<Input value={form.authUserId} readOnly className="h-11 rounded-xl bg-muted" /></label> : null}
+            {row ? <label className="grid gap-1.5 text-sm font-semibold sm:col-span-2">Linked Portal User ID<Input value={form.authUserId} readOnly className="h-11 rounded-xl bg-muted" /></label> : null}
             <label className="grid gap-1.5 text-sm font-semibold">Full Name<Input value={form.fullName} onChange={(event) => change('fullName', event.target.value)} required className="h-11 rounded-xl" /></label>
             <label className="grid gap-1.5 text-sm font-semibold">Email<Input type="email" value={form.email} onChange={(event) => change('email', event.target.value)} required className="h-11 rounded-xl" /></label>
             {!row ? <>
@@ -177,7 +177,7 @@ export function TeamAccessRolePage() {
     setLoading(true);
     setError('');
     const { data, error: loadError } = await supabase.from('admin_users').select('id,auth_user_id,full_name,email,phone,nationality,role,department,status,avatar_url,notes,created_at').order('full_name', { ascending: true }).limit(500);
-    if (loadError) setError(loadError.message);
+    if (loadError) { console.error('Team access load failed', loadError); setError('Unable to load team access. Please try again.'); }
     else setRows((data || []) as TeamRow[]);
     setLoading(false);
   }
@@ -241,7 +241,8 @@ export function TeamAccessRolePage() {
       setNotice('Team access saved.');
       await load();
     } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : 'Unable to save team access.');
+      console.error('Team access save failed', saveError);
+      setError('Team access could not be saved. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -250,7 +251,7 @@ export function TeamAccessRolePage() {
   async function sendReset(row: TeamRow) {
     if (!isSuperAdmin || !row.email) return;
     const { error: resetError } = await supabase.auth.resetPasswordForEmail(row.email, { redirectTo: `${window.location.origin}/admin/reset-password/` });
-    if (resetError) setError(resetError.message);
+    if (resetError) { console.error('Team password reset failed', resetError); setError('The reset email could not be sent. Please try again.'); }
     else setNotice(`Password reset email sent to ${row.email}.`);
   }
 

@@ -250,7 +250,8 @@ export function ManagerCollectionsPage({ manager }: { manager: ManagerIdentity }
     const { data, error: loadError } = await supabase.from(bookingRequestsTable).select('*').order('preferred_date', { ascending: false }).limit(800);
     if (loadError) {
       setBookings([]);
-      setError(loadError.message);
+      console.error('Manager collection load failed', loadError);
+      setError('Unable to load collection information. Please try again.');
     } else {
       setBookings((data || []) as BookingRow[]);
     }

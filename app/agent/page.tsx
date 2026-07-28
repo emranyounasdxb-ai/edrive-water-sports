@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatAed } from '@/lib/booking-data';
 import { supabase } from '@/lib/supabase-client';
+import { safeUiError } from '@/lib/ui-labels';
 import type { B2BRefundRequest, B2BWalletLedgerEntry } from '@/services/b2b-finance';
 
 type Booking = { id: string; booking_code: string | null; customer_name: string | null; selected_package_name: string | null; preferred_date: string | null; preferred_time: string | null; status: string | null; created_at: string | null };
@@ -37,7 +38,7 @@ export default function AgentDashboardPage() {
       if (bookingResult.error || requestResult.error || ledgerResult.error) throw new Error(bookingResult.error?.message || requestResult.error?.message || ledgerResult.error?.message);
       setBookings((bookingResult.data || []) as Booking[]); setRequests((requestResult.data || []) as B2BRefundRequest[]); setLedger((ledgerResult.data || []) as B2BWalletLedgerEntry[]);
       if (refresh) await refreshPortal();
-    } catch (loadError) { setError(loadError instanceof Error ? loadError.message : 'Unable to load the partner dashboard.'); }
+    } catch (loadError) { console.error('Partner dashboard load failed', loadError); setError(safeUiError(loadError, 'load')); }
     finally { setLoading(false); setRefreshing(false); }
   }
   useEffect(() => { void load(); }, [agentId]);

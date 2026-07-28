@@ -233,7 +233,8 @@ export function ManagerBookingsPage() {
     setError('');
     const { data, error: queryError } = await supabase.from(bookingRequestsTable).select('*').in('status', ['Confirmed', 'Completed', 'No Show']).order('preferred_date', { ascending: true }).order('preferred_time', { ascending: true }).limit(500);
     if (queryError) {
-      setError(queryError.message);
+      console.error('Manager booking load failed', queryError);
+      setError('Unable to load assigned bookings. Please try again.');
       setItems([]);
     } else {
       setItems(((data || []) as ManagerBooking[]).filter((booking) => matchesManager(booking, managerProfile)));

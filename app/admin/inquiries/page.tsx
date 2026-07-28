@@ -138,7 +138,8 @@ export default function InquiriesPage() {
       .eq('id', selected.id);
 
     if (updateError) {
-      setError(updateError.message || 'Unable to update inquiry status.');
+      console.error('Inquiry status update failed', updateError);
+      setError('The inquiry status could not be updated. Please try again.');
       setSaving(false);
       return;
     }

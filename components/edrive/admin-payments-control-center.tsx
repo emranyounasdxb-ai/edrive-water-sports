@@ -256,7 +256,8 @@ function SettlementModal({ group, onClose, onSaved }: { group: ReceivableGroup; 
       await onSaved();
       onClose();
     } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : 'Unable to receive payment.');
+      console.error('Settlement receipt failed', saveError);
+      setError('The payment could not be recorded. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -333,7 +334,7 @@ export function AdminPaymentsControlCenter() {
       supabase.from('payment_ledger_entries').select('*').order('created_at', { ascending: false }).limit(3000)
     ]);
     const firstError = bookingResult.error || receiptResult.error || allocationResult.error || ledgerResult.error;
-    if (firstError) setError(firstError.message);
+    if (firstError) { console.error('Payment information load failed', firstError); setError('Unable to load payment information. Please try again.'); }
     setBookings((bookingResult.data || []) as BookingRow[]);
     setReceipts((receiptResult.data || []) as ReceiptRow[]);
     setAllocations((allocationResult.data || []) as AllocationRow[]);

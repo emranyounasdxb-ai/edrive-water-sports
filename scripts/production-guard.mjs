@@ -63,6 +63,7 @@ const financeService = read('services/finance-reporting.ts');
 const financeMigration = read('supabase/04-finance-portal-rbac-reporting.sql');
 const financeAudit = read('components/edrive/admin-audit-log-page.tsx');
 const adminPaymentsControlCenter = read('components/edrive/admin-payments-control-center.tsx');
+const uiLabels = read('lib/ui-labels.ts');
 
 function sourceFiles(directory) {
   const absolute = path.join(root, directory);
@@ -98,6 +99,9 @@ assert(nextConfig.includes("output: 'export'"), 'The website must remain a Next.
 assert(deployWorkflow.includes('local-dir: ./out/') && deployWorkflow.includes('SamKirkland/FTP-Deploy-Action'), 'The existing static-export FTP deployment architecture must remain unchanged.');
 assert(portalAccess.includes("path === '/admin/my-profile'") && portalAccess.includes("path === '/admin/manager/my-profile'"), 'Approved self-profile routes must retain their mutation exception.');
 assert(portalAccess.includes("['super_admin', 'admin', 'booking_staff', 'manager', 'finance']"), 'Every active supported portal role must retain self-profile mutation access.');
+assert(!portalAccess.includes('Role-based access') && !portalAccess.includes('Database security policies'), 'Portal authorization must remain enforced without exposing implementation banners.');
+assert(uiLabels.includes("super_admin: 'Super Admin'") && uiLabels.includes("booking_staff: 'Booking Manager'") && uiLabels.includes("b2b_agent: 'B2B Agent'"), 'Shared portal labels must preserve approved business terminology.');
+assert(uiLabels.includes('export function safeUiError') && !financeBookings.includes('public.booking_requests'), 'Portal pages must use safe presentation errors and avoid visible database identifiers.');
 assert(portalAccess.includes("if (role === 'admin') return false;") && portalAccess.includes("if (role === 'finance') return path === '/admin/payments'"), 'Admin must remain read-only and Finance mutations must remain limited to Payments and self-profile.');
 assert(myProfilePage.includes("const avatarBucket = 'profile-avatars'"), 'Self-profile uploads must continue using the profile-avatars bucket.');
 assert(myProfilePage.includes('const maxAvatarSize = 3 * 1024 * 1024') && myProfilePage.includes("'image/jpeg', 'image/png', 'image/webp'"), 'Self-profile uploads must retain the 3 MB JPG, PNG, and WebP restrictions.');
@@ -114,7 +118,7 @@ for (const route of ['/admin/bookings', '/admin/inquiries', '/admin/operations-s
   const financeBlock = financeNav.match(/export const financeNavItems = \[[\s\S]*?\n\];/)?.[0] || '';
   assert(!financeBlock.includes(`href: '${route}'`), `Finance navigation must not include operational route ${route}.`);
 }
-assert(financeBookings.includes('Read-only financial view') && !financeBookings.includes('start_booking_ride') && !financeBookings.includes('set_booking_manager'), 'Financial Bookings must remain read-only and free of operational controls.');
+assert(financeBookings.includes('Review booking revenue, payments and outstanding balances.') && !financeBookings.includes('start_booking_ride') && !financeBookings.includes('set_booking_manager'), 'Financial Bookings must remain professionally described and free of operational controls.');
 assert(financeReports.includes('exportFinanceCsv') && financeReports.includes('exportFinancePdf'), 'Finance Reports must retain CSV and PDF export.');
 assert(financeExport.includes('context.rows.map') && financeExport.includes('finance_report_exported'), 'Finance exports must use the filtered rows and create a safe audit event.');
 assert(!/(password|jwt|access_token|service_role)[\s\S]{0,80}metadata/i.test(financeExport), 'Finance export audit metadata must not include credentials or tokens.');

@@ -185,7 +185,8 @@ export function AdminMaintenancePage() {
     setError('');
     const { data, error: loadError } = await supabase.from('vehicles').select('*').order('vehicle_code', { ascending: true }).limit(1000);
     if (loadError) {
-      setError(loadError.message);
+      console.error('Maintenance information load failed', loadError);
+      setError('Unable to load maintenance information. Please try again.');
       setVehicles([]);
     } else {
       setVehicles((data || []) as VehicleRow[]);
@@ -202,7 +203,8 @@ export function AdminMaintenancePage() {
     const queryBuilder = supabase.from('vehicles').update(payload);
     const result = vehicle.id ? await queryBuilder.eq('id', vehicle.id) : await queryBuilder.eq('vehicle_code', vehicle.vehicle_code);
     if (result.error) {
-      setError(result.error.message);
+      console.error('Maintenance update failed', result.error);
+      setError('The maintenance update could not be saved. Please try again.');
       return;
     }
     await refresh();

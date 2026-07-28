@@ -4,6 +4,7 @@ import { ArrowDownLeft, ArrowUpRight, ReceiptText } from 'lucide-react';
 import { AgentEmptyState } from './agent-empty-state';
 import { formatAed } from '@/lib/booking-data';
 import type { B2BWalletLedgerEntry } from '@/services/b2b-finance';
+import { uiLabel } from '@/lib/ui-labels';
 
 export function walletTransactionLabel(type: string, description = '') {
   const normalizedDescription = description.toLowerCase();
@@ -16,7 +17,7 @@ export function walletTransactionLabel(type: string, description = '') {
     adjustment_debit: 'Manual Adjustment',
     reversal: 'Reversal'
   };
-  return labels[type] || type.replaceAll('_', ' ');
+  return labels[type] || uiLabel(type);
 }
 
 export function AgentWalletLedger({ entries, bookingCodes = {}, compact = false }: {

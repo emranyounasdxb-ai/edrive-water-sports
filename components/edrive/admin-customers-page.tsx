@@ -241,7 +241,8 @@ export function AdminCustomersPage() {
     setError('');
     const { data, error: loadError } = await supabase.from(bookingRequestsTable).select('*').order('created_at', { ascending: false }).limit(1500);
     if (loadError) {
-      setError(loadError.message);
+      console.error('Customer load failed', loadError);
+      setError('Unable to load customers. Please try again.');
       setBookings([]);
     } else {
       setBookings((data || []) as BookingRow[]);

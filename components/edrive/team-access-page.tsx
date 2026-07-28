@@ -170,9 +170,9 @@ function TeamModal({ row, saving, error, onClose, onSave }: { row: TeamRow | nul
         </div>
         <form onSubmit={submit} className="max-h-[calc(92vh-4.5rem)] overflow-y-auto p-4">
           {error ? <p className="mb-3 rounded-xl bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">{error}</p> : null}
-          {!row ? <p className="mb-4 rounded-xl border border-primary/15 bg-primary-50 px-3 py-2 text-xs font-semibold leading-5 text-primary-900">Create the user first in Supabase Authentication, then paste the Auth User UID here. No password or service key is stored in the website.</p> : null}
+          {!row ? <p className="mb-4 rounded-xl border border-primary/15 bg-primary-50 px-3 py-2 text-xs font-semibold leading-5 text-primary-900">Create the portal login first, then enter its user ID here. Passwords are never stored in this form.</p> : null}
           <div className="grid gap-3 sm:grid-cols-2">
-            <label className="grid gap-1.5 text-sm font-semibold sm:col-span-2">Auth User UID<Input value={form.authUserId} onChange={(event) => change('authUserId', event.target.value)} required={!row} placeholder="Supabase Auth user UID" className="h-11 rounded-xl" /></label>
+            <label className="grid gap-1.5 text-sm font-semibold sm:col-span-2">Portal User ID<Input value={form.authUserId} onChange={(event) => change('authUserId', event.target.value)} required={!row} placeholder="Enter portal user ID" className="h-11 rounded-xl" /></label>
             <label className="grid gap-1.5 text-sm font-semibold">Full Name<Input value={form.fullName} onChange={(event) => change('fullName', event.target.value)} required className="h-11 rounded-xl" /></label>
             <label className="grid gap-1.5 text-sm font-semibold">Email<Input type="email" value={form.email} onChange={(event) => change('email', event.target.value)} required className="h-11 rounded-xl" /></label>
             <label className="grid gap-1.5 text-sm font-semibold">Phone<Input value={form.phone} onChange={(event) => change('phone', event.target.value)} className="h-11 rounded-xl" /></label>
@@ -212,7 +212,7 @@ export function TeamAccessPage() {
     }
 
     const { data, error: loadError } = await supabase.from('admin_users').select('id,auth_user_id,full_name,email,phone,nationality,role,department,status,avatar_url,notes,created_at').order('full_name', { ascending: true }).limit(500);
-    if (loadError) setError(loadError.message);
+    if (loadError) { console.error('Team profile load failed', loadError); setError('Unable to load team profiles. Please try again.'); }
     else setRows((data || []) as TeamRow[]);
     setLoading(false);
   }
@@ -280,7 +280,8 @@ export function TeamAccessPage() {
       setNotice(editing ? 'Team access updated.' : 'Linked team profile created.');
       await load();
     } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : 'Unable to save team profile.');
+      console.error('Team profile save failed', saveError);
+      setError('The team profile could not be saved. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -294,7 +295,8 @@ export function TeamAccessPage() {
     const redirectTo = `${window.location.origin}/admin/reset-password/`;
     const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
     if (resetError) {
-      setError(resetError.message);
+      console.error('Team password reset failed', resetError);
+      setError('The reset email could not be sent. Please try again.');
       return;
     }
     await recordAuditLog({ module: 'team', action: 'password_reset_sent', entityType: 'admin_user', entityId: row.id, entityLabel: row.full_name, summary: `Password reset email was sent to ${email}.`, metadata: { email } });

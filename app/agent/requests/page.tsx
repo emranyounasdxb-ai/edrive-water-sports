@@ -10,6 +10,7 @@ import { AgentStatusBadge } from '@/components/edrive/agent/agent-status-badge';
 import { Button } from '@/components/ui/button';
 import { formatAed } from '@/lib/booking-data';
 import { supabase } from '@/lib/supabase-client';
+import { safeUiError } from '@/lib/ui-labels';
 import type { B2BRefundRequest } from '@/services/b2b-finance';
 
 type Booking = { id: string; booking_code: string | null; customer_name: string | null; selected_package_name: string | null };
@@ -34,7 +35,7 @@ export default function AgentRequestsPage() {
       if (requestResult.error || bookingResult.error) throw new Error(requestResult.error?.message || bookingResult.error?.message);
       setRequests((requestResult.data || []) as B2BRefundRequest[]); setBookings(Object.fromEntries((bookingResult.data || []).map((booking: Booking) => [booking.id, booking])));
       if (refresh) await refreshPortal();
-    } catch (loadError) { setError(loadError instanceof Error ? loadError.message : 'Unable to load requests.'); }
+    } catch (loadError) { console.error('Partner requests load failed', loadError); setError(safeUiError(loadError, 'load')); }
     finally { setLoading(false); setRefreshing(false); }
   }
   useEffect(() => { void load(); }, [agentId]);

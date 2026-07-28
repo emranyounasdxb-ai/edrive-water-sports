@@ -403,8 +403,8 @@ function PaymentReceiveModal({ target, onClose, onSaved }: { target: ReceiveTarg
       await onSaved();
       onClose();
     } catch (saveError) {
-      const message = saveError instanceof Error ? saveError.message : 'Unable to receive payment.';
-      setError(message.includes('payment_receipts') || message.includes('payment_receipt_allocations') || message.includes('payment_ledger_entries') ? 'Payment receiving tables are missing. Run supabase/payment-receiving.sql in Supabase first.' : message);
+      console.error('Payment receipt save failed', saveError);
+      setError('The payment could not be recorded. Please try again.');
     } finally {
       setSaving(false);
     }

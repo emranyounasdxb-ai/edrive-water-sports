@@ -93,7 +93,8 @@ export function MyProfilePage() {
       .maybeSingle();
 
     if (error || !data) {
-      setNotice({ tone: 'error', text: error?.message || 'Linked staff profile was not found.' });
+      if (error) console.error('Profile load failed', error);
+      setNotice({ tone: 'error', text: 'Unable to load your profile. Please try again.' });
       setLoading(false);
       return;
     }
@@ -207,7 +208,8 @@ export function MyProfilePage() {
       setNotice({ tone: 'success', text: 'Profile updated successfully.' });
     } catch (error) {
       if (newlyUploadedPath) await supabase.storage.from(avatarBucket).remove([newlyUploadedPath]);
-      setNotice({ tone: 'error', text: error instanceof Error ? error.message : 'Unable to update profile.' });
+      console.error('Profile update failed', error);
+      setNotice({ tone: 'error', text: 'Your profile could not be updated. Please try again.' });
     } finally {
       setSaving(false);
     }
@@ -257,7 +259,8 @@ export function MyProfilePage() {
       setConfirmPassword('');
       setNotice({ tone: 'success', text: 'Password changed successfully.' });
     } catch (error) {
-      setNotice({ tone: 'error', text: error instanceof Error ? error.message : 'Unable to change password.' });
+      console.error('Password change failed', error);
+      setNotice({ tone: 'error', text: 'Your password could not be changed. Please try again.' });
     } finally {
       setPasswordSaving(false);
     }
@@ -272,7 +275,7 @@ export function MyProfilePage() {
       redirectTo: `${window.location.origin}/admin/reset-password/`
     });
 
-    if (error) setNotice({ tone: 'error', text: error.message });
+    if (error) { console.error('Password reset request failed', error); setNotice({ tone: 'error', text: 'The reset email could not be sent. Please try again.' }); }
     else {
       await recordAuditLog({
         module: 'profile',

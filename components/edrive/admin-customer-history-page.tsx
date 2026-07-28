@@ -229,7 +229,8 @@ export function AdminCustomerHistoryPage() {
     setError('');
     const { data, error: loadError } = await supabase.from(bookingRequestsTable).select('*').order('created_at', { ascending: false }).limit(5000);
     if (loadError) {
-      setError(loadError.message);
+      console.error('Customer history load failed', loadError);
+      setError('Unable to load customer history. Please try again.');
       setBookings([]);
     } else setBookings((data || []) as OperationsBooking[]);
     setLoading(false);

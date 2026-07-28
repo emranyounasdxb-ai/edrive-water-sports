@@ -83,7 +83,7 @@ export function AdminDashboardReconciledPage() {
     ]);
 
     const firstError = bookingResult.error || ledgerResult.error || receiptResult.error;
-    if (firstError) setError(firstError.message);
+    if (firstError) { console.error('Dashboard load failed', firstError); setError('Unable to load dashboard information. Please try again.'); }
     setData({
       bookings: (bookingResult.data || []) as OperationsBooking[],
       ledger: (ledgerResult.data || []) as CompanyLedgerEntry[],

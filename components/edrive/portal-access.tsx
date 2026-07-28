@@ -2,8 +2,8 @@
 
 import { createContext, useContext, useEffect, useMemo, useState, type FormEvent, type MouseEvent, type ReactNode } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { ShieldCheck } from 'lucide-react';
 import { supabase } from '@/lib/supabase-client';
+import { safeUiError, uiLabel } from '@/lib/ui-labels';
 
 type PortalAccessValue = {
   userId: string;
@@ -58,14 +58,7 @@ function canMutatePath(role: string, pathname: string) {
 }
 
 export function portalRoleLabel(role: string) {
-  const labels: Record<string, string> = {
-    super_admin: 'Super Admin',
-    admin: 'Admin',
-    booking_staff: 'Booking Manager',
-    manager: 'Ride Manager',
-    finance: 'Finance'
-  };
-  return labels[role] || 'Portal User';
+  return uiLabel(role, 'Portal User');
 }
 
 function legacyRoleLabel(role: string) {
@@ -117,7 +110,10 @@ export function PortalAccessProvider({ children }: { children: ReactNode }) {
 
       const { data, error } = await supabase.from('admin_users').select('full_name,email,role,status,avatar_url,nationality').eq('auth_user_id', user.id).limit(2);
       if (!active) return;
-      if (error) setAccessError(`Profile read error: ${error.message}`);
+      if (error) {
+        console.error('Portal profile load failed', error);
+        setAccessError(safeUiError(error, 'load'));
+      }
       const row = !error && data?.length === 1 && String(data[0]?.status || '').toLowerCase() === 'active' ? data[0] : null;
       if (!row && !error) setAccessError('No active portal profile is linked to this account.');
       setProfile({
@@ -197,7 +193,7 @@ function isMutationControl(target: HTMLElement) {
 export function PortalRoleBoundary({ children }: { children: ReactNode }) {
   const { loading, role, canMutateCurrentPage } = usePortalAccess();
   if (!loading && role === 'maintenance_staff') {
-    return <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-4 text-sm font-semibold text-red-800">Maintenance Staff portal access is inactive. Fleet lifecycle and maintenance operations are restricted to Super Admin.</div>;
+    return <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-4 text-sm font-semibold text-red-800">You do not have access to this page.</div>;
   }
   const restricted = !loading && Boolean(role) && !canMutateCurrentPage;
 
@@ -215,12 +211,6 @@ export function PortalRoleBoundary({ children }: { children: ReactNode }) {
 
   return (
     <div onClickCapture={blockClick} onSubmitCapture={blockSubmit}>
-      {restricted ? (
-        <div className="mb-4 flex items-start gap-3 rounded-2xl border border-primary/15 bg-primary-50 px-4 py-3 text-sm text-primary-900">
-          <ShieldCheck className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-          <div><p className="font-bold">Role-based access</p><p className="mt-0.5 text-xs font-semibold leading-5 text-primary-900/75">This page is read-only for the {portalRoleLabel(role)} role. Database security policies also enforce the same restriction.</p></div>
-        </div>
-      ) : null}
       {children}
     </div>
   );

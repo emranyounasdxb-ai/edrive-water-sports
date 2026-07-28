@@ -316,7 +316,8 @@ function PaymentModal({ booking, onClose, onComplete }: { booking: BookingRow; o
       await onComplete({ method: lockedMethod, amount: Number.isFinite(numeric) ? numeric : 0, reference: reference.trim(), note: note.trim() });
       onClose();
     } catch (modalError) {
-      setError(modalError instanceof Error ? modalError.message : 'Unable to complete ride.');
+      console.error('Ride completion failed', modalError);
+      setError('The ride could not be completed. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -371,7 +372,8 @@ function NoShowModal({ booking, onClose, onConfirm }: { booking: BookingRow; onC
       await onConfirm(reason, note);
       onClose();
     } catch (modalError) {
-      setError(modalError instanceof Error ? modalError.message : 'Unable to mark no show.');
+      console.error('No-show update failed', modalError);
+      setError('The booking could not be marked as No Show. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -432,7 +434,8 @@ function RideCard({ booking, onSaved }: { booking: BookingRow; onSaved: () => Pr
     try {
       setVehicles(await getAssignableVehicles(booking.id));
     } catch (loadError) {
-      setVehicleError(loadError instanceof Error ? loadError.message : 'Unable to load available vehicles.');
+      console.error('Available vehicle load failed', loadError);
+      setVehicleError('Unable to load available vehicles. Please try again.');
     } finally {
       setVehiclesLoading(false);
     }
@@ -463,7 +466,8 @@ function RideCard({ booking, onSaved }: { booking: BookingRow; onSaved: () => Pr
       closeStartPanel();
       await onSaved();
     } catch (saveError) {
-      setVehicleError(saveError instanceof Error ? saveError.message : 'Unable to start ride.');
+      console.error('Ride start failed', saveError);
+      setVehicleError('The ride could not be started. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -475,7 +479,8 @@ function RideCard({ booking, onSaved }: { booking: BookingRow; onSaved: () => Pr
     try {
       await onSaved();
     } catch (refreshError) {
-      setError(refreshError instanceof Error ? refreshError.message : 'The booking changed, but the ride list could not be refreshed.');
+      console.error('Ride list refresh failed', refreshError);
+      setError('The ride was updated, but the list could not be refreshed. Please refresh the page.');
     }
   }
 
@@ -494,7 +499,8 @@ function RideCard({ booking, onSaved }: { booking: BookingRow; onSaved: () => Pr
     try {
       await onSaved();
     } catch (refreshError) {
-      setError(refreshError instanceof Error ? refreshError.message : 'The ride completed, but the ride list could not be refreshed.');
+      console.error('Completed ride refresh failed', refreshError);
+      setError('The ride was completed, but the list could not be refreshed. Please refresh the page.');
     }
   }
 
@@ -560,7 +566,8 @@ function ManagerAssignedRidesPage({ manager }: { manager: ManagerProfile }) {
       setBookings((bookingResult.data || []) as BookingRow[]);
     } catch (loadError) {
       setBookings([]);
-      setError(loadError instanceof Error ? loadError.message : 'Unable to load assigned rides.');
+      console.error('Assigned rides load failed', loadError);
+      setError('Unable to load assigned rides. Please try again.');
     } finally {
       setLoading(false);
     }

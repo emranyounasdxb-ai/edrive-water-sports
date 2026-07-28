@@ -15,6 +15,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { formatAed } from '@/lib/booking-data';
 import { supabase } from '@/lib/supabase-client';
+import { safeUiError } from '@/lib/ui-labels';
 import type { B2BRefundRequest } from '@/services/b2b-finance';
 
 type Booking = AgentBookingView & { total_refunded_aed: number | null; payment_workflow_status: string | null };
@@ -44,7 +45,7 @@ export default function AgentBookingsPage() {
       if (bookingResult.error || requestResult.error) throw new Error(bookingResult.error?.message || requestResult.error?.message);
       setBookings((bookingResult.data || []) as Booking[]); setRequests((requestResult.data || []) as B2BRefundRequest[]);
       if (refresh) await refreshPortal();
-    } catch (loadError) { setError(loadError instanceof Error ? loadError.message : 'Unable to load bookings.'); }
+    } catch (loadError) { console.error('Partner bookings load failed', loadError); setError(safeUiError(loadError, 'load')); }
     finally { setLoading(false); setRefreshing(false); }
   }
   useEffect(() => { void load(); }, [agentId]);

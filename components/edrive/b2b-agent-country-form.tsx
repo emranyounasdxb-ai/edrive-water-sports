@@ -151,7 +151,8 @@ export function B2BAgentCountryForm() {
     setError('');
     const { data, error: loadError } = await supabase.from(tableName).select('*').order('created_at', { ascending: false }).limit(500);
     if (loadError) {
-      setError(loadError.message.includes('country') ? 'Run supabase/b2b-agent-country.sql first, then refresh this page.' : loadError.message);
+      console.error('Country information load failed', loadError);
+      setError('Unable to load country information. Please try again.');
       setAgents([]);
     } else {
       const rows = ((data || []) as Record<string, unknown>[]).map(mapAgent);
@@ -223,7 +224,8 @@ export function B2BAgentCountryForm() {
       await loadAgents();
       setForm((current) => ({ ...emptyForm, agent_code: nextAgentCode(agents), country: current.country }));
     } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : 'Unable to save B2B agent.');
+      console.error('B2B agent country save failed', saveError);
+      setError('The B2B agent could not be saved. Please try again.');
     } finally {
       setSaving(false);
     }

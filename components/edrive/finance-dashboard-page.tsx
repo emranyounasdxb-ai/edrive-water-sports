@@ -11,6 +11,7 @@ import {
 } from '@/lib/operations-reporting';
 import { getFinanceReportData, type FinanceReportData } from '@/services/finance-reporting';
 import type { LucideIcon } from 'lucide-react';
+import { safeUiError, uiLabel } from '@/lib/ui-labels';
 
 const money = (value: number) => new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED' }).format(value);
 const dateKey = (date = new Date()) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dubai', year: 'numeric', month: '2-digit', day: '2-digit' }).format(date);
@@ -39,7 +40,8 @@ export function FinanceDashboardPage() {
       setData(month);
       setTodayData(today);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Unable to load Finance Dashboard.');
+      console.error('Finance dashboard load failed', cause);
+      setError(safeUiError(cause, 'load'));
     } finally {
       setLoading(false);
     }
@@ -87,7 +89,7 @@ export function FinanceDashboardPage() {
   return (
     <section className="space-y-5">
       <header className="flex flex-wrap items-end justify-between gap-3">
-        <div><p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">Finance Portal</p><h1 className="mt-1 font-heading text-3xl font-semibold text-primary-900">Finance Dashboard</h1><p className="mt-1 text-sm text-muted-foreground">Reconciled revenue, collections and receivables for the current Dubai month.</p></div>
+        <div><p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">Finance Portal</p><h1 className="mt-1 font-heading text-2xl font-semibold text-primary-900">Finance Dashboard</h1><p className="mt-1 text-sm text-muted-foreground">Revenue, collections and receivables for the current Dubai month.</p></div>
         <Button variant="outline" onClick={() => void load()}><RefreshCw className="size-4" />Refresh</Button>
       </header>
       {error ? <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-800">{error} <button className="ml-2 underline" onClick={() => void load()}>Retry</button></div> : null}
@@ -102,10 +104,10 @@ export function FinanceDashboardPage() {
         ].map(([label, value]) => <div key={String(label)} className="mt-3 flex justify-between rounded-2xl bg-[#F4F7F8] px-4 py-3 text-sm"><span>{label}</span><strong>{money(Number(value))}</strong></div>)}</CardContent></Card>
       </div>
       <div className="grid gap-4 lg:grid-cols-2">
-        <Card className="rounded-3xl border-0 shadow-sm"><CardContent className="p-5"><h2 className="font-heading text-lg font-semibold">Payment-method split</h2>{paymentSplit.length ? paymentSplit.map(([label, value]) => <div key={label} className="mt-3 flex justify-between rounded-2xl bg-[#F4F7F8] px-4 py-3 text-sm"><span>{label}</span><strong>{money(value)}</strong></div>) : <p className="mt-4 text-sm text-muted-foreground">No collected payments in this period.</p>}</CardContent></Card>
+        <Card className="rounded-3xl border-0 shadow-sm"><CardContent className="p-5"><h2 className="font-heading text-lg font-semibold">Payment-method split</h2>{paymentSplit.length ? paymentSplit.map(([label, value]) => <div key={label} className="mt-3 flex justify-between rounded-2xl bg-[#F4F7F8] px-4 py-3 text-sm"><span>{uiLabel(label)}</span><strong>{money(value)}</strong></div>) : <p className="mt-4 text-sm text-muted-foreground">No collected payments in this period.</p>}</CardContent></Card>
         <Card className="rounded-3xl border-0 shadow-sm"><CardContent className="p-5"><h2 className="font-heading text-lg font-semibold">Refund queue</h2><div className="mt-3 grid grid-cols-3 gap-2">{[['Pending', data?.pending_refunds || 0], ['Approved', money(data?.approved_refunds_aed || 0)], ['Rejected', data?.rejected_refunds || 0]].map(([label, value]) => <div key={String(label)} className="rounded-2xl bg-[#F4F7F8] p-3 text-center"><p className="text-xs text-muted-foreground">{label}</p><p className="mt-1 font-bold">{value}</p></div>)}</div></CardContent></Card>
       </div>
-      <Card className="rounded-3xl border-0 shadow-sm"><CardContent className="p-5"><h2 className="font-heading text-lg font-semibold">Recent receipts</h2><div className="mt-3 overflow-x-auto"><table className="w-full min-w-[700px] text-left text-sm"><thead><tr className="border-b text-xs text-muted-foreground"><th className="py-2">Receipt</th><th>Source</th><th>Amount</th><th>Method</th><th>Reference</th><th>Received by</th><th>Date</th></tr></thead><tbody>{(data?.receipts || []).slice(0, 8).map((receipt) => <tr key={receipt.id} className="border-b border-border/60"><td className="py-3 font-bold">{receipt.receipt_number || receipt.id}</td><td>{receipt.source_name || receipt.source_type || '-'}</td><td>{money(reportAmount(receipt.received_amount))}</td><td>{receipt.payment_method || '-'}</td><td>{receipt.reference_no || '-'}</td><td>{receipt.received_by || '-'}</td><td>{receipt.received_at ? new Date(receipt.received_at).toLocaleString('en-AE') : '-'}</td></tr>)}</tbody></table></div></CardContent></Card>
+      <Card className="rounded-3xl border-0 shadow-sm"><CardContent className="p-5"><h2 className="font-heading text-lg font-semibold">Recent receipts</h2><div className="mt-3 overflow-x-auto"><table className="w-full min-w-[700px] text-left text-sm"><thead><tr className="border-b text-xs text-muted-foreground"><th className="py-2">Receipt</th><th>Source</th><th>Amount</th><th>Method</th><th>Reference</th><th>Received by</th><th>Date</th></tr></thead><tbody>{(data?.receipts || []).slice(0, 8).map((receipt) => <tr key={receipt.id} className="border-b border-border/60"><td className="py-3 font-bold">{receipt.receipt_number || receipt.id}</td><td>{receipt.source_name || uiLabel(receipt.source_type)}</td><td>{money(reportAmount(receipt.received_amount))}</td><td>{uiLabel(receipt.payment_method)}</td><td>{receipt.reference_no || '-'}</td><td>{receipt.received_by || '-'}</td><td>{receipt.received_at ? new Date(receipt.received_at).toLocaleString('en-AE') : '-'}</td></tr>)}</tbody></table></div></CardContent></Card>
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{quickLinks.map(([href, label, Icon]) => <Link key={href} href={href} className="flex items-center justify-between rounded-2xl bg-white p-4 font-bold shadow-sm"><span className="flex items-center gap-2"><Icon className="size-4 text-primary" />{label}</span><ArrowRight className="size-4" /></Link>)}</div>
     </section>
   );

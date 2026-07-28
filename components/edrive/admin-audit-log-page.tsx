@@ -7,6 +7,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { supabase } from '@/lib/supabase-client';
+import { safeUiError, uiLabel } from '@/lib/ui-labels';
 import { ContentAreaSkeleton } from './route-content-transition';
 import { usePortalAccess } from './portal-access';
 import { AppDatePicker } from './shared/app-date-picker';
@@ -182,10 +183,10 @@ function DetailsDrawer({ group, onClose }: { group: GroupedAuditRow; onClose: ()
         <div className="flex items-start justify-between gap-4 border-b border-border/70 bg-[#F7FAFA] px-5 py-4">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <span className={`inline-flex rounded-full border px-2.5 py-1 text-[10px] font-bold ${moduleTone(row.module)}`}>{titleCase(row.module)}</span>
+              <span className={`inline-flex rounded-full border px-2.5 py-1 text-[10px] font-bold ${moduleTone(row.module)}`}>{uiLabel(row.module)}</span>
               {group.count > 1 ? <span className="rounded-full bg-primary-900 px-2.5 py-1 text-[10px] font-bold text-white">Repeated ×{group.count}</span> : null}
             </div>
-            <h2 className="mt-3 break-words font-heading text-xl font-semibold leading-7 text-foreground">{titleCase(row.action)}</h2>
+            <h2 className="mt-3 break-words font-heading text-xl font-semibold leading-7 text-foreground">{uiLabel(row.action)}</h2>
             <p className="mt-1 text-xs font-semibold text-muted-foreground">Latest event: {formatFullDateTime(row.created_at)}</p>
           </div>
           <button type="button" onClick={onClose} className="flex size-9 shrink-0 items-center justify-center rounded-full border border-border bg-white text-muted-foreground shadow-sm transition hover:text-primary" aria-label="Close details">
@@ -240,11 +241,11 @@ function DetailsDrawer({ group, onClose }: { group: GroupedAuditRow; onClose: ()
 }
 
 function ActivityLine({ row, count }: { row: AuditRow; count: number }) {
-  const label = `${titleCase(row.module)} | ${titleCase(row.action)}`;
+  const label = `${uiLabel(row.module)} | ${uiLabel(row.action)}`;
   return (
     <div className="flex min-w-0 items-center gap-1.5" title={label}>
-      <span className={`inline-flex shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-bold ${moduleTone(row.module)}`}>{titleCase(row.module)}</span>
-      <span className="truncate text-xs font-bold text-foreground">{titleCase(row.action)}</span>
+      <span className={`inline-flex shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-bold ${moduleTone(row.module)}`}>{uiLabel(row.module)}</span>
+      <span className="truncate text-xs font-bold text-foreground">{uiLabel(row.action)}</span>
       {count > 1 ? <span className="shrink-0 rounded-full bg-primary-900 px-1.5 py-0.5 text-[9px] font-bold text-white">×{count}</span> : null}
     </div>
   );
@@ -279,7 +280,8 @@ export function AdminAuditLogPage() {
     const { data, error: loadError } = result;
     if (loadError) {
       setRows([]);
-      setError(loadError.message.includes('audit_logs') ? 'Audit Log table is not ready. Run supabase/audit-log.sql in Supabase.' : loadError.message);
+      console.error('Audit activity load failed', loadError);
+      setError(safeUiError(loadError, 'load'));
     } else {
       setRows((data || []) as AuditRow[]);
     }

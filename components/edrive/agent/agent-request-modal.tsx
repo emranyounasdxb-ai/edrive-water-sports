@@ -31,7 +31,8 @@ export function AgentRequestModal({ booking, open, onOpenChange, onSuccess }: {
       await onSuccess();
       onOpenChange(false);
     } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : `Unable to submit ${action.toLowerCase()} request.`);
+      console.error('Agent request submission failed', requestError);
+      setError(`The ${action.toLowerCase()} request could not be submitted. Please try again.`);
     } finally { setSaving(false); }
   }
 
