@@ -52,7 +52,7 @@ function canMutatePath(role: string, pathname: string) {
   if (role === 'super_admin') return true;
   if (role === 'admin') return false;
   if (role === 'booking_staff') return path === '/admin/bookings' || path.startsWith('/admin/bookings/') || path === '/admin/inquiries' || path.startsWith('/admin/inquiries/');
-  if (role === 'finance') return false;
+  if (role === 'finance') return path === '/admin/payments' || path.startsWith('/admin/payments/');
   if (role === 'manager') return path === '/admin/my-rides' || path.startsWith('/admin/my-rides/');
   return false;
 }

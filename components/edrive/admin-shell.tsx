@@ -31,7 +31,7 @@ import {
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { adminNavItems, managerNavItems, type AdminNavItem, type AdminNavRole } from '@/lib/mock-data';
+import { adminNavItems, financeNavItems, managerNavItems, type AdminNavItem, type AdminNavRole } from '@/lib/mock-data';
 import { supabase } from '@/lib/supabase-client';
 import { cn } from '@/lib/utils';
 import { LiveWeatherPill } from './admin/live-weather-pill';
@@ -150,6 +150,19 @@ function isManagerPathAllowed(pathname: string) {
   return ['/admin/manager', '/admin/my-rides', '/admin/operations-schedule', '/admin/payments'].some((path) => pathname === path || pathname.startsWith(`${path}/`));
 }
 
+function isFinancePathAllowed(pathname: string) {
+  return [
+    '/admin',
+    '/admin/payments',
+    '/admin/finance-bookings',
+    '/admin/b2b-finance',
+    '/admin/reports',
+    '/admin/audit-log',
+    '/admin/my-profile',
+    '/admin/reset-password'
+  ].some((path) => pathname === path || (path !== '/admin' && pathname.startsWith(`${path}/`)));
+}
+
 function roleLabel(role: string) {
   const labels: Record<string, string> = {
     super_admin: 'Super Admin',
@@ -255,6 +268,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
   const navItems = useMemo(() => {
     if (!user) return [] as NavItem[];
     if (isManagerRole(user.role)) return managerNavItems as NavItem[];
+    if (user.role === 'finance') return financeNavItems as NavItem[];
     return adminNavItems.filter((item) => canUseNavItem(user.role, item)) as NavItem[];
   }, [user]);
 
@@ -269,6 +283,10 @@ export function AdminShell({ children }: { children: ReactNode }) {
 
     if (isManagerRole(user.role)) {
       if (!isManagerPathAllowed(currentPath)) router.replace('/admin/manager');
+      return;
+    }
+    if (user.role === 'finance') {
+      if (!isFinancePathAllowed(currentPath)) router.replace('/admin');
       return;
     }
 
@@ -320,6 +338,10 @@ export function AdminShell({ children }: { children: ReactNode }) {
   }
 
   const isManager = isManagerRole(user.role);
+  const financeRedirecting = user.role === 'finance' && !isFinancePathAllowed(currentPath);
+  if (financeRedirecting) {
+    return <div className="flex min-h-screen items-center justify-center bg-[#F4F7F8] text-sm font-semibold text-muted-foreground">Redirecting to Finance Dashboard...</div>;
+  }
 
   return (
     <OperationsProvider>
@@ -373,7 +395,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
 
                 <div className="flex min-w-0 items-center gap-2.5">
                   <div className="hidden items-center gap-2 rounded-full bg-[#F4F7F8] px-3 py-1.5 text-xs font-semibold text-muted-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_6px_16px_rgba(8,37,50,0.045)] sm:flex">
-                    <Home className="size-4 text-primary" aria-hidden="true" />{isManager ? 'Manager Operations' : 'Admin Operations'}
+                    <Home className="size-4 text-primary" aria-hidden="true" />{isManager ? 'Manager Operations' : user.role === 'finance' ? 'Finance Portal' : 'Admin Operations'}
                   </div>
                   <div className="manager-mobile-avatar sm:hidden"><ProfileAvatar src={user.avatarUrl} size="sm" /></div>
                   <div className="min-w-0 sm:hidden">

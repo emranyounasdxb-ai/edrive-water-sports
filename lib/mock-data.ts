@@ -75,8 +75,12 @@ export const managerNavItems = [
 ];
 
 export const financeNavItems = [
-  { href: '/admin/payments', label: 'Payments', icon: 'CreditCard' },
-  { href: '/admin/reports', label: 'Reports', icon: 'BarChart3' }
+  { href: '/admin', label: 'Finance Dashboard', icon: 'LayoutDashboard' },
+  { href: '/admin/payments', label: 'Payments & Collections', icon: 'CreditCard' },
+  { href: '/admin/finance-bookings', label: 'Financial Bookings', icon: 'CalendarDays' },
+  { href: '/admin/b2b-finance', label: 'B2B Finance', icon: 'CreditCard' },
+  { href: '/admin/reports', label: 'Financial Reports', icon: 'BarChart3' },
+  { href: '/admin/audit-log', label: 'Finance Activity', icon: 'ClipboardCheck' }
 ];
 
 export const fleetHeroImage = '/images/edrive/fleet/jc-01.webp';

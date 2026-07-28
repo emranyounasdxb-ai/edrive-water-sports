@@ -1,15 +1,17 @@
 'use client';
 
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
-import { Building2, CreditCard, FileText, Landmark, LayoutDashboard, RefreshCw, Save, Search, WalletCards, X } from 'lucide-react';
+import { Building2, CreditCard, Download, FileDown, FileText, Landmark, LayoutDashboard, Printer, RefreshCw, Save, Search, WalletCards, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { formatAed } from '@/lib/booking-data';
 import { bookingRequestsTable } from '@/lib/booking-records';
 import { supabase } from '@/lib/supabase-client';
+import { exportFinanceCsv, exportFinancePdf, type ExportColumn } from '@/lib/finance-report-export';
 import { AdminPaymentsPage } from './admin-payments-page';
+import { usePortalAccess } from './portal-access';
 
 type PaymentTab = 'overview' | 'manager' | 'b2b' | 'receipts' | 'ledger';
 type ReceivableKind = 'manager' | 'b2b_agent';
@@ -30,7 +32,9 @@ type BookingRow = Record<string, unknown> & {
   amount_received_aed?: number | string | null;
   amount_pending_aed?: number | string | null;
   assigned_manager_name?: string | null;
+  assigned_manager_id?: string | null;
   b2b_agent_name?: string | null;
+  b2b_agent_id?: string | null;
   internal_note?: string | null;
   preferred_date?: string | null;
   preferred_time?: string | null;
@@ -72,6 +76,7 @@ type LedgerRow = {
 
 type ReceivableGroup = {
   kind: ReceivableKind;
+  sourceId: string;
   name: string;
   bookings: BookingRow[];
   cash: number;
@@ -167,21 +172,13 @@ function isB2BDue(booking: BookingRow) {
     && (isCompleted(booking) || workflow.includes('b2b invoice'));
 }
 
-function appendNote(existing: unknown, line: string) {
-  return [text(existing), line].filter(Boolean).join('\n');
-}
-
-function receiptNumber() {
-  const now = new Date();
-  const date = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
-  return `RC-${date}-${String(Date.now()).slice(-6)}`;
-}
-
 function buildGroups(bookings: BookingRow[], kind: ReceivableKind) {
   const groups = new Map<string, ReceivableGroup>();
   bookings.filter((booking) => kind === 'manager' ? isManagerDue(booking) : isB2BDue(booking)).forEach((booking) => {
+    const sourceId = text(kind === 'manager' ? booking.assigned_manager_id : booking.b2b_agent_id);
+    if (!sourceId) return;
     const name = kind === 'manager' ? text(booking.assigned_manager_name, 'Unassigned Manager') : text(booking.b2b_agent_name, 'B2B Agent');
-    const current = groups.get(name) || { kind, name, bookings: [], cash: 0, card: 0, due: 0 };
+    const current = groups.get(sourceId) || { kind, sourceId, name, bookings: [], cash: 0, card: 0, due: 0 };
     current.bookings.push(booking);
     if (kind === 'manager') {
       if (text(booking.payment_method).toLowerCase() === 'cash') current.cash += bookingReceived(booking);
@@ -190,7 +187,7 @@ function buildGroups(bookings: BookingRow[], kind: ReceivableKind) {
     } else {
       current.due += bookingPending(booking);
     }
-    groups.set(name, current);
+    groups.set(sourceId, current);
   });
   return Array.from(groups.values()).sort((a, b) => b.due - a.due);
 }
@@ -218,7 +215,12 @@ function SettlementModal({ group, onClose, onSaved }: { group: ReceivableGroup; 
   const [note, setNote] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const operationKey = useRef('');
+  if (!operationKey.current) operationKey.current = crypto.randomUUID();
   const numericAmount = Number(receivedAmount || 0);
+  const paymentMethods = group.kind === 'manager'
+    ? ['Cash Handover', 'Card Settlement', 'Mixed Handover']
+    : ['Bank Transfer', 'Cash', 'Card Settlement', 'Cheque'];
 
   async function submit() {
     setError('');
@@ -228,82 +230,28 @@ function SettlementModal({ group, onClose, onSaved }: { group: ReceivableGroup; 
 
     setSaving(true);
     try {
-      const number = receiptNumber();
-      const { data: sessionData } = await supabase.auth.getSession();
-      const receivedBy = sessionData.session?.user?.email || 'Admin';
-      const receiptResult = await supabase.from('payment_receipts').insert({
-        receipt_number: number,
-        source_type: group.kind,
-        source_name: group.name,
-        received_amount: numericAmount,
-        payment_method: method,
-        reference_no: reference.trim() || null,
-        note: note.trim() || null,
-        received_by: receivedBy,
-        received_at: new Date().toISOString()
-      }).select('id').single();
-      if (receiptResult.error) throw receiptResult.error;
-      const receiptId = String(receiptResult.data.id);
-
       let remaining = numericAmount;
       const allocations = group.bookings.map((booking) => {
         const before = group.kind === 'manager' ? bookingReceived(booking) : bookingPending(booking);
         const allocated = Math.min(before, remaining);
         remaining = Math.max(remaining - allocated, 0);
-        return { booking, before, allocated, after: Math.max(before - allocated, 0) };
-      }).filter((item) => item.allocated > 0);
-
-      const allocationResult = await supabase.from('payment_receipt_allocations').insert(allocations.map((item) => ({
-        receipt_id: receiptId,
-        booking_request_id: text(item.booking.id) || null,
-        booking_code: bookingCode(item.booking),
-        allocated_amount: item.allocated,
-        balance_before: item.before,
-        balance_after: item.after
-      }))).select('id,booking_code');
-      if (allocationResult.error) throw allocationResult.error;
-
-      const ledgerRows = allocations.flatMap((item) => {
-        const allocationId = (allocationResult.data || []).find((row: { id: string; booking_code: string }) => row.booking_code === bookingCode(item.booking))?.id || null;
-        const common = {
-          receipt_id: receiptId,
-          allocation_id: allocationId,
-          booking_request_id: text(item.booking.id) || null,
-          booking_code: bookingCode(item.booking),
-          amount: item.allocated,
-          narration: `${number} | ${group.kind === 'manager' ? 'Manager' : 'B2B agent'} payment received`
+        return {
+          booking_request_id: text(booking.id),
+          allocated_amount: allocated
         };
-        return [
-          { ...common, account_type: group.kind, account_name: group.name, entry_type: 'source_out' },
-          { ...common, account_type: 'company', account_name: 'Company Account', entry_type: 'company_in' }
-        ];
+      }).filter((item) => item.allocated_amount > 0);
+      if (allocations.some((item) => !item.booking_request_id)) throw new Error('A selected booking is missing its permanent ID.');
+      const { error: rpcError } = await supabase.rpc('receive_finance_settlement', {
+        p_operation_key: operationKey.current,
+        p_source_type: group.kind,
+        p_source_id: group.sourceId,
+        p_received_amount: numericAmount,
+        p_payment_method: method,
+        p_reference_no: reference.trim() || null,
+        p_note: note.trim() || null,
+        p_allocations: allocations
       });
-      const ledgerResult = await supabase.from('payment_ledger_entries').insert(ledgerRows);
-      if (ledgerResult.error) throw ledgerResult.error;
-
-      for (const item of allocations) {
-        const line = `${number}: ${formatAed(item.allocated)} received by admin from ${group.name}.`;
-        const payload: Record<string, unknown> = group.kind === 'manager'
-          ? {
-              payment_status: 'Paid',
-              collection_status: 'company_received',
-              payment_workflow_status: 'Received By Admin',
-              internal_note: appendNote(item.booking.internal_note, line),
-              updated_at: new Date().toISOString()
-            }
-          : {
-              amount_received_aed: bookingReceived(item.booking) + item.allocated,
-              amount_pending_aed: item.after,
-              payment_status: item.after <= 0 ? 'Paid' : 'Partial Paid',
-              collection_status: item.after <= 0 ? 'company_received' : 'partial_collection',
-              payment_workflow_status: item.after <= 0 ? 'B2B Paid' : 'B2B Payment Received',
-              internal_note: appendNote(item.booking.internal_note, line),
-              updated_at: new Date().toISOString()
-            };
-        const update = supabase.from(bookingRequestsTable).update(payload);
-        const result = item.booking.id ? await update.eq('id', item.booking.id) : await update.eq('booking_code', bookingCode(item.booking));
-        if (result.error) throw result.error;
-      }
+      if (rpcError) throw new Error(rpcError.message);
 
       await onSaved();
       onClose();
@@ -321,7 +269,7 @@ function SettlementModal({ group, onClose, onSaved }: { group: ReceivableGroup; 
         <div className="grid max-h-[calc(88vh-9rem)] gap-4 overflow-y-auto p-5">
           {error ? <p className="rounded-xl bg-red-50 px-3 py-2 text-xs font-semibold text-red-700">{error}</p> : null}
           <div className="grid gap-3 sm:grid-cols-2"><Detail label="Receive From" value={group.name} sub={group.kind === 'manager' ? 'Manager settlement' : 'B2B receivable'} /><Detail label="Outstanding" value={formatAed(totalDue)} sub={group.kind === 'manager' ? 'Full settlement required' : 'Partial payment allowed'} /></div>
-          <div className="grid gap-3 sm:grid-cols-2"><label className="grid gap-1.5 text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">Amount<Input value={receivedAmount} onChange={(event) => setReceivedAmount(event.target.value)} disabled={group.kind === 'manager'} type="number" min="0" max={totalDue} step="0.01" className="h-10 rounded-xl bg-white" /></label><label className="grid gap-1.5 text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">Method<select value={method} onChange={(event) => setMethod(event.target.value)} className="h-10 rounded-xl border border-border bg-white px-3 text-sm font-semibold"><option>Cash Handover</option><option>Cash</option><option>Bank Transfer</option><option>Card Settlement</option><option>Mixed Handover</option><option>Cheque</option></select></label></div>
+          <div className="grid gap-3 sm:grid-cols-2"><label className="grid gap-1.5 text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">Amount<Input value={receivedAmount} onChange={(event) => setReceivedAmount(event.target.value)} disabled={group.kind === 'manager'} type="number" min="0" max={totalDue} step="0.01" className="h-10 rounded-xl bg-white" /></label><label className="grid gap-1.5 text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">Method<select value={method} onChange={(event) => setMethod(event.target.value)} className="h-10 rounded-xl border border-border bg-white px-3 text-sm font-semibold">{paymentMethods.map((item) => <option key={item}>{item}</option>)}</select></label></div>
           <div className="grid gap-3 sm:grid-cols-2"><label className="grid gap-1.5 text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">Reference<Input value={reference} onChange={(event) => setReference(event.target.value)} className="h-10 rounded-xl bg-white" placeholder="Transfer, cheque or card ref" /></label><label className="grid gap-1.5 text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">Note<Input value={note} onChange={(event) => setNote(event.target.value)} className="h-10 rounded-xl bg-white" /></label></div>
           <div className="rounded-[1.15rem] border border-border p-3"><p className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">Booking allocation</p><div className="mt-2 grid gap-2">{group.bookings.map((booking) => <div key={bookingCode(booking)} className="flex items-center justify-between gap-3 rounded-xl bg-[#F7FAFA] px-3 py-2 text-xs"><span className="font-semibold text-foreground">{bookingCode(booking)}</span><span className="font-bold text-primary">{formatAed(group.kind === 'manager' ? bookingReceived(booking) : bookingPending(booking))}</span></div>)}</div></div>
         </div>
@@ -364,6 +312,7 @@ function LedgerTab({ ledger, receipts, query, onQuery }: { ledger: LedgerRow[]; 
 }
 
 export function AdminPaymentsControlCenter() {
+  const { fullName, email, role } = usePortalAccess();
   const [activeTab, setActiveTab] = useState<PaymentTab>('overview');
   const [bookings, setBookings] = useState<BookingRow[]>([]);
   const [receipts, setReceipts] = useState<ReceiptRow[]>([]);
@@ -405,12 +354,47 @@ export function AdminPaymentsControlCenter() {
     ledger: ledger.filter((row) => row.entry_type === 'company_in').length
   };
 
+  const receiptColumns: ExportColumn<ReceiptRow>[] = [
+    { heading: 'Receipt', value: (row) => row.receipt_number },
+    { heading: 'Source', value: (row) => row.source_name },
+    { heading: 'Amount AED', value: (row) => amount(row.received_amount) },
+    { heading: 'Method', value: (row) => row.payment_method },
+    { heading: 'Reference', value: (row) => row.reference_no || '-' },
+    { heading: 'Received By', value: (row) => row.received_by || '-' },
+    { heading: 'Received At', value: (row) => niceDateTime(row.received_at) }
+  ];
+  const ledgerColumns: ExportColumn<LedgerRow>[] = [
+    { heading: 'Booking', value: (row) => row.booking_code || '-' },
+    { heading: 'Account', value: (row) => row.account_name },
+    { heading: 'Entry', value: (row) => row.entry_type },
+    { heading: 'Amount AED', value: (row) => amount(row.amount) },
+    { heading: 'Narration', value: (row) => row.narration || '-' },
+    { heading: 'Date', value: (row) => niceDateTime(row.created_at) }
+  ];
+  const exportRows = activeTab === 'receipts'
+    ? receipts.filter((row) => !query.trim() || Object.values(row).some((value) => text(value).toLowerCase().includes(query.trim().toLowerCase())))
+    : ledger.filter((row) => row.entry_type === 'company_in' && (!query.trim() || Object.values(row).some((value) => text(value).toLowerCase().includes(query.trim().toLowerCase()))));
+  const exportContext = activeTab === 'receipts'
+    ? { reportType: 'Payment Receipts', dateFrom: '', dateTo: '', filters: { search: query }, rows: exportRows as ReceiptRow[], columns: receiptColumns, generatedBy: fullName || email }
+    : { reportType: 'Company Ledger', dateFrom: '', dateTo: '', filters: { search: query }, rows: exportRows as LedgerRow[], columns: ledgerColumns, generatedBy: fullName || email };
+
+  function printCurrentReceipts() {
+    const popup = window.open('', '_blank', 'noopener,noreferrer');
+    if (!popup || activeTab !== 'receipts') return;
+    const lines = (exportRows as ReceiptRow[]).map((row) => `<tr><td>${text(row.receipt_number)}</td><td>${text(row.source_name)}</td><td>${formatAed(amount(row.received_amount))}</td><td>${text(row.payment_method)}</td><td>${text(row.reference_no, '-')}</td><td>${niceDateTime(row.received_at)}</td></tr>`).join('');
+    popup.document.write(`<title>eDrive Payment Receipts</title><main style="font-family:Arial;padding:24px"><h1>eDrive Water Sports</h1><h2>Payment Receipts</h2><table border="1" cellspacing="0" cellpadding="7"><thead><tr><th>Receipt</th><th>Source</th><th>Amount</th><th>Method</th><th>Reference</th><th>Date</th></tr></thead><tbody>${lines}</tbody></table></main>`);
+    popup.document.close();
+    popup.print();
+  }
+
   return (
     <section className="w-full overflow-hidden">
       <div className="px-4 pt-5 sm:px-6 sm:pt-7 lg:px-8 xl:px-10">
         <div className="flex flex-col gap-4 rounded-[1.5rem] border border-white/80 bg-white/85 p-4 shadow-[0_18px_45px_rgba(8,37,50,0.055)] lg:flex-row lg:items-end lg:justify-between"><div><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Finance</p><h1 className="mt-2 font-heading text-2xl font-semibold text-foreground sm:text-3xl">Payment workspace</h1><p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">Track outstanding accounts, receive settlements, review receipts and reconcile company collections.</p></div><Button type="button" variant="outline" onClick={load} disabled={loading} className="w-fit rounded-full bg-white"><RefreshCw className={`size-4 ${loading ? 'animate-spin' : ''}`} aria-hidden="true" />Refresh</Button></div>
         {error ? <p className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</p> : null}
         <div className="mt-4 flex gap-2 overflow-x-auto rounded-[1.15rem] border border-border/70 bg-white p-2 shadow-sm">{tabItems.map((item) => { const Icon = item.icon; const active = activeTab === item.id; return <button key={item.id} type="button" onClick={() => setActiveTab(item.id)} className={`inline-flex shrink-0 items-center gap-2 rounded-xl px-3 py-2 text-xs font-bold transition ${active ? 'bg-primary text-white shadow-sm' : 'text-muted-foreground hover:bg-primary-50 hover:text-primary-900'}`}><Icon className="size-4" aria-hidden="true" />{item.label}<span className={`rounded-full px-1.5 py-0.5 text-[9px] ${active ? 'bg-white/15 text-white' : 'bg-[#F4F7F8] text-muted-foreground'}`}>{tabCounts[item.id]}</span></button>; })}</div>
+        {activeTab === 'receipts' || activeTab === 'ledger' ? <div className="mt-3 flex flex-wrap gap-2"><Button variant="outline" disabled={!exportRows.length} onClick={() => void exportFinanceCsv(exportContext as never)}><Download className="size-4" />Export CSV</Button><Button variant="outline" disabled={!exportRows.length} onClick={() => void exportFinancePdf(exportContext as never)}><FileDown className="size-4" />Download PDF</Button>{activeTab === 'receipts' ? <Button variant="outline" disabled={!exportRows.length} onClick={printCurrentReceipts}><Printer className="size-4" />Print Receipts</Button> : null}</div> : null}
+        {role === 'finance' ? <p className="mt-3 text-xs font-semibold text-muted-foreground">Finance access is limited to payment receipts, settlement allocations and company ledger collection fields.</p> : null}
       </div>
 
       {activeTab === 'overview' ? <AdminPaymentsPage /> : null}

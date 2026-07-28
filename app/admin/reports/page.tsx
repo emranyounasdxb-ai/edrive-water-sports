@@ -1,10 +1,10 @@
 import type { Metadata } from 'next';
-import { AdminReportsReconciledPage } from '@/components/edrive/admin-reports-reconciled-page';
+import { ReportsRoutePage } from '@/components/edrive/reports-route-page';
 
 export const metadata: Metadata = {
   title: 'Reports'
 };
 
 export default function Page() {
-  return <AdminReportsReconciledPage />;
+  return <ReportsRoutePage />;
 }

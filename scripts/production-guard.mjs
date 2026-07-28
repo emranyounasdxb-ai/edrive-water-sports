@@ -53,6 +53,16 @@ const nextConfig = read('next.config.mjs');
 const deployWorkflow = read('.github/workflows/static-export.yml');
 const myProfilePage = read('components/edrive/my-profile-page.tsx');
 const myProfileAccessMigration = read('supabase/my-profile-access.sql');
+const adminShell = read('components/edrive/admin-shell.tsx');
+const dashboardRoute = read('components/edrive/admin-dashboard-route-page.tsx');
+const financeNav = read('lib/mock-data.ts');
+const financeBookings = read('components/edrive/finance-bookings-page.tsx');
+const financeReports = read('components/edrive/finance-reports-page.tsx');
+const financeExport = read('lib/finance-report-export.ts');
+const financeService = read('services/finance-reporting.ts');
+const financeMigration = read('supabase/04-finance-portal-rbac-reporting.sql');
+const financeAudit = read('components/edrive/admin-audit-log-page.tsx');
+const adminPaymentsControlCenter = read('components/edrive/admin-payments-control-center.tsx');
 
 function sourceFiles(directory) {
   const absolute = path.join(root, directory);
@@ -88,13 +98,61 @@ assert(nextConfig.includes("output: 'export'"), 'The website must remain a Next.
 assert(deployWorkflow.includes('local-dir: ./out/') && deployWorkflow.includes('SamKirkland/FTP-Deploy-Action'), 'The existing static-export FTP deployment architecture must remain unchanged.');
 assert(portalAccess.includes("path === '/admin/my-profile'") && portalAccess.includes("path === '/admin/manager/my-profile'"), 'Approved self-profile routes must retain their mutation exception.');
 assert(portalAccess.includes("['super_admin', 'admin', 'booking_staff', 'manager', 'finance']"), 'Every active supported portal role must retain self-profile mutation access.');
-assert(portalAccess.includes("if (role === 'admin') return false;") && portalAccess.includes("if (role === 'finance') return false;"), 'Admin and Finance must remain read-only outside approved self-profile routes.');
+assert(portalAccess.includes("if (role === 'admin') return false;") && portalAccess.includes("if (role === 'finance') return path === '/admin/payments'"), 'Admin must remain read-only and Finance mutations must remain limited to Payments and self-profile.');
 assert(myProfilePage.includes("const avatarBucket = 'profile-avatars'"), 'Self-profile uploads must continue using the profile-avatars bucket.');
 assert(myProfilePage.includes('const maxAvatarSize = 3 * 1024 * 1024') && myProfilePage.includes("'image/jpeg', 'image/png', 'image/webp'"), 'Self-profile uploads must retain the 3 MB JPG, PNG, and WebP restrictions.');
 assert(myProfilePage.includes('`${userId}/profile-${Date.now()}') && myProfilePage.includes("rpc('update_my_admin_profile'"), 'Self-profile writes must use the authenticated user storage folder and secured profile RPC.');
 assert(myProfilePage.includes('refreshAccess()'), 'Successful self-profile updates must immediately refresh portal avatar context.');
 assert(myProfilePage.includes('newlyUploadedPath') && myProfilePage.includes('remove([newlyUploadedPath])'), 'Failed profile updates must remove newly uploaded unused avatars.');
 assert(myProfileAccessMigration.includes('where auth_user_id = auth.uid()'), 'The self-profile RPC must remain restricted to the authenticated user profile.');
+assert(dashboardRoute.includes("role === 'finance'") && dashboardRoute.includes('<FinanceDashboardPage />'), 'Finance must route to FinanceDashboardPage instead of the Admin dashboard.');
+assert(adminShell.includes('financeNavItems') && adminShell.includes('isFinancePathAllowed'), 'AdminShell must use dedicated Finance navigation and route protection.');
+for (const route of ['/admin/payments', '/admin/finance-bookings', '/admin/b2b-finance', '/admin/reports', '/admin/audit-log']) {
+  assert(financeNav.includes(`href: '${route}'`), `Finance navigation must retain ${route}.`);
+}
+for (const route of ['/admin/bookings', '/admin/inquiries', '/admin/operations-schedule', '/admin/staff-management', '/admin/vehicles', '/admin/maintenance']) {
+  const financeBlock = financeNav.match(/export const financeNavItems = \[[\s\S]*?\n\];/)?.[0] || '';
+  assert(!financeBlock.includes(`href: '${route}'`), `Finance navigation must not include operational route ${route}.`);
+}
+assert(financeBookings.includes('Read-only financial view') && !financeBookings.includes('start_booking_ride') && !financeBookings.includes('set_booking_manager'), 'Financial Bookings must remain read-only and free of operational controls.');
+assert(financeReports.includes('exportFinanceCsv') && financeReports.includes('exportFinancePdf'), 'Finance Reports must retain CSV and PDF export.');
+assert(financeExport.includes('context.rows.map') && financeExport.includes('finance_report_exported'), 'Finance exports must use the filtered rows and create a safe audit event.');
+assert(!/(password|jwt|access_token|service_role)[\s\S]{0,80}metadata/i.test(financeExport), 'Finance export audit metadata must not include credentials or tokens.');
+assert(financeService.includes("rpc('get_finance_portal_data'") && !financeService.includes("from('bookings')"), 'Finance reporting must use the secured RPC and public.booking_requests flow.');
+assert(financeAudit.includes("role === 'finance'") && financeAudit.includes("rpc('get_finance_audit_logs'"), 'Finance Audit Log must use the finance-only secured RPC.');
+const financeAuditReadPolicy = financeMigration.match(/create policy "audit_logs_admin_read"[\s\S]*?\n\);/)?.[0] ?? '';
+assert(
+  financeMigration.includes('drop policy if exists "audit_logs_admin_read"') &&
+    financeAuditReadPolicy.includes('au.auth_user_id::text = auth.uid()::text') &&
+    financeAuditReadPolicy.includes("lower(coalesce(au.email, '')) = lower(coalesce(auth.jwt() ->> 'email', ''))") &&
+    financeAuditReadPolicy.includes("lower(coalesce(au.status::text, '')) = 'active'") &&
+    financeAuditReadPolicy.includes("lower(coalesce(au.role::text, '')) in ('super_admin', 'admin', 'booking_staff')") &&
+    !financeAuditReadPolicy.includes("'finance'"),
+  'Finance must lose direct audit table SELECT while the live active-profile identity checks remain intact.',
+);
+assert(
+  !financeMigration.includes("'discount_amount_aed'") &&
+    !financeMigration.includes('br.discount_amount_aed') &&
+    !financeBookings.includes('discount_amount_aed'),
+  'Finance Portal must not depend on a physical booking_requests.discount_amount_aed column.',
+);
+assert(financeMigration.includes('receive_finance_settlement') && financeMigration.includes('p_operation_key uuid'), 'Finance settlements must use the atomic idempotent payment RPC.');
+assert(financeMigration.includes('revoke insert, update, delete, truncate on table public.payment_receipts from anon, authenticated') && !financeMigration.includes('create policy "booking_requests_finance_collection_update"'), 'Finance must not receive broad direct payment or booking write access.');
+assert(!financeMigration.includes('create policy "payment_receipts_finance_insert"') && !financeMigration.includes('create policy "payment_allocations_finance_insert"') && !financeMigration.includes('create policy "payment_ledger_finance_insert"'), 'Finance payment writes must remain RPC-only.');
+assert(financeMigration.includes("revoke all on function public.receive_finance_settlement") && financeMigration.includes("grant execute on function public.receive_finance_settlement"), 'The secured Finance settlement RPC must revoke PUBLIC and grant authenticated execution explicitly.');
+assert(financeMigration.includes('revoke all on function public.edrive_booking_matches_report_filters') && financeMigration.includes('from authenticated;') && !financeMigration.includes('grant execute on function public.edrive_booking_matches_report_filters'), 'The internal report-filter helper must not be browser executable.');
+assert(financeMigration.includes("to_regprocedure('public.normalize_edrive_vehicle_type(text)')") && financeMigration.includes("to_regprocedure('public.get_b2b_finance_summary(uuid)')") && financeMigration.includes('relrowsecurity'), 'Finance migration preflight must verify reporting dependencies and required RLS.');
+assert(adminPaymentsControlCenter.includes("rpc('receive_finance_settlement'") && !adminPaymentsControlCenter.includes("from('payment_receipts').insert") && !adminPaymentsControlCenter.includes("from('payment_receipt_allocations').insert") && !adminPaymentsControlCenter.includes("from('payment_ledger_entries').insert"), 'Payments must use the secured atomic settlement RPC without sequential browser inserts.');
+assert(adminPaymentsControlCenter.includes('p_source_id: group.sourceId') && financeMigration.includes('assigned_manager_id is distinct from p_source_id') && financeMigration.includes('b2b_agent_id is distinct from p_source_id'), 'Settlement sources must use stable Manager or B2B Agent IDs.');
+assert(financeMigration.includes('v_canonical_allocations') && financeMigration.includes('extensions.digest'), 'Settlement idempotency must use canonical allocations and the schema-qualified pgcrypto digest.');
+assert(financeService.includes('getAllFinanceReportData') && financeService.includes('maxPages = 200'), 'Filtered exports must fetch every safe paginated reporting page.');
+assert(financeMigration.includes('order by br.preferred_date desc nulls last, br.created_at desc, br.id desc') && financeMigration.includes('order by pr.received_at desc, pr.id desc'), 'Finance report pagination must use deterministic booking and receipt ordering before LIMIT/OFFSET.');
+assert(financeMigration.includes("p.policyname <> 'booking_requests_finance_collection_update'") && financeMigration.includes('Finance booking UPDATE policy remains after Finance Portal lockdown.'), 'Finance policy preflight must tolerate only the known legacy policy and verify its removal.');
+assert(financeMigration.includes('jsonb_array_length(p_allocations) > 500'), 'Finance settlements must enforce the bounded allocation request limit.');
+for (const source of ['bookings', 'receipts', 'ledger', 'wallet_ledger', 'refunds']) {
+  assert(financeService.includes(`${source === 'wallet_ledger' ? 'walletLedger' : source}.push`) || source === 'bookings', `Complete Finance exports must accumulate paginated ${source} rows.`);
+}
+assert(financeReports.includes("reportType === 'Payment Transaction Report'") && financeReports.includes("reportType === 'B2B Wallet Ledger Report'") && financeReports.includes("reportType === 'Refund Report'"), 'Finance report exports must select the complete report-specific ledger, wallet, and refund datasets.');
 assert(!bookingWizard.includes('b2b_price'), 'Public booking wizard must not request B2B pricing.');
 assert(packageShowcase.includes('package=${encodeURIComponent(item.id)}'), 'Package cards must preserve the exact package ID.');
 assert(bookingWizard.includes("params.get('duration')"), 'Booking wizard must preserve the selected duration.');

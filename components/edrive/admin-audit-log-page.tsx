@@ -273,7 +273,10 @@ export function AdminAuditLogPage() {
       setLoading(false);
       return;
     }
-    const { data, error: loadError } = await supabase.from('audit_logs').select('*').order('created_at', { ascending: false }).limit(1000);
+    const result = role === 'finance'
+      ? await supabase.rpc('get_finance_audit_logs', { p_limit: 1000 })
+      : await supabase.from('audit_logs').select('*').order('created_at', { ascending: false }).limit(1000);
+    const { data, error: loadError } = result;
     if (loadError) {
       setRows([]);
       setError(loadError.message.includes('audit_logs') ? 'Audit Log table is not ready. Run supabase/audit-log.sql in Supabase.' : loadError.message);
