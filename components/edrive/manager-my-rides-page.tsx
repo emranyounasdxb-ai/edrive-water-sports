@@ -11,6 +11,8 @@ import { bookingRequestsTable } from '@/lib/booking-records';
 import { supabase } from '@/lib/supabase-client';
 import { completeBookingRide, getAssignableVehicles, markBookingNoShow, startBookingRide, type AssignableVehicle } from '@/services/booking-assignments';
 import { AdminOperationsAssignmentsPage } from './admin-operations-modules';
+import { CompactKpiCard, CompactPageHeader } from './shared/compact-presentation';
+import { DashboardActionList, DashboardPanel } from './shared/dashboard-visuals';
 
 type PortalProfile = { id: string; full_name: string | null; email: string | null; role: string | null; status: string | null };
 type ManagerProfile = { id: string; name: string; email: string; role: string; status: string; ready: boolean; error: string };
@@ -272,11 +274,6 @@ async function loadManagerProfile(): Promise<ManagerProfile> {
     ready: true,
     error: ''
   };
-}
-
-function CompactStat({ label, value, tone = 'default' }: { label: string; value: string; tone?: 'default' | 'good' | 'bad' }) {
-  const toneClass = tone === 'good' ? 'text-emerald-700' : tone === 'bad' ? 'text-red-700' : 'text-foreground';
-  return <span className="inline-flex items-baseline gap-1.5 text-xs font-bold text-muted-foreground"><span>{label}</span><span className={`font-heading text-base ${toneClass}`}>{value}</span></span>;
 }
 
 function Detail({ label, value, sub, tone = 'default' }: { label: string; value: ReactNode; sub?: ReactNode; tone?: 'default' | 'warning' }) {
@@ -599,13 +596,21 @@ function ManagerAssignedRidesPage({ manager }: { manager: ManagerProfile }) {
     return { active, inProgress, completed, cash, card };
   }, [scopedBookings]);
   const filterList: RideFilter[] = ['today', 'tomorrow', 'upcoming', 'overdue', 'completed', 'no-show', 'all'];
+  const todayTimeline = scopedBookings.filter((booking) => matchesFilter(booking, 'today')).sort((a, b) => scheduleSortValue(a).localeCompare(scheduleSortValue(b)));
+  const nextRide = todayTimeline.find((booking) => ['Confirmed', 'In Progress'].includes(cardStatus(booking)));
+  const handoverDue = metrics.cash + metrics.card;
+  const attention = [
+    ...todayTimeline.filter((booking) => cardStatus(booking) === 'Confirmed' && !text(booking.assigned_vehicle_name)).slice(0, 3).map((booking) => ({ title: `Vehicle required · ${bookingCode(booking)}`, meta: `${text(booking.preferred_time, 'Time pending')} · ${packageLabel(booking)}`, value: 'Open', href: '/admin/my-rides', tone: 'warning' as const })),
+    ...(handoverDue > 0 ? [{ title: 'Payment handover due', meta: 'Completed rides awaiting company receipt', value: formatAed(handoverDue), href: '/admin/my-rides', tone: 'warning' as const }] : [])
+  ];
 
   return (
-    <section className="w-full overflow-hidden px-1 py-1 pb-28 sm:px-4 sm:py-4 lg:px-8 lg:py-8">
-      <div className="flex items-start justify-between gap-3 rounded-[1.2rem] border border-white/70 bg-white/72 p-3.5 shadow-[0_12px_28px_rgba(8,37,50,0.05)] backdrop-blur-xl sm:p-5"><div className="min-w-0"><p className="text-[10px] font-bold uppercase tracking-[0.22em] text-primary">My Rides</p><h1 className="mt-1 font-heading text-2xl font-semibold leading-tight text-foreground sm:text-3xl">Assigned rides</h1><p className="mt-1 text-sm font-semibold text-muted-foreground">{counts.today} today | {counts.upcoming} upcoming</p></div><button type="button" onClick={loadData} className="flex size-10 shrink-0 items-center justify-center rounded-2xl border border-border bg-white text-primary shadow-sm" aria-label="Refresh rides"><RefreshCw className="size-4" /></button></div>
+    <section className="w-full space-y-3 overflow-hidden px-1 py-1 pb-28 sm:px-4 sm:py-4 lg:px-8 lg:py-6">
+      <CompactPageHeader eyebrow="Ride Manager" title="Today’s Ride Command Center" description={`${counts.today} rides today · ${counts.upcoming} upcoming`} actions={<Button type="button" size="sm" variant="outline" onClick={loadData}><RefreshCw className="size-4" />Refresh</Button>} />
       {error ? <p className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-xs font-semibold text-red-700">{error}</p> : null}
-      <div className="mt-3 rounded-[1.15rem] border border-border/70 bg-white/70 px-3 py-2.5 shadow-[0_8px_20px_rgba(8,37,50,0.035)]"><div className="flex flex-wrap gap-x-4 gap-y-1.5"><CompactStat label="Active" value={String(metrics.active)} /><CompactStat label="Progress" value={String(metrics.inProgress)} /><CompactStat label="Done" value={String(metrics.completed)} tone="good" /><CompactStat label="Cash Due" value={formatAed(metrics.cash)} tone="good" /><CompactStat label="Card Due" value={formatAed(metrics.card)} /></div></div>
-      <Card className="mt-3 overflow-hidden rounded-[1.35rem] border-border/80 bg-white shadow-[0_12px_28px_rgba(8,37,50,0.05)]">
+      <div className="grid grid-cols-2 gap-2 xl:grid-cols-5"><CompactKpiCard label="Assigned Today" value={String(counts.today)} detail="Active rides scheduled today." /><CompactKpiCard label="Next Ride" value={nextRide ? text(nextRide.preferred_time, 'TBC') : 'None'} detail="Next confirmed or active ride today." /><CompactKpiCard label="Active Rides" value={String(metrics.inProgress)} detail="Rides currently in progress." /><CompactKpiCard label="Completed" value={String(metrics.completed)} detail="Completed assigned rides." /><CompactKpiCard label="Handover Due" value={formatAed(handoverDue)} detail="Cash and card payments awaiting company receipt." /></div>
+      <div className="grid gap-3 xl:grid-cols-[minmax(0,2fr)_minmax(18rem,1fr)]"><DashboardPanel title="Today’s Ride Timeline" description="Assigned rides ordered by scheduled time">{todayTimeline.length ? <div className="divide-y divide-border/60">{todayTimeline.slice(0, 7).map((booking) => <button key={String(booking.id || bookingCode(booking))} type="button" onClick={() => { setFilter('today'); setQuery(bookingCode(booking)); }} className="grid min-h-12 w-full gap-1 px-4 py-2 text-left outline-none hover:bg-primary-50/60 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/30 sm:grid-cols-[5rem_minmax(0,1fr)_auto] sm:items-center"><span className="text-sm font-bold tabular-nums text-primary">{text(booking.preferred_time, 'TBC')}</span><span className="min-w-0 truncate text-xs font-bold">{bookingCode(booking)} · {text(booking.customer_name, 'Guest')}</span><span className="text-[11px] font-semibold text-muted-foreground">{cardStatus(booking)}</span></button>)}</div> : <div className="px-4 py-6 text-center text-xs font-semibold text-muted-foreground">No active rides are scheduled today.</div>}</DashboardPanel><DashboardPanel title="Needs Attention" description="Ride workflow and payment priorities"><DashboardActionList items={attention} /></DashboardPanel></div>
+      <Card className="overflow-hidden rounded-[1.35rem] border-border/80 bg-white shadow-[0_12px_28px_rgba(8,37,50,0.05)]">
         <CardHeader className="gap-3 border-b border-border/70 bg-[#F7FAFA] px-4 py-3"><div><CardTitle className="font-heading text-xl font-semibold sm:text-2xl">{filterLabels[filter]} rides</CardTitle><p className="mt-0.5 text-xs font-semibold text-muted-foreground">{loading ? 'Loading...' : `${visible.length} rides`}</p></div>{scopedBookings.length > 0 ? <div className="relative w-full"><Search className="pointer-events-none absolute left-3 top-3 size-4 text-muted-foreground" /><Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search rides..." className="h-10 rounded-full bg-white pl-9" /></div> : null}</CardHeader>
         <div className="flex flex-wrap gap-2 border-b border-border/70 bg-white px-4 py-3">{filterList.map((item) => <button key={item} type="button" onClick={() => setFilter(item)} className={`rounded-full border px-3 py-2 text-xs font-bold transition ${filter === item ? 'border-primary bg-primary text-white' : 'border-border bg-white text-muted-foreground'}`}>{filterLabels[item]} <span className={filter === item ? 'text-white/80' : 'text-muted-foreground'}>{counts[item]}</span></button>)}</div>
         <CardContent className="grid gap-3 p-3 sm:p-4 xl:grid-cols-2">{loading ? <div className="rounded-2xl border border-dashed border-border bg-[#F7FAFA] px-4 py-5 text-center text-sm font-semibold text-muted-foreground">Loading assigned rides...</div> : null}{!loading && visible.length === 0 ? <div className="rounded-2xl border border-dashed border-border bg-[#F7FAFA] px-4 py-5 text-center"><p className="font-heading text-base font-semibold text-foreground">No rides in {filterLabels[filter]}</p><p className="mt-1 text-sm text-muted-foreground">Rides will appear here according to their booking date.</p></div> : null}{visible.map((booking, index) => <RideCard key={String(booking.id || `${bookingCode(booking)}-${index}`)} booking={booking} onSaved={loadData} />)}</CardContent>

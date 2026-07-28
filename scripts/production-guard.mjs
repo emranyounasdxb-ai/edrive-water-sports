@@ -64,8 +64,13 @@ const financeMigration = read('supabase/04-finance-portal-rbac-reporting.sql');
 const financeAudit = read('components/edrive/admin-audit-log-page.tsx');
 const adminPaymentsControlCenter = read('components/edrive/admin-payments-control-center.tsx');
 const uiLabels = read('lib/ui-labels.ts');
-const compactPresentation = read('components/edrive/shared/compact-presentation.tsx');
-const overflowText = read('components/edrive/shared/overflow-text.tsx');
+  const compactPresentation = read('components/edrive/shared/compact-presentation.tsx');
+  const overflowText = read('components/edrive/shared/overflow-text.tsx');
+  const dashboardVisuals = read('components/edrive/shared/dashboard-visuals.tsx');
+  const financeDashboard = read('components/edrive/finance-dashboard-page.tsx');
+  const adminDashboard = read('components/edrive/admin-dashboard-reconciled-page.tsx');
+  const bookingManagerDashboard = read('components/edrive/booking-manager-dashboard-page.tsx');
+  const agentDashboard = read('app/agent/page.tsx');
 const tablePrimitive = read('components/ui/table.tsx');
 
 function sourceFiles(directory) {
@@ -108,6 +113,9 @@ assert(uiLabels.includes('export function safeUiError') && !financeBookings.incl
   assert(compactPresentation.includes('CompactPageHeader') && compactPresentation.includes('CompactKpiCard') && compactPresentation.includes('CompactSegmentedTabs') && compactPresentation.includes('CompactOperationalRow') && compactPresentation.includes('CompactEmptyState'), 'Portal density standards must retain shared compact headers, metrics, tabs, operational rows and empty states.');
   assert(compactPresentation.includes('min-h-[56px]') && compactPresentation.includes('h-8 shrink-0'), 'Portal metrics and segmented tabs must retain compact laptop-first dimensions.');
   assert(overflowText.includes('CompactInfoTooltip') && overflowText.includes('role="tooltip"') && overflowText.includes("event.key === 'Escape'") && overflowText.includes('aria-expanded'), 'Overflow and metric helper text must remain accessible by pointer, keyboard and touch.');
+  assert(dashboardVisuals.includes('DashboardAreaChart') && dashboardVisuals.includes('role="img"') && dashboardVisuals.includes('DashboardActionList') && dashboardVisuals.includes('DashboardActivityList'), 'Role dashboards must retain the shared accessible SVG visualization, attention and activity system.');
+  assert(!financeDashboard.includes('quickLinks') && financeDashboard.includes('Revenue & Collections') && financeDashboard.includes('Needs Attention'), 'Finance Dashboard must remain a role-specific command center without duplicate sidebar shortcut cards.');
+  assert(adminDashboard.includes('Bookings & Revenue Trend') && bookingManagerDashboard.includes('Today’s Schedule') && agentDashboard.includes('Booking Activity'), 'Admin, Booking Manager and B2B Agent dashboards must retain role-specific operational hierarchy.');
 assert(tablePrimitive.includes('whitespace-nowrap') && tablePrimitive.includes("text-[10px]"), 'Portal table headers and cells must retain compact single-line defaults.');
 assert(portalAccess.includes("if (role === 'admin') return false;") && portalAccess.includes("if (role === 'finance') return path === '/admin/payments'"), 'Admin must remain read-only and Finance mutations must remain limited to Payments and self-profile.');
 assert(myProfilePage.includes("const avatarBucket = 'profile-avatars'"), 'Self-profile uploads must continue using the profile-avatars bucket.');

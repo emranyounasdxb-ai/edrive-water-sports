@@ -2,16 +2,13 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
-import type { LucideIcon } from 'lucide-react';
-import { AlertTriangle, CalendarDays, CheckCircle2, Clock3, RefreshCw, UserCheck, UsersRound } from 'lucide-react';
+import { AlertTriangle, CalendarDays, CheckCircle2, Clock3, RefreshCw, UserCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { bookingRequestsTable } from '@/lib/booking-records';
 import { bookingCode, bookingDateKey, bookingStage, dubaiTodayKey, packageName, reportText, type OperationsBooking } from '@/lib/operations-reporting';
 import { supabase } from '@/lib/supabase-client';
-
-type ManagerRow = { full_name: string | null; email: string | null; status: string | null; role: string | null };
-type Workload = { name: string; today: number; upcoming: number; active: number };
+import { CompactKpiCard, CompactMetricStrip, CompactPageHeader } from './shared/compact-presentation';
+import { DashboardActionList, DashboardActivityList, DashboardPanel, DashboardProgressList } from './shared/dashboard-visuals';
 
 function dateOffset(base: string, days: number) {
   const date = new Date(`${base}T12:00:00Z`);
@@ -19,41 +16,27 @@ function dateOffset(base: string, days: number) {
   return date.toISOString().slice(0, 10);
 }
 
-function metricTone(value: number, warning = false) {
-  if (warning && value > 0) return 'text-red-700';
-  return 'text-foreground';
-}
-
-function Metric({ label, value, helper, icon: Icon, warning = false }: { label: string; value: number; helper: string; icon: LucideIcon; warning?: boolean }) {
-  return <Card className="rounded-[1.25rem] border-border/80 bg-white shadow-[0_12px_30px_rgba(8,37,50,0.05)]"><CardContent className="flex items-start gap-3 p-4"><span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-primary-50 text-primary"><Icon className="size-5" aria-hidden="true" /></span><div><p className="text-xs font-semibold text-muted-foreground">{label}</p><p className={`mt-1 font-heading text-2xl font-semibold ${metricTone(value, warning)}`}>{value}</p><p className="mt-1 text-[11px] font-semibold leading-4 text-muted-foreground">{helper}</p></div></CardContent></Card>;
-}
-
-function stageTone(stage: string) {
-  const value = stage.toLowerCase();
-  if (value === 'completed') return 'border-emerald-200 bg-emerald-50 text-emerald-700';
-  if (value === 'in progress') return 'border-sky-200 bg-sky-50 text-sky-700';
-  if (value === 'assigned' || value === 'confirmed') return 'border-primary/25 bg-primary-50 text-primary';
-  if (value === 'no show' || value === 'cancelled') return 'border-red-200 bg-red-50 text-red-700';
-  return 'border-amber-200 bg-amber-50 text-amber-700';
+function timeMinutes(value: unknown) {
+  const text = reportText(value);
+  const match = text.match(/^(\d{1,2}):(\d{2})(?:\s*([AP]M))?$/i);
+  if (!match) return 9999;
+  let hour = Number(match[1]);
+  if (match[3]?.toUpperCase() === 'PM' && hour < 12) hour += 12;
+  if (match[3]?.toUpperCase() === 'AM' && hour === 12) hour = 0;
+  return hour * 60 + Number(match[2]);
 }
 
 export function BookingManagerDashboardPage() {
   const [bookings, setBookings] = useState<OperationsBooking[]>([]);
-  const [managers, setManagers] = useState<ManagerRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   async function load() {
     setLoading(true);
     setError('');
-    const [bookingResult, managerResult] = await Promise.all([
-      supabase.from(bookingRequestsTable).select('*').order('created_at', { ascending: false }).limit(2000),
-      supabase.from('admin_users').select('full_name,email,status,role').eq('role', 'manager').eq('status', 'active').order('full_name', { ascending: true }).limit(200)
-    ]);
-    const firstError = bookingResult.error || managerResult.error;
-    if (firstError) { console.error('Booking Manager dashboard load failed', firstError); setError('Unable to load dashboard information. Please try again.'); }
-    setBookings((bookingResult.data || []) as OperationsBooking[]);
-    setManagers((managerResult.data || []) as ManagerRow[]);
+    const result = await supabase.from(bookingRequestsTable).select('*').order('created_at', { ascending: false }).limit(2000);
+    if (result.error) { console.error('Booking Manager dashboard load failed', result.error); setError('Unable to load dashboard information. Please try again.'); }
+    setBookings((result.data || []) as OperationsBooking[]);
     setLoading(false);
   }
 
@@ -61,58 +44,63 @@ export function BookingManagerDashboardPage() {
 
   const today = dubaiTodayKey();
   const tomorrow = dateOffset(today, 1);
-  const activeStatuses = new Set(['Pending', 'Confirmed', 'Assigned', 'In Progress']);
+  const active = (booking: OperationsBooking) => !['Cancelled', 'No Show'].includes(bookingStage(booking));
+  const todayRows = bookings.filter((booking) => bookingDateKey(booking) === today && active(booking)).sort((a, b) => timeMinutes(a.preferred_time) - timeMinutes(b.preferred_time));
+  const upcoming = bookings.filter((booking) => bookingDateKey(booking) > today && active(booking));
+  const pending = bookings.filter((booking) => bookingStage(booking) === 'Pending');
+  const completed = bookings.filter((booking) => bookingStage(booking) === 'Completed');
+  const exceptions = bookings.filter((booking) => ['No Show', 'Cancelled'].includes(bookingStage(booking)));
+  const unassigned = bookings.filter((booking) => ['Pending', 'Confirmed'].includes(bookingStage(booking)) && !reportText(booking.assigned_manager_id || booking.assigned_manager_name));
+  const actionRows = [...pending, ...unassigned.filter((booking) => !pending.includes(booking))].slice(0, 8);
+  const statusCounts = useMemo(() => {
+    const values = new Map<string, number>();
+    bookings.forEach((booking) => values.set(bookingStage(booking), (values.get(bookingStage(booking)) || 0) + 1));
+    return Array.from(values.entries()).sort((a, b) => b[1] - a[1]);
+  }, [bookings]);
+  const packageCounts = useMemo(() => {
+    const values = new Map<string, number>();
+    bookings.forEach((booking) => values.set(packageName(booking), (values.get(packageName(booking)) || 0) + 1));
+    return Array.from(values.entries()).sort((a, b) => b[1] - a[1]).slice(0, 5);
+  }, [bookings]);
 
-  const summary = useMemo(() => {
-    const newRequests = bookings.filter((booking) => bookingStage(booking) === 'Pending').length;
-    const unassigned = bookings.filter((booking) => ['Pending', 'Confirmed'].includes(bookingStage(booking)) && !reportText(booking.assigned_manager_name)).length;
-    const todayBookings = bookings.filter((booking) => bookingDateKey(booking) === today && !['Cancelled', 'No Show'].includes(bookingStage(booking))).length;
-    const tomorrowBookings = bookings.filter((booking) => bookingDateKey(booking) === tomorrow && !['Cancelled', 'No Show'].includes(bookingStage(booking))).length;
-    const conflicts = new Map<string, number>();
-    bookings.filter((booking) => activeStatuses.has(bookingStage(booking))).forEach((booking) => {
-      const key = `${bookingDateKey(booking)}|${reportText(booking.preferred_time)}|${reportText(booking.assigned_manager_name)}`;
-      if (!reportText(booking.assigned_manager_name) || !bookingDateKey(booking) || !reportText(booking.preferred_time)) return;
-      conflicts.set(key, (conflicts.get(key) || 0) + 1);
-    });
-    const conflictCount = Array.from(conflicts.values()).filter((count) => count > 1).reduce((sum, count) => sum + count, 0);
-    return { newRequests, unassigned, todayBookings, tomorrowBookings, conflictCount };
-  }, [bookings, today, tomorrow]);
-
-  const workload = useMemo(() => managers.map((manager) => {
-    const name = reportText(manager.full_name || manager.email, 'Manager');
-    const rows = bookings.filter((booking) => reportText(booking.assigned_manager_name).toLowerCase() === name.toLowerCase());
-    return {
-      name,
-      today: rows.filter((booking) => bookingDateKey(booking) === today && activeStatuses.has(bookingStage(booking))).length,
-      upcoming: rows.filter((booking) => bookingDateKey(booking) > today && ['Assigned', 'Confirmed'].includes(bookingStage(booking))).length,
-      active: rows.filter((booking) => bookingStage(booking) === 'In Progress').length
-    } as Workload;
-  }).sort((a, b) => (b.today + b.active) - (a.today + a.active)), [bookings, managers, today]);
-
-  const actionRows = bookings.filter((booking) => bookingStage(booking) === 'Pending' || (bookingStage(booking) === 'Confirmed' && !reportText(booking.assigned_manager_name))).slice(0, 10);
+  if (loading) return <DashboardLoading />;
 
   return (
-    <section className="w-full overflow-hidden px-1 py-1 sm:px-2">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Booking Manager</p><h1 className="mt-2 font-heading text-3xl font-semibold text-foreground sm:text-4xl">Booking operations</h1><p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">Review requests, confirm customer details, assign ride managers and monitor booking progress without financial or fleet-editing access.</p></div>
-        <div className="flex flex-wrap gap-2"><Button type="button" variant="outline" onClick={load} className="rounded-full bg-white"><RefreshCw className="size-4" aria-hidden="true" />Refresh</Button><Button asChild className="rounded-full"><Link href="/admin/bookings">Open Bookings</Link></Button></div>
+    <section className="space-y-3">
+      <CompactPageHeader eyebrow="Booking Manager" title="Booking Operations" description="Confirm requests, coordinate Ride Managers and keep today’s schedule moving." actions={<><Button asChild size="sm"><Link href="/admin/bookings">Open Bookings</Link></Button><Button size="sm" variant="outline" onClick={load}><RefreshCw className="size-4" />Refresh</Button></>} />
+      {error ? <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-700">{error}<Button size="sm" variant="ghost" className="ml-2" onClick={load}>Retry</Button></div> : null}
+      <CompactMetricStrip>
+        <CompactKpiCard label="Today" value={String(todayRows.length)} icon={CalendarDays} detail="Active rides scheduled today." className="ring-1 ring-primary/20" />
+        <CompactKpiCard label="Upcoming" value={String(upcoming.length)} icon={Clock3} detail="Future active bookings." />
+        <CompactKpiCard label="Awaiting Confirmation" value={String(pending.length)} icon={UserCheck} detail="New booking requests requiring review." />
+        <CompactKpiCard label="Completed" value={String(completed.length)} icon={CheckCircle2} detail="Completed booking records." />
+        <CompactKpiCard label="No Show / Cancelled" value={String(exceptions.length)} icon={AlertTriangle} detail="Operational exceptions." />
+      </CompactMetricStrip>
+      <div className="grid gap-3 xl:grid-cols-[minmax(0,2fr)_minmax(18rem,1fr)]">
+        <DashboardPanel title="Today’s Schedule" description={`${todayRows.length} active rides on the Dubai calendar`}>
+          {todayRows.length ? <div className="divide-y divide-border/60">{todayRows.slice(0, 10).map((booking) => <Link href="/admin/bookings" key={bookingCode(booking)} className="grid min-h-14 gap-1 px-4 py-2.5 outline-none hover:bg-primary-50/60 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/30 sm:grid-cols-[5rem_minmax(0,1fr)_auto] sm:items-center"><span className="text-sm font-bold tabular-nums text-primary">{reportText(booking.preferred_time, 'TBC')}</span><span className="min-w-0"><span className="block truncate text-xs font-bold">{bookingCode(booking)} · {reportText(booking.customer_name, 'Guest')}</span><span className="mt-0.5 block truncate text-[11px] text-muted-foreground">{packageName(booking)} · {reportText(booking.assigned_manager_name, 'Ride Manager required')}</span></span><span className="text-[11px] font-bold text-muted-foreground">{bookingStage(booking)}</span></Link>)}</div> : <div className="px-4 py-8 text-center text-xs font-semibold text-muted-foreground">No active rides are scheduled today.</div>}
+        </DashboardPanel>
+        <DashboardPanel title="Needs Attention" description="Bookings requiring Booking Manager action">
+          <DashboardActionList items={actionRows.map((booking) => ({
+            title: bookingStage(booking) === 'Pending' ? `Confirm ${bookingCode(booking)}` : `Assign Ride Manager · ${bookingCode(booking)}`,
+            meta: `${reportText(booking.customer_name, 'Guest')} · ${bookingDateKey(booking) || 'Date pending'} ${reportText(booking.preferred_time)}`,
+            value: 'Review',
+            href: '/admin/bookings',
+            tone: bookingStage(booking) === 'Pending' ? 'warning' : 'critical'
+          }))} />
+        </DashboardPanel>
       </div>
-
-      {error ? <p className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</p> : null}
-
-      <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-        <Metric label="New Requests" value={summary.newRequests} helper="Awaiting review" icon={CalendarDays} />
-        <Metric label="Unassigned" value={summary.unassigned} helper="Manager required" icon={UserCheck} warning />
-        <Metric label="Today" value={summary.todayBookings} helper="Active scheduled rides" icon={Clock3} />
-        <Metric label="Tomorrow" value={summary.tomorrowBookings} helper="Upcoming bookings" icon={CheckCircle2} />
-        <Metric label="Schedule Conflicts" value={summary.conflictCount} helper="Same manager/date/time" icon={AlertTriangle} warning />
+      <div className="grid gap-3 lg:grid-cols-2">
+        <DashboardPanel title="Booking Status"><DashboardProgressList items={statusCounts.map(([label, value]) => ({ label, value }))} empty="No booking status data is available." /></DashboardPanel>
+        <DashboardPanel title="Popular Services"><DashboardProgressList items={packageCounts.map(([label, value]) => ({ label, value, color: '#0891b2' }))} empty="No package activity is available." /></DashboardPanel>
       </div>
-
-      <div className="mt-5 grid gap-5 xl:grid-cols-[1.25fr_0.75fr]">
-        <Card className="rounded-[1.5rem] border-border/80 bg-white"><CardHeader className="border-b border-border/70 bg-[#F7FAFA]"><CardTitle className="font-heading text-xl font-semibold">Bookings needing action</CardTitle></CardHeader><CardContent className="grid gap-3 p-4">{loading ? <p className="py-8 text-center text-sm font-semibold text-muted-foreground">Loading bookings...</p> : null}{!loading && !actionRows.length ? <p className="rounded-2xl border border-dashed border-border bg-[#F7FAFA] px-4 py-8 text-center text-sm font-semibold text-muted-foreground">No bookings need action.</p> : actionRows.map((booking) => { const stage = bookingStage(booking); return <div key={bookingCode(booking)} className="grid gap-3 rounded-2xl border border-border p-3 sm:grid-cols-[1.2fr_1fr_auto] sm:items-center"><div><p className="text-xs font-bold text-primary">{bookingCode(booking)}</p><p className="mt-1 font-heading text-base font-semibold text-foreground">{reportText(booking.customer_name, 'Guest')}</p><p className="mt-1 text-xs text-muted-foreground">{packageName(booking)}</p></div><div><p className="text-sm font-semibold text-foreground">{bookingDateKey(booking) || 'Date pending'} | {reportText(booking.preferred_time, 'Time pending')}</p><p className="mt-1 text-xs text-muted-foreground">{reportText(booking.customer_phone || booking.customer_email, 'No contact')}</p></div><div className="flex items-center gap-2"><span className={`rounded-full border px-2.5 py-1 text-xs font-bold ${stageTone(stage)}`}>{stage}</span><Button asChild size="sm" className="rounded-full"><Link href="/admin/bookings">Review</Link></Button></div></div>; })}</CardContent></Card>
-
-        <Card className="rounded-[1.5rem] border-border/80 bg-white"><CardHeader className="border-b border-border/70 bg-[#F7FAFA]"><CardTitle className="font-heading text-xl font-semibold">Ride manager workload</CardTitle></CardHeader><CardContent className="grid gap-3 p-4">{!workload.length ? <p className="rounded-2xl border border-dashed border-border bg-[#F7FAFA] px-4 py-8 text-center text-sm font-semibold text-muted-foreground">No active ride managers.</p> : workload.map((row) => <div key={row.name} className="rounded-2xl border border-border p-3"><div className="flex items-center justify-between gap-3"><div className="flex items-center gap-2"><span className="flex size-9 items-center justify-center rounded-2xl bg-primary-50 text-primary"><UsersRound className="size-4" aria-hidden="true" /></span><div><p className="text-sm font-bold text-foreground">{row.name}</p><p className="text-xs text-muted-foreground">{row.today} today | {row.upcoming} upcoming</p></div></div>{row.active > 0 ? <span className="rounded-full bg-sky-50 px-2.5 py-1 text-xs font-bold text-sky-700">{row.active} active</span> : <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700">Available</span>}</div></div>)}</CardContent></Card>
-      </div>
+      <DashboardPanel title="Recent Booking Activity">
+        <DashboardActivityList items={bookings.slice(0, 7).map((booking) => ({ title: `${bookingCode(booking)} · ${reportText(booking.customer_name, 'Guest')}`, meta: `${packageName(booking)} · ${bookingStage(booking)}`, time: bookingDateKey(booking), icon: CalendarDays, href: '/admin/bookings' }))} />
+      </DashboardPanel>
     </section>
   );
+}
+
+function DashboardLoading() {
+  return <section className="space-y-3 animate-pulse"><div className="h-12 w-72 rounded-xl bg-slate-200" /><div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">{Array.from({ length: 5 }, (_, index) => <div key={index} className="h-14 rounded-xl bg-white" />)}</div><div className="grid gap-3 xl:grid-cols-[2fr_1fr]"><div className="h-72 rounded-2xl bg-white" /><div className="h-72 rounded-2xl bg-white" /></div></section>;
 }

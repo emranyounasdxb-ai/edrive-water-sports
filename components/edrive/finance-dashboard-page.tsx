@@ -1,28 +1,22 @@
 'use client';
 
-import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ArrowRight, CreditCard, FileBarChart, RefreshCw, WalletCards } from 'lucide-react';
+import { RefreshCw, ReceiptText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import {
   b2bOutstanding, bookingReceived, directOutstanding, earnedRevenue, managerOutstanding,
-  reportAmount, sumAmounts, totalOutstanding, type OperationsBooking
+  reportAmount, sumAmounts, totalOutstanding
 } from '@/lib/operations-reporting';
-import { getFinanceReportData, type FinanceReportData } from '@/services/finance-reporting';
-import type { LucideIcon } from 'lucide-react';
 import { safeUiError, uiLabel } from '@/lib/ui-labels';
-import { CompactEmptyState, CompactKpiCard, CompactMetricStrip, CompactPageHeader } from './shared/compact-presentation';
+import { getFinanceReportData, type FinanceReportData } from '@/services/finance-reporting';
+import { CompactKpiCard, CompactMetricStrip, CompactPageHeader } from './shared/compact-presentation';
+import { DashboardActionList, DashboardActivityList, DashboardAreaChart, DashboardPanel, DashboardProgressList } from './shared/dashboard-visuals';
 
 const money = (value: number) => new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED' }).format(value);
 const dateKey = (date = new Date()) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dubai', year: 'numeric', month: '2-digit', day: '2-digit' }).format(date);
 const monthStart = () => `${dateKey().slice(0, 7)}-01`;
-const quickLinks: Array<[string, string, LucideIcon]> = [
-  ['/admin/payments', 'Payments & Collections', CreditCard],
-  ['/admin/b2b-finance', 'B2B Finance', WalletCards],
-  ['/admin/reports', 'Financial Reports', FileBarChart],
-  ['/admin/finance-bookings', 'Financial Bookings', ArrowRight]
-];
+const shortDate = (value: string) => new Intl.DateTimeFormat('en-AE', { day: '2-digit', month: 'short', timeZone: 'Asia/Dubai' }).format(new Date(`${value}T12:00:00`));
+const shortDateTime = (value?: string | null) => value ? new Intl.DateTimeFormat('en-AE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Dubai' }).format(new Date(value)) : '';
 
 export function FinanceDashboardPage() {
   const [data, setData] = useState<FinanceReportData | null>(null);
@@ -51,62 +45,116 @@ export function FinanceDashboardPage() {
   useEffect(() => { void load(); }, [load]);
 
   const bookings = data?.bookings || [];
-  const metrics = useMemo(() => {
-    const todayBookings = todayData?.bookings || [];
-    return [
-      ['Today', money(sumAmounts(todayBookings, earnedRevenue)), 'Revenue earned today.'],
-      ['Month', money(sumAmounts(bookings, earnedRevenue)), 'Revenue earned in the current Dubai month.'],
-      ['Received', money(sumAmounts(bookings, bookingReceived)), 'Payments received by the company.'],
-      ['Outstanding', money(sumAmounts(bookings, totalOutstanding)), 'Total receivables awaiting collection.'],
-      ['VAT', money(sumAmounts(bookings, (row) => reportAmount(row.vat_amount))), 'VAT included in current-month bookings.'],
-      ['Managers', money(sumAmounts(bookings, managerOutstanding)), 'Payments awaiting Ride Manager handover.'],
-      ['B2B', money(sumAmounts(bookings, b2bOutstanding)), 'Outstanding B2B Agent receivables.'],
-      ['Direct', money(sumAmounts(bookings, directOutstanding)), 'Outstanding direct customer payments.'],
-      ['Refunds', String(data?.pending_refunds ?? 0), 'Refund requests awaiting a decision.'],
-      ['Wallet', money(data?.combined_wallet_balance_aed ?? (data?.wallet_credits_aed || 0) - (data?.wallet_debits_aed || 0)), 'Combined balance across B2B Agent wallets.']
-    ];
-  }, [bookings, data, todayData]);
+  const todayBookings = todayData?.bookings || [];
+  const totals = {
+    today: sumAmounts(todayBookings, earnedRevenue),
+    month: sumAmounts(bookings, earnedRevenue),
+    received: sumAmounts(bookings, bookingReceived),
+    outstanding: sumAmounts(bookings, totalOutstanding),
+    wallet: data?.combined_wallet_balance_aed ?? (data?.wallet_credits_aed || 0) - (data?.wallet_debits_aed || 0),
+    manager: sumAmounts(bookings, managerOutstanding),
+    b2b: sumAmounts(bookings, b2bOutstanding),
+    direct: sumAmounts(bookings, directOutstanding),
+    vat: sumAmounts(bookings, (row) => reportAmount(row.vat_amount))
+  };
 
   const daily = useMemo(() => {
-    const map = new Map<string, number>();
+    const map = new Map<string, { revenue: number; received: number; outstanding: number }>();
     bookings.forEach((booking) => {
       const key = String(booking.preferred_date || booking.created_at || '').slice(0, 10);
-      if (key) map.set(key, (map.get(key) || 0) + earnedRevenue(booking));
+      if (!key) return;
+      const row = map.get(key) || { revenue: 0, received: 0, outstanding: 0 };
+      row.revenue += earnedRevenue(booking);
+      row.received += bookingReceived(booking);
+      row.outstanding += totalOutstanding(booking);
+      map.set(key, row);
     });
     return Array.from(map.entries()).sort(([a], [b]) => a.localeCompare(b)).slice(-14);
   }, [bookings]);
-  const maxDay = Math.max(...daily.map(([, value]) => value), 1);
+
   const paymentSplit = useMemo(() => {
-    const totals = new Map<string, number>();
+    const totalsByMethod = new Map<string, number>();
     bookings.forEach((booking) => {
-      const method = String(booking.payment_method || booking.payment_source || 'Other');
-      totals.set(method, (totals.get(method) || 0) + bookingReceived(booking));
+      const method = uiLabel(String(booking.payment_method || booking.payment_source || 'Other'));
+      totalsByMethod.set(method, (totalsByMethod.get(method) || 0) + bookingReceived(booking));
     });
-    return Array.from(totals.entries()).sort((a, b) => b[1] - a[1]);
+    return Array.from(totalsByMethod.entries()).sort((a, b) => b[1] - a[1]);
   }, [bookings]);
 
-  if (loading) return <section className="space-y-3 animate-pulse"><div className="h-10 w-64 rounded bg-slate-200" /><div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">{Array.from({ length: 10 }, (_, i) => <div key={i} className="h-14 rounded-xl bg-white" />)}</div></section>;
+  const attention = [
+    totals.manager > 0 ? { title: 'Manager settlements pending', meta: 'Payments awaiting Ride Manager handover', value: money(totals.manager), href: '/admin/payments', tone: 'warning' as const } : null,
+    totals.b2b > 0 ? { title: 'B2B receivables outstanding', meta: 'Completed partner bookings awaiting collection', value: money(totals.b2b), href: '/admin/payments', tone: 'warning' as const } : null,
+    totals.direct > 0 ? { title: 'Direct balances outstanding', meta: 'Customer payments still due', value: money(totals.direct), href: '/admin/payments', tone: 'critical' as const } : null,
+    (data?.pending_refunds || 0) > 0 ? { title: 'Refund decisions required', meta: 'Pending B2B refund requests', value: String(data?.pending_refunds || 0), href: '/admin/b2b-finance', tone: 'critical' as const } : null
+  ].filter((item): item is NonNullable<typeof item> => Boolean(item));
+
+  if (loading) return <DashboardLoading />;
 
   return (
-    <section className="space-y-4">
-      <CompactPageHeader eyebrow="Finance" title="Finance Dashboard" description="Revenue, collections and receivables for the current Dubai month." actions={<Button size="sm" variant="outline" onClick={() => void load()}><RefreshCw className="size-4" />Refresh</Button>} />
-      {error ? <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-800">{error} <button className="ml-2 underline" onClick={() => void load()}>Retry</button></div> : null}
-      {!error && !bookings.length ? <CompactEmptyState>No financial activity for the selected month.</CompactEmptyState> : null}
-      <CompactMetricStrip>{metrics.map(([label, value, detail]) => <CompactKpiCard key={label} label={label} value={value} detail={detail} />)}</CompactMetricStrip>
-      <div className="grid gap-3 xl:grid-cols-[1.5fr_1fr]">
-        <Card className="rounded-2xl shadow-sm"><CardContent className="p-4"><h2 className="font-heading text-base font-semibold">Revenue trend</h2><div className="mt-3 flex h-44 items-end gap-2">{daily.length ? daily.map(([day, value]) => <div key={day} className="flex min-w-0 flex-1 flex-col items-center gap-1.5"><span className="text-[9px] font-bold text-muted-foreground">{money(value)}</span><div className="w-full rounded-t-md bg-primary" style={{ height: `${Math.max(4, (value / maxDay) * 128)}px` }} /><span className="text-[9px] text-muted-foreground">{day.slice(5)}</span></div>) : <p className="m-auto text-xs text-muted-foreground">No earned revenue in this period.</p>}</div></CardContent></Card>
-        <Card className="rounded-2xl shadow-sm"><CardContent className="p-4"><h2 className="font-heading text-base font-semibold">Receivables</h2>{[
-          ['Managers', sumAmounts(bookings, managerOutstanding)],
-          ['B2B Agents', sumAmounts(bookings, b2bOutstanding)],
-          ['Direct customers', sumAmounts(bookings, directOutstanding)]
-        ].map(([label, value]) => <div key={String(label)} className="mt-2 flex min-h-9 items-center justify-between rounded-xl bg-[#F4F7F8] px-3 py-2 text-xs"><span>{label}</span><strong>{money(Number(value))}</strong></div>)}</CardContent></Card>
+    <section className="space-y-3">
+      <CompactPageHeader eyebrow="Finance" title="Finance Overview" description="Revenue, collections and receivables for the current Dubai month." actions={<Button size="sm" variant="outline" onClick={() => void load()}><RefreshCw className="size-4" />Refresh</Button>} />
+      {error ? <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-800">{error}<Button size="sm" variant="ghost" className="ml-2" onClick={() => void load()}>Retry</Button></div> : null}
+
+      <CompactMetricStrip>
+        <CompactKpiCard label="Today" value={money(totals.today)} detail="Revenue earned today." className="ring-1 ring-primary/20" />
+        <CompactKpiCard label="Month Revenue" value={money(totals.month)} detail="Revenue earned in the current Dubai month." />
+        <CompactKpiCard label="Company Received" value={money(totals.received)} detail="Payments received by the company." />
+        <CompactKpiCard label="Outstanding" value={money(totals.outstanding)} detail="Total receivables awaiting collection." />
+        <CompactKpiCard label="Wallet Balance" value={money(totals.wallet)} detail="Combined B2B Agent wallet balance." />
+      </CompactMetricStrip>
+
+      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+        <CompactKpiCard label="Managers" value={money(totals.manager)} detail="Awaiting Ride Manager handover." />
+        <CompactKpiCard label="B2B" value={money(totals.b2b)} detail="Partner receivables." />
+        <CompactKpiCard label="Direct" value={money(totals.direct)} detail="Direct customer balances." />
+        <CompactKpiCard label="VAT" value={money(totals.vat)} detail="VAT included in current-month bookings." />
+        <CompactKpiCard label="Pending Refunds" value={String(data?.pending_refunds || 0)} detail="Refund requests awaiting a decision." />
       </div>
-      <div className="grid gap-3 lg:grid-cols-2">
-        <Card className="rounded-2xl shadow-sm"><CardContent className="p-4"><h2 className="font-heading text-base font-semibold">Payment methods</h2>{paymentSplit.length ? paymentSplit.map(([label, value]) => <div key={label} className="mt-2 flex min-h-9 items-center justify-between rounded-xl bg-[#F4F7F8] px-3 py-2 text-xs"><span>{uiLabel(label)}</span><strong>{money(value)}</strong></div>) : <CompactEmptyState className="mt-2">No collected payments in this period.</CompactEmptyState>}</CardContent></Card>
-        <Card className="rounded-2xl shadow-sm"><CardContent className="p-4"><h2 className="font-heading text-base font-semibold">Refund status</h2><div className="mt-2 grid grid-cols-3 divide-x rounded-xl bg-[#F4F7F8]">{[['Pending', data?.pending_refunds || 0], ['Approved', money(data?.approved_refunds_aed || 0)], ['Rejected', data?.rejected_refunds || 0]].map(([label, value]) => <div key={String(label)} className="px-2 py-2 text-center"><p className="text-[10px] text-muted-foreground">{label}</p><p className="mt-0.5 text-sm font-bold">{value}</p></div>)}</div></CardContent></Card>
+
+      <div className="grid gap-3 xl:grid-cols-[minmax(0,2fr)_minmax(18rem,1fr)]">
+        <DashboardPanel title="Revenue & Collections" description="Daily earned revenue, company receipts and outstanding balances">
+          <DashboardAreaChart labels={daily.map(([day]) => shortDate(day))} series={[
+            { name: 'Earned Revenue', color: '#0f8f91', values: daily.map(([, row]) => row.revenue) },
+            { name: 'Company Received', color: '#16a34a', values: daily.map(([, row]) => row.received) },
+            { name: 'Outstanding', color: '#f59e0b', values: daily.map(([, row]) => row.outstanding) }
+          ]} formatValue={money} ariaLabel="Daily revenue, company receipts and outstanding balances for the current Dubai month" />
+        </DashboardPanel>
+        <DashboardPanel title="Needs Attention" description="Financial work requiring follow-up">
+          <DashboardActionList items={attention} />
+        </DashboardPanel>
       </div>
-      <Card className="rounded-2xl shadow-sm"><CardContent className="p-4"><h2 className="font-heading text-base font-semibold">Recent receipts</h2>{(data?.receipts || []).length ? <div className="mt-2 overflow-x-auto"><table className="w-full min-w-[700px] text-left text-xs"><thead><tr className="border-b text-[10px] text-muted-foreground"><th className="py-2">Receipt</th><th>Source</th><th>Amount</th><th>Method</th><th>Reference</th><th>Received by</th><th>Date</th></tr></thead><tbody>{(data?.receipts || []).slice(0, 8).map((receipt) => <tr key={receipt.id} className="border-b border-border/60"><td className="py-2 font-bold">{receipt.receipt_number || receipt.id}</td><td>{receipt.source_name || uiLabel(receipt.source_type)}</td><td>{money(reportAmount(receipt.received_amount))}</td><td>{uiLabel(receipt.payment_method)}</td><td>{receipt.reference_no || '-'}</td><td>{receipt.received_by || '-'}</td><td>{receipt.received_at ? new Date(receipt.received_at).toLocaleString('en-AE') : '-'}</td></tr>)}</tbody></table></div> : <CompactEmptyState className="mt-2">No recent receipts available.</CompactEmptyState>}</CardContent></Card>
-      <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">{quickLinks.map(([href, label, Icon]) => <Link key={href} href={href} className="flex min-h-10 items-center justify-between rounded-xl border bg-white px-3 py-2 text-xs font-bold shadow-sm"><span className="flex items-center gap-2"><Icon className="size-4 text-primary" />{label}</span><ArrowRight className="size-4" /></Link>)}</div>
+
+      <div className="grid gap-3 lg:grid-cols-3">
+        <DashboardPanel title="Receivables Breakdown">
+          <DashboardProgressList items={[
+            { label: 'Managers', value: totals.manager, color: '#0f8f91' },
+            { label: 'B2B Agents', value: totals.b2b, color: '#0891b2' },
+            { label: 'Direct Customers', value: totals.direct, color: '#f59e0b' }
+          ]} formatValue={money} empty="No receivables are outstanding." />
+        </DashboardPanel>
+        <DashboardPanel title="Payment Mix">
+          <DashboardProgressList items={paymentSplit.map(([label, value], index) => ({ label, value, color: ['#0f8f91', '#0891b2', '#16a34a', '#f59e0b'][index % 4] }))} formatValue={money} empty="No collected payments in this period." />
+        </DashboardPanel>
+        <DashboardPanel title="Refund Status">
+          <div className="grid grid-cols-3 divide-x divide-border/60 p-4 text-center">
+            {[['Pending', data?.pending_refunds || 0], ['Approved', money(data?.approved_refunds_aed || 0)], ['Rejected', data?.rejected_refunds || 0]].map(([label, value]) => <div key={String(label)} className="px-2"><p className="text-[10px] text-muted-foreground">{label}</p><p className="mt-1 text-sm font-bold">{value}</p></div>)}
+          </div>
+        </DashboardPanel>
+      </div>
+
+      <DashboardPanel title="Recent Finance Activity" description="Latest receipts recorded in the company account">
+        <DashboardActivityList items={(data?.receipts || []).slice(0, 6).map((receipt) => ({
+          title: `${receipt.source_name || uiLabel(receipt.source_type)} · ${money(reportAmount(receipt.received_amount))}`,
+          meta: `${uiLabel(receipt.payment_method)}${receipt.reference_no ? ` · ${receipt.reference_no}` : ''}`,
+          time: shortDateTime(receipt.received_at),
+          icon: ReceiptText,
+          href: '/admin/payments'
+        }))} empty="No recent finance activity is available." />
+      </DashboardPanel>
     </section>
   );
+}
+
+function DashboardLoading() {
+  return <section className="space-y-3 animate-pulse"><div className="h-12 w-72 rounded-xl bg-slate-200" /><div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">{Array.from({ length: 5 }, (_, index) => <div key={index} className="h-14 rounded-xl bg-white" />)}</div><div className="grid gap-3 xl:grid-cols-[2fr_1fr]"><div className="h-72 rounded-2xl bg-white" /><div className="h-72 rounded-2xl bg-white" /></div></section>;
 }
