@@ -220,39 +220,36 @@ ${whatsappPrice}
 Please confirm availability and the best timing.`);
 
   return (
-    <article className="premium-surface premium-card-hover flex h-full min-w-0 flex-col overflow-hidden rounded-[1.2rem] p-2">
+    <article className="premium-surface premium-card-hover group flex h-full min-w-0 flex-col overflow-hidden rounded-[1.2rem] p-2 transition duration-200 motion-reduce:transform-none motion-reduce:transition-none">
       <div className="relative aspect-[16/8.6] w-full overflow-hidden rounded-[0.9rem] bg-primary-50">
         {imageSrc && !imageFailed ? (
-          <img src={imageSrc} alt={item.title} onError={() => setImageFailed(true)} className="h-full w-full object-cover object-center transition duration-700 hover:scale-105" loading="lazy" />
+          <img src={imageSrc} alt={item.title} onError={() => setImageFailed(true)} className="h-full w-full object-cover object-center transition duration-200 group-hover:scale-[1.02] motion-reduce:transform-none motion-reduce:transition-none" loading="lazy" />
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-primary-100 via-white to-accent-100 text-primary">
             <TicketCheck className="size-6" aria-hidden="true" />
           </div>
         )}
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-primary-950/22 to-transparent" aria-hidden="true" />
-        <div className="absolute left-2 top-2 flex max-w-[calc(100%-5rem)] flex-wrap items-center gap-2">
-          <span className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-white/82 text-primary shadow-sm backdrop-blur-sm">
-          <TicketCheck className="size-4" aria-hidden="true" />
-          </span>
-          <PackageOfferRibbon pricing={item} />
+        <div className="absolute left-2 top-2 flex max-w-[calc(100%-5.5rem)] items-center">
+          <PackageOfferRibbon pricing={item} showIcon={false} />
         </div>
-        <Badge className="absolute right-2 top-2 bg-white/92 px-2 py-0.5 text-[9px] font-bold text-primary-900 shadow-sm" variant="secondary">{categoryLabel(item.category)}</Badge>
+        <Badge className="absolute right-2 top-2 whitespace-nowrap bg-white/92 px-2 py-0.5 text-[9px] font-bold text-primary-900 shadow-sm" variant="secondary">{categoryLabel(item.category)}</Badge>
       </div>
 
       <div className="flex flex-1 flex-col px-2.5 pb-2 pt-2.5">
-        <h3 className="font-heading text-[0.92rem] font-semibold leading-[1.25] tracking-[-0.01em] text-foreground sm:text-[0.96rem]">{item.title}</h3>
+        <h3 title={item.title} className="min-h-10 overflow-hidden font-heading text-[0.92rem] font-semibold leading-5 tracking-[-0.01em] text-foreground [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2] sm:text-[0.96rem]">{item.title}</h3>
         <div className="mt-2 grid gap-1.5 rounded-[0.85rem] bg-primary-50 px-3 py-2 text-xs">
-          <div className="flex items-center justify-between gap-2">
-            <PackageOfferPrice pricing={item} audience="b2c" compact />
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <PackageOfferPrice pricing={item} audience="b2c" />
             <span className="rounded-full bg-white px-2 py-0.5 text-[9px] font-bold text-primary-900">{item.duration_minutes} min</span>
           </div>
           <p className="flex items-center gap-1.5 text-[10.5px] text-muted-foreground"><Users className="size-3 text-primary" aria-hidden="true" />{item.capacity} seater</p>
           <p className="flex items-center gap-1.5 text-[10.5px] text-muted-foreground"><Clock className="size-3 text-primary" aria-hidden="true" />Includes ride time and support</p>
         </div>
-        <p className="mt-2 overflow-hidden text-[12px] leading-5 text-muted-foreground [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]">{description}</p>
+        <p title={description} className="mt-2 min-h-10 overflow-hidden text-[12px] leading-5 text-muted-foreground [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]">{description}</p>
         <div className="mt-auto grid gap-1.5 pt-3">
-          <Button asChild size="sm" className="h-8 w-full rounded-full text-[10.5px] font-bold shadow-[0_8px_18px_rgba(8,37,50,0.12)]"><Link href={bookingHref} className="justify-center">Book This Package<ArrowRight className="ml-1 size-3 shrink-0" aria-hidden="true" /></Link></Button>
-          <Button asChild size="sm" variant="outline" className="h-8 w-full rounded-full border-emerald-300 bg-emerald-500 text-[10.5px] font-bold text-white shadow-[0_8px_18px_rgba(16,185,129,0.14)] hover:bg-emerald-600 hover:text-white"><a href={`${whatsappUrl}?text=${whatsappMessage}`} target="_blank" rel="noopener noreferrer" className="justify-center">Ask on WhatsApp</a></Button>
+          <Button asChild size="sm" className="h-11 w-full rounded-full text-xs font-bold shadow-[0_8px_18px_rgba(8,37,50,0.12)]"><Link href={bookingHref} className="justify-center whitespace-nowrap">Book This Package<ArrowRight className="ml-1 size-3 shrink-0" aria-hidden="true" /></Link></Button>
+          <Button asChild size="sm" variant="outline" className="h-11 w-full rounded-full border-emerald-300 bg-emerald-500 text-xs font-bold text-white shadow-[0_8px_18px_rgba(16,185,129,0.14)] hover:bg-emerald-600 hover:text-white"><a href={`${whatsappUrl}?text=${whatsappMessage}`} target="_blank" rel="noopener noreferrer" className="justify-center whitespace-nowrap">Ask on WhatsApp</a></Button>
         </div>
       </div>
     </article>
