@@ -27,6 +27,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { usePortalAccess } from '@/components/edrive/portal-access';
 import { getJetCarPackageImage, getJetSkiPackageImage } from '@/lib/edrive-package-images';
 import { supabase } from '@/lib/supabase-client';
+import { PackageOfferPrice, PackageOfferRibbon } from '@/components/edrive/shared/package-offer-price';
 
 const categoryMap: Record<string, string> = {
   'Jet Car Rental': 'jet_car_rental',
@@ -54,6 +55,10 @@ type PackageRecord = {
   durationMinutes: string;
   basePrice: string;
   b2bPrice: string;
+  offerEnabled: boolean;
+  offerName: string;
+  b2cOfferPrice: string;
+  b2bOfferPrice: string;
   capacity: string;
   imageUrl: string;
   shortDescription: string;
@@ -75,6 +80,10 @@ const emptyPackage: PackageFormValues = {
   durationMinutes: '30',
   basePrice: '0',
   b2bPrice: '0',
+  offerEnabled: false,
+  offerName: '',
+  b2cOfferPrice: '',
+  b2bOfferPrice: '',
   capacity: '2',
   imageUrl: '',
   shortDescription: '',
@@ -154,6 +163,10 @@ function mapPackage(row: Record<string, unknown>, index: number): PackageRecord 
     durationMinutes: toNumberText(row.duration_minutes),
     basePrice: toNumberText(row.base_price),
     b2bPrice: toNumberText(row.b2b_price),
+    offerEnabled: Boolean(row.offer_enabled),
+    offerName: toText(row.offer_name),
+    b2cOfferPrice: row.b2c_offer_price == null ? '' : toNumberText(row.b2c_offer_price),
+    b2bOfferPrice: row.b2b_offer_price == null ? '' : toNumberText(row.b2b_offer_price),
     capacity,
     imageUrl: resolvePackageImage(category, toText(row.image_url), displayOrder),
     shortDescription: toText(row.short_description),
@@ -180,6 +193,9 @@ function validatePackage(values: PackageFormValues, items: PackageRecord[], edit
   const b2c = Number(values.basePrice);
   const b2b = Number(values.b2bPrice);
   const displayOrder = Number(values.displayOrder);
+  const offerName = values.offerName.trim();
+  const b2cOffer = Number(values.b2cOfferPrice);
+  const b2bOffer = Number(values.b2bOfferPrice);
 
   if (title.length < 5 || title.length > 120) return 'Package title must be between 5 and 120 characters.';
   if (!/^[a-z0-9][a-z0-9 '&()+,./-]*$/i.test(title)) return 'Package title contains unsupported characters.';
@@ -188,6 +204,15 @@ function validatePackage(values: PackageFormValues, items: PackageRecord[], edit
   if (!Number.isFinite(b2c) || b2c <= 0) return 'B2C price must be greater than zero.';
   if (!Number.isFinite(b2b) || b2b < 0) return 'B2B price cannot be negative.';
   if (b2b > b2c) return 'B2B price cannot be higher than the B2C price.';
+  if (offerName.length > 40) return 'Offer name cannot exceed 40 characters.';
+  if (values.offerEnabled) {
+    if (offerName.length < 2 || offerName.length > 40) return 'Offer name must be between 2 and 40 characters.';
+    if (!Number.isFinite(b2cOffer) || b2cOffer <= 0) return 'B2C offer price must be greater than zero.';
+    if (!Number.isFinite(b2bOffer) || b2bOffer <= 0) return 'B2B offer price must be greater than zero.';
+    if (b2cOffer >= b2c) return 'B2C offer price must be lower than the normal B2C price.';
+    if (b2bOffer >= b2b) return 'B2B offer price must be lower than the normal B2B price.';
+    if (b2bOffer > b2cOffer) return 'B2B offer price cannot be higher than the B2C offer price.';
+  }
   if (!Number.isInteger(displayOrder) || displayOrder < 0 || displayOrder > 9999) return 'Display order must be a whole number between 0 and 9999.';
 
   const duplicateTitle = items.find((item) => item.id !== editingId && item.status !== 'Inactive' && normalizeText(item.title) === normalizeText(title));
@@ -244,7 +269,7 @@ export default function Page() {
     setError('');
     const { data, error: queryError } = await supabase
       .from('packages')
-      .select('id,title,slug,category,duration_minutes,base_price,b2b_price,capacity,image_url,short_description,status,is_featured,display_order')
+      .select('id,title,slug,category,duration_minutes,base_price,b2b_price,offer_enabled,offer_name,b2c_offer_price,b2b_offer_price,capacity,image_url,short_description,status,is_featured,display_order')
       .order('display_order')
       .order('category')
       .order('capacity')
@@ -336,6 +361,10 @@ export default function Page() {
       duration_minutes: Number(values.durationMinutes),
       base_price: Number(values.basePrice),
       b2b_price: Number(values.b2bPrice),
+      offer_enabled: values.offerEnabled,
+      offer_name: values.offerName.trim() || null,
+      b2c_offer_price: values.b2cOfferPrice === '' ? null : Number(values.b2cOfferPrice),
+      b2b_offer_price: values.b2bOfferPrice === '' ? null : Number(values.b2bOfferPrice),
       capacity: Number(values.capacity),
       image_url: imageUrl,
       short_description: values.shortDescription.trim().slice(0, 500),
@@ -520,6 +549,7 @@ export default function Page() {
                   <SortableHead label="Capacity" column="capacity" active={sortKey} direction={sortDirection} onSort={toggleSort} />
                   <SortableHead label="B2C" column="basePrice" active={sortKey} direction={sortDirection} onSort={toggleSort} />
                   <SortableHead label="B2B" column="b2bPrice" active={sortKey} direction={sortDirection} onSort={toggleSort} />
+                  <TableHead>Offer</TableHead>
                   <SortableHead label="Order" column="displayOrder" active={sortKey} direction={sortDirection} onSort={toggleSort} />
                   <SortableHead label="Status" column="status" active={sortKey} direction={sortDirection} onSort={toggleSort} />
                   <TableHead className="sticky right-0 bg-[#F7FAFA] text-right">Actions</TableHead>
@@ -536,6 +566,7 @@ export default function Page() {
                     <TableCell>{row.capacity} seater</TableCell>
                     <TableCell className="font-semibold text-primary-900">{formatAed(row.basePrice)}</TableCell>
                     <TableCell>{formatAed(row.b2bPrice)}</TableCell>
+                    <TableCell className="min-w-44">{row.offerEnabled ? <div><p className="font-semibold text-amber-700">{row.offerName} · Active</p><p className="mt-1 text-[10px] text-muted-foreground">B2C {formatAed(row.b2cOfferPrice)} | B2B {formatAed(row.b2bOfferPrice)}</p></div> : row.offerName ? <span className="text-xs font-semibold text-muted-foreground">Saved · Disabled</span> : <span className="text-xs text-muted-foreground">No Offer</span>}</TableCell>
                     <TableCell>{row.displayOrder}</TableCell>
                     <TableCell><span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-bold ${statusBadgeClass(row.status)}`}>{row.status}</span></TableCell>
                     <TableCell className="sticky right-0 bg-white text-right"><div className="flex justify-end gap-2">
@@ -544,7 +575,7 @@ export default function Page() {
                       {isSuperAdmin ? <Button type="button" size="sm" variant="danger" onClick={() => setConfirmAction({ type: 'delete', record: row })}><Trash2 className="size-4" aria-hidden="true" />Delete</Button> : null}
                     </div></TableCell>
                   </TableRow>;
-                }) : <TableRow><TableCell colSpan={10} className="h-28 text-center text-sm text-muted-foreground">{loading ? 'Loading packages...' : 'No packages found for the selected filters.'}</TableCell></TableRow>}
+                }) : <TableRow><TableCell colSpan={11} className="h-28 text-center text-sm text-muted-foreground">{loading ? 'Loading packages...' : 'No packages found for the selected filters.'}</TableCell></TableRow>}
               </TableBody>
             </Table>
           </div>
@@ -664,6 +695,16 @@ function PackageModal({ initialValues, readOnly, items, onClose, onSubmit }: { i
               <FormInput label="Capacity / Seater" type="number" min={1} max={12} step={1} value={values.capacity} required disabled={readOnly} onChange={(value) => updateField('capacity', value)} />
               <FormInput label="B2C Price" type="number" min={1} step="0.01" value={values.basePrice} required disabled={readOnly} onChange={(value) => updateField('basePrice', value)} />
               <FormInput label="B2B Price" type="number" min={0} step="0.01" value={values.b2bPrice} required disabled={readOnly} helper="Must be equal to or lower than B2C price." onChange={(value) => updateField('b2bPrice', value)} />
+              <section className="grid gap-3 rounded-2xl border border-amber-200 bg-amber-50/60 p-4 sm:col-span-2" aria-labelledby="package-offer-heading">
+                <div><h3 id="package-offer-heading" className="font-heading text-base font-semibold text-foreground">Offer</h3><p className="mt-1 text-xs leading-5 text-muted-foreground">Normal B2C and B2B prices remain unchanged. When the offer is disabled, all cards and new bookings automatically return to the normal prices.</p></div>
+                <label className="flex min-h-11 items-center gap-3 rounded-xl border border-amber-200 bg-white px-3 text-sm font-semibold text-foreground"><input type="checkbox" disabled={readOnly} checked={values.offerEnabled} onChange={(event) => updateField('offerEnabled', event.target.checked)} aria-label="Enable package offer" />Enable Offer</label>
+                <div className={`grid gap-3 sm:grid-cols-3 ${values.offerEnabled ? '' : 'opacity-60'}`}>
+                  <FormInput label="Offer Name" value={values.offerName} min={undefined} maxLength={40} placeholder="Summer Offer" disabled={readOnly || !values.offerEnabled} required={values.offerEnabled} onChange={(value) => updateField('offerName', value)} />
+                  <FormInput label="B2C Offer Price" type="number" min={0.01} step="0.01" value={values.b2cOfferPrice} disabled={readOnly || !values.offerEnabled} required={values.offerEnabled} onChange={(value) => updateField('b2cOfferPrice', value)} />
+                  <FormInput label="B2B Offer Price" type="number" min={0.01} step="0.01" value={values.b2bOfferPrice} disabled={readOnly || !values.offerEnabled} required={values.offerEnabled} onChange={(value) => updateField('b2bOfferPrice', value)} />
+                </div>
+                {values.offerEnabled ? <div className="rounded-xl border border-amber-200 bg-white p-3"><PackageOfferRibbon pricing={{ base_price: values.basePrice, b2b_price: values.b2bPrice, offer_enabled: values.offerEnabled, offer_name: values.offerName, b2c_offer_price: values.b2cOfferPrice, b2b_offer_price: values.b2bOfferPrice }} /><div className="mt-3 grid gap-2 sm:grid-cols-2"><div><p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">B2C</p><PackageOfferPrice pricing={{ base_price: values.basePrice, b2b_price: values.b2bPrice, offer_enabled: values.offerEnabled, offer_name: values.offerName, b2c_offer_price: values.b2cOfferPrice, b2b_offer_price: values.b2bOfferPrice }} audience="b2c" /></div><div><p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">B2B</p><PackageOfferPrice pricing={{ base_price: values.basePrice, b2b_price: values.b2bPrice, offer_enabled: values.offerEnabled, offer_name: values.offerName, b2c_offer_price: values.b2cOfferPrice, b2b_offer_price: values.b2bOfferPrice }} audience="b2b" /></div></div></div> : null}
+              </section>
               <FormInput label="Display Order" type="number" min={0} max={9999} step={1} value={values.displayOrder} disabled={readOnly} helper="Lower numbers appear first on the website." onChange={(value) => updateField('displayOrder', value)} />
               <SelectInput label="Status" value={values.status} options={Object.keys(statusMap)} required disabled={readOnly} onChange={(value) => updateField('status', value)} />
               <label className="flex items-center gap-3 rounded-xl border border-border bg-white px-3 py-2 text-sm font-semibold text-foreground"><input type="checkbox" disabled={readOnly} checked={values.isFeatured} onChange={(event) => updateField('isFeatured', event.target.checked)} />Featured package</label>

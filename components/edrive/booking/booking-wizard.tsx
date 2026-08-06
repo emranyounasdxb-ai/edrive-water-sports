@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { ArrowLeft, ArrowRight, Check, ChevronDown, ChevronLeft, ChevronRight, Clock3, Mail, MapPin, Minus, Phone, Plus, Send, TicketCheck, UserRound } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,6 +12,8 @@ import { getLivePackageImage } from '@/lib/edrive-package-images';
 import { cleanMultiline, cleanSingleLine, dubaiDateParts, dubaiDateValue, isSelectableDubaiBookingTime, isValidOptionalEmail, isValidPhone } from '@/lib/public-request-validation';
 import { supabase } from '@/lib/supabase-client';
 import { cn } from '@/lib/utils';
+import { getEffectivePackagePrice } from '@/lib/package-pricing';
+import { PackageOfferPrice, PackageOfferRibbon } from '@/components/edrive/shared/package-offer-price';
 import { BookingInfoAccordions } from './booking-info-accordions';
 import { BookingSuccess } from './booking-success';
 import { BookingSummaryTicket } from './booking-summary-ticket';
@@ -32,6 +34,9 @@ type PackageRateRow = {
   category: string;
   duration_minutes: number;
   base_price: number;
+  offer_enabled?: boolean | null;
+  offer_name?: string | null;
+  b2c_offer_price?: number | null;
   capacity: number;
   image_url?: string | null;
   short_description?: string | null;
@@ -104,7 +109,11 @@ function mapRates(rows: PackageRateRow[]): BookingRateOption[] {
       slug: row.slug,
       category: row.category,
       minutes: Number(row.duration_minutes || 0),
-      price: Number(row.base_price || 0),
+      price: getEffectivePackagePrice(row, 'b2c'),
+      normalPrice: Number(row.base_price || 0),
+      offerEnabled: row.offer_enabled === true,
+      offerName: row.offer_name,
+      offerPrice: row.b2c_offer_price,
       capacity: Number(row.capacity || 2)
     }))
     .filter((rate) => rate.id && rate.minutes > 0 && rate.price > 0)
@@ -173,7 +182,7 @@ async function fetchPublicPackageRows() {
 
   const fallbackResult = await supabase
     .from('packages')
-    .select('id,title,slug,category,duration_minutes,base_price,capacity,image_url,short_description,display_order')
+    .select('id,title,slug,category,duration_minutes,base_price,offer_enabled,offer_name,b2c_offer_price,capacity,image_url,short_description,display_order')
     .eq('status', 'active')
     .order('display_order', { ascending: true })
     .order('capacity', { ascending: true })
@@ -474,11 +483,11 @@ function DurationStep({ draft, onUpdate }: { draft: BookingDraft; onUpdate: (val
   const experience = getExperience(draft.experienceType);
   const packages: BookingRateOption[] = draft.selectedPackageRates || [];
   if (!packages.length) return <div className="rounded-[1.25rem] border border-amber-200 bg-amber-50 p-4 text-sm font-semibold leading-6 text-amber-800">Please select a ride package first. Contact the team if you need help choosing an option.</div>;
-  return <div><p className="mb-3 text-sm leading-6 text-muted-foreground">Choose duration for {draft.selectedPackageName || experience.title}. Prices shown are per vehicle.</p><div className="grid gap-3 md:grid-cols-3">{packages.map((item) => <ChoiceButton key={item.id || item.minutes} active={draft.selectedPackageRateId === item.id} onClick={() => onUpdate({ selectedPackageRateId: item.id, selectedPackageName: item.title || draft.selectedPackageName, selectedPackageSlug: item.slug || draft.selectedPackageSlug, durationMinutes: item.minutes, selectedPackagePrice: item.price, selectedPackageB2BPrice: undefined, selectedPackageCapacity: item.capacity })} title={formatDuration(item.minutes)} detail={formatAed(item.price)} />)}</div></div>;
+  return <div><p className="mb-3 text-sm leading-6 text-muted-foreground">Choose duration for {draft.selectedPackageName || experience.title}. Prices shown are per vehicle.</p><div className="grid gap-3 md:grid-cols-3">{packages.map((item) => <ChoiceButton key={item.id || item.minutes} active={draft.selectedPackageRateId === item.id} onClick={() => onUpdate({ selectedPackageRateId: item.id, selectedPackageName: item.title || draft.selectedPackageName, selectedPackageSlug: item.slug || draft.selectedPackageSlug, durationMinutes: item.minutes, selectedPackagePrice: item.price, selectedPackageB2BPrice: undefined, selectedPackageCapacity: item.capacity })} title={formatDuration(item.minutes)} detail={<PackageOfferPrice pricing={{ base_price: item.normalPrice ?? item.price, offer_enabled: item.offerEnabled, offer_name: item.offerName, b2c_offer_price: item.offerPrice }} audience="b2c" compact />} ribbon={item.offerEnabled ? <PackageOfferRibbon pricing={{ base_price: item.normalPrice ?? item.price, offer_enabled: item.offerEnabled, offer_name: item.offerName, b2c_offer_price: item.offerPrice }} /> : null} />)}</div></div>;
 }
 
-function ChoiceButton({ active, onClick, title, detail }: { active: boolean; onClick: () => void; title: string; detail: string }) {
-  return <button type="button" onClick={onClick} className={cn('group flex min-h-[84px] items-center justify-between gap-3 rounded-[1.05rem] border bg-white px-4 py-3 text-left transition duration-200 hover:-translate-y-0.5 hover:border-primary/45 hover:shadow-md', active ? 'border-primary bg-gradient-to-br from-primary-50 via-white to-accent-100/40 shadow-md ring-1 ring-primary/15' : 'border-border shadow-sm')} aria-pressed={active}><span><span className="block text-[15px] font-bold leading-5 text-foreground">{title}</span><span className="mt-1.5 block text-xs font-medium text-muted-foreground">{detail}</span></span><span className={cn('flex size-5 shrink-0 items-center justify-center rounded-full border transition', active ? 'border-primary bg-primary text-white shadow-sm' : 'border-border bg-white group-hover:border-primary/45')}>{active ? <Check className="size-3" aria-hidden="true" /> : null}</span></button>;
+function ChoiceButton({ active, onClick, title, detail, ribbon }: { active: boolean; onClick: () => void; title: string; detail: ReactNode; ribbon?: ReactNode }) {
+  return <button type="button" onClick={onClick} className={cn('group flex min-h-[84px] items-center justify-between gap-3 rounded-[1.05rem] border bg-white px-4 py-3 text-left transition duration-200 hover:-translate-y-0.5 hover:border-primary/45 hover:shadow-md', active ? 'border-primary bg-gradient-to-br from-primary-50 via-white to-accent-100/40 shadow-md ring-1 ring-primary/15' : 'border-border shadow-sm')} aria-pressed={active}><span className="min-w-0">{ribbon}<span className="mt-1 block text-[15px] font-bold leading-5 text-foreground">{title}</span><span className="mt-1.5 block text-xs font-medium text-muted-foreground">{detail}</span></span><span className={cn('flex size-5 shrink-0 items-center justify-center rounded-full border transition', active ? 'border-primary bg-primary text-white shadow-sm' : 'border-border bg-white group-hover:border-primary/45')}>{active ? <Check className="size-3" aria-hidden="true" /> : null}</span></button>;
 }
 
 function PartyStep({ draft, capacity, capacityPerVehicle, exceeded, onUpdate }: { draft: BookingDraft; capacity: number; capacityPerVehicle: number; exceeded: boolean; onUpdate: (values: Partial<BookingDraft>) => void }) {

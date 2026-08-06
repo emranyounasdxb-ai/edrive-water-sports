@@ -8,6 +8,8 @@ import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/supabase-client';
 import { whatsappUrl } from '@/lib/company-info';
 import { getLivePackageImage } from '@/lib/edrive-package-images';
+import { getPackagePricePresentation } from '@/lib/package-pricing';
+import { PackageOfferPrice, PackageOfferRibbon } from '@/components/edrive/shared/package-offer-price';
 import { cn } from '@/lib/utils';
 
 type LivePackage = {
@@ -17,6 +19,9 @@ type LivePackage = {
   category: string;
   duration_minutes: number;
   base_price: number;
+  offer_enabled?: boolean | null;
+  offer_name?: string | null;
+  b2c_offer_price?: number | null;
   capacity: number;
   image_url: string | null;
   short_description: string | null;
@@ -98,7 +103,7 @@ async function fetchPublicPackages(categories?: string[]) {
 
   let query = supabase
     .from('packages')
-    .select('id,title,slug,category,duration_minutes,base_price,capacity,image_url,short_description,status,is_featured,display_order')
+    .select('id,title,slug,category,duration_minutes,base_price,offer_enabled,offer_name,b2c_offer_price,capacity,image_url,short_description,status,is_featured,display_order')
     .eq('status', 'active');
 
   if (categories?.length) query = query.in('category', categories);
@@ -204,11 +209,13 @@ function LivePackageCard({ item }: { item: PackageCardItem; index: number }) {
   const imageSrc = item.display_image_url;
   const bookingHref = `/booking?package=${encodeURIComponent(item.id)}&category=${encodeURIComponent(item.category)}&capacity=${encodeURIComponent(String(item.capacity || 2))}&duration=${encodeURIComponent(String(item.duration_minutes || 0))}`;
   const description = item.short_description || defaultDescription(item);
+  const price = getPackagePricePresentation(item, 'b2c');
+  const whatsappPrice = price.active ? `${price.label}\nRegular price: ${formatAed(price.normalPrice)}\nOffer price: ${formatAed(price.effectivePrice)}` : `Price: ${formatAed(price.normalPrice)}`;
   const whatsappMessage = encodeURIComponent(`Hello eDrive, I am interested in this package: ${item.title}
 
 Duration: ${item.duration_minutes} minutes
 Guests/Seats: ${item.capacity}
-Price: ${formatAed(Number(item.base_price || 0))}
+${whatsappPrice}
 
 Please confirm availability and the best timing.`);
 
@@ -223,8 +230,11 @@ Please confirm availability and the best timing.`);
           </div>
         )}
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-primary-950/22 to-transparent" aria-hidden="true" />
-        <div className="absolute left-2 top-2 flex size-8 items-center justify-center rounded-xl bg-white/82 text-primary shadow-sm backdrop-blur-sm">
+        <div className="absolute left-2 top-2 flex max-w-[calc(100%-5rem)] flex-wrap items-center gap-2">
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-white/82 text-primary shadow-sm backdrop-blur-sm">
           <TicketCheck className="size-4" aria-hidden="true" />
+          </span>
+          <PackageOfferRibbon pricing={item} />
         </div>
         <Badge className="absolute right-2 top-2 bg-white/92 px-2 py-0.5 text-[9px] font-bold text-primary-900 shadow-sm" variant="secondary">{categoryLabel(item.category)}</Badge>
       </div>
@@ -233,7 +243,7 @@ Please confirm availability and the best timing.`);
         <h3 className="font-heading text-[0.92rem] font-semibold leading-[1.25] tracking-[-0.01em] text-foreground sm:text-[0.96rem]">{item.title}</h3>
         <div className="mt-2 grid gap-1.5 rounded-[0.85rem] bg-primary-50 px-3 py-2 text-xs">
           <div className="flex items-center justify-between gap-2">
-            <span className="text-[12px] font-bold text-primary-900">{formatAed(Number(item.base_price || 0))}</span>
+            <PackageOfferPrice pricing={item} audience="b2c" compact />
             <span className="rounded-full bg-white px-2 py-0.5 text-[9px] font-bold text-primary-900">{item.duration_minutes} min</span>
           </div>
           <p className="flex items-center gap-1.5 text-[10.5px] text-muted-foreground"><Users className="size-3 text-primary" aria-hidden="true" />{item.capacity} seater</p>

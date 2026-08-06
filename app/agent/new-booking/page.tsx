@@ -6,6 +6,8 @@ import { CalendarDays, Check, CheckCircle2, ChevronLeft, ChevronRight, Minus, Pa
 import { AgentPageHeader } from '@/components/edrive/agent/agent-page-header';
 import { useAgentPortal } from '@/components/edrive/agent/agent-portal-provider';
 import { AgentSchedulePicker } from '@/components/edrive/agent/agent-schedule-picker';
+import { PackageOfferPrice, PackageOfferRibbon } from '@/components/edrive/shared/package-offer-price';
+import { getEffectivePackagePrice } from '@/lib/package-pricing';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -15,7 +17,7 @@ import { dubaiDateValue, isSelectableDubaiBookingTime } from '@/lib/public-reque
 import { supabase } from '@/lib/supabase-client';
 import { createB2BBooking } from '@/services/b2b-finance';
 
-type PackageRow = { id: string; title: string; category: string; duration_minutes: number; b2b_price: number; capacity: number | null; image_url: string | null; short_description: string | null };
+type PackageRow = { id: string; title: string; category: string; duration_minutes: number; b2b_price: number; offer_enabled?: boolean | null; offer_name?: string | null; b2b_offer_price?: number | null; capacity: number | null; image_url: string | null; short_description: string | null };
 type FormState = { packageId: string; vehicleQuantity: string; guestCount: string; preferredDate: string; preferredTime: string; customerName: string; customerPhone: string; customerEmail: string; customerHotelOrArea: string; customerNotes: string };
 const initial: FormState = { packageId: '', vehicleQuantity: '1', guestCount: '1', preferredDate: '', preferredTime: '', customerName: '', customerPhone: '', customerEmail: '', customerHotelOrArea: '', customerNotes: '' };
 const steps = [{ title: 'Package', icon: Package }, { title: 'Customer', icon: UserRound }, { title: 'Schedule', icon: CalendarDays }, { title: 'Review', icon: CheckCircle2 }];
@@ -47,7 +49,7 @@ export default function AgentNewBookingPage() {
   async function load() {
     setLoading(true); setError('');
     try {
-      const packageResult = await supabase.from('packages').select('id,title,category,duration_minutes,b2b_price,capacity,image_url,short_description,status,display_order').eq('status', 'active').gt('b2b_price', 0).order('display_order');
+      const packageResult = await supabase.rpc('get_b2b_agent_packages');
       if (packageResult.error) throw new Error(packageResult.error.message);
       const rows = (packageResult.data || []) as PackageRow[];
       const currentPackage = rows.find((item) => item.id === form.packageId);
@@ -64,7 +66,7 @@ export default function AgentNewBookingPage() {
   }, []);
   const selected = packages.find((item) => item.id === form.packageId) || null;
   const quantity = Math.max(Number(form.vehicleQuantity) || 1, 1);
-  const unit = Number(selected?.b2b_price || 0);
+  const unit = selected ? getEffectivePackagePrice(selected, 'b2b') : 0;
   const subtotal = unit * quantity;
   const vat = subtotal * 0.05;
   const total = subtotal + vat;
@@ -163,7 +165,7 @@ function PackageStep({ packages, activeCategory, onCategoryChange, selectedId, o
       const selectedPackage = selectedId === item.id;
       return <button type="button" key={item.id} onClick={() => onSelect(item.id)} aria-pressed={selectedPackage} className={`relative rounded-xl border p-3.5 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 ${selectedPackage ? 'border-2 border-teal-600 bg-teal-50 shadow-sm' : 'border-slate-200 hover:border-teal-300'}`}>
         {selectedPackage ? <span className="absolute right-3 top-3 flex size-6 items-center justify-center rounded-full bg-teal-600 text-white"><Check className="size-4" /></span> : null}
-        <div className="flex justify-between gap-8"><div className="min-w-0"><p className="font-semibold">{item.title}</p><p className="mt-1 text-xs text-slate-500">{item.duration_minutes} minutes | Capacity {item.capacity || '-'}</p></div><p className="shrink-0 whitespace-nowrap font-heading font-semibold text-teal-700">{formatAed(item.b2b_price)}</p></div>
+        <div className="flex justify-between gap-4"><div className="min-w-0"><PackageOfferRibbon pricing={item} /><p className="mt-1 font-semibold">{item.title}</p><p className="mt-1 text-xs text-slate-500">{item.duration_minutes} minutes | Capacity {item.capacity || '-'}</p></div><PackageOfferPrice pricing={item} audience="b2b" compact className="shrink-0" /></div>
         <p className="mt-3 text-xs leading-5 text-slate-500">{item.short_description}</p>
       </button>;
     })}</div>

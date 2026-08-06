@@ -31,6 +31,10 @@ export type BookingRateOption = {
   minutes: number;
   price: number;
   b2bPrice?: number;
+  normalPrice?: number;
+  offerEnabled?: boolean;
+  offerName?: string | null;
+  offerPrice?: number | null;
   capacity: number;
 };
 
