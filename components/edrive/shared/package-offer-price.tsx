@@ -3,10 +3,10 @@ import { formatAed } from '@/lib/booking-data';
 import { getPackagePricePresentation, type PackagePriceAudience, type PackagePricingFields } from '@/lib/package-pricing';
 import { cn } from '@/lib/utils';
 
-export function PackageOfferRibbon({ pricing, showIcon = true }: { pricing: PackagePricingFields; showIcon?: boolean }) {
+export function PackageOfferRibbon({ pricing }: { pricing: PackagePricingFields }) {
   const offer = getPackagePricePresentation(pricing, 'b2c');
   if (!offer.active) return null;
-  return <span className="inline-flex h-8 max-w-full items-center justify-start whitespace-nowrap rounded-full bg-gradient-to-r from-amber-500 to-orange-500 px-3.5 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-white shadow-md" aria-label={`Active offer: ${offer.label}`}>{showIcon ? <Sparkles className="mr-1.5 size-3.5 shrink-0" aria-hidden="true" /> : null}<span className="truncate">{offer.label}</span></span>;
+  return <span className="inline-flex h-7 max-w-full items-center justify-start gap-1.5 whitespace-nowrap rounded-full bg-gradient-to-r from-amber-500 to-orange-500 px-3 text-left text-[10px] font-bold uppercase leading-none tracking-[0.075em] text-white shadow-[0_4px_12px_rgba(217,119,6,0.22)]" aria-label={`Active offer: ${offer.label}`}><Sparkles className="size-3 shrink-0" aria-hidden="true" /><span className="truncate">{offer.label}</span></span>;
 }
 
 export function PackageOfferPrice({ pricing, audience, compact = false, showRibbon = false, className }: { pricing: PackagePricingFields; audience: PackagePriceAudience; compact?: boolean; showRibbon?: boolean; className?: string }) {

@@ -231,7 +231,7 @@ Please confirm availability and the best timing.`);
         )}
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-primary-950/22 to-transparent" aria-hidden="true" />
         <div className="absolute left-2 top-2 flex max-w-[calc(100%-5.5rem)] items-center">
-          <PackageOfferRibbon pricing={item} showIcon={false} />
+          <PackageOfferRibbon pricing={item} />
         </div>
         <Badge className="absolute right-2 top-2 whitespace-nowrap bg-white/92 px-2 py-0.5 text-[9px] font-bold text-primary-900 shadow-sm" variant="secondary">{categoryLabel(item.category)}</Badge>
       </div>
