@@ -302,8 +302,10 @@ assert(packageOfferMigration.includes("conrelid = 'public.packages'::regclass"),
 assert(packageOfferMigration.includes('numeric(12,2)') && packageOfferMigration.includes('v_category::public.rental_category') && packageOfferMigration.includes('v_status::public.record_status'), 'Offer precision and authoritative package enum casts must be preserved.');
 assert(packagePricing.includes("pkg.offer_enabled === true") && packagePricing.includes("getNormalPackagePrice(pkg, audience)"), 'Disabled or invalid offers must fall back to the unchanged normal package price.');
 assert(packageShowcase.includes('PackageOfferRibbon pricing={item}') && !packageOfferPrice.includes('SUMMER OFFER'), 'Public offer ribbons must render the stored per-package label.');
-assert(bookingWizard.includes("getEffectivePackagePrice(row, 'b2c')"), 'Public booking selection must use effective B2C pricing.');
-assert(agentNewBooking.includes("getEffectivePackagePrice(selected, 'b2b')"), 'B2B booking previews must use effective B2B pricing.');
+assert(packageOfferPrice.includes("audience = 'b2c'") && packageOfferPrice.includes('getPackagePricePresentation(pricing, audience)'), 'Shared offer ribbons must validate prices for the requested audience while preserving the B2C default.');
+assert(bookingWizard.includes("getPackagePricePresentation(row, 'b2c')") && bookingWizard.includes('price: price.effectivePrice'), 'Public booking selection must store validated effective B2C pricing.');
+assert(agentNewBooking.includes("getPackagePricePresentation(selected, 'b2b')") && agentNewBooking.includes('audience="b2b"'), 'B2B booking previews and ribbons must use validated B2B pricing.');
+assert(!packageShowcase.includes('normalPrice=') && !packageShowcase.includes('offerPrice='), 'Public booking URLs must not include client-controlled price parameters.');
 assert(packageOfferMigration.includes('insert into public.booking_requests') && !packageOfferMigration.includes('public.bookings'), 'Package offers must keep public.booking_requests as the live booking source.');
 assert(packagesPage.includes("rpc('delete_package_if_unused'"), 'Package deletion must use the booking-aware delete RPC.');
 assert(packagesPage.includes('packageSpecKey'), 'Package duplicate specifications must be detected in the admin UI.');

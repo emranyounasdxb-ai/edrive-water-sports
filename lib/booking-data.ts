@@ -1,4 +1,5 @@
 import { jetCarLightImage, jetSkiLightImage } from '@/lib/mock-data';
+import type { PackagePricingFields } from '@/lib/package-pricing';
 
 export type ExperienceId = 'jet-ski-rental' | 'jet-car-rental' | 'jet-ski-sales' | 'jet-car-sales';
 export type ServiceType = 'rental' | 'sales_inquiry';
@@ -37,6 +38,15 @@ export type BookingRateOption = {
   offerPrice?: number | null;
   capacity: number;
 };
+
+export function bookingRatePricing(rate: BookingRateOption): PackagePricingFields {
+  return {
+    base_price: rate.normalPrice ?? rate.price,
+    offer_enabled: rate.offerEnabled,
+    offer_name: rate.offerName,
+    b2c_offer_price: rate.offerPrice
+  };
+}
 
 export type BookingDraft = {
   selectedPackageRateId?: string;

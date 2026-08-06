@@ -1,6 +1,8 @@
 import type { LucideIcon } from 'lucide-react';
 import { CalendarDays, Clock3, MapPin, TicketCheck, UsersRound } from 'lucide-react';
-import { BookingDraft, formatAed, formatDuration, getBookingTotals, getExperience, getPackageUnitPrice } from '@/lib/booking-data';
+import { bookingRatePricing, BookingDraft, formatAed, formatDuration, getBookingTotals, getExperience, getPackageUnitPrice, getSelectedRateForDuration } from '@/lib/booking-data';
+import { PackageOfferRibbon } from '@/components/edrive/shared/package-offer-price';
+import { getPackagePricePresentation } from '@/lib/package-pricing';
 import { companyInfo } from '@/lib/company-info';
 import { cn } from '@/lib/utils';
 
@@ -14,6 +16,8 @@ export function BookingSummaryTicket({ draft, compact = false }: { draft: Bookin
   const totals = getBookingTotals(draft);
   const isSales = experience.serviceType === 'sales_inquiry';
   const packagePrice = getPackageUnitPrice(draft);
+  const selectedRate = getSelectedRateForDuration(draft);
+  const price = selectedRate ? getPackagePricePresentation(bookingRatePricing(selectedRate), 'b2c') : null;
   const totalLabel = isSales ? 'Request quote' : formatAed(totals.totalAmount);
   const selectedTitle = draft.selectedPackageName || experience.title;
   const party = `${draft.vehicleQuantity} ${draft.vehicleQuantity === 1 ? 'vehicle' : 'vehicles'} | ${draft.guestCount} ${draft.guestCount === 1 ? 'guest' : 'guests'}`;
@@ -56,8 +60,11 @@ export function BookingSummaryTicket({ draft, compact = false }: { draft: Bookin
               <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-muted-foreground">Cost Breakdown</p>
               <span className="h-px flex-1 bg-border" />
             </div>
+            {price?.active ? <div className="mb-2"><PackageOfferRibbon pricing={bookingRatePricing(selectedRate!)} /></div> : null}
+            {price?.active ? <BreakdownLine label="Regular unit price" value={formatAed(price.normalPrice)} crossedOut /> : null}
+            {price?.active ? <BreakdownLine label="Offer unit price" value={formatAed(price.effectivePrice)} strong /> : null}
             <BreakdownLine label={`${selectedTitle} | ${formatDuration(draft.durationMinutes)}`} value={formatAed(packagePrice)} />
-            <BreakdownLine label={`Vehicles × ${draft.vehicleQuantity}`} value={formatAed(totals.subtotal)} />
+            <BreakdownLine label={`Vehicle quantity`} value={String(draft.vehicleQuantity)} />
             <BreakdownLine label="Sub Total" value={formatAed(totals.subtotal)} strong />
             <BreakdownLine label="VAT (5%)" value={formatAed(totals.vatAmount)} />
           </div>
@@ -92,11 +99,11 @@ function SummaryRow({ icon: Icon, label, value }: { icon: LucideIcon; label: str
   );
 }
 
-function BreakdownLine({ label, value, strong = false }: { label: string; value: string; strong?: boolean }) {
+function BreakdownLine({ label, value, strong = false, crossedOut = false }: { label: string; value: string; strong?: boolean; crossedOut?: boolean }) {
   return (
     <div className={cn('flex items-center justify-between gap-3 py-1 text-[11px] leading-4', strong ? 'font-bold text-foreground' : 'font-medium text-muted-foreground')}>
       <span className="min-w-0 truncate">{label}</span>
-      <span className="shrink-0 font-semibold text-foreground">{value}</span>
+      <span className={cn('shrink-0 font-semibold text-foreground', crossedOut && 'text-muted-foreground line-through')}>{value}</span>
     </div>
   );
 }

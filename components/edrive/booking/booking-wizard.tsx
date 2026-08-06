@@ -5,14 +5,14 @@ import { ArrowLeft, ArrowRight, Check, ChevronDown, ChevronLeft, ChevronRight, C
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { formatAed, formatDuration, generateBookingCode, getBookingTotals, getCapacityPerVehicle, getExperience, getSelectedRateForDuration, initialBookingDraft, timeSlots } from '@/lib/booking-data';
+import { bookingRatePricing, formatAed, formatDuration, generateBookingCode, getBookingTotals, getCapacityPerVehicle, getExperience, getSelectedRateForDuration, initialBookingDraft, timeSlots } from '@/lib/booking-data';
 import type { BookingDraft, BookingRateOption, BookingRequest } from '@/lib/booking-data';
 import { companyInfo } from '@/lib/company-info';
 import { getLivePackageImage } from '@/lib/edrive-package-images';
 import { cleanMultiline, cleanSingleLine, dubaiDateParts, dubaiDateValue, isSelectableDubaiBookingTime, isValidOptionalEmail, isValidPhone } from '@/lib/public-request-validation';
 import { supabase } from '@/lib/supabase-client';
 import { cn } from '@/lib/utils';
-import { getEffectivePackagePrice } from '@/lib/package-pricing';
+import { getPackagePricePresentation } from '@/lib/package-pricing';
 import { PackageOfferPrice, PackageOfferRibbon } from '@/components/edrive/shared/package-offer-price';
 import { BookingInfoAccordions } from './booking-info-accordions';
 import { BookingSuccess } from './booking-success';
@@ -103,19 +103,22 @@ function packageFamilyKey(row: PackageRateRow) {
 
 function mapRates(rows: PackageRateRow[]): BookingRateOption[] {
   return rows
-    .map((row) => ({
-      id: row.id,
-      title: row.title,
-      slug: row.slug,
-      category: row.category,
-      minutes: Number(row.duration_minutes || 0),
-      price: getEffectivePackagePrice(row, 'b2c'),
-      normalPrice: Number(row.base_price || 0),
-      offerEnabled: row.offer_enabled === true,
-      offerName: row.offer_name,
-      offerPrice: row.b2c_offer_price,
-      capacity: Number(row.capacity || 2)
-    }))
+    .map((row) => {
+      const price = getPackagePricePresentation(row, 'b2c');
+      return {
+        id: row.id,
+        title: row.title,
+        slug: row.slug,
+        category: row.category,
+        minutes: Number(row.duration_minutes || 0),
+        price: price.effectivePrice,
+        normalPrice: price.normalPrice,
+        offerEnabled: price.active,
+        offerName: price.active ? price.label : null,
+        offerPrice: price.offerPrice,
+        capacity: Number(row.capacity || 2)
+      };
+    })
     .filter((rate) => rate.id && rate.minutes > 0 && rate.price > 0)
     .sort((a, b) => a.minutes - b.minutes || String(a.title).localeCompare(String(b.title)));
 }
@@ -453,6 +456,7 @@ function PackageSelectionStep({ groups, selectedRateId, onSelect }: { groups: Pa
         {groups.map((group, index) => {
           const active = group.rates.some((rate) => rate.id === selectedRateId);
           const startingPrice = Math.min(...group.rates.map((rate) => rate.price));
+          const offeredRate = group.rates.find((rate) => getPackagePricePresentation(bookingRatePricing(rate), 'b2c').active);
           return (
             <button key={group.key} type="button" onClick={() => onSelect(group)} className={cn('group overflow-hidden rounded-[1.25rem] border bg-white text-left transition duration-200 hover:-translate-y-0.5 hover:border-primary/45 hover:shadow-md', active ? 'border-primary bg-gradient-to-br from-primary-50 via-white to-accent-100/40 shadow-md ring-1 ring-primary/15' : 'border-border shadow-sm')} aria-pressed={active}>
               <PackageSelectionImage src={group.imageUrl} title={group.title} category={group.category} index={index} />
@@ -460,8 +464,9 @@ function PackageSelectionStep({ groups, selectedRateId, onSelect }: { groups: Pa
                 <div>
                   <div className="flex flex-wrap items-center gap-2"><TicketCheck className="size-4 text-primary" aria-hidden="true" /><h3 className="font-heading text-lg font-semibold text-foreground">{group.title}</h3></div>
                   <p className="mt-1.5 text-xs leading-5 text-muted-foreground">{group.categoryLabel} | {group.capacity} seater</p>
+                  {offeredRate ? <div className="mt-2"><PackageOfferRibbon pricing={bookingRatePricing(offeredRate)} /></div> : null}
                   <p className="mt-2 text-sm font-bold text-primary-900">From {formatAed(startingPrice)}</p>
-                  <div className="mt-3 flex flex-wrap gap-1.5">{group.rates.map((rate) => <span key={rate.id} className="rounded-full bg-primary-50 px-2 py-1 text-[10px] font-semibold text-primary-900">{rate.minutes} min | {formatAed(rate.price)}</span>)}</div>
+                  <div className="mt-3 grid gap-1.5">{group.rates.map((rate) => <div key={rate.id} className="flex flex-wrap items-baseline gap-1.5 rounded-xl bg-primary-50 px-2 py-1.5 text-[10px] font-semibold text-primary-900"><span>{rate.minutes} min</span><PackageOfferPrice pricing={bookingRatePricing(rate)} audience="b2c" compact /></div>)}</div>
                 </div>
                 <span className={cn('mt-1 flex size-5 shrink-0 items-center justify-center rounded-full border', active ? 'border-primary bg-primary text-white' : 'border-border bg-background')}>{active ? <Check className="size-3" aria-hidden="true" /> : null}</span>
               </div>
@@ -483,7 +488,10 @@ function DurationStep({ draft, onUpdate }: { draft: BookingDraft; onUpdate: (val
   const experience = getExperience(draft.experienceType);
   const packages: BookingRateOption[] = draft.selectedPackageRates || [];
   if (!packages.length) return <div className="rounded-[1.25rem] border border-amber-200 bg-amber-50 p-4 text-sm font-semibold leading-6 text-amber-800">Please select a ride package first. Contact the team if you need help choosing an option.</div>;
-  return <div><p className="mb-3 text-sm leading-6 text-muted-foreground">Choose duration for {draft.selectedPackageName || experience.title}. Prices shown are per vehicle.</p><div className="grid gap-3 md:grid-cols-3">{packages.map((item) => <ChoiceButton key={item.id || item.minutes} active={draft.selectedPackageRateId === item.id} onClick={() => onUpdate({ selectedPackageRateId: item.id, selectedPackageName: item.title || draft.selectedPackageName, selectedPackageSlug: item.slug || draft.selectedPackageSlug, durationMinutes: item.minutes, selectedPackagePrice: item.price, selectedPackageB2BPrice: undefined, selectedPackageCapacity: item.capacity })} title={formatDuration(item.minutes)} detail={<PackageOfferPrice pricing={{ base_price: item.normalPrice ?? item.price, offer_enabled: item.offerEnabled, offer_name: item.offerName, b2c_offer_price: item.offerPrice }} audience="b2c" compact />} ribbon={item.offerEnabled ? <PackageOfferRibbon pricing={{ base_price: item.normalPrice ?? item.price, offer_enabled: item.offerEnabled, offer_name: item.offerName, b2c_offer_price: item.offerPrice }} /> : null} />)}</div></div>;
+  return <div><p className="mb-3 text-sm leading-6 text-muted-foreground">Choose duration for {draft.selectedPackageName || experience.title}. Prices shown are per vehicle.</p><div className="grid gap-3 md:grid-cols-3">{packages.map((item) => {
+    const pricing = bookingRatePricing(item);
+    return <ChoiceButton key={item.id || item.minutes} active={draft.selectedPackageRateId === item.id} onClick={() => onUpdate({ selectedPackageRateId: item.id, selectedPackageName: item.title || draft.selectedPackageName, selectedPackageSlug: item.slug || draft.selectedPackageSlug, durationMinutes: item.minutes, selectedPackagePrice: item.price, selectedPackageB2BPrice: undefined, selectedPackageCapacity: item.capacity })} title={formatDuration(item.minutes)} detail={<PackageOfferPrice pricing={pricing} audience="b2c" compact />} ribbon={<PackageOfferRibbon pricing={pricing} />} />;
+  })}</div></div>;
 }
 
 function ChoiceButton({ active, onClick, title, detail, ribbon }: { active: boolean; onClick: () => void; title: string; detail: ReactNode; ribbon?: ReactNode }) {
