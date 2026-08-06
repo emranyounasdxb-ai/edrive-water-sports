@@ -9,12 +9,14 @@ export function HeroVideoMedia({
   fallbackImage,
   fallbackAlt,
   priority = false,
-  objectPosition = 'object-center'
+  objectPosition = 'object-center',
+  mediaClassName = ''
 }: {
   fallbackImage: string;
   fallbackAlt: string;
   priority?: boolean;
   objectPosition?: string;
+  mediaClassName?: string;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [videoReady, setVideoReady] = useState(false);
@@ -92,7 +94,7 @@ export function HeroVideoMedia({
         aria-hidden={!showFallback}
         data-public-hero-image
         data-video-fallback={showFallback ? 'visible' : 'hidden'}
-        className={`object-cover ${objectPosition}`}
+        className={`object-cover ${objectPosition} ${mediaClassName}`}
         style={{ visibility: showFallback ? 'visible' : 'hidden' }}
         sizes="100vw"
       />
@@ -100,7 +102,7 @@ export function HeroVideoMedia({
         ref={videoRef}
         data-public-hero-video
         data-video-ready={showVideo ? 'true' : 'false'}
-        className={`absolute inset-0 size-full object-cover ${objectPosition}`}
+        className={`absolute inset-0 size-full object-cover ${objectPosition} ${mediaClassName}`}
         style={{ visibility: showVideo ? 'visible' : 'hidden' }}
         autoPlay
         muted

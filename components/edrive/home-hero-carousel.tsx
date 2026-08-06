@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowLeft, ArrowRight, Sparkles } from 'lucide-react';
 import { formatAed } from '@/lib/booking-data';
 import { whatsappUrl } from '@/lib/company-info';
@@ -106,10 +106,15 @@ export function HomeHeroCarousel() {
   const previousSlide = useCallback(() => showSlide(activeSlide - 1), [activeSlide, showSlide]);
   const nextSlide = useCallback(() => showSlide(activeSlide + 1), [activeSlide, showSlide]);
 
-  const slideTransition = useMemo(() => cn(
-    'absolute inset-0 transition-[opacity,transform] duration-700 ease-out',
-    reducedMotion && 'transition-opacity duration-150'
-  ), [reducedMotion]);
+  const planeTransition = reducedMotion
+    ? 'transition-opacity duration-150'
+    : 'transition-transform duration-[800ms] ease-[cubic-bezier(0.64,0,0.36,1)]';
+  const slideOnePosition = reducedMotion
+    ? (activeSlide === 0 ? 'opacity-100' : 'opacity-0')
+    : (activeSlide === 0 ? 'translate-x-0' : '-translate-x-full');
+  const slideTwoPosition = reducedMotion
+    ? (activeSlide === 1 ? 'opacity-100' : 'opacity-0')
+    : (activeSlide === 1 ? 'translate-x-0' : 'translate-x-full');
 
   function handleTouchEnd(event: React.TouchEvent<HTMLElement>) {
     const start = touchStart.current;
@@ -142,10 +147,10 @@ export function HomeHeroCarousel() {
       }}
       onTouchEnd={handleTouchEnd}
     >
-      <HeroVideoMedia fallbackImage={dubaiWaterfrontImage} fallbackAlt="Jet ski and jet car riding across the Dubai waterfront" priority objectPosition="object-[68%_68%]" />
+      <HeroVideoMedia fallbackImage={dubaiWaterfrontImage} fallbackAlt="Jet ski and jet car riding across the Dubai waterfront" priority objectPosition="object-[68%_68%]" mediaClassName={cn(planeTransition, slideOnePosition)} />
 
       <article
-        className={cn(slideTransition, activeSlide === 0 ? 'z-10 opacity-100 translate-x-0' : 'pointer-events-none opacity-0', !reducedMotion && activeSlide !== 0 && '-translate-x-2')}
+        className={cn('absolute inset-0 z-10', planeTransition, slideOnePosition, activeSlide !== 0 && 'pointer-events-none')}
         role="group"
         aria-roledescription="slide"
         aria-label={`1 of ${slideCount}: eDrive Water Sports`}
@@ -182,7 +187,7 @@ export function HomeHeroCarousel() {
 
       {hasSummerSlide ? (
         <article
-          className={cn(slideTransition, activeSlide === 1 ? 'z-10 opacity-100 translate-x-0' : 'pointer-events-none opacity-0', !reducedMotion && activeSlide !== 1 && 'translate-x-2')}
+          className={cn('absolute inset-0 z-10', planeTransition, slideTwoPosition, activeSlide !== 1 && 'pointer-events-none')}
           role="group"
           aria-roledescription="slide"
           aria-label="2 of 2: Summer Offers"
