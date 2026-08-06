@@ -1,0 +1,232 @@
+'use client';
+
+import Image from 'next/image';
+import Link from 'next/link';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ArrowLeft, ArrowRight, Sparkles } from 'lucide-react';
+import { formatAed } from '@/lib/booking-data';
+import { whatsappUrl } from '@/lib/company-info';
+import { dubaiWaterfrontImage } from '@/lib/mock-data';
+import { getPackagePricePresentation, type PackagePricingFields } from '@/lib/package-pricing';
+import { supabase } from '@/lib/supabase-client';
+import { cn } from '@/lib/utils';
+import { HeroVideoMedia } from './hero-video-media';
+import { MotionReveal } from './motion-reveal';
+import { publicHeroContentClass, publicHeroFrameClass } from './public-video-hero';
+
+const summerHeroImage = '/images/edrive/home/home-summer-offer-hero.webp';
+const autoplayDelay = 6500;
+const swipeThreshold = 52;
+
+type PublicOfferPackage = PackagePricingFields & {
+  id: string;
+  title: string;
+  category: string;
+};
+
+type OfferSummary = {
+  count: number;
+  lowestPrice: number;
+};
+
+export function HomeHeroCarousel() {
+  const [offerSummary, setOfferSummary] = useState<OfferSummary | null>(null);
+  const [activeSlide, setActiveSlide] = useState(0);
+  const [pointerInside, setPointerInside] = useState(false);
+  const [focusInside, setFocusInside] = useState(false);
+  const [pageVisible, setPageVisible] = useState(true);
+  const [reducedMotion, setReducedMotion] = useState(false);
+  const [timerVersion, setTimerVersion] = useState(0);
+  const touchStart = useRef<{ x: number; y: number } | null>(null);
+  const hasSummerSlide = Boolean(offerSummary);
+  const slideCount = hasSummerSlide ? 2 : 1;
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadOffers() {
+      const { data, error } = await supabase.rpc('get_public_packages', { p_categories: null });
+      if (!mounted) return;
+      if (error) {
+        setOfferSummary(null);
+        return;
+      }
+
+      const activeOffers = ((data || []) as PublicOfferPackage[])
+        .map((item) => getPackagePricePresentation(item, 'b2c'))
+        .filter((price) => price.active);
+
+      if (!activeOffers.length) {
+        setOfferSummary(null);
+        return;
+      }
+
+      setOfferSummary({
+        count: activeOffers.length,
+        lowestPrice: Math.min(...activeOffers.map((price) => price.effectivePrice))
+      });
+    }
+
+    void loadOffers();
+    return () => { mounted = false; };
+  }, []);
+
+  useEffect(() => {
+    if (hasSummerSlide) return;
+    setActiveSlide(0);
+  }, [hasSummerSlide]);
+
+  useEffect(() => {
+    const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const updateMotion = () => setReducedMotion(motionQuery.matches);
+    const updateVisibility = () => setPageVisible(document.visibilityState === 'visible');
+    updateMotion();
+    updateVisibility();
+    motionQuery.addEventListener?.('change', updateMotion);
+    document.addEventListener('visibilitychange', updateVisibility);
+    return () => {
+      motionQuery.removeEventListener?.('change', updateMotion);
+      document.removeEventListener('visibilitychange', updateVisibility);
+    };
+  }, []);
+
+  const autoplayPaused = pointerInside || focusInside || !pageVisible || reducedMotion;
+
+  useEffect(() => {
+    if (slideCount < 2 || autoplayPaused) return;
+    const timer = window.setTimeout(() => setActiveSlide((current) => (current + 1) % slideCount), autoplayDelay);
+    return () => window.clearTimeout(timer);
+  }, [activeSlide, autoplayPaused, slideCount, timerVersion]);
+
+  const showSlide = useCallback((index: number) => {
+    setActiveSlide(((index % slideCount) + slideCount) % slideCount);
+    setTimerVersion((value) => value + 1);
+  }, [slideCount]);
+
+  const previousSlide = useCallback(() => showSlide(activeSlide - 1), [activeSlide, showSlide]);
+  const nextSlide = useCallback(() => showSlide(activeSlide + 1), [activeSlide, showSlide]);
+
+  const slideTransition = useMemo(() => cn(
+    'absolute inset-0 transition-[opacity,transform] duration-700 ease-out',
+    reducedMotion && 'transition-opacity duration-150'
+  ), [reducedMotion]);
+
+  function handleTouchEnd(event: React.TouchEvent<HTMLElement>) {
+    const start = touchStart.current;
+    touchStart.current = null;
+    if (!start || slideCount < 2) return;
+    const touch = event.changedTouches[0];
+    const deltaX = touch.clientX - start.x;
+    const deltaY = touch.clientY - start.y;
+    if (Math.abs(deltaX) < swipeThreshold || Math.abs(deltaX) <= Math.abs(deltaY)) return;
+    if (deltaX < 0) nextSlide();
+    else previousSlide();
+  }
+
+  return (
+    <section
+      className={publicHeroFrameClass}
+      data-public-hero
+      data-home-hero-carousel
+      aria-label="eDrive Water Sports homepage highlights"
+      aria-roledescription="carousel"
+      onPointerEnter={() => setPointerInside(true)}
+      onPointerLeave={() => setPointerInside(false)}
+      onFocusCapture={() => setFocusInside(true)}
+      onBlurCapture={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setFocusInside(false);
+      }}
+      onTouchStart={(event) => {
+        const touch = event.touches[0];
+        touchStart.current = { x: touch.clientX, y: touch.clientY };
+      }}
+      onTouchEnd={handleTouchEnd}
+    >
+      <HeroVideoMedia fallbackImage={dubaiWaterfrontImage} fallbackAlt="Jet ski and jet car riding across the Dubai waterfront" priority objectPosition="object-[68%_68%]" />
+
+      <article
+        className={cn(slideTransition, activeSlide === 0 ? 'z-10 opacity-100 translate-x-0' : 'pointer-events-none opacity-0', !reducedMotion && activeSlide !== 0 && '-translate-x-2')}
+        role="group"
+        aria-roledescription="slide"
+        aria-label={`1 of ${slideCount}: eDrive Water Sports`}
+        aria-hidden={activeSlide !== 0}
+      >
+        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(5,27,39,0.98)_0%,rgba(5,35,48,0.90)_34%,rgba(5,35,48,0.38)_58%,rgba(5,35,48,0.04)_82%)]" />
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(4,23,33,0.36)_0%,transparent_38%,rgba(4,23,33,0.24)_100%)]" />
+
+        <div className={publicHeroContentClass}>
+          <MotionReveal>
+            <div className="max-w-2xl">
+              <p className="mb-4 text-xs font-bold uppercase tracking-[0.24em] text-accent-300">eDrive Water Sports</p>
+              <h1 className="font-heading text-4xl font-semibold leading-[1.03] text-white sm:text-5xl lg:text-[3.45rem]">
+                Jet Ski & Jet Car
+                <span className="mt-1 block text-primary-300">Dubai Islands</span>
+              </h1>
+              <p className="mt-5 max-w-xl text-base leading-7 text-white/82 sm:text-lg">Book premium jet ski rentals, luxury jet car rides, and Dubai water sports experiences with clear pricing and fast support.</p>
+              <div className="mt-8 flex">
+                <a
+                  href={whatsappUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  tabIndex={activeSlide === 0 ? 0 : -1}
+                  className="inline-flex min-h-12 w-auto items-center justify-center gap-2 rounded-full border border-emerald-300/45 bg-[#25D366] px-6 text-sm font-bold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.32),0_14px_28px_rgba(37,211,102,0.22)] transition hover:-translate-y-0.5 hover:bg-[#1EBE5D] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.38),0_18px_36px_rgba(37,211,102,0.30)]"
+                >
+                  <span>Check Availability</span>
+                  <ArrowRight className="size-4 shrink-0" aria-hidden="true" />
+                </a>
+              </div>
+            </div>
+          </MotionReveal>
+        </div>
+      </article>
+
+      {hasSummerSlide ? (
+        <article
+          className={cn(slideTransition, activeSlide === 1 ? 'z-10 opacity-100 translate-x-0' : 'pointer-events-none opacity-0', !reducedMotion && activeSlide !== 1 && 'translate-x-2')}
+          role="group"
+          aria-roledescription="slide"
+          aria-label="2 of 2: Summer Offers"
+          aria-hidden={activeSlide !== 1}
+        >
+          <Image
+            src={summerHeroImage}
+            alt="eDrive Jet Ski and Jet Car summer rides at Dubai Islands"
+            fill
+            sizes="100vw"
+            className="object-cover object-[68%_center] sm:object-center"
+          />
+          <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(4,23,34,0.98)_0%,rgba(5,30,43,0.94)_36%,rgba(5,35,48,0.52)_62%,rgba(5,35,48,0.06)_88%)]" />
+          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(4,23,33,0.30)_0%,transparent_38%,rgba(4,23,33,0.48)_100%)]" />
+          <div className={publicHeroContentClass}>
+            <div className="mx-11 max-w-[44rem] pb-10 sm:mx-14 sm:pb-8 lg:mx-16">
+              <span className="inline-flex h-7 items-center gap-1.5 whitespace-nowrap rounded-full bg-gradient-to-r from-amber-500 to-orange-500 px-3 text-[10px] font-bold uppercase tracking-[0.075em] text-white shadow-[0_4px_12px_rgba(217,119,6,0.24)]">
+                <Sparkles className="size-3" aria-hidden="true" />Limited-Time Summer Offers
+              </span>
+              <h2 className="mt-4 font-heading text-4xl font-semibold leading-[1.03] text-white sm:text-5xl lg:text-[3.45rem]">
+                Make a Splash This Summer
+                <span className="mt-1 block text-amber-300">Ride More. Save More.</span>
+              </h2>
+              <p className="mt-5 max-w-2xl text-base leading-7 text-white/85 sm:text-lg">Unlock special summer prices on selected Jet Ski and Jet Car experiences at Dubai Islands. Choose your ride, reserve your preferred time and make this summer unforgettable.</p>
+              {offerSummary ? <p className="mt-4 w-fit rounded-full border border-white/15 bg-primary-900/60 px-3 py-1.5 text-xs font-bold text-white/90 backdrop-blur-sm">{offerSummary.count} Summer {offerSummary.count === 1 ? 'Offer' : 'Offers'} Live <span aria-hidden="true">·</span> From {formatAed(offerSummary.lowestPrice)}</p> : null}
+              <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+                <Link href="/rentals#live-packages" tabIndex={activeSlide === 1 ? 0 : -1} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-amber-400 px-6 text-sm font-bold text-primary-900 shadow-[0_14px_28px_rgba(245,158,11,0.22)] transition hover:-translate-y-0.5 hover:bg-amber-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-200 focus-visible:ring-offset-2 focus-visible:ring-offset-primary-900">Explore Summer Offers<ArrowRight className="size-4" aria-hidden="true" /></Link>
+                <Link href="/booking" tabIndex={activeSlide === 1 ? 0 : -1} className="inline-flex min-h-12 items-center justify-center rounded-full border border-white/35 bg-white/10 px-6 text-sm font-bold text-white backdrop-blur-sm transition hover:-translate-y-0.5 hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-primary-900">Book Your Summer Ride</Link>
+              </div>
+            </div>
+          </div>
+        </article>
+      ) : null}
+
+      {slideCount > 1 ? (
+        <>
+          <button type="button" onClick={previousSlide} className="absolute left-2.5 top-1/2 z-30 flex size-10 -translate-y-1/2 items-center justify-center rounded-full border border-white/35 bg-primary-900/45 text-white shadow-[0_8px_22px_rgba(4,23,33,0.28)] backdrop-blur-sm transition hover:border-white/60 hover:bg-primary-900/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 focus-visible:ring-offset-2 focus-visible:ring-offset-primary-900 sm:left-5 sm:size-11 lg:left-6 lg:size-12" aria-label="Previous hero slide">
+            <ArrowLeft className="size-[18px] sm:size-5" aria-hidden="true" />
+          </button>
+          <button type="button" onClick={nextSlide} className="absolute right-2.5 top-1/2 z-30 flex size-10 -translate-y-1/2 items-center justify-center rounded-full border border-white/35 bg-primary-900/45 text-white shadow-[0_8px_22px_rgba(4,23,33,0.28)] backdrop-blur-sm transition hover:border-white/60 hover:bg-primary-900/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 focus-visible:ring-offset-2 focus-visible:ring-offset-primary-900 sm:right-5 sm:size-11 lg:right-6 lg:size-12" aria-label="Next hero slide">
+            <ArrowRight className="size-[18px] sm:size-5" aria-hidden="true" />
+          </button>
+        </>
+      ) : null}
+    </section>
+  );
+}

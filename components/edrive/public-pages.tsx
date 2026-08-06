@@ -15,14 +15,14 @@ import {
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { companyInfo, whatsappUrl } from '@/lib/company-info';
-import { dubaiWaterfrontImage, fleetHeroImage, jetCarLightImage, jetSkiLightImage } from '@/lib/mock-data';
+import { fleetHeroImage, jetCarLightImage, jetSkiLightImage } from '@/lib/mock-data';
 import { cn } from '@/lib/utils';
 import { BookingForm } from './booking-form';
 import { ContactForm } from './contact-form';
-import { HeroVideoMedia } from './hero-video-media';
+import { HomeHeroCarousel } from './home-hero-carousel';
 import { MotionReveal } from './motion-reveal';
 import { PublicFleetShowcase } from './public-fleet-showcase';
-import { PublicVideoHero, publicHeroContentClass, publicHeroFrameClass, type PublicHeroAction } from './public-video-hero';
+import { PublicVideoHero, type PublicHeroAction } from './public-video-hero';
 
 const sectionPad = 'py-10 sm:py-12 lg:py-14';
 
@@ -44,7 +44,7 @@ const bookingSteps = [
 export function HomePage() {
   return (
     <>
-      <HomeHero />
+      <HomeHeroCarousel />
 
       <section className="bg-[#f4f5f5]" data-home-rides>
         <div className={cn('container-x', sectionPad)}>
@@ -104,40 +104,6 @@ export function HomePage() {
 
       <HomeContactStrip />
     </>
-  );
-}
-
-function HomeHero() {
-  return (
-    <section className={publicHeroFrameClass} data-public-hero>
-      <HeroVideoMedia fallbackImage={dubaiWaterfrontImage} fallbackAlt="Jet ski and jet car riding across the Dubai waterfront" priority objectPosition="object-[68%_68%]" />
-      <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(5,27,39,0.98)_0%,rgba(5,35,48,0.90)_34%,rgba(5,35,48,0.38)_58%,rgba(5,35,48,0.04)_82%)]" />
-      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(4,23,33,0.36)_0%,transparent_38%,rgba(4,23,33,0.24)_100%)]" />
-
-      <div className={publicHeroContentClass}>
-        <MotionReveal>
-          <div className="max-w-2xl">
-            <p className="mb-4 text-xs font-bold uppercase tracking-[0.24em] text-accent-300">eDrive Water Sports</p>
-            <h1 className="font-heading text-4xl font-semibold leading-[1.03] text-white sm:text-5xl lg:text-[3.45rem]">
-              Jet Ski & Jet Car
-              <span className="mt-1 block text-primary-300">Dubai Islands</span>
-            </h1>
-            <p className="mt-5 max-w-xl text-base leading-7 text-white/82 sm:text-lg">Book premium jet ski rentals, luxury jet car rides, and Dubai water sports experiences with clear pricing and fast support.</p>
-            <div className="mt-8 flex">
-              <a
-                href={whatsappUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex min-h-12 w-auto items-center justify-center gap-2 rounded-full border border-emerald-300/45 bg-[#25D366] px-6 text-sm font-bold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.32),0_14px_28px_rgba(37,211,102,0.22)] transition hover:-translate-y-0.5 hover:bg-[#1EBE5D] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.38),0_18px_36px_rgba(37,211,102,0.30)]"
-              >
-                <span>Check Availability</span>
-                <ArrowRight className="size-4 shrink-0" aria-hidden="true" />
-              </a>
-            </div>
-          </div>
-        </MotionReveal>
-      </div>
-    </section>
   );
 }
 
