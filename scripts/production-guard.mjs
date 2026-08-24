@@ -316,17 +316,22 @@ assert(!robotsRoute.includes("disallow: ['/admin/']"), 'Crawlers must be able to
 assert(!sitemapRoute.includes("'admin'"), 'Admin routes must remain absent from the public sitemap.');
 assert(publicShell.includes('<span>Staff Login</span>') && publicShell.includes('href="/admin"'), 'The public Staff Login link must remain visible and point to /admin.');
 const optimizedPublicImages = [
+  'jc-01.webp',
   'jc-02.webp',
   'jc-03.webp',
   'jc-04.webp',
+  'js-02.webp',
   'jet-car-2-seater-20-min.webp',
   'jet-car-2-seater-30-min.webp',
   'jet-car-2-seater-60-min.webp',
-  'jet-car-4-seater-20-min.webp'
+  'jet-car-4-seater-20-min.webp',
+  'jet-ski-30-minutes.webp',
+  'jet-ski-60-minutes.webp',
+  'jet-ski-90-minutes.webp'
 ];
-assert(optimizedPublicImages.every((file) => fs.existsSync(path.join(root, 'public/images/edrive/optimized', file))), 'All seven optimized public fleet and package images must exist.');
+assert(optimizedPublicImages.every((file) => fs.existsSync(path.join(root, 'public/images/edrive/optimized', file))), 'All twelve optimized public fleet and package images must exist.');
 assert(optimizedPublicImages.every((file) => fs.statSync(path.join(root, 'public/images/edrive/optimized', file)).size <= 300_000), 'Optimized public images must remain at or below 300 KB.');
-assert((publicImageOverrides.match(/\.png': '\/images\/edrive\/optimized\//g) || []).length === 7, 'All seven known heavy public PNG filenames must map to local optimized WebP assets.');
+assert((publicImageOverrides.match(/\.png': '\/images\/edrive\/optimized\//g) || []).length === 12, 'All twelve known heavy public PNG filenames must map to local optimized WebP assets.');
 assert(packageShowcase.includes('getPublicImageUrl(item.image_url)') && publicFleetShowcase.includes('getPublicImageUrl(unit.image_url)') && bookingWizard.includes('getPublicImageUrl(savedImage)'), 'Every active public fleet and package image path must apply optimized URL overrides.');
 assert(companyInfo.includes('https://api.whatsapp.com/send/?phone=') && companyInfo.includes('&text=${encodedMessage}'), 'Public WhatsApp links must use the direct official endpoint and centralized encoded message handling.');
 assert(migration.includes('revoke select on table public.packages from anon'), 'Anonymous direct package table access must be revoked.');
