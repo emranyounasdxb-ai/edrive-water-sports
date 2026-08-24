@@ -75,7 +75,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <head>
-        <script src="https://analytics.ahrefs.com/analytics.js" data-key="UoYoq8v0eRrcGtZTGPyI0g" async />
+        <script src="https://analytics.ahrefs.com/analytics.js" data-key="DN0Kn/t2hWiHus4SSVkwIg" async />
       </head>
       <body className={`${inter.variable} ${poppins.variable}`}>
         <PwaRegister />
