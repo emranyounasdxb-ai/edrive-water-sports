@@ -118,7 +118,10 @@ function PublicFooter() {
         </div>
         <div className="flex flex-col gap-3">
           <h3 className="text-sm font-semibold text-foreground">Explore</h3>
-          {publicNavItems.map((item) => <Link key={item.href} href={item.href} className="text-sm text-muted-foreground transition hover:text-primary">{item.label}</Link>)}
+          {publicNavItems.filter((item) => item.href !== '/rentals').map((item) => <Link key={item.href} href={item.href} className="text-sm text-muted-foreground transition hover:text-primary">{item.label}</Link>)}
+          <Link href="/rentals" className="text-sm text-muted-foreground transition hover:text-primary">All Rentals</Link>
+          <Link href="/jet-ski-rentals" className="text-sm text-muted-foreground transition hover:text-primary">Jet Ski Rentals</Link>
+          <Link href="/jet-car-rentals" className="text-sm text-muted-foreground transition hover:text-primary">Jet Car Rentals</Link>
           <Link href="/booking" className="text-sm text-muted-foreground transition hover:text-primary">Book Ride</Link>
           <Link href="/my-booking" prefetch className="text-sm text-muted-foreground transition hover:text-primary">Track My Booking</Link>
         </div>

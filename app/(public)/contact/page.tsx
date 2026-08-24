@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { ContactPage } from '@/components/edrive/public-pages';
+import '../../contact-page-polish.css';
 
 export const metadata: Metadata = {
   title: 'Contact Us Dubai',

@@ -43,6 +43,7 @@ const ownerAndAdmin: AdminNavRole[] = ['super_admin', 'admin'];
 
 export const publicNavItems = [
   { href: '/', label: 'Home' },
+  { href: '/rentals', label: 'Rentals' },
   { href: '/fleet', label: 'Fleet' },
   { href: '/membership', label: 'Membership' },
   { href: '/contact', label: 'Contact' }

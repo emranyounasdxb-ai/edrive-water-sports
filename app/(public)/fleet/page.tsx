@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { FleetPage } from '@/components/edrive/public-pages';
+import '../../fleet-image-polish.css';
 
 export const metadata: Metadata = {
   title: 'Jet Ski & Jet Car Fleet Dubai',

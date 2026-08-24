@@ -7,7 +7,7 @@ import { jetCarLightImage } from '@/lib/mock-data';
 
 export const metadata: Metadata = {
   title: 'Jet Car Rental Dubai',
-  description: 'Book a luxury jet car rental in Dubai with eDrive Water Sports at Dubai Islands. Compare ride durations, prices, seating options, and premium water sports experiences.'
+  description: 'Book a Jet Car rental at Dubai Islands with clear durations and pricing. Choose your preferred experience and request your ride online with eDrive.'
 };
 
 export default function Page() {

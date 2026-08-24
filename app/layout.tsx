@@ -3,12 +3,6 @@ import type { ReactNode } from 'react';
 import { Inter, Poppins } from 'next/font/google';
 import { PwaRegister } from '@/components/edrive/pwa-register';
 import './globals.css';
-import './contact-cta.css';
-import './hero-cta.css';
-import './home-responsive.css';
-import './contact-page-polish.css';
-import './manager-app-polish.css';
-import './fleet-image-polish.css';
 
 const inter = Inter({
   subsets: ['latin'],

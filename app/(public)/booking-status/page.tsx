@@ -7,6 +7,9 @@ export const metadata: Metadata = {
   alternates: {
     canonical: '/my-booking/'
   },
+  openGraph: {
+    url: '/my-booking/'
+  },
   robots: {
     index: false,
     follow: true
