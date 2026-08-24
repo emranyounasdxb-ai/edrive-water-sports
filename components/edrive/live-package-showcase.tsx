@@ -6,9 +6,10 @@ import { ArrowRight, Clock, MessageCircle, RefreshCw, TicketCheck, Users } from 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/supabase-client';
-import { whatsappUrl } from '@/lib/company-info';
+import { whatsappMessageUrl, whatsappUrl } from '@/lib/company-info';
 import { getLivePackageImage } from '@/lib/edrive-package-images';
 import { getPackagePricePresentation } from '@/lib/package-pricing';
+import { getPublicImageUrl } from '@/lib/public-image-overrides';
 import { PackageOfferPrice, PackageOfferRibbon } from '@/components/edrive/shared/package-offer-price';
 import { cn } from '@/lib/utils';
 
@@ -70,7 +71,7 @@ function fallbackImageForPackage(item: LivePackage, index = 0) {
 }
 
 function imageForLivePackage(item: LivePackage, index = 0) {
-  return String(item.image_url || '').trim() || fallbackImageForPackage(item, index);
+  return getPublicImageUrl(item.image_url) || fallbackImageForPackage(item, index);
 }
 
 function sortedPackages(items: LivePackage[], sortByDuration = false) {
@@ -249,7 +250,7 @@ Please confirm availability and the best timing.`);
         <p title={description} className="mt-2 min-h-10 overflow-hidden text-[12px] leading-5 text-muted-foreground [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]">{description}</p>
         <div className="mt-auto grid gap-1.5 pt-3">
           <Button asChild size="sm" className="h-11 w-full rounded-full text-xs font-bold shadow-[0_8px_18px_rgba(8,37,50,0.12)]"><Link href={bookingHref} className="justify-center whitespace-nowrap">Book This Package<ArrowRight className="ml-1 size-3 shrink-0" aria-hidden="true" /></Link></Button>
-          <Button asChild size="sm" variant="outline" className="h-11 w-full rounded-full border-emerald-300 bg-emerald-500 text-xs font-bold text-white shadow-[0_8px_18px_rgba(16,185,129,0.14)] hover:bg-emerald-600 hover:text-white"><a href={`${whatsappUrl}?text=${whatsappMessage}`} target="_blank" rel="noopener noreferrer" className="justify-center whitespace-nowrap">Ask on WhatsApp</a></Button>
+          <Button asChild size="sm" variant="outline" className="h-11 w-full rounded-full border-emerald-300 bg-emerald-500 text-xs font-bold text-white shadow-[0_8px_18px_rgba(16,185,129,0.14)] hover:bg-emerald-600 hover:text-white"><a href={whatsappMessageUrl(whatsappMessage)} target="_blank" rel="noopener noreferrer" className="justify-center whitespace-nowrap">Ask on WhatsApp</a></Button>
         </div>
       </div>
     </article>

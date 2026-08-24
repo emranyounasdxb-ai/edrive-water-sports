@@ -2,7 +2,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowRight, BadgeCheck, CalendarCheck, Camera, Car, CheckCircle2, Crown, Headphones, LifeBuoy, MapPin, MessageCircle, Phone, ShieldCheck, Sparkles, Star, TicketCheck, Users, Waves } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { companyInfo, whatsappUrl } from '@/lib/company-info';
+import { companyInfo, whatsappMessageUrl, whatsappUrl } from '@/lib/company-info';
 import { dubaiWaterfrontImage, fleetHeroImage, fleetShowcaseImage, jetCarLightImage, jetSkiLightImage } from '@/lib/mock-data';
 import { getBookingHref, getPackagesBySlugs, publicPackages } from '@/lib/public-packages';
 
@@ -134,7 +134,7 @@ export function HomeExpansionSections() {
                 <p className="mt-3 text-xs font-semibold text-muted-foreground"><span className="text-foreground">Best for:</span> {item.bestFor}</p>
                 <div className="mt-auto flex flex-col gap-2 pt-5 sm:flex-row">
                   <Button asChild size="sm" className="flex-1"><Link href={getBookingHref(item.slug)}><CalendarCheck data-icon aria-hidden="true" />Book</Link></Button>
-                  <Button asChild size="sm" variant="outline" className="flex-1"><a href={`${whatsappUrl}?text=${encodeURIComponent(`Hello eDrive, I am interested in the ${item.name} package.`)}`} target="_blank" rel="noopener noreferrer">WhatsApp</a></Button>
+                  <Button asChild size="sm" variant="outline" className="flex-1"><a href={whatsappMessageUrl(encodeURIComponent(`Hello eDrive, I am interested in the ${item.name} package.`))} target="_blank" rel="noopener noreferrer">WhatsApp</a></Button>
                 </div>
               </article>
             ))}

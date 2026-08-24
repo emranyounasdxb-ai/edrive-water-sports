@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { BookingRequest, BookingStatus, formatAed, getExperience, normalizeBookingStatus } from '@/lib/booking-data';
 import { bookingRequestsTable, bookingRowToRequest } from '@/lib/booking-records';
-import { companyInfo, whatsappUrl } from '@/lib/company-info';
+import { companyInfo, whatsappMessageUrl } from '@/lib/company-info';
 import { supabase } from '@/lib/supabase-client';
 import { cn } from '@/lib/utils';
 
@@ -97,7 +97,7 @@ export function BookingStatusChecker() {
             </label>
             <div className="mt-4 flex flex-col gap-2 sm:flex-row">
               <Button type="submit" className="rounded-full bg-primary-900 shadow-[0_10px_24px_rgba(8,37,50,0.18)] hover:bg-primary-800" disabled={loading}>{loading ? <Loader2 data-icon className="animate-spin" aria-hidden="true" /> : <Search data-icon aria-hidden="true" />}{loading ? 'Searching...' : 'Search Booking'}</Button>
-              <Button asChild className="rounded-full bg-emerald-500 shadow-[0_10px_22px_rgba(16,185,129,0.25)] hover:bg-emerald-600"><a href={`${whatsappUrl}?text=${whatsappMessage}`} target="_blank" rel="noopener noreferrer"><MessageCircle data-icon aria-hidden="true" />Ask WhatsApp</a></Button>
+              <Button asChild className="rounded-full bg-emerald-500 shadow-[0_10px_22px_rgba(16,185,129,0.25)] hover:bg-emerald-600"><a href={whatsappMessageUrl(whatsappMessage)} target="_blank" rel="noopener noreferrer"><MessageCircle data-icon aria-hidden="true" />Ask WhatsApp</a></Button>
             </div>
             <p className="mt-3 text-xs leading-5 text-muted-foreground">Example: ED-20260707-007. Your reference is shown after submitting the booking form.</p>
           </form>
@@ -215,7 +215,7 @@ function LoadingCard() {
 }
 
 function NotFound({ reference, whatsappMessage }: { reference: string; whatsappMessage: string }) {
-  return <div className="premium-surface mx-auto max-w-2xl rounded-[1.75rem] p-6 text-center"><FileSearch className="mx-auto size-10 text-primary" aria-hidden="true" /><h2 className="mt-4 font-heading text-2xl font-semibold text-foreground">Booking not found</h2><p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-muted-foreground">We could not find {reference || 'this reference'}. Please check the reference number or contact the eDrive team on WhatsApp.</p><Button asChild className="mt-5 rounded-full"><a href={`${whatsappUrl}?text=${whatsappMessage}`} target="_blank" rel="noopener noreferrer"><MessageCircle data-icon aria-hidden="true" />Ask WhatsApp</a></Button></div>;
+  return <div className="premium-surface mx-auto max-w-2xl rounded-[1.75rem] p-6 text-center"><FileSearch className="mx-auto size-10 text-primary" aria-hidden="true" /><h2 className="mt-4 font-heading text-2xl font-semibold text-foreground">Booking not found</h2><p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-muted-foreground">We could not find {reference || 'this reference'}. Please check the reference number or contact the eDrive team on WhatsApp.</p><Button asChild className="mt-5 rounded-full"><a href={whatsappMessageUrl(whatsappMessage)} target="_blank" rel="noopener noreferrer"><MessageCircle data-icon aria-hidden="true" />Ask WhatsApp</a></Button></div>;
 }
 
 function EmptyPreview() {

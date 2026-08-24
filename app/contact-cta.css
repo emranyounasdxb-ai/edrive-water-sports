@@ -82,7 +82,7 @@ main > section.bg-\[\#f4f5f5\].pb-9 .premium-dark.grid > div:nth-child(2) a:nth-
   letter-spacing: -0.018em;
 }
 
-main > section.bg-\[\#f4f5f5\].pb-9 .premium-dark.grid > div:nth-child(2) a[href*="wa.me"] {
+main > section.bg-\[\#f4f5f5\].pb-9 .premium-dark.grid > div:nth-child(2) a[href*="whatsapp.com"] {
   border-color: rgba(84, 255, 176, 0.40) !important;
   background: linear-gradient(145deg, #2cdd76 0%, #20bd64 46%, #0d7561 100%) !important;
   color: #ffffff !important;
@@ -95,11 +95,11 @@ main > section.bg-\[\#f4f5f5\].pb-9 .premium-dark.grid > div:nth-child(2) a[href
     0 2px 0 rgba(5, 94, 84, 0.22) !important;
 }
 
-main > section.bg-\[\#f4f5f5\].pb-9 .premium-dark.grid > div:nth-child(2) a[href*="wa.me"] svg {
+main > section.bg-\[\#f4f5f5\].pb-9 .premium-dark.grid > div:nth-child(2) a[href*="whatsapp.com"] svg {
   display: none !important;
 }
 
-main > section.bg-\[\#f4f5f5\].pb-9 .premium-dark.grid > div:nth-child(2) a[href*="wa.me"]:hover {
+main > section.bg-\[\#f4f5f5\].pb-9 .premium-dark.grid > div:nth-child(2) a[href*="whatsapp.com"]:hover {
   border-color: rgba(84, 255, 176, 0.56) !important;
   background: linear-gradient(145deg, #34e77f 0%, #22c96a 46%, #075e54 100%) !important;
   transform: translateY(-1px);

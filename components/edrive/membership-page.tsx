@@ -2,15 +2,15 @@ import Image from 'next/image';
 import { CheckCircle2, MessageCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { whatsappUrl } from '@/lib/company-info';
+import { whatsappMessageUrl } from '@/lib/company-info';
 import { dubaiWaterfrontImage } from '@/lib/mock-data';
 import { PublicVideoHero } from './public-video-hero';
 
 const sectionPad = 'py-10 sm:py-12 lg:py-14';
 const membershipImage = '/images/edrive/home/home-membership-gold-card.webp';
-const membershipWhatsappUrl = `${whatsappUrl}?text=${encodeURIComponent(
+const membershipWhatsappUrl = whatsappMessageUrl(encodeURIComponent(
   'Hello eDrive, I would like to know more about the eDrive Signature Membership.'
-)}`;
+));
 
 const membershipBenefits = [
   'Member-only offers',

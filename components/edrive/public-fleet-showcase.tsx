@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ArrowRight, Car, RefreshCw, ShipWheel, Users } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { getPublicImageUrl } from '@/lib/public-image-overrides';
 import { supabase } from '@/lib/supabase-client';
 import { cn } from '@/lib/utils';
 
@@ -168,7 +169,7 @@ export function PublicFleetShowcase() {
 function FleetUnitCard({ unit }: { unit: PublicFleetUnit }) {
   const [imageFailed, setImageFailed] = useState(false);
   const type = normalizedType(unit.vehicle_type);
-  const imageSrc = !imageFailed && String(unit.image_url || '').trim() ? String(unit.image_url).trim() : fallbackImage(unit);
+  const imageSrc = !imageFailed && String(unit.image_url || '').trim() ? getPublicImageUrl(unit.image_url) : fallbackImage(unit);
   const details = unitDetails(unit);
   const categoryHref = type === 'jet_ski' ? '/jet-ski-rentals' : '/jet-car-rentals';
   const Icon = type === 'jet_ski' ? ShipWheel : Car;

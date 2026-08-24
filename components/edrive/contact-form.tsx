@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { AppDatePicker } from '@/components/edrive/shared/app-date-picker';
 import { generateBookingCode } from '@/lib/booking-data';
 import { bookingRequestsTable } from '@/lib/booking-records';
-import { companyInfo, whatsappUrl } from '@/lib/company-info';
+import { companyInfo, whatsappMessageUrl } from '@/lib/company-info';
 import { cleanMultiline, cleanSingleLine, isValidOptionalEmail, isValidPhone } from '@/lib/public-request-validation';
 import { supabase } from '@/lib/supabase-client';
 
@@ -59,7 +59,7 @@ export function ContactForm() {
 
   function whatsappInquiryUrl(payload: FormState) {
     const text = encodeURIComponent(`Hello eDrive, I would like to send an inquiry.\n\nName: ${payload.name}\nPhone: ${payload.phone}\nEmail: ${payload.email || 'Not provided'}\nInquiry: ${payload.inquiryType}\nPreferred date: ${payload.preferredDate || 'Not selected'}\n\nMessage: ${payload.message}`);
-    return `${whatsappUrl}?text=${text}`;
+    return whatsappMessageUrl(text);
   }
 
   async function saveLegacyInquiry(payload: FormState) {

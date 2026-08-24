@@ -42,6 +42,11 @@ const myBookingPage = read('app/(public)/my-booking/page.tsx');
 const bookingStatusPublicPage = read('app/(public)/booking-status/page.tsx');
 const mockData = read('lib/mock-data.ts');
 const htaccess = read('public/.htaccess');
+const robotsRoute = read('app/robots.ts');
+const sitemapRoute = read('app/sitemap.ts');
+const companyInfo = read('lib/company-info.ts');
+const publicImageOverrides = read('lib/public-image-overrides.ts');
+const publicFleetShowcase = read('components/edrive/public-fleet-showcase.tsx');
 const manifest = JSON.parse(read('public/manifest.webmanifest'));
 const migration = read('supabase/public-request-hardening.sql');
 const packageMigration = read('supabase/package-catalog-hardening.sql');
@@ -305,6 +310,25 @@ assert(!layout.includes("'./home-responsive.css'") && homePage.includes("'../hom
 assert(publicLayout.includes("'../hero-cta.css'") && publicLayout.includes("'../contact-cta.css'"), 'Shared public hero and contact CTA styles must load from the public layout only.');
 assert(htaccess.includes('RewriteCond %{HTTPS} !=on [OR]') && htaccess.includes('RewriteCond %{HTTP_HOST} !^edrivedubai\\.ae$ [NC]'), 'Apache must canonicalize wrong schemes or hosts in one redirect block.');
 assert(htaccess.includes('BROTLI_COMPRESS') && htaccess.includes('DEFLATE') && htaccess.includes('<IfModule !mod_brotli.c>'), 'Apache must provide guarded Brotli compression with gzip fallback.');
+assert(myBookingPage.includes("siteName: 'eDrive Water Sports'") && myBookingPage.includes("url: '/brand/og-image.png'") && myBookingPage.includes("card: 'summary_large_image'"), 'My Booking must retain complete Open Graph and Twitter image metadata.');
+assert(adminLayout.includes('index: false') && adminLayout.includes('follow: false') && adminLayout.includes('noimageindex: true'), 'Every admin route must remain non-indexable through layout metadata.');
+assert(!robotsRoute.includes("disallow: ['/admin/']"), 'Crawlers must be able to read admin noindex metadata; robots.txt is not access control.');
+assert(!sitemapRoute.includes("'admin'"), 'Admin routes must remain absent from the public sitemap.');
+assert(publicShell.includes('<span>Staff Login</span>') && publicShell.includes('href="/admin"'), 'The public Staff Login link must remain visible and point to /admin.');
+const optimizedPublicImages = [
+  'jc-02.webp',
+  'jc-03.webp',
+  'jc-04.webp',
+  'jet-car-2-seater-20-min.webp',
+  'jet-car-2-seater-30-min.webp',
+  'jet-car-2-seater-60-min.webp',
+  'jet-car-4-seater-20-min.webp'
+];
+assert(optimizedPublicImages.every((file) => fs.existsSync(path.join(root, 'public/images/edrive/optimized', file))), 'All seven optimized public fleet and package images must exist.');
+assert(optimizedPublicImages.every((file) => fs.statSync(path.join(root, 'public/images/edrive/optimized', file)).size <= 300_000), 'Optimized public images must remain at or below 300 KB.');
+assert((publicImageOverrides.match(/\.png': '\/images\/edrive\/optimized\//g) || []).length === 7, 'All seven known heavy public PNG filenames must map to local optimized WebP assets.');
+assert(packageShowcase.includes('getPublicImageUrl(item.image_url)') && publicFleetShowcase.includes('getPublicImageUrl(unit.image_url)') && bookingWizard.includes('getPublicImageUrl(savedImage)'), 'Every active public fleet and package image path must apply optimized URL overrides.');
+assert(companyInfo.includes('https://api.whatsapp.com/send/?phone=') && companyInfo.includes('&text=${encodedMessage}'), 'Public WhatsApp links must use the direct official endpoint and centralized encoded message handling.');
 assert(migration.includes('revoke select on table public.packages from anon'), 'Anonymous direct package table access must be revoked.');
 assert(migration.includes('revoke insert on table public.booking_requests from anon'), 'Anonymous direct booking inserts must be revoked after RPC migration.');
 assert(migration.includes('public_request_rate_limited'), 'Public booking and lookup throttling must be included in the migration.');

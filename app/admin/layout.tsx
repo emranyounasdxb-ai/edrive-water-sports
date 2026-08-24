@@ -7,7 +7,16 @@ import { TopbarProfileMenu } from '@/components/edrive/topbar-profile-menu';
 import '../manager-app-polish.css';
 
 export const metadata: Metadata = {
-  title: 'Admin'
+  title: 'Admin',
+  robots: {
+    index: false,
+    follow: false,
+    googleBot: {
+      index: false,
+      follow: false,
+      noimageindex: true
+    }
+  }
 };
 
 export default function AdminLayout({ children }: { children: ReactNode }) {

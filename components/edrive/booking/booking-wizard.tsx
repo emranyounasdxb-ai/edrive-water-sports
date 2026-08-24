@@ -9,6 +9,7 @@ import { bookingRatePricing, formatAed, formatDuration, generateBookingCode, get
 import type { BookingDraft, BookingRateOption, BookingRequest } from '@/lib/booking-data';
 import { companyInfo } from '@/lib/company-info';
 import { getLivePackageImage } from '@/lib/edrive-package-images';
+import { getPublicImageUrl } from '@/lib/public-image-overrides';
 import { cleanMultiline, cleanSingleLine, dubaiDateParts, dubaiDateValue, isSelectableDubaiBookingTime, isValidOptionalEmail, isValidPhone } from '@/lib/public-request-validation';
 import { supabase } from '@/lib/supabase-client';
 import { cn } from '@/lib/utils';
@@ -145,7 +146,7 @@ function groupPackageRows(rows: PackageRateRow[]) {
         category: first.category,
         categoryLabel: categoryLabel(first.category),
         capacity,
-        imageUrl: savedImage || getLivePackageImage(first.category, Number(first.display_order || capacity)),
+        imageUrl: getPublicImageUrl(savedImage) || getLivePackageImage(first.category, Number(first.display_order || capacity)),
         description: first.short_description || `Choose your ${title.toLowerCase()} duration and submit your request.`,
         displayOrder: Math.min(...sortedRows.map((row) => Number(row.display_order || 100))),
         rates: mapRates(sortedRows)

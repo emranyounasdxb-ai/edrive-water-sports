@@ -7,7 +7,7 @@ import { AlertCircle, CalendarDays, Check, Clock3, CreditCard, Home, LoaderCircl
 import { Button } from '@/components/ui/button';
 import { BookingRequest, formatAed, getExperience } from '@/lib/booking-data';
 import { bookingRequestToLegacyRow, bookingRequestToRow, bookingRequestsTable, isPackageColumnInsertError } from '@/lib/booking-records';
-import { companyInfo, whatsappUrl } from '@/lib/company-info';
+import { companyInfo, whatsappMessageUrl } from '@/lib/company-info';
 import { supabase } from '@/lib/supabase-client';
 
 function displayDate(value: string) {
@@ -172,7 +172,7 @@ export function BookingSuccess({ request, onAnother }: { request: BookingRequest
           <div><p className="font-semibold text-foreground">Need to add something?</p><p className="mt-1 text-sm text-muted-foreground">Send the booking team your reference on WhatsApp or check your booking status after submission.</p></div>
           <div className="flex flex-col gap-2 sm:flex-row">
             {saveStatus === 'saved' ? <Button asChild variant="outline"><Link href={`/my-booking?ref=${encodeURIComponent(savedRequest.bookingCode)}`}><TicketCheck data-icon aria-hidden="true" />Check Status</Link></Button> : null}
-            <Button asChild><a href={`${whatsappUrl}?text=${whatsappMessage}`} target="_blank" rel="noopener noreferrer"><MessageCircle data-icon aria-hidden="true" />WhatsApp us</a></Button>
+            <Button asChild><a href={whatsappMessageUrl(whatsappMessage)} target="_blank" rel="noopener noreferrer"><MessageCircle data-icon aria-hidden="true" />WhatsApp us</a></Button>
           </div>
         </div>
 
