@@ -311,7 +311,7 @@ assert(publicLayout.includes("'../hero-cta.css'") && publicLayout.includes("'../
 assert(htaccess.includes('RewriteCond %{HTTPS} !=on [OR]') && htaccess.includes('RewriteCond %{HTTP_HOST} !^edrivedubai\\.ae$ [NC]'), 'Apache must canonicalize wrong schemes or hosts in one redirect block.');
 assert(htaccess.includes('BROTLI_COMPRESS') && htaccess.includes('DEFLATE') && htaccess.includes('<IfModule !mod_brotli.c>'), 'Apache must provide guarded Brotli compression with gzip fallback.');
 assert(myBookingPage.includes("siteName: 'eDrive Water Sports'") && myBookingPage.includes("url: '/brand/og-image.png'") && myBookingPage.includes("card: 'summary_large_image'"), 'My Booking must retain complete Open Graph and Twitter image metadata.');
-assert(adminLayout.includes('index: false') && adminLayout.includes('follow: false') && adminLayout.includes('noimageindex: true'), 'Every admin route must remain non-indexable through layout metadata.');
+assert(adminLayout.includes('index: false') && adminLayout.includes('follow: true') && adminLayout.includes('noimageindex: true'), 'Every admin route must remain non-indexable while allowing crawlers to follow its links.');
 assert(!robotsRoute.includes("disallow: ['/admin/']"), 'Crawlers must be able to read admin noindex metadata; robots.txt is not access control.');
 assert(!sitemapRoute.includes("'admin'"), 'Admin routes must remain absent from the public sitemap.');
 assert(publicShell.includes('<span>Staff Login</span>') && publicShell.includes('href="/admin"'), 'The public Staff Login link must remain visible and point to /admin.');
