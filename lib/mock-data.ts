@@ -85,7 +85,7 @@ export const financeNavItems = [
 
 export const fleetHeroImage = '/images/edrive/fleet/jc-01.webp';
 export const fleetShowcaseImage = '/images/edrive/fleet/jc-02.webp';
-export const dubaiWaterfrontImage = '/images/edrive/dubai-waterfront-hero.png';
+export const dubaiWaterfrontImage = '/images/edrive/dubai-waterfront-hero.webp';
 export const jetSkiLightImage = '/images/edrive/fleet/js-01.webp';
 export const jetCarLightImage = '/images/edrive/fleet/jc-03.webp';
 
