@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { LockKeyhole, Mail, MapPin, Menu, MessageCircle, Phone, TicketCheck, X } from 'lucide-react';
+import { LockKeyhole, Mail, MapPin, Menu, MessageCircle, Phone, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { companyInfo, whatsappUrl } from '@/lib/company-info';
 import { localizeHref } from '@/lib/i18n/locales';
@@ -13,10 +13,8 @@ import { LanguageSwitcher } from './language-switcher';
 import { usePublicLocale } from './public-locale-provider';
 import styles from './public-shell.module.css';
 
-const menuPillClass = 'border border-white/75 bg-white/72 shadow-[inset_0_1px_0_rgba(255,255,255,0.95),inset_0_-8px_14px_rgba(8,37,50,0.025),0_5px_14px_rgba(8,37,50,0.045)] hover:border-primary/15 hover:bg-primary-50/80 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.95),inset_0_-8px_14px_rgba(8,37,50,0.025),0_8px_18px_rgba(8,37,50,0.07)]';
 const activeMenuClass = 'border-primary/18 bg-primary-100 text-primary-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.95),inset_0_-8px_14px_rgba(8,37,50,0.03),0_9px_20px_rgba(8,37,50,0.09)]';
 const actionBaseClass = 'inline-flex h-9 items-center justify-center gap-2 whitespace-nowrap rounded-full px-4 text-[11px] font-bold leading-none transition-all duration-200 hover:-translate-y-0.5';
-const myBookingActionClass = `${actionBaseClass} border border-cyan-100 bg-[linear-gradient(145deg,#E9FCFF_0%,#C8F5F8_48%,#FFFFFF_100%)] text-primary-950 shadow-[inset_0_1px_0_rgba(255,255,255,0.98),inset_0_-10px_18px_rgba(0,139,156,0.08),0_12px_26px_rgba(0,139,156,0.18),0_2px_5px_rgba(255,255,255,0.8)] hover:border-primary/25 hover:shadow-[inset_0_1px_0_rgba(255,255,255,1),inset_0_-10px_18px_rgba(0,139,156,0.11),0_16px_34px_rgba(0,139,156,0.24)]`;
 const staffActionClass = `${actionBaseClass} border border-amber-100 bg-[linear-gradient(145deg,#FFF6D9_0%,#FFFFFF_48%,#EAF8FA_100%)] text-primary-950 shadow-[inset_0_1px_0_rgba(255,255,255,0.98),inset_0_-10px_18px_rgba(159,118,44,0.08),0_12px_26px_rgba(8,37,50,0.13),0_2px_5px_rgba(255,255,255,0.82)] hover:border-accent-300/70 hover:shadow-[inset_0_1px_0_rgba(255,255,255,1),inset_0_-10px_18px_rgba(159,118,44,0.11),0_16px_34px_rgba(8,37,50,0.18)]`;
 
 function normalizePath(pathname: string) {
@@ -64,11 +62,11 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
             </Link>
 
             <div className="pointer-events-none absolute left-1/2 top-1/2 hidden -translate-x-1/2 -translate-y-1/2 lg:flex">
-              <div className={cn('pointer-events-auto flex items-center justify-center gap-1.5 rounded-full p-1 transition-all duration-300', scrolled ? 'bg-white/82 shadow-[inset_0_1px_5px_rgba(8,37,50,0.04)] backdrop-blur-sm' : 'bg-white shadow-[inset_0_1px_4px_rgba(8,37,50,0.05)]')}>
+              <div className="pointer-events-auto flex items-center justify-center gap-1">
                 {navItems.map((item) => {
                   const active = currentPath === normalizePath(item.href);
                   return (
-                    <Link key={item.href} href={item.href} prefetch aria-current={active ? 'page' : undefined} className={cn('inline-flex h-8 shrink-0 items-center justify-center whitespace-nowrap rounded-full px-3 text-center text-[11px] font-bold leading-none text-slate-700 transition-all duration-200 xl:px-4 xl:text-xs', menuPillClass, active && activeMenuClass)}>
+                    <Link key={item.href} href={item.href} prefetch aria-current={active ? 'page' : undefined} className={cn('inline-flex h-8 shrink-0 items-center justify-center whitespace-nowrap rounded-full border border-transparent bg-transparent px-3 text-center text-[11px] font-bold leading-none text-slate-700 transition-all duration-200 hover:text-primary-800 xl:px-4 xl:text-xs', active && activeMenuClass)}>
                       <span className="relative -top-px block leading-none">{item.label}</span>
                     </Link>
                   );
@@ -76,10 +74,9 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
               </div>
             </div>
 
-            <div className="z-10 ml-auto hidden shrink-0 items-center gap-2 md:flex">
+            <div className="z-10 ml-auto hidden shrink-0 items-center gap-2 lg:flex">
               <LanguageSwitcher />
-              <Link href={localizeHref(locale, '/my-booking')} prefetch className={cn('hidden xl:inline-flex', myBookingActionClass)}><TicketCheck className="size-3.5" aria-hidden="true" /><span>{messages.myBooking}</span></Link>
-              <Link href="/admin" prefetch className={staffActionClass}><LockKeyhole className="size-3.5" aria-hidden="true" /><span>{messages.staffLogin}</span></Link>
+              <Link href="/admin" prefetch title={messages.staffLogin} aria-label={messages.staffLogin} className={cn(staffActionClass, 'size-9 px-0')}><LockKeyhole className="size-3.5" aria-hidden="true" /></Link>
             </div>
 
             <Button variant="outline" size="icon" className={cn('z-10 size-9 shrink-0 rounded-full lg:hidden', scrolled ? 'bg-white/90 backdrop-blur-sm' : 'bg-white')} onClick={() => setOpen((value) => !value)} aria-label={messages.toggleNavigation}>
@@ -96,8 +93,7 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
                 return <Link key={item.href} href={item.href} prefetch onClick={() => setOpen(false)} aria-current={active ? 'page' : undefined} className={cn('inline-flex h-10 items-center justify-center whitespace-nowrap rounded-2xl px-4 text-sm font-bold text-muted-foreground transition hover:bg-white hover:text-foreground', active && activeMenuClass)}><span className="relative -top-px block leading-none">{item.label}</span></Link>;
               })}
               <div className="mt-2"><LanguageSwitcher mobile onSelect={() => setOpen(false)} /></div>
-              <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                <Link href={localizeHref(locale, '/my-booking')} prefetch className={myBookingActionClass} onClick={() => setOpen(false)}><TicketCheck className="size-3.5" aria-hidden="true" /><span>{messages.myBooking}</span></Link>
+              <div className="mt-3">
                 <Link href="/admin" onClick={() => setOpen(false)} className={staffActionClass}><LockKeyhole className="size-3.5" aria-hidden="true" /><span>{messages.staffLogin}</span></Link>
               </div>
             </div>

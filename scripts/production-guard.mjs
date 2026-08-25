@@ -32,7 +32,6 @@ const jetSkiRentalsPage = read('app/(public)/jet-ski-rentals/page.tsx');
 const jetCarRentalsPage = read('app/(public)/jet-car-rentals/page.tsx');
 const heroVideoFile = path.join(root, 'public/videos/edrive-hero-loop.mp4');
 const heroVideoExists = fs.existsSync(heroVideoFile);
-const summerHeroFile = path.join(root, 'public/images/edrive/home/home-summer-offer-hero.webp');
 const responsiveHomepageImages = [
   'public/brand/edrive-logo-header.webp',
   'public/images/edrive/home/home-jet-ski-rentals-768.webp',
@@ -240,7 +239,7 @@ assert(publicShellStyles.includes('--public-header-height: 4.625rem'), 'Public h
 assert(publicShellStyles.includes('height: var(--public-header-height)'), 'Public header must use the shared header-height variable.');
 assert(publicShellStyles.includes('padding-top: var(--public-header-height)'), 'Public main must use the same shared header-height variable.');
 assert(publicShellStyles.includes('.main > section:first-of-type:not([data-public-hero])'), 'Non-hero public sections must be protected from accidental top margin.');
-assert(homePageComponent.includes('<HomeHeroCarousel') && homeHeroCarousel.includes('data-public-hero'), 'HomePage carousel must keep the stable public hero marker.');
+assert(homePageComponent.includes('<HomeHeroCarousel') && homeHeroCarousel.includes('data-public-hero'), 'Homepage must keep the stable public hero marker.');
 assert(publicVideoHero.includes('data-public-hero'), 'Shared PublicVideoHero must keep the stable public hero marker.');
 assert(heroCtaStyles.includes('[data-public-main] > [data-public-hero]:first-of-type'), 'Hero polish must target stable public layout markers.');
 assert(heroCtaStyles.includes('[data-public-main] > [data-public-hero]:first-of-type'), 'Public hero CSS must retain the direct-child data-public-main layout contract.');
@@ -290,13 +289,13 @@ assert(heroVideoMedia.includes("window.matchMedia('(prefers-reduced-motion: redu
 assert(!heroVideoMedia.includes('hidden={!showFallback}'), 'Page-specific fallback images must be visible during the initial critical render.');
 assert(heroCtaStyles.includes('[data-public-hero-video]'), 'Hero CSS must explicitly support the shared video layer.');
 assert(heroCtaStyles.includes('prefers-reduced-motion: reduce'), 'Reduced-motion users must receive the static hero fallback.');
-assert(homeHeroCarousel.includes('HeroVideoMedia fallbackImage={dubaiWaterfrontImage}'), 'Home carousel first slide must use the shared video media component.');
-assert(fs.existsSync(summerHeroFile) && fs.statSync(summerHeroFile).size > 1024, 'Home carousel Summer Offer image must exist and must not be empty.');
-assert(homeHeroCarousel.includes("'/images/edrive/home/home-summer-offer-hero.webp'"), 'Home carousel must use the approved local Summer Offer image path.');
-assert(homeHeroCarousel.includes("getPackagePricePresentation(item, 'b2c')") && !homeHeroCarousel.includes('b2b_price') && !homeHeroCarousel.includes('b2b_offer_price'), 'Home carousel must validate public B2C offers without exposing B2B pricing.');
-assert(homeHeroCarousel.includes("await import('@/lib/supabase-client')") && !homeHeroCarousel.includes("import { supabase } from '@/lib/supabase-client'"), 'Summer Offer data must load after the homepage critical render.');
-assert(!homeHeroCarousel.includes('<article') && (homeHeroCarousel.match(/role="group"/g) || []).length === 2, 'Carousel slides must use valid group semantics without article role conflicts.');
-assert(!/AED\s*\d/.test(homeHeroCarousel), 'Home carousel must not hardcode an offer amount.');
+assert(homeHeroCarousel.includes('HeroVideoMedia fallbackImage={dubaiWaterfrontImage}'), 'Homepage hero must use the shared video media component.');
+assert(homeHeroCarousel.includes("localizeHref(locale, '/my-booking')") && homeHeroCarousel.includes('publicMessages.myBooking'), 'Homepage hero must provide the localized My Booking action.');
+assert(!homeHeroCarousel.includes('whatsappUrl') && !homeHeroCarousel.includes('checkAvailability'), 'Homepage hero must not restore the WhatsApp availability action.');
+assert(!homeHeroCarousel.includes('activeSlide') && !homeHeroCarousel.includes('autoplayDelay') && !homeHeroCarousel.includes('previousSlide') && !homeHeroCarousel.includes('nextSlide'), 'Homepage hero must remain static without carousel state, autoplay, or navigation controls.');
+assert(!homeHeroCarousel.includes('summerHeroImage') && !homeHeroCarousel.includes('get_public_packages') && !homeHeroCarousel.includes('data-home-hero-carousel'), 'Homepage hero must not restore the Summer Offer carousel slide or its data query.');
+assert((publicShell.match(/localizeHref\(locale, '\/my-booking'\)/g) || []).length === 1, 'Public header must not restore the My Booking action; only the footer tracker link may remain.');
+assert(publicShell.includes('href="/admin"') && publicShell.includes('aria-label={messages.staffLogin}'), 'Desktop Staff Login must remain an accessible compact link to /admin.');
 assert(responsiveHomepageImages.every((file) => fs.existsSync(path.join(root, file))), 'Measured homepage image-delivery offenders must retain responsive WebP variants.');
 assert(publicPages.includes('<PublicVideoHero title={title}'), 'Fleet, Membership, and Contact must use the shared video hero component.');
 assert(rentalsPage.includes('<PublicVideoHero'), 'Rentals page must use the shared video hero.');
@@ -308,8 +307,8 @@ assert(publicVideoHero.includes('fallbackImage={fallbackImage}'), 'Every video h
 assert(publicVideoHero.includes('fallbackAlt={fallbackAlt}'), 'Every video hero must keep accessible fallback image text.');
 assert(publicHeroLayout.includes('export const publicHeroFrameClass ='), 'Shared hero layout must own the public hero frame contract.');
 assert(publicHeroLayout.includes('export const publicHeroContentClass ='), 'Shared hero layout must own the public hero content contract.');
-assert(homeHeroCarousel.includes('className={publicHeroFrameClass}'), 'Home carousel must use the shared hero frame class.');
-assert(homeHeroCarousel.match(/className=\{publicHeroContentClass\}/g)?.length === 2, 'Both home carousel slides must use the shared hero content class.');
+assert(homeHeroCarousel.includes('className={publicHeroFrameClass}'), 'Homepage hero must use the shared hero frame class.');
+assert(homeHeroCarousel.match(/className=\{publicHeroContentClass\}/g)?.length === 1, 'Static homepage hero must use one shared hero content layer.');
 assert(publicVideoHero.includes('className={publicHeroFrameClass}'), 'Shared PublicVideoHero must use the shared hero frame class.');
 assert(publicVideoHero.includes('className={publicHeroContentClass}'), 'Shared PublicVideoHero must use the shared hero content class.');
 assert(!heroCtaStyles.includes('min-height: 520px !important'), 'Global hero polish must not override shared component height.');
