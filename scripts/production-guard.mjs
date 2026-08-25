@@ -22,8 +22,10 @@ const portalAccess = read('components/edrive/portal-access.tsx');
 const publicShell = read('components/edrive/public-shell.tsx');
 const publicShellStyles = read('components/edrive/public-shell.module.css');
 const publicPages = read('components/edrive/public-pages.tsx');
+const homePageComponent = read('components/edrive/home-page.tsx');
 const homeHeroCarousel = read('components/edrive/home-hero-carousel.tsx');
 const heroVideoMedia = read('components/edrive/hero-video-media.tsx');
+const publicHeroLayout = read('components/edrive/public-hero-layout.ts');
 const publicVideoHero = read('components/edrive/public-video-hero.tsx');
 const rentalsPage = read('app/(public)/rentals/page.tsx');
 const jetSkiRentalsPage = read('app/(public)/jet-ski-rentals/page.tsx');
@@ -31,6 +33,12 @@ const jetCarRentalsPage = read('app/(public)/jet-car-rentals/page.tsx');
 const heroVideoFile = path.join(root, 'public/videos/edrive-hero-loop.mp4');
 const heroVideoExists = fs.existsSync(heroVideoFile);
 const summerHeroFile = path.join(root, 'public/images/edrive/home/home-summer-offer-hero.webp');
+const responsiveHomepageImages = [
+  'public/brand/edrive-logo-header.webp',
+  'public/images/edrive/home/home-jet-ski-rentals-768.webp',
+  'public/images/edrive/home/home-jet-car-rentals-768.webp',
+  'public/images/edrive/home/home-membership-gold-card-768.webp'
+];
 const heroCtaStyles = read('app/hero-cta.css');
 const homeResponsiveStyles = read('app/home-responsive.css');
 const contactPolishStyles = read('app/contact-page-polish.css');
@@ -227,25 +235,25 @@ assert(publicShellStyles.includes('--public-header-height: 4.625rem'), 'Public h
 assert(publicShellStyles.includes('height: var(--public-header-height)'), 'Public header must use the shared header-height variable.');
 assert(publicShellStyles.includes('padding-top: var(--public-header-height)'), 'Public main must use the same shared header-height variable.');
 assert(publicShellStyles.includes('.main > section:first-of-type:not([data-public-hero])'), 'Non-hero public sections must be protected from accidental top margin.');
-assert(publicPages.includes('<HomeHeroCarousel />') && homeHeroCarousel.includes('data-public-hero'), 'HomePage carousel must keep the stable public hero marker.');
+assert(homePageComponent.includes('<HomeHeroCarousel />') && homeHeroCarousel.includes('data-public-hero'), 'HomePage carousel must keep the stable public hero marker.');
 assert(publicVideoHero.includes('data-public-hero'), 'Shared PublicVideoHero must keep the stable public hero marker.');
 assert(heroCtaStyles.includes('[data-public-main] > [data-public-hero]:first-of-type'), 'Hero polish must target stable public layout markers.');
 assert(heroCtaStyles.includes('[data-public-main] > [data-public-hero]:first-of-type'), 'Public hero CSS must retain the direct-child data-public-main layout contract.');
-assert(!publicPages.includes('Dubai Water Sports Packages'), 'The homepage live package grid must not return.');
-assert(!publicPages.includes('LivePackageShowcase'), 'The homepage must not render or import the live package grid.');
-assert(publicPages.match(/data-home-ride-card/g)?.length === 3, 'The homepage must define exactly two primary ride cards and one shared card marker type.');
-const homeRideSection = publicPages.match(/<section className="bg-\[#f4f5f5\]" data-home-rides>[\s\S]*?<\/section>/)?.[0] || '';
+assert(!homePageComponent.includes('Dubai Water Sports Packages'), 'The homepage live package grid must not return.');
+assert(!homePageComponent.includes('LivePackageShowcase'), 'The homepage must not render or import the live package grid.');
+assert(homePageComponent.match(/data-home-ride-card/g)?.length === 3, 'The homepage must define exactly two primary ride cards and one shared card marker type.');
+const homeRideSection = homePageComponent.match(/<section className="bg-\[#f4f5f5\]" data-home-rides>[\s\S]*?<\/section>/)?.[0] || '';
 assert(homeRideSection.match(/data-home-ride-card/g)?.length === 2, 'The homepage ride section must contain exactly two primary ride cards.');
 assert(!homeRideSection.includes('/membership'), 'Membership must remain outside the homepage ride-card grid.');
 assert(homeRideSection.includes('View Jet Ski Packages'), 'The Jet Ski ride CTA must remain View Jet Ski Packages.');
 assert(homeRideSection.includes('View Jet Car Packages'), 'The Jet Car ride CTA must remain View Jet Car Packages.');
-assert(!publicPages.includes('bg-primary-950'), 'The homepage must not use the unsupported bg-primary-950 utility.');
-assert(!publicPages.includes('text-primary-950'), 'The homepage must not use the unsupported text-primary-950 utility.');
-const homeMembershipSection = publicPages.match(/<section className="border-y border-border bg-white\/70" data-home-membership>[\s\S]*?<\/section>/)?.[0] || '';
+assert(!homePageComponent.includes('bg-primary-950'), 'The homepage must not use the unsupported bg-primary-950 utility.');
+assert(!homePageComponent.includes('text-primary-950'), 'The homepage must not use the unsupported text-primary-950 utility.');
+const homeMembershipSection = homePageComponent.match(/<section className="border-y border-border bg-white\/70" data-home-membership>[\s\S]*?<\/section>/)?.[0] || '';
 assert(homeMembershipSection.includes('bg-primary-900'), 'The Membership panel must retain its supported dark primary-900 background.');
 assert(/<Button[^>]*\btext-primary-900\b[^>]*>[\s\S]*?href="\/membership"/.test(homeMembershipSection), 'The Membership CTA must retain a readable primary-900 text color.');
 for (const marker of ['data-home-rides', 'data-home-membership', 'data-home-why', 'data-home-process', 'data-home-contact']) {
-  assert(publicPages.includes(marker), `Homepage markup must retain the stable ${marker} marker.`);
+  assert(homePageComponent.includes(marker), `Homepage markup must retain the stable ${marker} marker.`);
   assert(homeResponsiveStyles.includes(`[data-public-main] > [${marker}]`), `Homepage responsive CSS must target ${marker} through the direct-child data-public-main contract.`);
 }
 assert(!homeResponsiveStyles.includes('#live-packages + section'), 'Homepage responsive CSS must not depend on live-package sibling positions.');
@@ -265,22 +273,26 @@ assert(!heroCtaStyles.includes('[data-public-hero]:first-of-type > img {'), 'Glo
 assert(heroVideoMedia.includes('object-cover'), 'Shared public hero media must cover the complete hero frame.');
 assert(heroVideoExists, 'Shared public hero video file must exist.');
 assert(!heroVideoExists || fs.statSync(heroVideoFile).size > 1024, 'Shared public hero video file must not be empty.');
+assert(!heroVideoExists || fs.statSync(heroVideoFile).size <= 5_000_000, 'Shared public hero video must remain optimized for mobile delivery.');
 assert(heroVideoMedia.includes("publicHeroVideoPath = '/videos/edrive-hero-loop.mp4'"), 'Hero video component must use the approved shared video path.');
 assert(heroVideoMedia.includes('autoPlay') && heroVideoMedia.includes('muted') && heroVideoMedia.includes('loop') && heroVideoMedia.includes('playsInline'), 'Shared hero video must autoplay silently, loop, and support inline mobile playback.');
-assert(heroVideoMedia.includes('preload="auto"'), 'Shared hero video must preload playable data before route transitions.');
+assert(heroVideoMedia.includes('preload="metadata"') && heroVideoMedia.includes('poster={fallbackImage}'), 'Shared hero video must expose its poster immediately without preloading the full video.');
+assert(heroVideoMedia.includes('priority={priority}'), 'Priority hero fallback images must receive high initial loading priority.');
+assert(heroVideoMedia.includes("typeof idleWindow.requestIdleCallback === 'function'") && heroVideoMedia.includes('loadVideo ? <source'), 'Full hero video loading must wait until after the critical render path.');
 assert(heroVideoMedia.includes('onLoadedData={markVideoReady}') && heroVideoMedia.includes('onCanPlay={markVideoReady}') && heroVideoMedia.includes('onPlaying={markVideoReady}'), 'Hero video visibility must wait for a playable frame.');
 assert(heroVideoMedia.includes('onError={showFallbackImage}'), 'Hero video failures must reveal the static fallback image.');
 assert(heroVideoMedia.includes("window.matchMedia('(prefers-reduced-motion: reduce)')"), 'Hero video must respect the browser reduced-motion preference.');
-assert(heroVideoMedia.includes("style={{ visibility: showVideo ? 'visible' : 'hidden' }}"), 'Hero video must remain hidden until its first frame is ready.');
-assert(heroVideoMedia.includes('hidden={!showFallback}'), 'Page-specific fallback images must stay hidden during normal video loading.');
-assert(!heroVideoMedia.includes('poster={fallbackImage}'), 'Page-specific fallback images must not be used as video posters.');
+assert(!heroVideoMedia.includes('hidden={!showFallback}'), 'Page-specific fallback images must be visible during the initial critical render.');
 assert(heroCtaStyles.includes('[data-public-hero-video]'), 'Hero CSS must explicitly support the shared video layer.');
 assert(heroCtaStyles.includes('prefers-reduced-motion: reduce'), 'Reduced-motion users must receive the static hero fallback.');
 assert(homeHeroCarousel.includes('HeroVideoMedia fallbackImage={dubaiWaterfrontImage}'), 'Home carousel first slide must use the shared video media component.');
 assert(fs.existsSync(summerHeroFile) && fs.statSync(summerHeroFile).size > 1024, 'Home carousel Summer Offer image must exist and must not be empty.');
 assert(homeHeroCarousel.includes("'/images/edrive/home/home-summer-offer-hero.webp'"), 'Home carousel must use the approved local Summer Offer image path.');
 assert(homeHeroCarousel.includes("getPackagePricePresentation(item, 'b2c')") && !homeHeroCarousel.includes('b2b_price') && !homeHeroCarousel.includes('b2b_offer_price'), 'Home carousel must validate public B2C offers without exposing B2B pricing.');
+assert(homeHeroCarousel.includes("await import('@/lib/supabase-client')") && !homeHeroCarousel.includes("import { supabase } from '@/lib/supabase-client'"), 'Summer Offer data must load after the homepage critical render.');
+assert(!homeHeroCarousel.includes('<article') && (homeHeroCarousel.match(/role="group"/g) || []).length === 2, 'Carousel slides must use valid group semantics without article role conflicts.');
 assert(!/AED\s*\d/.test(homeHeroCarousel), 'Home carousel must not hardcode an offer amount.');
+assert(responsiveHomepageImages.every((file) => fs.existsSync(path.join(root, file))), 'Measured homepage image-delivery offenders must retain responsive WebP variants.');
 assert(publicPages.includes('<PublicVideoHero title={title}'), 'Fleet, Membership, and Contact must use the shared video hero component.');
 assert(rentalsPage.includes('<PublicVideoHero'), 'Rentals page must use the shared video hero.');
 assert(jetSkiRentalsPage.includes('<PublicVideoHero'), 'Jet Ski rentals page must use the shared video hero.');
@@ -289,8 +301,8 @@ assert(publicVideoHero.includes('publicHeroFrameClass') && publicVideoHero.inclu
 assert(publicVideoHero.includes('<HeroVideoMedia'), 'Shared public hero must render the approved video media component.');
 assert(publicVideoHero.includes('fallbackImage={fallbackImage}'), 'Every video hero must keep its page-specific fallback image.');
 assert(publicVideoHero.includes('fallbackAlt={fallbackAlt}'), 'Every video hero must keep accessible fallback image text.');
-assert(publicVideoHero.includes('export const publicHeroFrameClass ='), 'Shared video hero must own the public hero frame contract.');
-assert(publicVideoHero.includes('export const publicHeroContentClass ='), 'Shared video hero must own the public hero content contract.');
+assert(publicHeroLayout.includes('export const publicHeroFrameClass ='), 'Shared hero layout must own the public hero frame contract.');
+assert(publicHeroLayout.includes('export const publicHeroContentClass ='), 'Shared hero layout must own the public hero content contract.');
 assert(homeHeroCarousel.includes('className={publicHeroFrameClass}'), 'Home carousel must use the shared hero frame class.');
 assert(homeHeroCarousel.match(/className=\{publicHeroContentClass\}/g)?.length === 2, 'Both home carousel slides must use the shared hero content class.');
 assert(publicVideoHero.includes('className={publicHeroFrameClass}'), 'Shared PublicVideoHero must use the shared hero frame class.');

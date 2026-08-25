@@ -19,6 +19,7 @@ export function HeroVideoMedia({
   mediaClassName?: string;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const [loadVideo, setLoadVideo] = useState(false);
   const [videoReady, setVideoReady] = useState(false);
   const [videoFailed, setVideoFailed] = useState(false);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
@@ -35,6 +36,33 @@ export function HeroVideoMedia({
   };
 
   useEffect(() => {
+    let idleHandle: number | undefined;
+    let timerHandle: ReturnType<typeof setTimeout> | undefined;
+    const idleWindow = window as Window & {
+      requestIdleCallback?: Window['requestIdleCallback'];
+      cancelIdleCallback?: Window['cancelIdleCallback'];
+    };
+
+    const scheduleVideo = () => {
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      if (typeof idleWindow.requestIdleCallback === 'function') {
+        idleHandle = idleWindow.requestIdleCallback(() => setLoadVideo(true), { timeout: 1400 });
+        return;
+      }
+      timerHandle = setTimeout(() => setLoadVideo(true), 600);
+    };
+
+    if (document.readyState === 'complete') scheduleVideo();
+    else window.addEventListener('load', scheduleVideo, { once: true });
+
+    return () => {
+      window.removeEventListener('load', scheduleVideo);
+      if (idleHandle !== undefined) idleWindow.cancelIdleCallback?.(idleHandle);
+      if (timerHandle !== undefined) clearTimeout(timerHandle);
+    };
+  }, []);
+
+  useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
 
@@ -48,6 +76,8 @@ export function HeroVideoMedia({
         video.pause();
         return;
       }
+
+      if (!loadVideo) return;
 
       if (video.error) {
         setVideoReady(false);
@@ -77,11 +107,17 @@ export function HeroVideoMedia({
 
     mediaQuery.addListener(updateMotionPreference);
     return () => mediaQuery.removeListener(updateMotionPreference);
-  }, []);
+  }, [loadVideo]);
 
-  const showFallback = videoFailed || prefersReducedMotion;
-  const fallbackPriority = priority && showFallback;
-  const showVideo = videoReady && !showFallback;
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !loadVideo || prefersReducedMotion) return;
+    video.load();
+    void video.play().catch(() => undefined);
+  }, [loadVideo, prefersReducedMotion]);
+
+  const showFallback = !videoReady || videoFailed || prefersReducedMotion;
+  const showVideo = videoReady && !videoFailed && !prefersReducedMotion;
 
   return (
     <>
@@ -89,13 +125,10 @@ export function HeroVideoMedia({
         src={fallbackImage}
         alt={fallbackAlt}
         fill
-        priority={fallbackPriority}
-        hidden={!showFallback}
-        aria-hidden={!showFallback}
+        priority={priority}
         data-public-hero-image
         data-video-fallback={showFallback ? 'visible' : 'hidden'}
         className={`object-cover ${objectPosition} ${mediaClassName}`}
-        style={{ visibility: showFallback ? 'visible' : 'hidden' }}
         sizes="100vw"
       />
       <video
@@ -103,12 +136,13 @@ export function HeroVideoMedia({
         data-public-hero-video
         data-video-ready={showVideo ? 'true' : 'false'}
         className={`absolute inset-0 size-full object-cover ${objectPosition} ${mediaClassName}`}
-        style={{ visibility: showVideo ? 'visible' : 'hidden' }}
+        style={{ visibility: videoFailed || prefersReducedMotion ? 'hidden' : 'visible' }}
         autoPlay
         muted
         loop
         playsInline
-        preload="auto"
+        preload="metadata"
+        poster={fallbackImage}
         aria-hidden="true"
         tabIndex={-1}
         disablePictureInPicture
@@ -118,7 +152,7 @@ export function HeroVideoMedia({
         onPlaying={markVideoReady}
         onError={showFallbackImage}
       >
-        <source src={publicHeroVideoPath} type="video/mp4" />
+        {loadVideo ? <source src={publicHeroVideoPath} type="video/mp4" /> : null}
       </video>
     </>
   );

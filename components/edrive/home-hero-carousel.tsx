@@ -8,11 +8,9 @@ import { formatAed } from '@/lib/booking-data';
 import { whatsappUrl } from '@/lib/company-info';
 import { dubaiWaterfrontImage } from '@/lib/mock-data';
 import { getPackagePricePresentation, type PackagePricingFields } from '@/lib/package-pricing';
-import { supabase } from '@/lib/supabase-client';
 import { cn } from '@/lib/utils';
 import { HeroVideoMedia } from './hero-video-media';
-import { MotionReveal } from './motion-reveal';
-import { publicHeroContentClass, publicHeroFrameClass } from './public-video-hero';
+import { publicHeroContentClass, publicHeroFrameClass } from './public-hero-layout';
 
 const summerHeroImage = '/images/edrive/home/home-summer-offer-hero.webp';
 const autoplayDelay = 6500;
@@ -43,8 +41,15 @@ export function HomeHeroCarousel() {
 
   useEffect(() => {
     let mounted = true;
+    let idleHandle: number | undefined;
+    let timerHandle: ReturnType<typeof setTimeout> | undefined;
+    const idleWindow = window as Window & {
+      requestIdleCallback?: Window['requestIdleCallback'];
+      cancelIdleCallback?: Window['cancelIdleCallback'];
+    };
 
     async function loadOffers() {
+      const { supabase } = await import('@/lib/supabase-client');
       const { data, error } = await supabase.rpc('get_public_packages', { p_categories: null });
       if (!mounted) return;
       if (error) {
@@ -67,8 +72,23 @@ export function HomeHeroCarousel() {
       });
     }
 
-    void loadOffers();
-    return () => { mounted = false; };
+    const scheduleLoad = () => {
+      if (typeof idleWindow.requestIdleCallback === 'function') {
+        idleHandle = idleWindow.requestIdleCallback(() => void loadOffers(), { timeout: 1600 });
+        return;
+      }
+      timerHandle = setTimeout(() => void loadOffers(), 600);
+    };
+
+    if (document.readyState === 'complete') scheduleLoad();
+    else window.addEventListener('load', scheduleLoad, { once: true });
+
+    return () => {
+      mounted = false;
+      window.removeEventListener('load', scheduleLoad);
+      if (idleHandle !== undefined) idleWindow.cancelIdleCallback?.(idleHandle);
+      if (timerHandle !== undefined) clearTimeout(timerHandle);
+    };
   }, []);
 
   useEffect(() => {
@@ -149,7 +169,7 @@ export function HomeHeroCarousel() {
     >
       <HeroVideoMedia fallbackImage={dubaiWaterfrontImage} fallbackAlt="Jet ski and jet car riding across the Dubai waterfront" priority objectPosition="object-[68%_68%]" mediaClassName={cn(planeTransition, slideOnePosition)} />
 
-      <article
+      <div
         className={cn('absolute inset-0 z-10', planeTransition, slideOnePosition, activeSlide !== 0 && 'pointer-events-none')}
         role="group"
         aria-roledescription="slide"
@@ -160,7 +180,7 @@ export function HomeHeroCarousel() {
         <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(4,23,33,0.36)_0%,transparent_38%,rgba(4,23,33,0.24)_100%)]" />
 
         <div className={publicHeroContentClass}>
-          <MotionReveal>
+          <div>
             <div className="max-w-2xl">
               <p className="mb-4 text-xs font-bold uppercase tracking-[0.24em] text-accent-300">eDrive Water Sports</p>
               <h1 className="font-heading text-4xl font-semibold leading-[1.03] text-white sm:text-5xl lg:text-[3.45rem]">
@@ -181,12 +201,12 @@ export function HomeHeroCarousel() {
                 </a>
               </div>
             </div>
-          </MotionReveal>
+          </div>
         </div>
-      </article>
+      </div>
 
       {hasSummerSlide ? (
-        <article
+        <div
           className={cn('absolute inset-0 z-10', planeTransition, slideTwoPosition, activeSlide !== 1 && 'pointer-events-none')}
           role="group"
           aria-roledescription="slide"
@@ -219,7 +239,7 @@ export function HomeHeroCarousel() {
               </div>
             </div>
           </div>
-        </article>
+        </div>
       ) : null}
 
       {slideCount > 1 ? (

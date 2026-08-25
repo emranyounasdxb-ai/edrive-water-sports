@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { HomePage } from '@/components/edrive/public-pages';
+import { HomePage } from '@/components/edrive/home-page';
 import '../home-responsive.css';
 
 export const metadata: Metadata = {
