@@ -1,0 +1,27 @@
+[data-public-locale='ar'] {
+  font-family: var(--font-arabic), var(--font-inter), Arial, sans-serif;
+}
+
+[data-public-locale='ru'] {
+  font-family: var(--font-russian), var(--font-inter), Arial, sans-serif;
+}
+
+[data-public-locale='ar'] .font-heading {
+  font-family: var(--font-arabic), Arial, sans-serif;
+}
+
+[data-public-locale='ru'] .font-heading {
+  font-family: var(--font-russian), Arial, sans-serif;
+}
+
+[data-public-locale='ar'] input[type='email'],
+[data-public-locale='ar'] input[type='tel'],
+[data-public-locale='ar'] [data-ltr-value] {
+  direction: ltr;
+  text-align: start;
+  unicode-bidi: isolate;
+}
+
+[data-public-locale='ar'] [data-icon-directional] {
+  transform: scaleX(-1);
+}

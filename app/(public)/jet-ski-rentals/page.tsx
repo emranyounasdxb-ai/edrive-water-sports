@@ -4,11 +4,9 @@ import { LivePackageShowcase } from '@/components/edrive/live-package-showcase';
 import { PublicVideoHero } from '@/components/edrive/public-video-hero';
 import { whatsappUrl } from '@/lib/company-info';
 import { jetSkiLightImage } from '@/lib/mock-data';
+import { createPublicMetadata } from '@/lib/i18n/metadata';
 
-export const metadata: Metadata = {
-  title: 'Jet Ski Rental Dubai',
-  description: 'Book a Jet Ski rental in Dubai Islands with clear durations and pricing. Choose your preferred ride time and get fast booking support from eDrive.'
-};
+export const metadata: Metadata = createPublicMetadata('en', 'jetSki');
 
 export default function Page() {
   return (

@@ -1,15 +1,20 @@
 import { companyInfo } from '@/lib/company-info';
+import { getPublicMessages } from '@/lib/i18n/get-messages';
+import { publicUrl, type PublicLocale } from '@/lib/i18n/locales';
 
-export function PublicSeoSchema() {
+export function PublicSeoSchema({ locale = 'en' }: { locale?: PublicLocale }) {
+  const messages = getPublicMessages(locale);
+  const languageNames = locale === 'ar' ? ['العربية', 'English', 'Русский'] : locale === 'ru' ? ['Русский', 'English', 'العربية'] : ['English', 'Arabic', 'Russian'];
   const schema = {
     '@context': 'https://schema.org',
     '@type': ['LocalBusiness', 'SportsActivityLocation'],
     '@id': 'https://edrivedubai.ae/#business',
     name: 'eDrive Water Sports',
-    url: 'https://edrivedubai.ae/',
+    url: publicUrl(locale),
     image: 'https://edrivedubai.ae/brand/og-image.png',
     logo: 'https://edrivedubai.ae/brand/icon-512.png',
-    description: 'Premium jet ski rental and jet car rides from Dubai Islands with booking support, safety briefing, and marine operations assistance.',
+    description: messages.routes.home.description,
+    inLanguage: locale,
     telephone: companyInfo.landlineDisplay,
     email: companyInfo.bookingEmail,
     priceRange: 'AED',
@@ -26,11 +31,11 @@ export function PublicSeoSchema() {
     },
     hasOfferCatalog: {
       '@type': 'OfferCatalog',
-      name: 'Water Sports Experiences',
+      name: messages.home.experiencesTitle,
       itemListElement: [
-        { '@type': 'OfferCatalog', name: 'Jet Ski Rental Dubai' },
-        { '@type': 'OfferCatalog', name: 'Jet Car Rides Dubai' },
-        { '@type': 'OfferCatalog', name: 'Water Sports Membership' }
+        { '@type': 'OfferCatalog', name: messages.routes.jetSki.title },
+        { '@type': 'OfferCatalog', name: messages.routes.jetCar.title },
+        { '@type': 'OfferCatalog', name: messages.routes.membership.title }
       ]
     },
     contactPoint: [
@@ -39,7 +44,7 @@ export function PublicSeoSchema() {
         telephone: companyInfo.landlineDisplay,
         contactType: 'customer service',
         areaServed: 'AE',
-        availableLanguage: ['English', 'Arabic', 'Urdu']
+        availableLanguage: languageNames
       }
     ]
   };
@@ -48,8 +53,9 @@ export function PublicSeoSchema() {
     '@context': 'https://schema.org',
     '@type': 'WebSite',
     '@id': 'https://edrivedubai.ae/#website',
-    url: 'https://edrivedubai.ae/',
+    url: publicUrl(locale),
     name: 'eDrive Water Sports',
+    inLanguage: locale,
     publisher: { '@id': 'https://edrivedubai.ae/#business' }
   };
 

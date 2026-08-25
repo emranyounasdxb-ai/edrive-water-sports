@@ -5,6 +5,9 @@ import { Card, CardContent } from '@/components/ui/card';
 import { whatsappMessageUrl } from '@/lib/company-info';
 import { dubaiWaterfrontImage } from '@/lib/mock-data';
 import { PublicVideoHero } from './public-video-hero';
+import type { PublicLocale } from '@/lib/i18n/locales';
+import type { MembershipMessages } from '@/lib/i18n/types';
+import { enMessages } from '@/lib/i18n/messages/en';
 
 const sectionPad = 'py-10 sm:py-12 lg:py-14';
 const membershipImage = '/images/edrive/home/home-membership-gold-card.webp';
@@ -42,18 +45,19 @@ const membershipComparison = [
   { feature: 'Dedicated contact flow', edrive: 'Included', others: 'Not commonly included' }
 ];
 
-export function MembershipPage() {
+export function MembershipPage({ locale = 'en', messages = enMessages.membership }: { locale?: PublicLocale; messages?: MembershipMessages }) {
+  const membershipComparison = messages.features.map((feature, index) => ({ feature, others: messages.comparisonOthers[index] || '' }));
   return (
     <>
       <PublicVideoHero
-        title="eDrive Signature Membership"
-        text="One premium membership with priority support, special offers, VIP planning, and all key eDrive member benefits combined in one package."
+        title={messages.heroTitle}
+        text={messages.heroText}
         fallbackImage={dubaiWaterfrontImage}
-        fallbackAlt="eDrive Water Sports membership in Dubai"
+        fallbackAlt={messages.heroAlt}
         actions={[
           {
             href: membershipWhatsappUrl,
-            label: 'Membership Inquiry',
+            label: messages.inquiry,
             icon: MessageCircle,
             external: true
           }
@@ -65,7 +69,7 @@ export function MembershipPage() {
           <Card className="premium-card-hover overflow-hidden rounded-[1.75rem] border-white/70 bg-white/90 shadow-lg">
             <Image
               src={membershipImage}
-              alt="eDrive Signature Membership gold card"
+              alt={messages.heroAlt}
               width={1200}
               height={800}
               className="aspect-[3/2] w-full object-cover"
@@ -76,17 +80,17 @@ export function MembershipPage() {
           <Card className="premium-card-hover rounded-[1.75rem] border-white/70 bg-white/95 shadow-lg">
             <CardContent className="p-6 sm:p-7 lg:p-8">
               <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-primary">
-                One Complete Membership
+                {messages.benefitsEyebrow}
               </p>
               <h2 className="mt-3 font-heading text-3xl font-semibold text-foreground sm:text-[2rem]">
-                eDrive Signature Membership
+                {messages.benefitsTitle}
               </h2>
               <p className="mt-3 text-sm leading-7 text-muted-foreground sm:text-base">
-                Designed for repeat riders, Dubai residents, couples, families, private groups, and VIP guests. All existing eDrive membership benefits are combined into one clear premium package.
+                {messages.benefitsText}
               </p>
 
               <div className="mt-6 grid gap-3 sm:grid-cols-2">
-                {membershipBenefits.map((benefit) => (
+                {messages.features.map((benefit) => (
                   <div
                     key={benefit}
                     className="flex items-start gap-3 rounded-xl border border-primary/10 bg-primary-50/40 p-3"
@@ -100,7 +104,7 @@ export function MembershipPage() {
               <Button asChild className="mt-7 w-full rounded-full sm:w-auto">
                 <a href={membershipWhatsappUrl} target="_blank" rel="noopener noreferrer">
                   <MessageCircle data-icon aria-hidden="true" />
-                  Ask About Membership on WhatsApp
+                  {messages.whatsapp}
                 </a>
               </Button>
             </CardContent>
@@ -111,9 +115,9 @@ export function MembershipPage() {
       <section className="border-y border-border bg-white/70">
         <div className={`container-x ${sectionPad}`}>
           <div>
-            <h2 className="section-title">Membership Benefits Comparison</h2>
+            <h2 className="section-title">{messages.comparisonTitle}</h2>
             <p className="mt-3 max-w-3xl text-sm leading-7 text-muted-foreground sm:text-base">
-              A clear view of what is included with eDrive Signature Membership compared with benefits that may not be standard with typical other operators. Other operator offerings can vary.
+              {messages.ctaText}
             </p>
           </div>
 
@@ -122,9 +126,9 @@ export function MembershipPage() {
               <table className="min-w-[720px] w-full border-collapse text-left">
                 <thead>
                   <tr className="bg-primary-900 text-white">
-                    <th className="px-4 py-4 text-sm font-semibold sm:px-5">Membership Benefit</th>
-                    <th className="px-4 py-4 text-sm font-semibold sm:px-5">eDrive Signature Membership</th>
-                    <th className="px-4 py-4 text-sm font-semibold sm:px-5">Typical Other Operators</th>
+                    <th className="px-4 py-4 text-sm font-semibold sm:px-5">{messages.feature}</th>
+                    <th className="px-4 py-4 text-sm font-semibold sm:px-5">{messages.edrive}</th>
+                    <th className="px-4 py-4 text-sm font-semibold sm:px-5">{messages.typical}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -134,7 +138,7 @@ export function MembershipPage() {
                       <td className="px-4 py-4 text-sm font-semibold text-emerald-700 sm:px-5">
                         <span className="inline-flex items-center gap-2">
                           <CheckCircle2 className="size-4 shrink-0" aria-hidden="true" />
-                          {row.edrive}
+                          {messages.included}
                         </span>
                       </td>
                       <td className="px-4 py-4 text-sm text-muted-foreground sm:px-5">{row.others}</td>
@@ -149,7 +153,7 @@ export function MembershipPage() {
             <Button asChild className="rounded-full">
               <a href={membershipWhatsappUrl} target="_blank" rel="noopener noreferrer">
                 <MessageCircle data-icon aria-hidden="true" />
-                Start Membership Inquiry
+                {messages.ctaTitle}
               </a>
             </Button>
           </div>

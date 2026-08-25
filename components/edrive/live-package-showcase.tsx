@@ -12,6 +12,10 @@ import { getPackagePricePresentation } from '@/lib/package-pricing';
 import { getPublicImageUrl } from '@/lib/public-image-overrides';
 import { PackageOfferPrice, PackageOfferRibbon } from '@/components/edrive/shared/package-offer-price';
 import { cn } from '@/lib/utils';
+import type { PublicLocale } from '@/lib/i18n/locales';
+import { localizeHref } from '@/lib/i18n/locales';
+import type { PackageMessages } from '@/lib/i18n/types';
+import { enMessages } from '@/lib/i18n/messages/en';
 
 type LivePackage = {
   id: string;
@@ -40,6 +44,8 @@ type LivePackageShowcaseProps = {
   compact?: boolean;
   categories?: string[];
   sortByDuration?: boolean;
+  locale?: PublicLocale;
+  messages?: PackageMessages;
 };
 
 function formatAed(value: number) {
@@ -119,7 +125,9 @@ async function fetchPublicPackages(categories?: string[]) {
   return (fallbackResult.data || []) as LivePackage[];
 }
 
-export function LivePackageShowcase({ title = 'Ride Packages', text = '', limit, compact = false, categories, sortByDuration = false }: LivePackageShowcaseProps) {
+export function LivePackageShowcase({ title, text = '', limit, compact = false, categories, sortByDuration = false, locale = 'en', messages = enMessages.packages }: LivePackageShowcaseProps) {
+  const sectionTitle = title || messages.defaultTitle;
+  const retryLabel = locale === 'ar' ? 'إعادة المحاولة' : locale === 'ru' ? 'Повторить' : 'Retry';
   const [items, setItems] = useState<LivePackage[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
@@ -140,7 +148,7 @@ export function LivePackageShowcase({ title = 'Ride Packages', text = '', limit,
       } catch {
         if (!active) return;
         setItems([]);
-        setLoadError('Ride packages could not be loaded right now. Please retry or contact the eDrive team for the latest availability.');
+        setLoadError(messages.unavailable);
       } finally {
         if (active) setLoading(false);
       }
@@ -158,17 +166,17 @@ export function LivePackageShowcase({ title = 'Ride Packages', text = '', limit,
       <section id="live-packages" className={cn('border-y border-border bg-white/70', compact ? 'py-6' : 'py-8 sm:py-10 lg:py-11')}>
         <div className="container-x">
           <div className="mx-auto max-w-5xl">
-            <Badge className="rounded-full bg-primary px-2.5 py-1 text-[10px] text-white">Ride packages</Badge>
-            <h2 className="mt-3 section-title">{title}</h2>
+            <Badge className="rounded-full bg-primary px-2.5 py-1 text-[10px] text-white">{messages.defaultTitle}</Badge>
+            <h2 className="mt-3 section-title">{sectionTitle}</h2>
             {text ? <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">{text}</p> : null}
             <div className="mt-5 rounded-[1.25rem] border border-amber-200 bg-amber-50 p-5">
-              <p className="text-sm font-semibold leading-6 text-amber-900">{loadError || 'No online packages are available at this moment. Contact the eDrive team to confirm the latest ride options and timings.'}</p>
+              <p className="text-sm font-semibold leading-6 text-amber-900">{loadError || messages.empty}</p>
               <div className="mt-4 flex flex-wrap gap-2">
                 <Button type="button" size="sm" variant="outline" className="rounded-full bg-white" onClick={() => setReloadKey((value) => value + 1)}>
-                  <RefreshCw className="size-3.5" aria-hidden="true" />Retry
+                  <RefreshCw className="size-3.5" aria-hidden="true" />{retryLabel}
                 </Button>
                 <Button asChild size="sm" className="rounded-full bg-emerald-500 text-white hover:bg-emerald-600">
-                  <a href={whatsappUrl} target="_blank" rel="noopener noreferrer"><MessageCircle className="size-3.5" aria-hidden="true" />WhatsApp Team</a>
+                  <a href={whatsappUrl} target="_blank" rel="noopener noreferrer"><MessageCircle className="size-3.5" aria-hidden="true" />WhatsApp</a>
                 </Button>
               </div>
             </div>
@@ -185,10 +193,10 @@ export function LivePackageShowcase({ title = 'Ride Packages', text = '', limit,
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <div className="mb-2 flex flex-wrap items-center gap-2">
-                <Badge className="rounded-full bg-primary px-2.5 py-1 text-[10px] text-white">Current prices</Badge>
-                <Badge className="rounded-full bg-white px-2.5 py-1 text-[10px] text-primary-900" variant="secondary">{loading ? 'Loading packages' : `${visibleItems.length} packages`}</Badge>
+                <Badge className="rounded-full bg-primary px-2.5 py-1 text-[10px] text-white">{messages.price}</Badge>
+                <Badge className="rounded-full bg-white px-2.5 py-1 text-[10px] text-primary-900" variant="secondary">{loading ? messages.loading : messages.count.replace('{count}', String(visibleItems.length))}</Badge>
               </div>
-              <h2 className="section-title">{title}</h2>
+              <h2 className="section-title">{sectionTitle}</h2>
               {text ? <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">{text}</p> : null}
               <noscript><p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">JavaScript is required to display live package prices. Jet ski and jet car bookings are available daily from Dubai Islands with durations and guest capacity confirmed by the eDrive team.</p></noscript>
             </div>
@@ -197,7 +205,7 @@ export function LivePackageShowcase({ title = 'Ride Packages', text = '', limit,
           <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {loading
               ? Array.from({ length: limit || 9 }).map((_, index) => <div key={index} className="h-64 animate-pulse rounded-[1.25rem] bg-white/80" />)
-              : displayedItems.map((item, index) => <LivePackageCard key={item.id} item={item} index={index} />)}
+              : displayedItems.map((item, index) => <LivePackageCard key={item.id} item={item} index={index} locale={locale} messages={messages} />)}
           </div>
         </div>
       </div>
@@ -205,10 +213,10 @@ export function LivePackageShowcase({ title = 'Ride Packages', text = '', limit,
   );
 }
 
-function LivePackageCard({ item }: { item: PackageCardItem; index: number }) {
+function LivePackageCard({ item, locale, messages }: { item: PackageCardItem; index: number; locale: PublicLocale; messages: PackageMessages }) {
   const [imageFailed, setImageFailed] = useState(false);
   const imageSrc = item.display_image_url;
-  const bookingHref = `/booking?package=${encodeURIComponent(item.id)}&category=${encodeURIComponent(item.category)}&capacity=${encodeURIComponent(String(item.capacity || 2))}&duration=${encodeURIComponent(String(item.duration_minutes || 0))}`;
+  const bookingHref = localizeHref(locale, `/booking?package=${encodeURIComponent(item.id)}&category=${encodeURIComponent(item.category)}&capacity=${encodeURIComponent(String(item.capacity || 2))}&duration=${encodeURIComponent(String(item.duration_minutes || 0))}`);
   const description = item.short_description || defaultDescription(item);
   const price = getPackagePricePresentation(item, 'b2c');
   const whatsappPrice = price.active ? `${price.label}\nRegular price: ${formatAed(price.normalPrice)}\nOffer price: ${formatAed(price.effectivePrice)}` : `Price: ${formatAed(price.normalPrice)}`;
@@ -234,7 +242,7 @@ Please confirm availability and the best timing.`);
         <div className="absolute left-2 top-2 flex max-w-[calc(100%-5.5rem)] items-center">
           <PackageOfferRibbon pricing={item} />
         </div>
-        <Badge className="absolute right-2 top-2 whitespace-nowrap bg-white/92 px-2 py-0.5 text-[9px] font-bold text-primary-900 shadow-sm" variant="secondary">{categoryLabel(item.category)}</Badge>
+        <Badge className="absolute right-2 top-2 whitespace-nowrap bg-white/92 px-2 py-0.5 text-[9px] font-bold text-primary-900 shadow-sm" variant="secondary">{item.category === 'jet_car_rental' ? messages.jetCar : item.category === 'jet_ski_rental' ? messages.jetSki : messages.yacht}</Badge>
       </div>
 
       <div className="flex flex-1 flex-col px-2.5 pb-2 pt-2.5">
@@ -242,15 +250,15 @@ Please confirm availability and the best timing.`);
         <div className="mt-2 grid gap-1.5 rounded-[0.85rem] bg-primary-50 px-3 py-2 text-xs">
           <div className="flex flex-wrap items-start justify-between gap-2">
             <PackageOfferPrice pricing={item} audience="b2c" />
-            <span className="rounded-full bg-white px-2 py-0.5 text-[9px] font-bold text-primary-900">{item.duration_minutes} min</span>
+            <span className="rounded-full bg-white px-2 py-0.5 text-[9px] font-bold text-primary-900">{item.duration_minutes} {messages.duration}</span>
           </div>
-          <p className="flex items-center gap-1.5 text-[10.5px] text-muted-foreground"><Users className="size-3 text-primary" aria-hidden="true" />{item.capacity} seater</p>
-          <p className="flex items-center gap-1.5 text-[10.5px] text-muted-foreground"><Clock className="size-3 text-primary" aria-hidden="true" />Includes ride time and support</p>
+          <p className="flex items-center gap-1.5 text-[10.5px] text-muted-foreground"><Users className="size-3 text-primary" aria-hidden="true" />{messages.upToGuests.replace('{count}', String(item.capacity))}</p>
+          <p className="flex items-center gap-1.5 text-[10.5px] text-muted-foreground"><Clock className="size-3 text-primary" aria-hidden="true" />{messages.perRide}</p>
         </div>
         <p title={description} className="mt-2 min-h-10 overflow-hidden text-[12px] leading-5 text-muted-foreground [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]">{description}</p>
         <div className="mt-auto grid gap-1.5 pt-3">
-          <Button asChild size="sm" className="h-11 w-full rounded-full text-xs font-bold shadow-[0_8px_18px_rgba(8,37,50,0.12)]"><Link href={bookingHref} className="justify-center whitespace-nowrap">Book This Package<ArrowRight className="ml-1 size-3 shrink-0" aria-hidden="true" /></Link></Button>
-          <Button asChild size="sm" variant="outline" className="h-11 w-full rounded-full border-emerald-300 bg-emerald-500 text-xs font-bold text-white shadow-[0_8px_18px_rgba(16,185,129,0.14)] hover:bg-emerald-600 hover:text-white"><a href={whatsappMessageUrl(whatsappMessage)} target="_blank" rel="noopener noreferrer" className="justify-center whitespace-nowrap">Ask on WhatsApp</a></Button>
+          <Button asChild size="sm" className="h-11 w-full rounded-full text-xs font-bold shadow-[0_8px_18px_rgba(8,37,50,0.12)]"><Link href={bookingHref} className="justify-center whitespace-nowrap">{messages.bookPackage}<ArrowRight className="ml-1 size-3 shrink-0 rtl:rotate-180" aria-hidden="true" /></Link></Button>
+          <Button asChild size="sm" variant="outline" className="h-11 w-full rounded-full border-emerald-300 bg-emerald-500 text-xs font-bold text-white shadow-[0_8px_18px_rgba(16,185,129,0.14)] hover:bg-emerald-600 hover:text-white"><a href={whatsappMessageUrl(whatsappMessage)} target="_blank" rel="noopener noreferrer" className="justify-center whitespace-nowrap">WhatsApp</a></Button>
         </div>
       </div>
     </article>

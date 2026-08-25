@@ -4,11 +4,9 @@ import { LivePackageShowcase } from '@/components/edrive/live-package-showcase';
 import { PublicVideoHero } from '@/components/edrive/public-video-hero';
 import { whatsappUrl } from '@/lib/company-info';
 import { fleetHeroImage } from '@/lib/mock-data';
+import { createPublicMetadata } from '@/lib/i18n/metadata';
 
-export const metadata: Metadata = {
-  title: 'Water Sports Rentals',
-  description: 'Explore current eDrive Water Sports jet ski and jet car rental packages in Dubai with clear durations, pricing, and booking support.'
-};
+export const metadata: Metadata = createPublicMetadata('en', 'rentals');
 
 export default function Page() {
   return (

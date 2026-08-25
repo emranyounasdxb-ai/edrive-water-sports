@@ -8,6 +8,10 @@ import { Button } from '@/components/ui/button';
 import { getPublicImageUrl } from '@/lib/public-image-overrides';
 import { supabase } from '@/lib/supabase-client';
 import { cn } from '@/lib/utils';
+import type { PublicLocale } from '@/lib/i18n/locales';
+import { localizeHref } from '@/lib/i18n/locales';
+import type { FleetMessages } from '@/lib/i18n/types';
+import { enMessages } from '@/lib/i18n/messages/en';
 
 type PublicFleetUnit = {
   id: string;
@@ -76,7 +80,7 @@ function unitDetails(unit: PublicFleetUnit) {
   return [unit.brand, unit.model, unit.year ? String(unit.year) : ''].filter(Boolean).join(' | ');
 }
 
-export function PublicFleetShowcase() {
+export function PublicFleetShowcase({ locale = 'en', messages = enMessages.fleet }: { locale?: PublicLocale; messages?: FleetMessages }) {
   const [items, setItems] = useState<PublicFleetUnit[]>([]);
   const [filter, setFilter] = useState<FleetFilter>('all');
   const [loading, setLoading] = useState(true);
@@ -94,7 +98,7 @@ export function PublicFleetShowcase() {
 
       if (result.error) {
         setItems([]);
-        setError('Fleet details could not be loaded right now. Please retry or contact the eDrive team.');
+        setError(messages.unavailable);
       } else {
         setItems((result.data || []) as PublicFleetUnit[]);
       }
@@ -115,15 +119,15 @@ export function PublicFleetShowcase() {
       <div className="container-x">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-primary">Original eDrive vehicles</p>
-            <h2 className="mt-3 section-title">Our Fleet</h2>
+            <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-primary">eDrive</p>
+            <h2 className="mt-3 section-title">{messages.exploreFleet}</h2>
             <p className="mt-3 max-w-2xl text-sm leading-7 text-muted-foreground sm:text-base">
-              Explore individual eDrive Jet Ski and Jet Car units using the original images maintained in the fleet system.
+              {messages.qualityText}
             </p>
           </div>
 
-          <div className="flex flex-wrap gap-2" aria-label="Filter fleet vehicles">
-            {filters.map((item) => (
+          <div className="flex flex-wrap gap-2" aria-label={messages.filtersAria}>
+            {filters.map((item, index) => (
               <button
                 key={item.value}
                 type="button"
@@ -135,7 +139,7 @@ export function PublicFleetShowcase() {
                     : 'border-border bg-white text-muted-foreground hover:border-primary/30 hover:text-primary'
                 )}
               >
-                {item.label}
+                {[messages.all, messages.jetSkis, messages.jetCars][index]}
               </button>
             ))}
           </div>
@@ -149,16 +153,16 @@ export function PublicFleetShowcase() {
           <div className="mt-8 rounded-[1.4rem] border border-amber-200 bg-amber-50 p-6">
             <p className="text-sm font-semibold text-amber-900">{error}</p>
             <Button type="button" variant="outline" className="mt-4 rounded-full bg-white" onClick={() => setReloadKey((value) => value + 1)}>
-              <RefreshCw className="size-4" aria-hidden="true" />Retry
+              <RefreshCw className="size-4" aria-hidden="true" />{messages.loading}
             </Button>
           </div>
         ) : visibleItems.length ? (
           <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {visibleItems.map((unit) => <FleetUnitCard key={unit.id} unit={unit} />)}
+            {visibleItems.map((unit) => <FleetUnitCard key={unit.id} unit={unit} locale={locale} messages={messages} />)}
           </div>
         ) : (
           <div className="mt-8 rounded-[1.4rem] border border-border bg-white p-6 text-sm text-muted-foreground">
-            No public fleet units are available in this category right now.
+            {messages.empty}
           </div>
         )}
       </div>
@@ -166,12 +170,12 @@ export function PublicFleetShowcase() {
   );
 }
 
-function FleetUnitCard({ unit }: { unit: PublicFleetUnit }) {
+function FleetUnitCard({ unit, locale, messages }: { unit: PublicFleetUnit; locale: PublicLocale; messages: FleetMessages }) {
   const [imageFailed, setImageFailed] = useState(false);
   const type = normalizedType(unit.vehicle_type);
   const imageSrc = !imageFailed && String(unit.image_url || '').trim() ? getPublicImageUrl(unit.image_url) : fallbackImage(unit);
   const details = unitDetails(unit);
-  const categoryHref = type === 'jet_ski' ? '/jet-ski-rentals' : '/jet-car-rentals';
+  const categoryHref = localizeHref(locale, type === 'jet_ski' ? '/jet-ski-rentals' : '/jet-car-rentals');
   const Icon = type === 'jet_ski' ? ShipWheel : Car;
 
   return (
@@ -185,8 +189,8 @@ function FleetUnitCard({ unit }: { unit: PublicFleetUnit }) {
           onError={() => setImageFailed(true)}
         />
         <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-primary-950/45 to-transparent" aria-hidden="true" />
-        <Badge className="absolute left-3 top-3 border-white/60 bg-white/92 text-primary-900" variant="secondary">{typeLabel(unit.vehicle_type)}</Badge>
-        <Badge className={cn('absolute right-3 top-3 border', statusClass(unit.status))} variant="secondary">{statusLabel(unit.status)}</Badge>
+        <Badge className="absolute left-3 top-3 border-white/60 bg-white/92 text-primary-900" variant="secondary">{type === 'jet_ski' ? messages.jetSki : messages.jetCar}</Badge>
+        <Badge className={cn('absolute right-3 top-3 border', statusClass(unit.status))} variant="secondary">{String(unit.status).toLowerCase() === 'available' ? messages.available : String(unit.status).toLowerCase() === 'assigned' ? messages.assigned : String(unit.status).toLowerCase() === 'in_use' ? messages.inUse : messages.reserved}</Badge>
         <span className="absolute bottom-3 left-3 rounded-full bg-primary-950/80 px-3 py-1 text-xs font-bold text-white backdrop-blur-sm">{unit.vehicle_code}</span>
       </div>
 
@@ -200,7 +204,7 @@ function FleetUnitCard({ unit }: { unit: PublicFleetUnit }) {
         </div>
 
         <div className="mt-4 flex flex-wrap gap-2">
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-primary-50 px-3 py-1.5 text-xs font-semibold text-primary-900"><Users className="size-3.5" aria-hidden="true" />Up to {Number(unit.capacity || 2)} guests</span>
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-primary-50 px-3 py-1.5 text-xs font-semibold text-primary-900"><Users className="size-3.5" aria-hidden="true" />{messages.capacity}: {Number(unit.capacity || 2)} {messages.guests}</span>
           {unit.location ? <span className="rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-muted-foreground">{unit.location}</span> : null}
         </div>
 
@@ -209,7 +213,7 @@ function FleetUnitCard({ unit }: { unit: PublicFleetUnit }) {
         </p>
 
         <Button asChild className="mt-5 w-full rounded-full">
-          <Link href={categoryHref}>View {typeLabel(unit.vehicle_type)} Packages<ArrowRight className="size-4" aria-hidden="true" /></Link>
+          <Link href={categoryHref}>{messages.viewPackages}<ArrowRight className="size-4 rtl:rotate-180" aria-hidden="true" /></Link>
         </Button>
       </div>
     </article>

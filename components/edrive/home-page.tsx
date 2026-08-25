@@ -5,49 +5,44 @@ import { ArrowRight, CalendarCheck, MapPin, MessageCircle, Phone, ShieldCheck, S
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { companyInfo, whatsappUrl } from '@/lib/company-info';
+import { localizeHref, type PublicLocale } from '@/lib/i18n/locales';
+import { enMessages } from '@/lib/i18n/messages/en';
+import type { HomeMessages } from '@/lib/i18n/types';
 import { cn } from '@/lib/utils';
 import { HomeHeroCarousel } from './home-hero-carousel';
 
 const sectionPad = 'py-10 sm:py-12 lg:py-14';
 
-const whyChoose = [
-  { icon: MapPin, title: 'Dubai Islands Location', text: `Start your ride from ${companyInfo.locationName} with clear arrival guidance and team support.` },
-  { icon: ShieldCheck, title: 'Safety First', text: 'Every experience includes a safety briefing, life jacket support, and guidance from the eDrive team.' },
-  { icon: MessageCircle, title: 'Fast WhatsApp Support', text: 'Get quick help with availability, timing, ride options, and special requests before you arrive.' },
-  { icon: CalendarCheck, title: 'Easy Booking', text: 'Choose your ride, duration, date, time, and guest count, then submit your request in minutes.' }
-];
+const whyIcons = [MapPin, ShieldCheck, MessageCircle, CalendarCheck];
+const stepIcons = [Sparkles, CalendarCheck, MessageCircle];
 
-const bookingSteps = [
-  { icon: Sparkles, title: 'Choose your ride', text: 'Select a jet ski, jet car, or package that matches your group and preferred timing.' },
-  { icon: CalendarCheck, title: 'Pick date and time', text: 'Share your preferred slot, guest count, and any celebration or group details.' },
-  { icon: MessageCircle, title: 'Team confirms', text: 'Our team checks availability and confirms the final details before your water sports experience.' }
-];
-
-export function HomePage() {
+export function HomePage({ locale = 'en', messages = enMessages.home }: { locale?: PublicLocale; messages?: HomeMessages }) {
+  const whyChoose = messages.whyItems.map((item, index) => ({ ...item, icon: whyIcons[index] }));
+  const bookingSteps = messages.howItems.map((item, index) => ({ ...item, icon: stepIcons[index] }));
   return (
     <>
-      <HomeHeroCarousel />
+      <HomeHeroCarousel locale={locale} messages={messages} />
 
       <section className="bg-[#f4f5f5]" data-home-rides>
         <div className={cn('container-x', sectionPad)}>
-          <SectionHeader title="Choose Your Water Experience" text="Start with a Jet Ski or Jet Car experience, then compare the available ride durations and prices." />
+          <SectionHeader title={messages.experiencesTitle} text={messages.experiencesText} />
           <div className="mt-7 grid gap-5 md:grid-cols-2">
             <HomeRideCard
-              title="Book Jet Ski Ride"
-              text="Choose a premium Jet Ski experience, then compare available ride durations and seating options."
+              title={messages.jetSkiTitle}
+              text={messages.jetSkiText}
               image="/images/edrive/home/home-jet-ski-rentals.webp"
               mobileImage="/images/edrive/home/home-jet-ski-rentals-768.webp"
-              href="/jet-ski-rentals"
-              cta="View Jet Ski Packages"
+              href={localizeHref(locale, '/jet-ski-rentals')}
+              cta={messages.jetSkiCta}
               data-home-ride-card
             />
             <HomeRideCard
-              title="Book Jet Car Ride"
-              text="Discover a luxury Jet Car experience for couples, families, celebrations, and memorable Dubai moments."
+              title={messages.jetCarTitle}
+              text={messages.jetCarText}
               image="/images/edrive/home/home-jet-car-rentals.webp"
               mobileImage="/images/edrive/home/home-jet-car-rentals-768.webp"
-              href="/jet-car-rentals"
-              cta="View Jet Car Packages"
+              href={localizeHref(locale, '/jet-car-rentals')}
+              cta={messages.jetCarCta}
               data-home-ride-card
             />
           </div>
@@ -59,13 +54,13 @@ export function HomePage() {
           <div className="grid overflow-hidden rounded-[1.6rem] bg-primary-900 text-white shadow-xl md:grid-cols-2 md:items-stretch">
             <picture className="block h-full">
               <source media="(max-width: 767px)" srcSet="/images/edrive/home/home-membership-gold-card-768.webp" />
-              <Image src="/images/edrive/home/home-membership-gold-card.webp" alt="eDrive Membership card" width={1200} height={800} className="h-full min-h-64 w-full object-cover" />
+              <Image src="/images/edrive/home/home-membership-gold-card.webp" alt={messages.membershipImageAlt} width={1200} height={800} className="h-full min-h-64 w-full object-cover" />
             </picture>
             <div className="flex flex-col justify-center p-6 sm:p-8 lg:p-10">
-              <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-accent-300">eDrive Membership</p>
-              <h2 className="mt-3 font-heading text-3xl font-semibold leading-tight sm:text-4xl">Make Every Ride More Rewarding</h2>
-              <p className="mt-4 max-w-xl text-sm leading-7 text-white/80 sm:text-base">Discover priority benefits, exclusive offers, and dedicated support designed for returning eDrive guests.</p>
-              <Button asChild className="mt-6 w-fit rounded-full bg-accent-500 text-primary-900 hover:bg-accent-100"><Link href="/membership">Explore Membership<ArrowRight data-icon aria-hidden="true" /></Link></Button>
+              <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-accent-300">{messages.membershipEyebrow}</p>
+              <h2 className="mt-3 font-heading text-3xl font-semibold leading-tight sm:text-4xl">{messages.membershipTitle}</h2>
+              <p className="mt-4 max-w-xl text-sm leading-7 text-white/80 sm:text-base">{messages.membershipText}</p>
+              <Button asChild className="mt-6 w-fit rounded-full bg-accent-500 text-primary-900 hover:bg-accent-100"><Link href={localizeHref(locale, '/membership')}>{messages.membershipCta}<ArrowRight data-icon data-icon-directional aria-hidden="true" /></Link></Button>
             </div>
           </div>
         </div>
@@ -73,7 +68,7 @@ export function HomePage() {
 
       <section className="bg-white/70" data-home-why>
         <div className={cn('container-x', sectionPad)}>
-          <SectionHeader title="Why Choose eDrive" text="A premium Dubai water sports experience built around clear packages, safety support, smooth booking, and guest-focused service." />
+          <SectionHeader title={messages.whyTitle} text={messages.whyText} />
           <FeatureGrid items={whyChoose} className="mt-7 lg:grid-cols-4" />
         </div>
       </section>
@@ -81,15 +76,15 @@ export function HomePage() {
       <section className="bg-[#f4f5f5]" data-home-process>
         <div className={cn('container-x grid gap-7 lg:grid-cols-[0.78fr_1.22fr] lg:items-center', sectionPad)}>
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-primary">How it works</p>
-            <h2 className="mt-3 section-title">From package choice to confirmed water time</h2>
-            <p className="mt-3 text-sm leading-7 text-muted-foreground sm:text-base">Choose your ride, share your preferred timing, and our team will confirm availability before you arrive.</p>
+            <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-primary">{messages.howEyebrow}</p>
+            <h2 className="mt-3 section-title">{messages.howTitle}</h2>
+            <p className="mt-3 text-sm leading-7 text-muted-foreground sm:text-base">{messages.howText}</p>
           </div>
           <FeatureGrid items={bookingSteps} className="lg:grid-cols-3" />
         </div>
       </section>
 
-      <HomeContactStrip />
+      <HomeContactStrip messages={messages} />
     </>
   );
 }
@@ -125,13 +120,13 @@ function FeatureCard({ item }: { item: { icon: LucideIcon; title: string; text: 
   return <Card className="premium-card-hover"><CardContent className="p-5"><span className="mb-4 flex size-10 items-center justify-center rounded-md bg-primary-50 text-primary"><Icon data-icon aria-hidden="true" /></span><h3 className="font-semibold text-foreground">{item.title}</h3><p className="mt-2 text-sm leading-6 text-muted-foreground">{item.text}</p></CardContent></Card>;
 }
 
-function HomeContactStrip() {
+function HomeContactStrip({ messages }: { messages: HomeMessages }) {
   return (
     <section className="bg-[#f4f5f5] pb-10 sm:pb-12 lg:pb-14" data-home-contact>
       <div className="container-x">
         <div className="flex flex-col gap-4 rounded-[1.5rem] bg-primary-900 p-5 text-white shadow-xl lg:flex-row lg:items-center lg:justify-between">
-          <div><p className="text-[10px] font-bold uppercase tracking-[0.22em] text-accent-300">Need help choosing?</p><h2 className="mt-2 font-heading text-2xl font-semibold">Talk to eDrive before you book.</h2><p className="mt-2 max-w-3xl text-sm leading-6 text-white/70">Tell us your date, number of guests, preferred ride, or whether you need help with an eDrive Signature Membership inquiry.</p></div>
-          <div className="flex flex-col gap-2 sm:flex-row"><Button asChild className="rounded-full bg-emerald-500 hover:bg-emerald-600"><a href={whatsappUrl} target="_blank" rel="noopener noreferrer"><MessageCircle data-icon aria-hidden="true" />Chat on WhatsApp</a></Button><Button asChild variant="outline" className="rounded-full bg-white text-primary-900 hover:bg-primary-50"><a href={`tel:${companyInfo.landlineHref}`}><Phone data-icon aria-hidden="true" />Call Now</a></Button></div>
+          <div><p className="text-[10px] font-bold uppercase tracking-[0.22em] text-accent-300">{messages.helpEyebrow}</p><h2 className="mt-2 font-heading text-2xl font-semibold">{messages.helpTitle}</h2><p className="mt-2 max-w-3xl text-sm leading-6 text-white/70">{messages.helpText}</p></div>
+          <div className="flex flex-col gap-2 sm:flex-row"><Button asChild className="rounded-full bg-emerald-500 hover:bg-emerald-600"><a href={whatsappUrl} target="_blank" rel="noopener noreferrer"><MessageCircle data-icon aria-hidden="true" />{messages.chatWhatsapp}</a></Button><Button asChild variant="outline" className="rounded-full bg-white text-primary-900 hover:bg-primary-50"><a href={`tel:${companyInfo.landlineHref}`}><Phone data-icon aria-hidden="true" />{messages.callNow}</a></Button></div>
         </div>
       </div>
     </section>

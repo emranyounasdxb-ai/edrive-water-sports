@@ -1,0 +1,13 @@
+import type { Metadata } from 'next';
+import { CalendarCheck, MessageCircle } from 'lucide-react';
+import { LivePackageShowcase } from '@/components/edrive/live-package-showcase';
+import { PublicVideoHero } from '@/components/edrive/public-video-hero';
+import { whatsappUrl } from '@/lib/company-info';
+import { getPublicMessages } from '@/lib/i18n/get-messages';
+import { localizeHref, requireLocalizedPublicLocale } from '@/lib/i18n/locales';
+import { createPublicMetadata } from '@/lib/i18n/metadata';
+import { fleetHeroImage } from '@/lib/mock-data';
+
+type Props = { params: Promise<{ locale: string }> };
+export async function generateMetadata({ params }: Props): Promise<Metadata> { return createPublicMetadata(requireLocalizedPublicLocale((await params).locale), 'rentals'); }
+export default async function Page({ params }: Props) { const locale = requireLocalizedPublicLocale((await params).locale); const m = getPublicMessages(locale); const route = m.routes.rentals; return <><PublicVideoHero title={route.heroTitle!} text={route.heroText!} fallbackImage={fleetHeroImage} fallbackAlt={route.heroAlt!} actions={[{ href: localizeHref(locale, '/booking'), label: m.common.bookNow, icon: CalendarCheck }, { href: whatsappUrl, label: m.common.whatsappTeam, icon: MessageCircle, variant: 'gold', external: true }]} /><LivePackageShowcase title={route.packageTitle} text={route.packageText} categories={['jet_ski_rental', 'jet_car_rental']} locale={locale} messages={m.packages} /></>; }

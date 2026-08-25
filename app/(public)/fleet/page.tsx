@@ -1,11 +1,9 @@
 import type { Metadata } from 'next';
 import { FleetPage } from '@/components/edrive/public-pages';
+import { createPublicMetadata } from '@/lib/i18n/metadata';
 import '../../fleet-image-polish.css';
 
-export const metadata: Metadata = {
-  title: 'Jet Ski & Jet Car Fleet Dubai',
-  description: 'Explore individual eDrive Jet Ski and Jet Car fleet units at Dubai Islands with original vehicle images, seating details, and direct package access.'
-};
+export const metadata: Metadata = createPublicMetadata('en', 'fleet');
 
 export default function Page() {
   return <FleetPage />;

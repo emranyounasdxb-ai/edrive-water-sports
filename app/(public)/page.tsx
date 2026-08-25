@@ -1,13 +1,9 @@
 import type { Metadata } from 'next';
 import { HomePage } from '@/components/edrive/home-page';
+import { createPublicMetadata } from '@/lib/i18n/metadata';
 import '../home-responsive.css';
 
-export const metadata: Metadata = {
-  title: {
-    absolute: 'Jet Ski Rental Dubai & Jet Car Rides | eDrive Water Sports'
-  },
-  description: 'Book Jet Ski rentals and Jet Car rides at Dubai Islands with clear packages, flexible times, and easy online booking from eDrive Water Sports.'
-};
+export const metadata: Metadata = createPublicMetadata('en', 'home');
 
 export default function Page() {
   return <HomePage />;

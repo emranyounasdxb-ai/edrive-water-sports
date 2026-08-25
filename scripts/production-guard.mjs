@@ -52,6 +52,11 @@ const mockData = read('lib/mock-data.ts');
 const htaccess = read('public/.htaccess');
 const robotsRoute = read('app/robots.ts');
 const sitemapRoute = read('app/sitemap.ts');
+const localeConfig = read('lib/i18n/locales.ts');
+const englishMessages = read('lib/i18n/messages/en.ts');
+const metadataHelper = read('lib/i18n/metadata.ts');
+const localizedLayout = read('app/(localized)/[locale]/layout.tsx');
+const languageSwitcher = read('components/edrive/language-switcher.tsx');
 const companyInfo = read('lib/company-info.ts');
 const publicImageOverrides = read('lib/public-image-overrides.ts');
 const publicFleetShowcase = read('components/edrive/public-fleet-showcase.tsx');
@@ -235,7 +240,7 @@ assert(publicShellStyles.includes('--public-header-height: 4.625rem'), 'Public h
 assert(publicShellStyles.includes('height: var(--public-header-height)'), 'Public header must use the shared header-height variable.');
 assert(publicShellStyles.includes('padding-top: var(--public-header-height)'), 'Public main must use the same shared header-height variable.');
 assert(publicShellStyles.includes('.main > section:first-of-type:not([data-public-hero])'), 'Non-hero public sections must be protected from accidental top margin.');
-assert(homePageComponent.includes('<HomeHeroCarousel />') && homeHeroCarousel.includes('data-public-hero'), 'HomePage carousel must keep the stable public hero marker.');
+assert(homePageComponent.includes('<HomeHeroCarousel') && homeHeroCarousel.includes('data-public-hero'), 'HomePage carousel must keep the stable public hero marker.');
 assert(publicVideoHero.includes('data-public-hero'), 'Shared PublicVideoHero must keep the stable public hero marker.');
 assert(heroCtaStyles.includes('[data-public-main] > [data-public-hero]:first-of-type'), 'Hero polish must target stable public layout markers.');
 assert(heroCtaStyles.includes('[data-public-main] > [data-public-hero]:first-of-type'), 'Public hero CSS must retain the direct-child data-public-main layout contract.');
@@ -245,13 +250,13 @@ assert(homePageComponent.match(/data-home-ride-card/g)?.length === 3, 'The homep
 const homeRideSection = homePageComponent.match(/<section className="bg-\[#f4f5f5\]" data-home-rides>[\s\S]*?<\/section>/)?.[0] || '';
 assert(homeRideSection.match(/data-home-ride-card/g)?.length === 2, 'The homepage ride section must contain exactly two primary ride cards.');
 assert(!homeRideSection.includes('/membership'), 'Membership must remain outside the homepage ride-card grid.');
-assert(homeRideSection.includes('View Jet Ski Packages'), 'The Jet Ski ride CTA must remain View Jet Ski Packages.');
-assert(homeRideSection.includes('View Jet Car Packages'), 'The Jet Car ride CTA must remain View Jet Car Packages.');
+assert(homeRideSection.includes('messages.jetSkiCta') && englishMessages.includes("jetSkiCta: 'View Jet Ski Packages'"), 'The Jet Ski ride CTA must retain its English label through typed localization.');
+assert(homeRideSection.includes('messages.jetCarCta') && englishMessages.includes("jetCarCta: 'View Jet Car Packages'"), 'The Jet Car ride CTA must retain its English label through typed localization.');
 assert(!homePageComponent.includes('bg-primary-950'), 'The homepage must not use the unsupported bg-primary-950 utility.');
 assert(!homePageComponent.includes('text-primary-950'), 'The homepage must not use the unsupported text-primary-950 utility.');
 const homeMembershipSection = homePageComponent.match(/<section className="border-y border-border bg-white\/70" data-home-membership>[\s\S]*?<\/section>/)?.[0] || '';
 assert(homeMembershipSection.includes('bg-primary-900'), 'The Membership panel must retain its supported dark primary-900 background.');
-assert(/<Button[^>]*\btext-primary-900\b[^>]*>[\s\S]*?href="\/membership"/.test(homeMembershipSection), 'The Membership CTA must retain a readable primary-900 text color.');
+assert(homeMembershipSection.includes('text-primary-900') && homeMembershipSection.includes("localizeHref(locale, '/membership')"), 'The Membership CTA must retain a readable primary-900 text color.');
 for (const marker of ['data-home-rides', 'data-home-membership', 'data-home-why', 'data-home-process', 'data-home-contact']) {
   assert(homePageComponent.includes(marker), `Homepage markup must retain the stable ${marker} marker.`);
   assert(homeResponsiveStyles.includes(`[data-public-main] > [${marker}]`), `Homepage responsive CSS must target ${marker} through the direct-child data-public-main contract.`);
@@ -314,19 +319,19 @@ assert(!heroCtaStyles.includes('main.pt-\\[86px\\]'), 'Hero polish must not depe
 assert(!contactPolishStyles.includes('main.pt-\\[86px\\]'), 'Contact polish must not depend on the removed Tailwind top-padding class.');
 assert(publicShellStyles.includes('.main > div:first-of-type'), 'Public pages with a div root must also be protected from accidental top margin.');
 assert(mockData.includes("{ href: '/rentals', label: 'Rentals' }"), 'Public navigation must link directly to the Rentals landing page.');
-assert(['/rentals', '/jet-ski-rentals', '/jet-car-rentals'].every((href) => publicShell.includes(`href="${href}"`)), 'The public footer must retain direct dofollow links to all rental landing pages.');
-assert(myBookingPage.includes("canonical: '/my-booking/'") && myBookingPage.includes("url: '/my-booking/'"), 'My Booking canonical and Open Graph URLs must remain aligned.');
+assert(['/rentals', '/jet-ski-rentals', '/jet-car-rentals'].every((href) => publicShell.includes(`localizeHref(locale, '${href}')`)), 'The public footer must retain direct dofollow links to all rental landing pages.');
+assert(myBookingPage.includes("createPublicMetadata('en', 'myBooking')") && metadataHelper.includes('alternates: { canonical') && metadataHelper.includes('url: canonical'), 'My Booking canonical and Open Graph URLs must remain aligned through the shared metadata helper.');
 assert(bookingStatusPublicPage.includes("canonical: '/my-booking/'") && bookingStatusPublicPage.includes("url: '/my-booking/'"), 'The legacy booking tracker canonical and Open Graph URLs must remain aligned.');
 assert(!layout.includes("'./manager-app-polish.css'") && adminLayout.includes("'../manager-app-polish.css'"), 'Manager polish must stay scoped to the admin portal layout.');
 assert(!layout.includes("'./home-responsive.css'") && homePage.includes("'../home-responsive.css'"), 'Homepage responsive CSS must stay scoped to the homepage.');
 assert(publicLayout.includes("'../hero-cta.css'") && publicLayout.includes("'../contact-cta.css'"), 'Shared public hero and contact CTA styles must load from the public layout only.');
 assert(htaccess.includes('RewriteCond %{HTTPS} !=on [OR]') && htaccess.includes('RewriteCond %{HTTP_HOST} !^edrivedubai\\.ae$ [NC]'), 'Apache must canonicalize wrong schemes or hosts in one redirect block.');
 assert(htaccess.includes('BROTLI_COMPRESS') && htaccess.includes('DEFLATE') && htaccess.includes('<IfModule !mod_brotli.c>'), 'Apache must provide guarded Brotli compression with gzip fallback.');
-assert(myBookingPage.includes("siteName: 'eDrive Water Sports'") && myBookingPage.includes("url: '/brand/og-image.png'") && myBookingPage.includes("card: 'summary_large_image'"), 'My Booking must retain complete Open Graph and Twitter image metadata.');
+assert(metadataHelper.includes("siteName: 'eDrive Water Sports'") && metadataHelper.includes("card: 'summary_large_image'") && metadataHelper.includes('/brand/og-image.png'), 'My Booking must retain complete Open Graph and Twitter image metadata.');
 assert(adminLayout.includes('index: false') && adminLayout.includes('follow: true') && adminLayout.includes('noimageindex: true'), 'Every admin route must remain non-indexable while allowing crawlers to follow its links.');
 assert(!robotsRoute.includes("disallow: ['/admin/']"), 'Crawlers must be able to read admin noindex metadata; robots.txt is not access control.');
 assert(!sitemapRoute.includes("'admin'"), 'Admin routes must remain absent from the public sitemap.');
-assert(publicShell.includes('<span>Staff Login</span>') && publicShell.includes('href="/admin"'), 'The public Staff Login link must remain visible and point to /admin.');
+assert(publicShell.includes('{messages.staffLogin}') && publicShell.includes('href="/admin"'), 'The public Staff Login link must remain visible and point to /admin.');
 const optimizedPublicImages = [
   'jc-01.webp',
   'jc-02.webp',
@@ -422,6 +427,15 @@ assert(b2bMigration.includes('reverse_b2b_wallet_entry') && b2bMigration.include
 assert(b2bFinanceService.includes("rpc<B2BWalletLedgerEntry>('reverse_b2b_wallet_entry'"), 'Wallet reversals must use the secured RPC.');
 assert(!b2bFinancePage.includes(".from('b2b_wallets').update(") && !b2bFinancePage.includes(".from('b2b_wallet_ledger').insert("), 'The finance UI must not write wallet data directly.');
 assert(!portalAccess.includes("case 'maintenance_staff'") && !portalAccess.includes("role === 'maintenance_staff' &&"), 'Maintenance Staff must not receive active navigation or mutation permissions.');
+
+assert(localeConfig.includes("publicLocales = ['en', 'ar', 'ru']") && localeConfig.includes("localizedPublicLocales = ['ar', 'ru']"), 'Public localization must retain English, Arabic, and Russian with English as the unprefixed default.');
+assert(localeConfig.includes("locale === 'en' ? suffix || '/'"), 'English public URLs must remain unprefixed.');
+assert(localizedLayout.includes("return localizedPublicLocales.map((locale) => ({ locale }))"), 'Arabic and Russian public routes must remain statically generated.');
+assert(localizedLayout.includes("dir={locale === 'ar' ? 'rtl' : 'ltr'}") && localizedLayout.includes('lang={locale}'), 'Localized public roots must retain Arabic RTL and explicit page language semantics.');
+assert(languageSwitcher.includes('<Link') && languageSwitcher.includes('switchLocalePath(pathname, item)'), 'The public language switcher must use crawlable equivalent-route links.');
+assert(sitemapRoute.includes('publicLocales.flatMap') && sitemapRoute.includes("'x-default': publicUrl('en', route)"), 'The sitemap must publish all 36 localized URLs with en/ar/ru/x-default alternates.');
+assert(!fs.existsSync(path.join(root, 'app/(localized)/[locale]/admin')), 'The Admin portal must never receive localized routes.');
+assert(nextConfig.includes("output: 'export'") && nextConfig.includes('trailingSlash: true') && nextConfig.includes('unoptimized: true'), 'Localization must preserve static export, trailing slashes, and unoptimized Next images.');
 
 if (failures.length) {
   console.error('\nProduction guard failed:\n');

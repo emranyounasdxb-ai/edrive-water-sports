@@ -1,5 +1,7 @@
 import { ChevronDown, Info, MapPin, ShieldCheck, SunMedium, Waves } from 'lucide-react';
 import { companyInfo } from '@/lib/company-info';
+import type { BookingMessages } from '@/lib/i18n/types';
+import { enMessages } from '@/lib/i18n/messages/en';
 
 const bookingInfo = [
   { icon: ShieldCheck, title: "What's Included", text: 'Safety briefing, life jacket, dock assistance, route guidance, and marina team support.' },
@@ -9,10 +11,11 @@ const bookingInfo = [
   { icon: Waves, title: 'Cancellation / Weather Policy', text: 'Marine conditions are monitored daily. If conditions are unsafe, our team will help reschedule your experience.' },
 ];
 
-export function BookingInfoAccordions() {
+export function BookingInfoAccordions({ messages = enMessages.booking }: { messages?: BookingMessages }) {
+  const localizedInfo = messages.info.map((item, index) => ({ ...item, icon: bookingInfo[index]?.icon || Info }));
   return (
     <div className="overflow-hidden rounded-[1.5rem] border border-white/80 bg-white/80 shadow-[0_14px_32px_rgba(8,37,50,0.055)]">
-      {bookingInfo.map((item, index) => {
+      {localizedInfo.map((item, index) => {
         const Icon = item.icon;
         return (
           <details key={item.title} className="group" name="booking-information">

@@ -12,6 +12,9 @@ import { bookingRequestsTable } from '@/lib/booking-records';
 import { companyInfo, whatsappMessageUrl } from '@/lib/company-info';
 import { cleanMultiline, cleanSingleLine, isValidOptionalEmail, isValidPhone } from '@/lib/public-request-validation';
 import { supabase } from '@/lib/supabase-client';
+import type { PublicLocale } from '@/lib/i18n/locales';
+import type { ContactMessages } from '@/lib/i18n/types';
+import { enMessages } from '@/lib/i18n/messages/en';
 
 type FormState = {
   name: string;
@@ -46,7 +49,7 @@ function slugify(value: string) {
   return value.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 }
 
-export function ContactForm() {
+export function ContactForm({ locale = 'en', messages = enMessages.contactForm }: { locale?: PublicLocale; messages?: ContactMessages }) {
   const [form, setForm] = useState<FormState>(initialForm);
   const [fallbackPayload, setFallbackPayload] = useState<FormState>(initialForm);
   const [status, setStatus] = useState<'idle' | 'sending' | 'saved' | 'fallback'>('idle');
@@ -130,10 +133,10 @@ export function ContactForm() {
       website: form.website
     };
 
-    if (payload.name.length < 2) return setError('Please enter your full name.');
-    if (!isValidPhone(payload.phone)) return setError('Please enter a valid phone or WhatsApp number.');
-    if (!isValidOptionalEmail(payload.email)) return setError('Please enter a valid email address.');
-    if (payload.message.length < 10) return setError('Please add a little more detail to your message.');
+    if (payload.name.length < 2) return setError(messages.nameError);
+    if (!isValidPhone(payload.phone)) return setError(messages.phoneError);
+    if (!isValidOptionalEmail(payload.email)) return setError(messages.emailError);
+    if (payload.message.length < 10) return setError(messages.messageError);
 
     setStatus('sending');
     setFallbackPayload(payload);
@@ -147,7 +150,7 @@ export function ContactForm() {
       return;
     }
 
-    const message = result.error?.message || 'Your inquiry could not be submitted.';
+    const message = result.error?.message || messages.submitError;
     if (rpcUnavailable(message)) {
       const legacyResult = await saveLegacyInquiry(payload);
       if (legacyResult.ok) {
@@ -171,29 +174,29 @@ export function ContactForm() {
   return (
     <Card className="shadow-premium">
       <CardHeader className="border-b border-border">
-        <CardTitle>Send an inquiry</CardTitle>
-        <CardDescription>Tell us what you are planning and how you would like us to contact you.</CardDescription>
+        <CardTitle>{messages.formTitle}</CardTitle>
+        <CardDescription>{messages.formText}</CardDescription>
       </CardHeader>
       <CardContent className="pt-6">
         {completed ? (
           <div className="flex flex-col items-center gap-4 rounded-lg border border-primary/20 bg-primary-50 p-8 text-center">
             <span className="flex size-14 items-center justify-center rounded-full bg-white text-primary shadow-glass">{status === 'saved' ? <CheckCircle2 className="size-7" aria-hidden="true" /> : <MessageCircle className="size-7" aria-hidden="true" />}</span>
-            <h3 className="font-heading text-2xl font-semibold text-foreground">{status === 'saved' ? 'Inquiry received' : 'Continue on WhatsApp'}</h3>
-            <p className="max-w-md text-sm leading-7 text-muted-foreground">{status === 'saved' ? `Thank you. Your inquiry reference is ${reference}. Our team will contact you shortly.` : 'The online inquiry service is temporarily unavailable, so your complete message has been prepared in WhatsApp to make sure it is not lost.'}</p>
+            <h3 className="font-heading text-2xl font-semibold text-foreground">{status === 'saved' ? messages.received : messages.whatsappContinue}</h3>
+            <p className="max-w-md text-sm leading-7 text-muted-foreground">{status === 'saved' ? messages.receivedText.replace('{reference}', reference) : messages.fallbackText}</p>
             <div className="flex flex-col gap-2 sm:flex-row">
-              {status === 'fallback' ? <Button asChild><a href={whatsappInquiryUrl(fallbackPayload)} target="_blank" rel="noopener noreferrer"><MessageCircle className="size-4" aria-hidden="true" />Open WhatsApp</a></Button> : null}
-              <Button variant="outline" onClick={() => { setStatus('idle'); setReference(''); setError(''); }}>Write another message</Button>
+              {status === 'fallback' ? <Button asChild><a href={whatsappInquiryUrl(fallbackPayload)} target="_blank" rel="noopener noreferrer"><MessageCircle className="size-4" aria-hidden="true" />{messages.whatsappContinue}</a></Button> : null}
+              <Button variant="outline" onClick={() => { setStatus('idle'); setReference(''); setError(''); }}>{messages.formTitle}</Button>
             </div>
           </div>
         ) : (
           <form className="flex flex-col gap-4" onSubmit={submit}>
             <input value={form.website} onChange={(event) => update('website', event.target.value)} type="text" name="website" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden="true" />
-            <div className="grid gap-4 md:grid-cols-2"><label className="grid gap-2 text-sm font-semibold text-foreground">Name<Input required autoComplete="name" maxLength={100} value={form.name} onChange={(event) => update('name', event.target.value)} placeholder="Your name" /></label><label className="grid gap-2 text-sm font-semibold text-foreground">Phone / WhatsApp<Input required type="tel" inputMode="tel" autoComplete="tel" maxLength={30} value={form.phone} onChange={(event) => update('phone', event.target.value)} placeholder="+971 50 000 0000" /></label></div>
-            <div className="grid gap-4 md:grid-cols-2"><label className="grid gap-2 text-sm font-semibold text-foreground">Email <span className="font-normal text-muted-foreground">(optional)</span><Input type="email" autoComplete="email" maxLength={160} value={form.email} onChange={(event) => update('email', event.target.value)} placeholder="you@example.com" /></label><AppDatePicker label="Preferred date (optional)" value={form.preferredDate} placeholder="Select preferred date" onChange={(value) => update('preferredDate', value)} /></div>
-            <label className="grid gap-2 text-sm font-semibold text-foreground">Inquiry type<select value={form.inquiryType} onChange={(event) => update('inquiryType', event.target.value)} className="h-11 rounded-md border border-input bg-white px-3 text-sm text-foreground shadow-sm outline-none transition focus:border-primary/60 focus:ring-2 focus:ring-ring/25"><option>Jet Ski Rental</option><option>Jet Car Rental</option><option>Membership</option><option>Sales Inquiry</option><option>General Question</option></select></label>
-            <label className="grid gap-2 text-sm font-semibold text-foreground">Message<Textarea required maxLength={2000} value={form.message} onChange={(event) => update('message', event.target.value)} placeholder="Tell us the package, date, guests, or question you have for the eDrive team." /></label>
+            <div className="grid gap-4 md:grid-cols-2"><label className="grid gap-2 text-sm font-semibold text-foreground">{messages.name}<Input required autoComplete="name" maxLength={100} value={form.name} onChange={(event) => update('name', event.target.value)} placeholder={messages.namePlaceholder} /></label><label className="grid gap-2 text-sm font-semibold text-foreground">{messages.phone}<Input required type="tel" inputMode="tel" autoComplete="tel" maxLength={30} value={form.phone} onChange={(event) => update('phone', event.target.value)} placeholder="+971 50 000 0000" /></label></div>
+            <div className="grid gap-4 md:grid-cols-2"><label className="grid gap-2 text-sm font-semibold text-foreground">{messages.email} <span className="font-normal text-muted-foreground">({messages.optional})</span><Input type="email" autoComplete="email" maxLength={160} value={form.email} onChange={(event) => update('email', event.target.value)} placeholder="you@example.com" /></label><AppDatePicker label={messages.preferredDate} value={form.preferredDate} placeholder={messages.datePlaceholder} onChange={(value) => update('preferredDate', value)} /></div>
+            <label className="grid gap-2 text-sm font-semibold text-foreground">{messages.inquiry}<select value={form.inquiryType} onChange={(event) => update('inquiryType', event.target.value)} className="h-11 rounded-md border border-input bg-white px-3 text-sm text-foreground shadow-sm outline-none transition focus:border-primary/60 focus:ring-2 focus:ring-ring/25">{['Jet Ski Rental', 'Jet Car Rental', 'Membership', 'Sales Inquiry', 'General Question'].map((value, index) => <option key={value} value={value}>{messages.inquiryTypes[index] || value}</option>)}</select></label>
+            <label className="grid gap-2 text-sm font-semibold text-foreground">{messages.message}<Textarea required maxLength={2000} value={form.message} onChange={(event) => update('message', event.target.value)} placeholder={messages.messagePlaceholder} /></label>
             {error ? <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</p> : null}
-            <Button type="submit" size="lg" disabled={status === 'sending'} className="w-full sm:w-fit"><Send data-icon aria-hidden="true" />{status === 'sending' ? 'Sending Inquiry...' : 'Send Inquiry'}</Button>
+            <Button type="submit" size="lg" disabled={status === 'sending'} className="w-full sm:w-fit"><Send data-icon aria-hidden="true" />{status === 'sending' ? messages.sending : messages.send}</Button>
           </form>
         )}
       </CardContent>

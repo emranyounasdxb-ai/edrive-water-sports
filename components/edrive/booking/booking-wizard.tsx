@@ -18,6 +18,9 @@ import { PackageOfferPrice, PackageOfferRibbon } from '@/components/edrive/share
 import { BookingInfoAccordions } from './booking-info-accordions';
 import { BookingSuccess } from './booking-success';
 import { BookingSummaryTicket } from './booking-summary-ticket';
+import type { PublicLocale } from '@/lib/i18n/locales';
+import type { BookingMessages, PackageMessages } from '@/lib/i18n/types';
+import { enMessages } from '@/lib/i18n/messages/en';
 
 const steps = ['Select Package', 'Select Duration', 'Vehicles & Guests', 'Date & Time', 'Contact Details', 'Review & Submit'];
 const fieldLabel = 'grid gap-1.5 text-sm font-semibold text-foreground';
@@ -196,7 +199,7 @@ async function fetchPublicPackageRows() {
   return (fallbackResult.data || []) as PackageRateRow[];
 }
 
-export function BookingWizard() {
+export function BookingWizard({ locale = 'en', messages = enMessages.booking, packageMessages = enMessages.packages }: { locale?: PublicLocale; messages?: BookingMessages; packageMessages?: PackageMessages }) {
   const [step, setStep] = useState(() => (hasPackageParams() ? 1 : 0));
   const [draft, setDraft] = useState<BookingDraft>(initialBookingDraft);
   const [submitted, setSubmitted] = useState<BookingRequest | null>(null);
@@ -212,9 +215,10 @@ export function BookingWizard() {
   const capacity = draft.vehicleQuantity * capacityPerVehicle;
   const capacityExceeded = draft.guestCount > capacity;
   const packageFlow = packageQueryMode;
-  const visibleSteps = packageFlow ? steps.slice(1) : steps;
+  const localizedSteps = messages.steps;
+  const visibleSteps = packageFlow ? localizedSteps.slice(1) : localizedSteps;
   const visibleStepIndex = packageFlow ? Math.max(0, step - 1) : step;
-  const visibleStepLabel = visibleSteps[visibleStepIndex] || steps[step];
+  const visibleStepLabel = visibleSteps[visibleStepIndex] || localizedSteps[step];
 
   function updateDraft(values: Partial<BookingDraft>) {
     setDraft((current) => ({ ...current, ...values }));
@@ -267,7 +271,7 @@ export function BookingWizard() {
         setPackageGroups([]);
         setPackageQueryMode(false);
         setStep(0);
-        setPackageError('Ride packages could not be loaded. Please retry the page or contact the eDrive team on WhatsApp.');
+        setPackageError(messages.packageLoadError);
       } finally {
         if (active) setReady(true);
       }
@@ -352,15 +356,15 @@ export function BookingWizard() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-  if (submitted) return <BookingSuccess request={submitted} onAnother={startAnother} />;
+  if (submitted) return <BookingSuccess request={submitted} onAnother={startAnother} locale={locale} messages={messages} />;
 
   if (!ready) {
     return (
       <section className="container-x pb-10 pt-3 sm:pb-12">
         <div className="mx-auto max-w-6xl">
           <div className="premium-surface rounded-[1.65rem] p-5 text-center">
-            <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-primary">Preparing Booking</p>
-            <h2 className="mt-2 font-heading text-xl font-semibold text-foreground">Preparing your ride options...</h2>
+            <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-primary">{messages.preparing}</p>
+            <h2 className="mt-2 font-heading text-xl font-semibold text-foreground">{messages.preparingText}</h2>
           </div>
         </div>
       </section>
@@ -370,14 +374,14 @@ export function BookingWizard() {
   return (
     <section className="container-x pb-10 pt-3 sm:pb-12">
       <div className="mx-auto max-w-6xl">
-        <WizardProgress currentStep={step} packageFlow={packageFlow} onStepSelect={goToStep} />
+        <WizardProgress currentStep={step} packageFlow={packageFlow} onStepSelect={goToStep} steps={localizedSteps} />
 
         <details className="group mt-3 lg:hidden">
           <summary className="flex cursor-pointer list-none items-center justify-between rounded-[1.25rem] border border-white/80 bg-white/80 px-4 py-2.5 text-sm font-semibold text-foreground shadow-sm">
-            View booking summary
+            {messages.summary}
             <ChevronDown className="size-4 text-primary transition group-open:rotate-180" aria-hidden="true" />
           </summary>
-          <div className="mt-3"><BookingSummaryTicket draft={draft} compact /></div>
+          <div className="mt-3"><BookingSummaryTicket draft={draft} compact locale={locale} messages={messages} /></div>
         </details>
 
         <div className="mt-4 grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_300px] xl:gap-6">
@@ -385,42 +389,42 @@ export function BookingWizard() {
             <div className="premium-surface rounded-[1.65rem] p-4 sm:p-5 lg:p-5">
               <div className="mb-4 flex items-start justify-between gap-4 border-b border-border/70 pb-4">
                 <div>
-                  <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-primary">Step {visibleStepIndex + 1} of {visibleSteps.length}</p>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-primary">{messages.stepOf.replace('{current}', String(visibleStepIndex + 1)).replace('{total}', String(visibleSteps.length))}</p>
                   <h2 className="mt-1 font-heading text-xl font-semibold text-foreground sm:text-2xl">{visibleStepLabel}</h2>
                 </div>
                 <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary-50 text-xs font-bold text-primary">{visibleStepIndex + 1}</span>
               </div>
 
               {packageError ? <p className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold leading-6 text-amber-800">{packageError}</p> : null}
-              {step === 0 && !packageFlow ? <PackageSelectionStep groups={packageGroups} selectedRateId={draft.selectedPackageRateId || ''} onSelect={selectPackageGroup} /> : null}
-              {step === 1 ? <DurationStep draft={draft} onUpdate={updateDraft} /> : null}
-              {step === 2 ? <PartyStep draft={draft} capacity={capacity} capacityPerVehicle={capacityPerVehicle} exceeded={capacityExceeded} onUpdate={updateDraft} /> : null}
-              {step === 3 ? <ScheduleStep draft={draft} now={now} onUpdate={updateDraft} /> : null}
-              {step === 4 ? <ContactStep draft={draft} onUpdate={updateDraft} /> : null}
-              {step === 5 ? <ReviewStep draft={draft} /> : null}
+              {step === 0 && !packageFlow ? <PackageSelectionStep groups={packageGroups} selectedRateId={draft.selectedPackageRateId || ''} onSelect={selectPackageGroup} messages={messages} packageMessages={packageMessages} /> : null}
+              {step === 1 ? <DurationStep draft={draft} onUpdate={updateDraft} messages={messages} /> : null}
+              {step === 2 ? <PartyStep draft={draft} capacity={capacity} capacityPerVehicle={capacityPerVehicle} exceeded={capacityExceeded} onUpdate={updateDraft} messages={messages} /> : null}
+              {step === 3 ? <ScheduleStep draft={draft} now={now} onUpdate={updateDraft} locale={locale} messages={messages} /> : null}
+              {step === 4 ? <ContactStep draft={draft} onUpdate={updateDraft} messages={messages} /> : null}
+              {step === 5 ? <ReviewStep draft={draft} locale={locale} messages={messages} /> : null}
 
               <div className="mt-5 flex flex-col-reverse justify-between gap-3 border-t border-border/70 pt-4 sm:flex-row">
-                <Button type="button" variant="outline" disabled={step === 0 || (packageFlow && step === 1)} onClick={() => setStep((current) => Math.max(packageFlow ? 1 : 0, current - 1))}><ArrowLeft data-icon aria-hidden="true" />Back</Button>
+                <Button type="button" variant="outline" disabled={step === 0 || (packageFlow && step === 1)} onClick={() => setStep((current) => Math.max(packageFlow ? 1 : 0, current - 1))}><ArrowLeft data-icon aria-hidden="true" />{messages.back}</Button>
                 {step < 5 ? (
-                  <Button type="button" disabled={!canContinue} onClick={() => setStep((current) => Math.min(5, current + 1))}>{step === 4 ? 'Review Booking' : 'Continue'}<ArrowRight data-icon aria-hidden="true" /></Button>
+                  <Button type="button" disabled={!canContinue} onClick={() => setStep((current) => Math.min(5, current + 1))}>{step === 4 ? messages.reviewBooking : messages.continue}<ArrowRight data-icon aria-hidden="true" /></Button>
                 ) : (
-                  <Button type="button" onClick={submitRequest}><Send data-icon aria-hidden="true" />Submit Booking Request</Button>
+                  <Button type="button" onClick={submitRequest}><Send data-icon aria-hidden="true" />{messages.submit}</Button>
                 )}
               </div>
             </div>
 
-            <div className="mt-4"><BookingInfoAccordions /></div>
+            <div className="mt-4"><BookingInfoAccordions messages={messages} /></div>
           </div>
 
-          <aside className="sticky top-24 hidden max-h-[calc(100vh-7rem)] lg:block"><BookingSummaryTicket draft={draft} /></aside>
+          <aside className="sticky top-24 hidden max-h-[calc(100vh-7rem)] lg:block"><BookingSummaryTicket draft={draft} locale={locale} messages={messages} /></aside>
         </div>
       </div>
     </section>
   );
 }
 
-function WizardProgress({ currentStep, packageFlow, onStepSelect }: { currentStep: number; packageFlow: boolean; onStepSelect: (step: number) => void }) {
-  const progressSteps = packageFlow ? steps.slice(1) : steps;
+function WizardProgress({ currentStep, packageFlow, onStepSelect, steps: progressLabels }: { currentStep: number; packageFlow: boolean; onStepSelect: (step: number) => void; steps: string[] }) {
+  const progressSteps = packageFlow ? progressLabels.slice(1) : progressLabels;
   const displayStep = packageFlow ? Math.max(0, currentStep - 1) : currentStep;
   return (
     <div className="overflow-x-auto pb-1">
@@ -445,14 +449,14 @@ function WizardProgress({ currentStep, packageFlow, onStepSelect }: { currentSte
   );
 }
 
-function PackageSelectionStep({ groups, selectedRateId, onSelect }: { groups: PackageGroup[]; selectedRateId: string; onSelect: (group: PackageGroup) => void }) {
+function PackageSelectionStep({ groups, selectedRateId, onSelect, messages, packageMessages }: { groups: PackageGroup[]; selectedRateId: string; onSelect: (group: PackageGroup) => void; messages: BookingMessages; packageMessages: PackageMessages }) {
   if (!groups.length) {
-    return <div className="rounded-[1.25rem] border border-amber-200 bg-amber-50 p-4 text-sm font-semibold leading-6 text-amber-800">No ride packages are available right now. Please contact the eDrive team on WhatsApp for the latest options.</div>;
+    return <div className="rounded-[1.25rem] border border-amber-200 bg-amber-50 p-4 text-sm font-semibold leading-6 text-amber-800">{messages.noPackages}</div>;
   }
 
   return (
     <div>
-      <p className="mb-3 text-sm leading-6 text-muted-foreground">Choose your preferred ride package below. Our team will confirm availability before your experience.</p>
+      <p className="mb-3 text-sm leading-6 text-muted-foreground">{messages.choosePackageText}</p>
       <div className="grid gap-3 sm:grid-cols-2">
         {groups.map((group, index) => {
           const active = group.rates.some((rate) => rate.id === selectedRateId);
@@ -466,7 +470,7 @@ function PackageSelectionStep({ groups, selectedRateId, onSelect }: { groups: Pa
                   <div className="flex flex-wrap items-center gap-2"><TicketCheck className="size-4 text-primary" aria-hidden="true" /><h3 className="font-heading text-lg font-semibold text-foreground">{group.title}</h3></div>
                   <p className="mt-1.5 text-xs leading-5 text-muted-foreground">{group.categoryLabel} | {group.capacity} seater</p>
                   {offeredRate ? <div className="mt-2"><PackageOfferRibbon pricing={bookingRatePricing(offeredRate)} /></div> : null}
-                  <p className="mt-2 text-sm font-bold text-primary-900">From {formatAed(startingPrice)}</p>
+                  <p className="mt-2 text-sm font-bold text-primary-900">{packageMessages.price}: {formatAed(startingPrice)}</p>
                   <div className="mt-3 grid gap-1.5">{group.rates.map((rate) => <div key={rate.id} className="flex flex-wrap items-baseline gap-1.5 rounded-xl bg-primary-50 px-2 py-1.5 text-[10px] font-semibold text-primary-900"><span>{rate.minutes} min</span><PackageOfferPrice pricing={bookingRatePricing(rate)} audience="b2c" compact /></div>)}</div>
                 </div>
                 <span className={cn('mt-1 flex size-5 shrink-0 items-center justify-center rounded-full border', active ? 'border-primary bg-primary text-white' : 'border-border bg-background')}>{active ? <Check className="size-3" aria-hidden="true" /> : null}</span>
@@ -485,11 +489,11 @@ function PackageSelectionImage({ src, title, category, index }: { src: string; t
   return <img src={imageSrc} alt={title} onError={() => setFailed(true)} className="aspect-[16/8.4] w-full object-cover object-center" loading="lazy" />;
 }
 
-function DurationStep({ draft, onUpdate }: { draft: BookingDraft; onUpdate: (values: Partial<BookingDraft>) => void }) {
+function DurationStep({ draft, onUpdate, messages }: { draft: BookingDraft; onUpdate: (values: Partial<BookingDraft>) => void; messages: BookingMessages }) {
   const experience = getExperience(draft.experienceType);
   const packages: BookingRateOption[] = draft.selectedPackageRates || [];
-  if (!packages.length) return <div className="rounded-[1.25rem] border border-amber-200 bg-amber-50 p-4 text-sm font-semibold leading-6 text-amber-800">Please select a ride package first. Contact the team if you need help choosing an option.</div>;
-  return <div><p className="mb-3 text-sm leading-6 text-muted-foreground">Choose duration for {draft.selectedPackageName || experience.title}. Prices shown are per vehicle.</p><div className="grid gap-3 md:grid-cols-3">{packages.map((item) => {
+  if (!packages.length) return <div className="rounded-[1.25rem] border border-amber-200 bg-amber-50 p-4 text-sm font-semibold leading-6 text-amber-800">{messages.choosePackage}</div>;
+  return <div><p className="mb-3 text-sm leading-6 text-muted-foreground">{messages.chooseDuration}: {draft.selectedPackageName || experience.title}</p><div className="grid gap-3 md:grid-cols-3">{packages.map((item) => {
     const pricing = bookingRatePricing(item);
     return <ChoiceButton key={item.id || item.minutes} active={draft.selectedPackageRateId === item.id} onClick={() => onUpdate({ selectedPackageRateId: item.id, selectedPackageName: item.title || draft.selectedPackageName, selectedPackageSlug: item.slug || draft.selectedPackageSlug, durationMinutes: item.minutes, selectedPackagePrice: item.price, selectedPackageB2BPrice: undefined, selectedPackageCapacity: item.capacity })} title={formatDuration(item.minutes)} detail={<PackageOfferPrice pricing={pricing} audience="b2c" compact />} ribbon={<PackageOfferRibbon pricing={pricing} />} />;
   })}</div></div>;
@@ -499,15 +503,15 @@ function ChoiceButton({ active, onClick, title, detail, ribbon }: { active: bool
   return <button type="button" onClick={onClick} className={cn('group flex min-h-[84px] items-center justify-between gap-3 rounded-[1.05rem] border bg-white px-4 py-3 text-left transition duration-200 hover:-translate-y-0.5 hover:border-primary/45 hover:shadow-md', active ? 'border-primary bg-gradient-to-br from-primary-50 via-white to-accent-100/40 shadow-md ring-1 ring-primary/15' : 'border-border shadow-sm')} aria-pressed={active}><span className="min-w-0">{ribbon}<span className="mt-1 block text-[15px] font-bold leading-5 text-foreground">{title}</span><span className="mt-1.5 block text-xs font-medium text-muted-foreground">{detail}</span></span><span className={cn('flex size-5 shrink-0 items-center justify-center rounded-full border transition', active ? 'border-primary bg-primary text-white shadow-sm' : 'border-border bg-white group-hover:border-primary/45')}>{active ? <Check className="size-3" aria-hidden="true" /> : null}</span></button>;
 }
 
-function PartyStep({ draft, capacity, capacityPerVehicle, exceeded, onUpdate }: { draft: BookingDraft; capacity: number; capacityPerVehicle: number; exceeded: boolean; onUpdate: (values: Partial<BookingDraft>) => void }) {
-  return <div><p className="mb-4 text-sm leading-6 text-muted-foreground">Each selected vehicle can carry up to {capacityPerVehicle} guests.</p><div className="grid gap-3 sm:grid-cols-2"><Counter label="Vehicles" helper={`Up to ${capacityPerVehicle} guests each`} value={draft.vehicleQuantity} min={1} max={6} onChange={(vehicleQuantity) => onUpdate({ vehicleQuantity })} /><Counter label="Guests" helper={`Current capacity: ${capacity}`} value={draft.guestCount} min={1} max={12} onChange={(guestCount) => onUpdate({ guestCount })} /></div><div className={cn('mt-4 rounded-[1.15rem] border px-4 py-3 text-sm', exceeded ? 'border-red-200 bg-red-50 text-red-700' : 'border-primary/15 bg-primary-50 text-primary-900')} role="status">{exceeded ? `Please add ${Math.ceil(draft.guestCount / capacityPerVehicle) - draft.vehicleQuantity} more vehicle${Math.ceil(draft.guestCount / capacityPerVehicle) - draft.vehicleQuantity === 1 ? '' : 's'} for ${draft.guestCount} guests.` : `${draft.vehicleQuantity} ${draft.vehicleQuantity === 1 ? 'vehicle' : 'vehicles'} can accommodate your party of ${draft.guestCount}.`}</div></div>;
+function PartyStep({ draft, capacity, capacityPerVehicle, exceeded, onUpdate, messages }: { draft: BookingDraft; capacity: number; capacityPerVehicle: number; exceeded: boolean; onUpdate: (values: Partial<BookingDraft>) => void; messages: BookingMessages }) {
+  return <div><p className="mb-4 text-sm leading-6 text-muted-foreground">{messages.capacityNote.replace('{count}', String(capacityPerVehicle))}</p><div className="grid gap-3 sm:grid-cols-2"><Counter label={messages.vehicles} helper={`${capacityPerVehicle} ${messages.guests}`} value={draft.vehicleQuantity} min={1} max={6} onChange={(vehicleQuantity) => onUpdate({ vehicleQuantity })} /><Counter label={messages.guests} helper={`${messages.capacityNote}: ${capacity}`} value={draft.guestCount} min={1} max={12} onChange={(guestCount) => onUpdate({ guestCount })} /></div><div className={cn('mt-4 rounded-[1.15rem] border px-4 py-3 text-sm', exceeded ? 'border-red-200 bg-red-50 text-red-700' : 'border-primary/15 bg-primary-50 text-primary-900')} role="status">{exceeded ? messages.capacityExceeded : `${draft.vehicleQuantity} ${messages.vehicles} | ${draft.guestCount} ${messages.guests}`}</div></div>;
 }
 
 function Counter({ label, helper, value, min, max, onChange }: { label: string; helper: string; value: number; min: number; max: number; onChange: (value: number) => void }) {
   return <div className="rounded-[1.25rem] border border-border bg-white p-4"><div className="flex items-center justify-between gap-4"><div><p className="font-semibold text-foreground">{label}</p><p className="mt-1 text-xs text-muted-foreground">{helper}</p></div><div className="flex items-center gap-3"><button type="button" disabled={value <= min} onClick={() => onChange(value - 1)} className="flex size-8 items-center justify-center rounded-full border border-border bg-background text-primary transition hover:bg-primary-50 disabled:opacity-35" aria-label={`Decrease ${label}`}><Minus className="size-4" /></button><span className="w-6 text-center text-base font-bold text-foreground">{value}</span><button type="button" disabled={value >= max} onClick={() => onChange(value + 1)} className="flex size-8 items-center justify-center rounded-full border border-border bg-background text-primary transition hover:bg-primary-50 disabled:opacity-35" aria-label={`Increase ${label}`}><Plus className="size-4" /></button></div></div></div>;
 }
 
-function ScheduleStep({ draft, now, onUpdate }: { draft: BookingDraft; now: Date; onUpdate: (values: Partial<BookingDraft>) => void }) {
+function ScheduleStep({ draft, now, onUpdate, locale, messages }: { draft: BookingDraft; now: Date; onUpdate: (values: Partial<BookingDraft>) => void; locale: PublicLocale; messages: BookingMessages }) {
   const todayIso = dubaiDateValue(now);
   const todayParts = dubaiDateParts(now);
   const [visibleMonth, setVisibleMonth] = useState(() => new Date(todayParts.year, todayParts.month - 1, 1));
@@ -530,7 +534,7 @@ function ScheduleStep({ draft, now, onUpdate }: { draft: BookingDraft; now: Date
       <div className="rounded-[1.25rem] border border-border bg-white p-4">
         <div className="mb-3 flex items-center justify-between">
           <button type="button" aria-label="Previous month" disabled={visibleMonthKey <= minMonthKey} onClick={() => setVisibleMonth(new Date(year, month - 1, 1))} className="flex size-8 items-center justify-center rounded-full border border-border text-primary disabled:opacity-30"><ChevronLeft className="size-4" /></button>
-          <p className="font-semibold text-foreground">{visibleMonth.toLocaleDateString('en-AE', { month: 'long', year: 'numeric' })}</p>
+          <p className="font-semibold text-foreground">{visibleMonth.toLocaleDateString(locale === 'ar' ? 'ar-AE' : locale === 'ru' ? 'ru-RU' : 'en-AE', { month: 'long', year: 'numeric' })}</p>
           <button type="button" aria-label="Next month" onClick={() => setVisibleMonth(new Date(year, month + 1, 1))} className="flex size-8 items-center justify-center rounded-full border border-border text-primary"><ChevronRight className="size-4" /></button>
         </div>
         <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-bold uppercase text-muted-foreground">{['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => <span key={day} className="py-1">{day}</span>)}</div>
@@ -545,7 +549,7 @@ function ScheduleStep({ draft, now, onUpdate }: { draft: BookingDraft; now: Date
         </div>
       </div>
       <div>
-        <div className="mb-3 flex items-center gap-2"><Clock3 className="size-4 text-primary" aria-hidden="true" /><p className="font-semibold text-foreground">Preferred time <span className="font-normal text-muted-foreground">(Dubai time)</span></p></div>
+        <div className="mb-3 flex items-center gap-2"><Clock3 className="size-4 text-primary" aria-hidden="true" /><p className="font-semibold text-foreground">{messages.preferredTime}</p></div>
         {selectedDateIsToday ? <p className="mb-3 rounded-xl bg-primary-50 px-3 py-2 text-xs font-semibold leading-5 text-primary-900">Past time slots are disabled using Dubai local time.</p> : null}
         <div className="grid max-h-[300px] grid-cols-2 gap-2 overflow-y-auto pr-1">
           {timeSlots.map((time) => {
@@ -559,17 +563,17 @@ function ScheduleStep({ draft, now, onUpdate }: { draft: BookingDraft; now: Date
   );
 }
 
-function ContactStep({ draft, onUpdate }: { draft: BookingDraft; onUpdate: (values: Partial<BookingDraft>) => void }) {
+function ContactStep({ draft, onUpdate, messages }: { draft: BookingDraft; onUpdate: (values: Partial<BookingDraft>) => void; messages: BookingMessages }) {
   const phoneValid = !draft.customerPhone || isValidPhone(draft.customerPhone);
   const emailValid = isValidOptionalEmail(draft.customerEmail);
-  return <div className="grid gap-4"><div className="grid gap-4 sm:grid-cols-2"><label className={fieldLabel}>Full name <span className="relative"><UserRound className="pointer-events-none absolute left-3 top-3.5 size-4 text-muted-foreground" /><Input required autoComplete="name" maxLength={100} value={draft.customerName} onChange={(event) => onUpdate({ customerName: event.target.value })} className="pl-10" placeholder="Your full name" /></span></label><label className={fieldLabel}>Phone or WhatsApp <span className="relative"><Phone className="pointer-events-none absolute left-3 top-3.5 size-4 text-muted-foreground" /><Input required type="tel" inputMode="tel" autoComplete="tel" maxLength={30} value={draft.customerPhone} onChange={(event) => onUpdate({ customerPhone: event.target.value })} className={cn('pl-10', !phoneValid && 'border-red-300 focus-visible:ring-red-200')} placeholder={companyInfo.whatsappDisplay} /></span>{!phoneValid ? <span className="text-xs font-medium text-red-600">Enter a valid phone number with 7 to 15 digits.</span> : null}</label></div><div className="grid gap-4 sm:grid-cols-2"><label className={fieldLabel}>Email address <span className="font-normal text-muted-foreground">(optional)</span><span className="relative"><Mail className="pointer-events-none absolute left-3 top-3.5 size-4 text-muted-foreground" /><Input type="email" autoComplete="email" maxLength={160} value={draft.customerEmail} onChange={(event) => onUpdate({ customerEmail: event.target.value })} className={cn('pl-10', !emailValid && 'border-red-300 focus-visible:ring-red-200')} placeholder="you@example.com" /></span>{!emailValid ? <span className="text-xs font-medium text-red-600">Enter a valid email address.</span> : null}</label><label className={fieldLabel}>Hotel or area <span className="font-normal text-muted-foreground">(optional)</span><span className="relative"><MapPin className="pointer-events-none absolute left-3 top-3.5 size-4 text-muted-foreground" /><Input autoComplete="address-level2" maxLength={160} value={draft.customerHotelOrArea} onChange={(event) => onUpdate({ customerHotelOrArea: event.target.value })} className="pl-10" placeholder="Where are you staying?" /></span></label></div><label className={fieldLabel}>Ride type or package notes <span className="font-normal text-muted-foreground">(optional)</span><Textarea maxLength={1000} value={draft.customerNotes} onChange={(event) => onUpdate({ customerNotes: event.target.value })} placeholder="Selected package, celebration details, rider experience, or anything else we should know" /></label><p className="rounded-[1.15rem] bg-primary-50 px-4 py-3 text-xs leading-5 text-primary-900">Your details are used only to confirm and manage this booking request. They are not stored in this browser after submission.</p></div>;
+  return <div className="grid gap-4"><div className="grid gap-4 sm:grid-cols-2"><label className={fieldLabel}>{messages.fullName}<span className="relative"><UserRound className="pointer-events-none absolute left-3 top-3.5 size-4 text-muted-foreground" /><Input required autoComplete="name" maxLength={100} value={draft.customerName} onChange={(event) => onUpdate({ customerName: event.target.value })} className="pl-10" placeholder={messages.namePlaceholder} /></span></label><label className={fieldLabel}>{messages.phone}<span className="relative"><Phone className="pointer-events-none absolute left-3 top-3.5 size-4 text-muted-foreground" /><Input required type="tel" inputMode="tel" autoComplete="tel" maxLength={30} value={draft.customerPhone} onChange={(event) => onUpdate({ customerPhone: event.target.value })} className={cn('pl-10', !phoneValid && 'border-red-300 focus-visible:ring-red-200')} placeholder={messages.phonePlaceholder} /></span>{!phoneValid ? <span className="text-xs font-medium text-red-600">{messages.phonePlaceholder}</span> : null}</label></div><div className="grid gap-4 sm:grid-cols-2"><label className={fieldLabel}>{messages.email} <span className="font-normal text-muted-foreground">({messages.optional})</span><span className="relative"><Mail className="pointer-events-none absolute left-3 top-3.5 size-4 text-muted-foreground" /><Input type="email" autoComplete="email" maxLength={160} value={draft.customerEmail} onChange={(event) => onUpdate({ customerEmail: event.target.value })} className={cn('pl-10', !emailValid && 'border-red-300 focus-visible:ring-red-200')} placeholder={messages.emailPlaceholder} /></span>{!emailValid ? <span className="text-xs font-medium text-red-600">{messages.emailPlaceholder}</span> : null}</label><label className={fieldLabel}>{messages.hotelArea} <span className="font-normal text-muted-foreground">({messages.optional})</span><span className="relative"><MapPin className="pointer-events-none absolute left-3 top-3.5 size-4 text-muted-foreground" /><Input autoComplete="address-level2" maxLength={160} value={draft.customerHotelOrArea} onChange={(event) => onUpdate({ customerHotelOrArea: event.target.value })} className="pl-10" placeholder={messages.hotelPlaceholder} /></span></label></div><label className={fieldLabel}>{messages.notes} <span className="font-normal text-muted-foreground">({messages.optional})</span><Textarea maxLength={1000} value={draft.customerNotes} onChange={(event) => onUpdate({ customerNotes: event.target.value })} placeholder={messages.notesPlaceholder} /></label><p className="rounded-[1.15rem] bg-primary-50 px-4 py-3 text-xs leading-5 text-primary-900">{messages.noPaymentNow}</p></div>;
 }
 
-function ReviewStep({ draft }: { draft: BookingDraft }) {
+function ReviewStep({ draft, locale, messages }: { draft: BookingDraft; locale: PublicLocale; messages: BookingMessages }) {
   const experience = getExperience(draft.experienceType);
   const totals = getBookingTotals(draft);
   const isSales = experience.serviceType === 'sales_inquiry';
-  const date = new Intl.DateTimeFormat('en-AE', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Dubai' }).format(new Date(`${draft.preferredDate}T12:00:00+04:00`));
+  const date = new Intl.DateTimeFormat(locale === 'ar' ? 'ar-AE' : locale === 'ru' ? 'ru-RU' : 'en-AE', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Dubai' }).format(new Date(`${draft.preferredDate}T12:00:00+04:00`));
   return <div><div className="grid gap-3 sm:grid-cols-2"><ReviewGroup title="Experience" items={[[draft.selectedPackageName || experience.title, isSales ? draft.inquiryType : formatDuration(draft.durationMinutes)], ...(draft.selectedPackageCapacity ? [[`${draft.selectedPackageCapacity} seater`, draft.selectedPackageCategory ?? 'Selected vehicle']] : []), [`${draft.vehicleQuantity} ${draft.vehicleQuantity === 1 ? 'vehicle' : 'vehicles'}`, `${draft.guestCount} ${draft.guestCount === 1 ? 'guest' : 'guests'}`]]} /><ReviewGroup title="Schedule" items={[[date, `${draft.preferredTime} Dubai time`], [companyInfo.locationName, companyInfo.locationAddress]]} /><ReviewGroup title="Contact" items={[[draft.customerName, draft.customerPhone], [draft.customerEmail || 'Email not provided', draft.customerHotelOrArea || 'Area not provided']]} /><ReviewGroup title={isSales ? 'Pricing' : 'Estimate'} items={[[isSales ? 'Request quote' : formatAed(totals.totalAmount), isSales ? 'Our sales team will follow up' : 'Includes 5% VAT'], ['Payment status', 'Not Paid']]} /></div>{draft.customerNotes ? <div className="mt-3 rounded-[1.15rem] border border-border bg-white p-4"><p className="text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">Notes</p><p className="mt-2 text-sm leading-6 text-foreground">{draft.customerNotes}</p></div> : null}<div className="mt-4 rounded-[1.15rem] border border-primary/15 bg-primary-50 p-4 text-sm leading-6 text-primary-900">Submitting sends a request only. Your booking becomes final after our team confirms availability with you.</div></div>;
 }
 

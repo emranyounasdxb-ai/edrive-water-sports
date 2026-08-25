@@ -1,0 +1,9 @@
+import type { Metadata } from 'next';
+import { MembershipPage } from '@/components/edrive/membership-page';
+import { getPublicMessages } from '@/lib/i18n/get-messages';
+import { requireLocalizedPublicLocale } from '@/lib/i18n/locales';
+import { createPublicMetadata } from '@/lib/i18n/metadata';
+
+type Props = { params: Promise<{ locale: string }> };
+export async function generateMetadata({ params }: Props): Promise<Metadata> { return createPublicMetadata(requireLocalizedPublicLocale((await params).locale), 'membership'); }
+export default async function Page({ params }: Props) { const locale = requireLocalizedPublicLocale((await params).locale); return <MembershipPage locale={locale} messages={getPublicMessages(locale).membership} />; }

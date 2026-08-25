@@ -4,11 +4,9 @@ import { LivePackageShowcase } from '@/components/edrive/live-package-showcase';
 import { PublicVideoHero } from '@/components/edrive/public-video-hero';
 import { whatsappUrl } from '@/lib/company-info';
 import { jetCarLightImage } from '@/lib/mock-data';
+import { createPublicMetadata } from '@/lib/i18n/metadata';
 
-export const metadata: Metadata = {
-  title: 'Jet Car Rental Dubai',
-  description: 'Book a Jet Car rental at Dubai Islands with clear durations and pricing. Choose your preferred experience and request your ride online with eDrive.'
-};
+export const metadata: Metadata = createPublicMetadata('en', 'jetCar');
 
 export default function Page() {
   return (

@@ -1,10 +1,9 @@
 import type { Metadata } from 'next';
 import { PolicyPage } from '@/components/edrive/policy-page';
 import { companyInfo } from '@/lib/company-info';
+import { createPublicMetadata } from '@/lib/i18n/metadata';
 
-export const metadata: Metadata = {
-  title: 'Terms & Conditions'
-};
+export const metadata: Metadata = createPublicMetadata('en', 'terms');
 
 const sections = [
   {

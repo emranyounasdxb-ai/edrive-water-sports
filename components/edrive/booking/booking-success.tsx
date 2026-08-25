@@ -9,6 +9,10 @@ import { BookingRequest, formatAed, getExperience } from '@/lib/booking-data';
 import { bookingRequestToLegacyRow, bookingRequestToRow, bookingRequestsTable, isPackageColumnInsertError } from '@/lib/booking-records';
 import { companyInfo, whatsappMessageUrl } from '@/lib/company-info';
 import { supabase } from '@/lib/supabase-client';
+import type { PublicLocale } from '@/lib/i18n/locales';
+import { localizeHref } from '@/lib/i18n/locales';
+import type { BookingMessages } from '@/lib/i18n/types';
+import { enMessages } from '@/lib/i18n/messages/en';
 
 function displayDate(value: string) {
   return new Intl.DateTimeFormat('en-AE', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Dubai' }).format(new Date(`${value}T12:00:00+04:00`));
@@ -30,7 +34,7 @@ type PublicBookingResult = {
   total_amount: number | string;
 };
 
-export function BookingSuccess({ request, onAnother }: { request: BookingRequest; onAnother: () => void }) {
+export function BookingSuccess({ request, onAnother, locale = 'en', messages = enMessages.booking }: { request: BookingRequest; onAnother: () => void; locale?: PublicLocale; messages?: BookingMessages }) {
   const [savedRequest, setSavedRequest] = useState(request);
   const [saveStatus, setSaveStatus] = useState<'saving' | 'saved' | 'failed'>('saving');
   const [saveMessage, setSaveMessage] = useState('');
@@ -90,7 +94,7 @@ export function BookingSuccess({ request, onAnother }: { request: BookingRequest
           totalAmount: Number(rpcRow.total_amount || 0)
         }));
         setSaveStatus('saved');
-        setSaveMessage('Request received successfully');
+        setSaveMessage(messages.requestReceived);
         return;
       }
 
@@ -105,7 +109,7 @@ export function BookingSuccess({ request, onAnother }: { request: BookingRequest
       if (!active) return;
       if (legacyResult.ok) {
         setSaveStatus('saved');
-        setSaveMessage('Request received successfully');
+        setSaveMessage(messages.requestReceived);
       } else {
         setSaveMessage(legacyResult.message || rpcMessage);
         setSaveStatus('failed');
@@ -116,7 +120,7 @@ export function BookingSuccess({ request, onAnother }: { request: BookingRequest
     return () => { active = false; };
   }, [attempt, request]);
 
-  const heading = saveStatus === 'saving' ? 'Submitting Booking Request' : saveStatus === 'saved' ? 'Booking Request Received' : 'Booking Request Not Sent';
+  const heading = saveStatus === 'saving' ? messages.submittingTitle : saveStatus === 'saved' ? messages.receivedTitle : messages.failedTitle;
   const HeaderIcon = saveStatus === 'saving' ? LoaderCircle : saveStatus === 'saved' ? Check : AlertCircle;
 
   return (
@@ -124,12 +128,12 @@ export function BookingSuccess({ request, onAnother }: { request: BookingRequest
       <div className="mx-auto max-w-6xl">
         <div className="text-center">
           <span className={`mx-auto flex size-11 items-center justify-center rounded-full text-white shadow-lg ${saveStatus === 'failed' ? 'bg-red-600' : 'bg-primary'}`}><HeaderIcon className={`size-5 ${saveStatus === 'saving' ? 'animate-spin' : ''}`} strokeWidth={2.6} aria-hidden="true" /></span>
-          <p className="mt-3 text-[10px] font-bold uppercase tracking-[0.24em] text-primary">{saveStatus === 'saved' ? 'Pending Confirmation' : saveStatus === 'saving' ? 'Secure Submission' : 'Action Required'}</p>
+          <p className="mt-3 text-[10px] font-bold uppercase tracking-[0.24em] text-primary">{saveStatus === 'saved' ? messages.pendingConfirmation : saveStatus === 'saving' ? messages.secureSubmission : messages.actionRequired}</p>
           <h1 className="mt-1 font-heading text-3xl font-semibold leading-tight text-foreground sm:text-4xl">{heading}</h1>
-          <p className="mx-auto mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">{saveStatus === 'saved' ? `Thank you, ${savedRequest.customerName}. Our booking team will check availability and contact you shortly.` : saveStatus === 'saving' ? 'Please wait while we securely save your booking request.' : 'Your request has not been recorded yet. Retry below or send the details to our team on WhatsApp.'}</p>
-          {saveStatus === 'saving' ? <p className="mx-auto mt-3 w-fit rounded-full bg-primary-50 px-3 py-1 text-xs font-bold text-primary-900">Sending your request...</p> : null}
+          <p className="mx-auto mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">{saveStatus === 'saved' ? messages.savedThankYou.replace('{name}', savedRequest.customerName) : saveStatus === 'saving' ? messages.savingText : messages.failedText}</p>
+          {saveStatus === 'saving' ? <p className="mx-auto mt-3 w-fit rounded-full bg-primary-50 px-3 py-1 text-xs font-bold text-primary-900">{messages.sending}</p> : null}
           {saveStatus === 'saved' ? <p className="mx-auto mt-3 w-fit rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">{saveMessage || 'Request received successfully'}</p> : null}
-          {saveStatus === 'failed' ? <div className="mx-auto mt-3 max-w-xl rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-left"><p className="text-sm font-bold text-red-700">We could not save the request automatically.</p><p className="mt-1 text-xs leading-5 text-red-700/85">{saveMessage || 'Please retry or WhatsApp the team.'}</p><Button type="button" size="sm" variant="outline" onClick={() => setAttempt((value) => value + 1)} className="mt-3 rounded-full bg-white"><RefreshCw className="size-3.5" aria-hidden="true" />Retry Submission</Button></div> : null}
+          {saveStatus === 'failed' ? <div className="mx-auto mt-3 max-w-xl rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-left"><p className="text-sm font-bold text-red-700">{messages.automaticFailure}</p><p className="mt-1 text-xs leading-5 text-red-700/85">{saveMessage || messages.retryHelp}</p><Button type="button" size="sm" variant="outline" onClick={() => setAttempt((value) => value + 1)} className="mt-3 rounded-full bg-white"><RefreshCw className="size-3.5" aria-hidden="true" />{messages.retry}</Button></div> : null}
         </div>
 
         <div className={`mt-6 grid gap-5 xl:grid-cols-[minmax(0,1fr)_18.5rem] ${saveStatus !== 'saved' ? 'opacity-90' : ''}`}>
@@ -171,14 +175,14 @@ export function BookingSuccess({ request, onAnother }: { request: BookingRequest
         <div className="mt-5 flex flex-col items-center justify-between gap-4 rounded-[1.35rem] border border-primary/15 bg-primary-50 p-4 sm:flex-row">
           <div><p className="font-semibold text-foreground">Need to add something?</p><p className="mt-1 text-sm text-muted-foreground">Send the booking team your reference on WhatsApp or check your booking status after submission.</p></div>
           <div className="flex flex-col gap-2 sm:flex-row">
-            {saveStatus === 'saved' ? <Button asChild variant="outline"><Link href={`/my-booking?ref=${encodeURIComponent(savedRequest.bookingCode)}`}><TicketCheck data-icon aria-hidden="true" />Check Status</Link></Button> : null}
-            <Button asChild><a href={whatsappMessageUrl(whatsappMessage)} target="_blank" rel="noopener noreferrer"><MessageCircle data-icon aria-hidden="true" />WhatsApp us</a></Button>
+            {saveStatus === 'saved' ? <Button asChild variant="outline"><Link href={localizeHref(locale, `/my-booking?ref=${encodeURIComponent(savedRequest.bookingCode)}`)}><TicketCheck data-icon aria-hidden="true" />{messages.checkStatus}</Link></Button> : null}
+            <Button asChild><a href={whatsappMessageUrl(whatsappMessage)} target="_blank" rel="noopener noreferrer"><MessageCircle data-icon aria-hidden="true" />{messages.whatsappUs}</a></Button>
           </div>
         </div>
 
         <div className="mt-5 flex flex-col justify-center gap-3 sm:flex-row">
-          <Button asChild variant="outline"><Link href="/"><Home data-icon aria-hidden="true" />Back to Home</Link></Button>
-          <Button type="button" onClick={onAnother}><RefreshCw data-icon aria-hidden="true" />Book Another Experience</Button>
+          <Button asChild variant="outline"><Link href={localizeHref(locale, '/')}><Home data-icon aria-hidden="true" />{messages.backHome}</Link></Button>
+          <Button type="button" onClick={onAnother}><RefreshCw data-icon aria-hidden="true" />{messages.bookAnother}</Button>
         </div>
       </div>
     </section>

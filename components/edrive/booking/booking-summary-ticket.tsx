@@ -5,22 +5,25 @@ import { PackageOfferRibbon } from '@/components/edrive/shared/package-offer-pri
 import { getPackagePricePresentation } from '@/lib/package-pricing';
 import { companyInfo } from '@/lib/company-info';
 import { cn } from '@/lib/utils';
+import type { PublicLocale } from '@/lib/i18n/locales';
+import type { BookingMessages } from '@/lib/i18n/types';
+import { enMessages } from '@/lib/i18n/messages/en';
 
-function displayDate(value: string) {
-  if (!value) return 'Not selected';
-  return new Intl.DateTimeFormat('en-AE', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(`${value}T12:00:00`));
+function displayDate(value: string, locale: PublicLocale, fallback: string) {
+  if (!value) return fallback;
+  return new Intl.DateTimeFormat(locale === 'ar' ? 'ar-AE' : locale === 'ru' ? 'ru-RU' : 'en-AE', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(`${value}T12:00:00`));
 }
 
-export function BookingSummaryTicket({ draft, compact = false }: { draft: BookingDraft; compact?: boolean }) {
+export function BookingSummaryTicket({ draft, compact = false, locale = 'en', messages = enMessages.booking }: { draft: BookingDraft; compact?: boolean; locale?: PublicLocale; messages?: BookingMessages }) {
   const experience = getExperience(draft.experienceType);
   const totals = getBookingTotals(draft);
   const isSales = experience.serviceType === 'sales_inquiry';
   const packagePrice = getPackageUnitPrice(draft);
   const selectedRate = getSelectedRateForDuration(draft);
   const price = selectedRate ? getPackagePricePresentation(bookingRatePricing(selectedRate), 'b2c') : null;
-  const totalLabel = isSales ? 'Request quote' : formatAed(totals.totalAmount);
+  const totalLabel = isSales ? messages.requestQuote : formatAed(totals.totalAmount);
   const selectedTitle = draft.selectedPackageName || experience.title;
-  const party = `${draft.vehicleQuantity} ${draft.vehicleQuantity === 1 ? 'vehicle' : 'vehicles'} | ${draft.guestCount} ${draft.guestCount === 1 ? 'guest' : 'guests'}`;
+  const party = `${draft.vehicleQuantity} ${messages.vehicles} | ${draft.guestCount} ${messages.guests}`;
 
   return (
     <div className={cn('mx-auto w-full max-w-[19.5rem] overflow-hidden rounded-[1.65rem] border border-white/80 bg-white shadow-[0_20px_45px_rgba(8,37,50,0.12)]', compact && 'max-w-full rounded-[1.35rem]')}>
@@ -32,24 +35,24 @@ export function BookingSummaryTicket({ draft, compact = false }: { draft: Bookin
             <p className="font-heading text-xl font-semibold leading-none">eDrive</p>
             <p className="mt-1 text-[9px] font-bold uppercase tracking-[0.3em] text-primary-100">Water Sports</p>
           </div>
-          <span className="rounded-full border border-gold/45 bg-white/10 px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.14em] text-gold">Live Summary</span>
+          <span className="rounded-full border border-gold/45 bg-white/10 px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.14em] text-gold">{messages.liveSummary}</span>
         </div>
         <div className="relative mt-4 rounded-2xl border border-white/10 bg-white/10 p-3 backdrop-blur">
-          <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-gold">Selected experience</p>
+          <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-gold">{messages.selectedExperience}</p>
           <h3 className="mt-1 font-heading text-xl font-semibold leading-tight text-white">{selectedTitle}</h3>
           {draft.selectedPackageCapacity ? <p className="mt-1 text-xs font-semibold text-white/72">{draft.selectedPackageCapacity} seater</p> : null}
-          <p className="mt-2 text-xs leading-5 text-white/72">No payment now. Final details are confirmed by our team.</p>
+          <p className="mt-2 text-xs leading-5 text-white/72">{messages.noPaymentNow}</p>
         </div>
       </div>
 
       <div className="bg-white p-3.5">
         <div className="grid gap-2">
-          <SummaryRow icon={Clock3} label={isSales ? 'Inquiry' : 'Duration'} value={isSales ? draft.inquiryType : formatDuration(draft.durationMinutes)} />
-          {draft.selectedPackageName ? <SummaryRow icon={TicketCheck} label="Selected vehicle" value={draft.selectedPackageName} /> : null}
-          <SummaryRow icon={UsersRound} label="Party" value={party} />
-          <SummaryRow icon={CalendarDays} label="Date" value={displayDate(draft.preferredDate)} />
-          <SummaryRow icon={Clock3} label="Time" value={draft.preferredTime || 'Not selected'} />
-          {!compact ? <SummaryRow icon={MapPin} label="Meeting point" value={companyInfo.locationName} /> : null}
+          <SummaryRow icon={Clock3} label={isSales ? messages.inquiry : messages.duration} value={isSales ? draft.inquiryType : formatDuration(draft.durationMinutes)} />
+          {draft.selectedPackageName ? <SummaryRow icon={TicketCheck} label={messages.selectedVehicle} value={draft.selectedPackageName} /> : null}
+          <SummaryRow icon={UsersRound} label={messages.party} value={party} />
+          <SummaryRow icon={CalendarDays} label={messages.date} value={displayDate(draft.preferredDate, locale, messages.notSelected)} />
+          <SummaryRow icon={Clock3} label={messages.time} value={draft.preferredTime || messages.notSelected} />
+          {!compact ? <SummaryRow icon={MapPin} label={messages.meetingPoint} value={companyInfo.locationName} /> : null}
         </div>
       </div>
 
@@ -72,14 +75,14 @@ export function BookingSummaryTicket({ draft, compact = false }: { draft: Bookin
         <div className="rounded-[1.15rem] border border-primary-900/10 bg-primary-900 p-3 text-white">
           <div className="flex items-end justify-between gap-3">
             <div>
-              <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-gold">{isSales ? 'Pricing' : 'Total price'}</p>
-              {!isSales ? <p className="mt-1 text-[10px] font-semibold text-white/60">Includes 5% VAT</p> : null}
+              <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-gold">{isSales ? messages.pricing : messages.totalPrice}</p>
+              {!isSales ? <p className="mt-1 text-[10px] font-semibold text-white/60">{messages.includesVat}</p> : null}
             </div>
             <p className="text-right font-heading text-xl font-semibold leading-none text-gold">{totalLabel}</p>
           </div>
           <div className="mt-3 flex items-center justify-between rounded-full border border-white/10 bg-white/10 px-3 py-2 text-[10px] font-semibold text-white/75">
-            <span>Website request</span>
-            <span>Pending</span>
+            <span>{messages.websiteRequest}</span>
+            <span>{messages.pending}</span>
           </div>
         </div>
       </div>
