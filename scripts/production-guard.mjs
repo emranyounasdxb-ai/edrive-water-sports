@@ -1,5 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import vm from 'node:vm';
+import ts from 'typescript';
 
 const root = process.cwd();
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
@@ -435,6 +437,55 @@ assert(languageSwitcher.includes('<Link') && languageSwitcher.includes('switchLo
 assert(sitemapRoute.includes('publicLocales.flatMap') && sitemapRoute.includes("'x-default': publicUrl('en', route)"), 'The sitemap must publish all 36 localized URLs with en/ar/ru/x-default alternates.');
 assert(!fs.existsSync(path.join(root, 'app/(localized)/[locale]/admin')), 'The Admin portal must never receive localized routes.');
 assert(nextConfig.includes("output: 'export'") && nextConfig.includes('trailingSlash: true') && nextConfig.includes('unoptimized: true'), 'Localization must preserve static export, trailing slashes, and unoptimized Next images.');
+
+const metaHelper = read('lib/meta-pixel.ts');
+const metaComponent = read('components/edrive/meta-pixel.tsx');
+const metaFrame = read('public/meta-pixel-frame.html');
+assert(layout.includes("'facebook-domain-verification': 'q61ul8mybrosz8fbyck2pgvefugvzp'"), 'Meta domain verification must retain the approved token.');
+assert(metaFrame.includes("const pixelId = '1139005827091005'"), 'Meta Pixel must retain the approved public ID.');
+assert(metaComponent.includes("setAttribute('sandbox', 'allow-scripts')") && metaComponent.includes("referrerPolicy = 'no-referrer'"), 'Meta must remain isolated from parent URLs, forms and storage.');
+assert(!metaComponent.includes("'allow-scripts allow-same-origin'") && metaComponent.includes('frame?.remove()'), 'Meta sandbox must not gain same-origin access and must be removed on navigation.');
+assert(metaFrame.includes("fbq('set', 'autoConfig', false, pixelId)") && metaFrame.includes('script.async = true'), 'Meta must disable automatic configuration and load asynchronously.');
+assert(!layout.includes('<noscript'), 'Do not add an unconditional tracking fallback that bypasses sensitive URL checks.');
+assert((bookingSuccess.match(/trackBookingCompletion\(request.bookingCode\)/g) || []).length === 2, 'Conversion observer must exist in both successful save branches only.');
+assert(/setSaveStatus\('saved'\);\s*setSaveMessage\(messages.requestReceived\);\s*trackBookingCompletion\(request.bookingCode\)/.test(bookingSuccess), 'Meta conversion must follow the successful save state.');
+const metaScope = { exports: {}, URL, Set, window: { location: { href: 'https://edrivedubai.ae/booking/', pathname: '/booking/' } }, sessionStorage: { getItem: () => null, setItem: () => {} } };
+vm.runInNewContext(ts.transpileModule(metaHelper, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 } }).outputText, metaScope);
+for (const prefix of ['', '/ar', '/ru']) {
+  for (const route of ['/', '/rentals/', '/fleet/', '/booking/', '/membership/', '/contact/']) {
+    assert(metaScope.exports.isMetaEligibleUrl(new URL(`https://edrivedubai.ae${prefix}${route}`)), `Meta should allow clean public route ${prefix}${route}.`);
+  }
+  for (const route of ['/booking/?package=jet-ski&category=jet_ski&capacity=2&duration=30', '/?utm_source=facebook', '/rentals/?fbclid=CAMPAIGN']) {
+    assert(metaScope.exports.isMetaEligibleUrl(new URL(`https://edrivedubai.ae${prefix}${route}`)), `Meta should allow approved public query parameters ${prefix}${route}.`);
+  }
+  for (const route of ['/admin/', '/admin/?utm_source=facebook', '/admin/login/', '/agent/', '/agent/?package=jet-ski', '/my-booking/', '/my-booking/?ref=TEST123', '/booking-status/', '/booking-status/?package=jet-ski', '/?email=private', '/rentals/?customer_id=private', '/booking/?package=jet-ski&ref=private', '/booking/?email=private', '/booking/?unexpected=value', '/booking/?utm_source=facebook', '/#private']) {
+    assert(!metaScope.exports.isMetaEligibleUrl(new URL(`https://edrivedubai.ae${prefix}${route}`)), `Meta must reject protected/sensitive route ${prefix}${route}.`);
+  }
+}
+const observedMetaEvents = [];
+metaScope.exports.connectMetaEvents((...args) => observedMetaEvents.push(args));
+metaScope.window.location = { href: 'https://edrivedubai.ae/booking/?package=jet-ski&category=jet_ski&capacity=2&duration=30', pathname: '/booking/' };
+metaScope.exports.trackBookingCompletion('LOCAL_ONLY');
+metaScope.exports.trackBookingCompletion('LOCAL_ONLY');
+assert(JSON.stringify(observedMetaEvents) === '[["CompleteRegistration"]]', 'Conversions must deduplicate and expose only the event name, never the local reference.');
+metaScope.window.location = { href: 'https://edrivedubai.ae/my-booking/?ref=TEST123', pathname: '/my-booking/' };
+metaScope.exports.trackBookingCompletion('ANOTHER_LOCAL_KEY');
+assert(observedMetaEvents.length === 1, 'Protected pages must not emit conversions.');
+const metaScripts = [];
+const metaMessages = [];
+const metaParent = {};
+const metaWindow = { parent: metaParent, addEventListener: (_name, handler) => metaMessages.push(handler) };
+vm.runInNewContext(metaFrame.match(/<script>([\s\S]*?)<\/script>/)[1], { window: metaWindow, document: { createElement: () => ({}), head: { appendChild: (script) => metaScripts.push(script) } } });
+const deliverMeta = (data, origin = 'https://edrivedubai.ae') => metaMessages[0]({ source: metaParent, origin, data });
+deliverMeta('PageView', 'https://untrusted.example');
+deliverMeta({ event: 'PageView', email: 'NOT_SENT' });
+assert(metaScripts.length === 0, 'Meta frame must reject untrusted senders and payload objects.');
+deliverMeta('PageView');
+deliverMeta('PageView');
+deliverMeta('CompleteRegistration');
+assert(metaScripts.length === 1 && metaScripts[0].async === true, 'Only one asynchronous Meta loader may run.');
+const metaCalls = metaWindow.fbq.queue.map((args) => Array.from(args));
+assert(JSON.stringify(metaCalls.slice(2)) === '[["track","PageView"],["track","CompleteRegistration"]]', 'Meta must queue only the required parameter-free events, with one initial PageView.');
 
 if (failures.length) {
   console.error('\nProduction guard failed:\n');

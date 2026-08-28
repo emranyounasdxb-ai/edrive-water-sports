@@ -13,6 +13,7 @@ import type { PublicLocale } from '@/lib/i18n/locales';
 import { localizeHref } from '@/lib/i18n/locales';
 import type { BookingMessages } from '@/lib/i18n/types';
 import { enMessages } from '@/lib/i18n/messages/en';
+import { trackBookingCompletion } from '@/lib/meta-pixel';
 
 function displayDate(value: string) {
   return new Intl.DateTimeFormat('en-AE', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Dubai' }).format(new Date(`${value}T12:00:00+04:00`));
@@ -95,6 +96,7 @@ export function BookingSuccess({ request, onAnother, locale = 'en', messages = e
         }));
         setSaveStatus('saved');
         setSaveMessage(messages.requestReceived);
+        trackBookingCompletion(request.bookingCode);
         return;
       }
 
@@ -110,6 +112,7 @@ export function BookingSuccess({ request, onAnother, locale = 'en', messages = e
       if (legacyResult.ok) {
         setSaveStatus('saved');
         setSaveMessage(messages.requestReceived);
+        trackBookingCompletion(request.bookingCode);
       } else {
         setSaveMessage(legacyResult.message || rpcMessage);
         setSaveStatus('failed');

@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
-import type { ReactNode } from 'react';
+import { Suspense, type ReactNode } from 'react';
+import { MetaPixel } from '@/components/edrive/meta-pixel';
 import { Inter, Poppins } from 'next/font/google';
 import { PwaRegister } from '@/components/edrive/pwa-register';
 import './globals.css';
@@ -26,6 +27,7 @@ export const metadata: Metadata = {
   metadataBase: new URL('https://edrivedubai.ae'),
   manifest: '/manifest.webmanifest',
   applicationName: 'eDrive Water Sports',
+  other: { 'facebook-domain-verification': 'q61ul8mybrosz8fbyck2pgvefugvzp' },
   appleWebApp: {
     capable: true,
     title: 'eDrive',
@@ -73,6 +75,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       </head>
       <body className={`${inter.variable} ${poppins.variable}`}>
         <PwaRegister />
+        <Suspense fallback={null}><MetaPixel /></Suspense>
         {children}
       </body>
     </html>

@@ -48,6 +48,7 @@ for (const route of requiredRoutes) {
 
 if (fs.existsSync(file('index.html'))) {
   const home = read('index.html');
+  assert(home.includes('name="facebook-domain-verification" content="q61ul8mybrosz8fbyck2pgvefugvzp"'), 'Global Facebook domain verification is missing.');
   const expectedTitle = '<title>Jet Ski Rental Dubai &amp; Jet Car Rides | eDrive Water Sports</title>';
   assert(home.includes(expectedTitle), 'Homepage SEO title is missing or duplicated.');
   assert(!home.includes('| eDrive Water Sports | eDrive Water Sports'), 'Homepage contains a duplicated brand suffix.');
@@ -75,6 +76,15 @@ if (fs.existsSync(file('sw.js'))) {
   const serviceWorker = read('sw.js');
   assert(serviceWorker.includes("startsWith('/admin/')"), 'Service worker must bypass admin pages.');
   assert(serviceWorker.includes("startsWith('/agent/')"), 'Service worker must bypass B2B agent pages.');
+}
+
+assert(fs.existsSync(file('meta-pixel-frame.html')), 'Isolated Meta measurement frame must be exported.');
+for (const route of ['index.html', 'ar/index.html', 'ru/index.html', 'admin/index.html', 'my-booking/index.html', 'agent/index.html']) {
+  if (!fs.existsSync(file(route))) continue;
+  const html = read(route);
+  assert(!/<script[^>]+src="https:\/\/connect.facebook.net/.test(html), `Meta must not load directly in ${route}.`);
+  assert(!/<iframe[^>]+src="\/meta-pixel-frame.html/.test(html), `Meta must wait for client URL eligibility checks in ${route}.`);
+  assert(!/www.facebook.com\/tr\?/.test(html), `Unconditional tracking image bypasses URL eligibility in ${route}.`);
 }
 
 if (failures.length) {
