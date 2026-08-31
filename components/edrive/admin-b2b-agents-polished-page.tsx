@@ -31,6 +31,25 @@ type Form = { auth_user_id: string; company_name: string; agent_code: string; ag
 const blankForm: Form = { auth_user_id: '', company_name: '', agent_code: '', agent_type: 'B2B Agent', contact_person: '', phone: '', billing_email: '', login_email: '', initial_password: '', confirm_password: '', payment_terms: 'Instant', rate_profile: 'Default B2B Package Rates', special_pricing: false, status: 'Active', notes: '' };
 const selectClass = 'h-11 w-full rounded-md border border-input bg-white px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25';
 
+function nextAgentCode(agents: Array<Pick<Agent, 'agent_code'>>) {
+  const maxNumber = agents.reduce((max, agent) => {
+    const match = (agent.agent_code || '').trim().match(/^B2B-(\d{3,})$/);
+    const value = match ? Number(match[1]) : Number.NaN;
+    return Number.isSafeInteger(value) ? Math.max(max, value) : max;
+  }, 0);
+  return `B2B-${String(maxNumber + 1).padStart(3, '0')}`;
+}
+
+function safeProvisioningMessage(error: unknown) {
+  const message = error instanceof Error ? error.message : '';
+  if (/already|registered|exists|in use/i.test(message)) return 'This login email is already in use.';
+  if (/session|signed-in|super admin|authorization/i.test(message)) return 'Your Super Admin session is no longer valid. Sign in again and retry.';
+  if (/password/i.test(message)) return 'Password must be at least 12 characters and include uppercase, lowercase, a number, and a special character.';
+  if (/not configured|unavailable|failed to send|fetch/i.test(message)) return 'Secure provisioning is temporarily unavailable. Please try again.';
+  if (/rollback|database profile could not be created/i.test(message)) return 'The B2B Agent profile could not be created. Auth rollback was requested; please retry once.';
+  return 'The partner profile could not be saved. Please try again.';
+}
+
 export function AdminB2BAgentsPolishedPage() {
   const { role } = usePortalAccess();
   const canManage = role === 'super_admin';
@@ -84,24 +103,46 @@ export function AdminB2BAgentsPolishedPage() {
     return text.includes(query.toLowerCase()) && (statusFilter === 'All' || agent.status === statusFilter) && (authFilter === 'All' || (authFilter === 'Linked' ? Boolean(agent.auth_user_id) : !agent.auth_user_id));
   }), [agents, query, statusFilter, authFilter]);
 
-  function openAdd() { setEditing(null); setForm(blankForm); setFormOpen(true); setError(''); setSuccess(''); }
+  function openAdd() { setEditing(null); setForm({ ...blankForm, agent_code: nextAgentCode(agents) }); setFormOpen(true); setError(''); setSuccess(''); }
   function openEdit(agent: Agent) {
     setEditing(agent); setForm({ auth_user_id: agent.auth_user_id || '', company_name: agent.company_name || '', agent_code: agent.agent_code || '', agent_type: agent.agent_type || 'B2B Agent', contact_person: agent.contact_person || '', phone: agent.phone || '', billing_email: agent.billing_email || '', login_email: agent.login_email || '', initial_password: '', confirm_password: '', payment_terms: agent.payment_terms || 'Instant', rate_profile: agent.rate_profile || 'Default B2B Package Rates', special_pricing: Boolean(agent.special_pricing), status: (agent.status as Form['status']) || 'Active', notes: agent.notes || '' }); setFormOpen(true); setProfileOpen(false); setError(''); setSuccess('');
   }
   function field<K extends keyof Form>(key: K, value: Form[K]) { setForm((current) => ({ ...current, [key]: value })); }
   async function save() {
     if (!canManage || saving) return;
-    if (!form.company_name.trim() || !form.login_email.trim() || (editing && !form.auth_user_id.trim())) { setError('Company name and login email are required.'); return; }
+    const companyName = form.company_name.trim();
+    const agentCode = form.agent_code.trim().toUpperCase();
+    const contactPerson = form.contact_person.trim();
+    const phone = form.phone.trim();
+    const loginEmail = form.login_email.trim().toLowerCase();
+    if (!companyName || !agentCode || !contactPerson || !phone || !loginEmail || (editing && !form.auth_user_id.trim())) { setError('Company name, Agent Code, contact person, phone, and login email are required.'); return; }
+    if (!/^B2B-\d{3,}$/.test(agentCode)) { setError('Agent Code must use the B2B-001 format.'); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(loginEmail)) { setError('Enter a valid login email address.'); return; }
+    if (!editing && !form.initial_password) { setError('Initial Password and Confirm Password are required.'); return; }
     if (!editing && form.initial_password !== form.confirm_password) { setError('Passwords do not match.'); return; }
     if (!editing && !(form.initial_password.length >= 12 && /[A-Z]/.test(form.initial_password) && /[a-z]/.test(form.initial_password) && /\d/.test(form.initial_password) && /[^A-Za-z0-9]/.test(form.initial_password))) { setError('Password must be at least 12 characters and include uppercase, lowercase, a number, and a special character.'); return; }
     setSaving(true); setError(''); setSuccess('');
     try {
-      const profile = { company_name: form.company_name.trim(), agent_code: form.agent_code.trim(), agent_type: form.agent_type, contact_person: form.contact_person.trim(), phone: form.phone.trim(), login_email: form.login_email.trim().toLowerCase(), email: form.login_email.trim().toLowerCase(), billing_email: form.billing_email.trim().toLowerCase() || form.login_email.trim().toLowerCase(), payment_terms: form.payment_terms, rate_profile: form.rate_profile.trim(), special_pricing: form.special_pricing, status: form.status, notes: form.notes.trim() || null };
+      const profile = { company_name: companyName, agent_code: agentCode, agent_type: form.agent_type, contact_person: contactPerson, phone, login_email: loginEmail, email: loginEmail, billing_email: form.billing_email.trim().toLowerCase() || loginEmail, payment_terms: form.payment_terms, rate_profile: form.rate_profile.trim(), special_pricing: form.special_pricing, status: form.status, notes: form.notes.trim() || null };
       if (editing) await manageB2BAgentProfile(editing.id, form.auth_user_id.trim(), profile);
-      else await provisionB2BAgentUser({ email: form.login_email, initial_password: form.initial_password, profile });
+      else await provisionB2BAgentUser({ email: loginEmail, initial_password: form.initial_password, profile });
       setForm(blankForm);
       setSuccess(editing ? 'Partner profile updated.' : 'Partner profile created and linked.'); await load(true); setFormOpen(false);
-    } catch (saveError) { console.error('B2B partner save failed', saveError); setError('The partner profile could not be saved. Please try again.'); }
+    } catch (saveError) {
+      console.error('B2B partner save failed', saveError);
+      if (!editing) {
+        const { data: codeMatches, error: codeCheckError } = await supabase.from('b2b_agents').select('agent_code').eq('agent_code', agentCode).limit(1);
+        if (!codeCheckError && codeMatches?.length) {
+          const { data: currentCodes } = await supabase.from('b2b_agents').select('agent_code');
+          const replacementCode = nextAgentCode((currentCodes || []) as Array<Pick<Agent, 'agent_code'>>);
+          setForm((current) => ({ ...current, agent_code: replacementCode }));
+          await load(true);
+          setError(`Agent Code ${agentCode} is already in use. The next available code is ${replacementCode}.`);
+          return;
+        }
+        setError(safeProvisioningMessage(saveError));
+      } else setError('The partner profile could not be saved. Please try again.');
+    }
     finally { setSaving(false); }
   }
   async function changeStatus(agent: Agent) {

@@ -140,6 +140,9 @@ assert(!provisioningService.includes('localStorage') && !provisioningService.inc
 assert(provisioningService.includes("functions.invoke('provision-portal-user'"), 'Browser provisioning must use the secured Supabase Edge Function.');
 assert(teamAccessPage.includes('provisionInternalPortalUser') && !teamAccessPage.includes('Create the account in Supabase Authentication first'), 'Team & Access create mode must securely provision Auth and profile records without a manual Auth UUID prerequisite.');
 assert(b2bAgentsPage.includes('provisionB2BAgentUser') && !b2bAgentsPage.includes('paste the Auth user UUID'), 'B2B Agent create mode must securely provision Auth and profile records without manual Auth UUID entry.');
+assert(b2bAgentsPage.includes('agent_code: nextAgentCode(agents)') && b2bAgentsPage.includes("match(/^B2B-(\\d{3,})$/)"), 'B2B Agent create mode must derive the next code only from valid existing B2B-NNN codes.');
+assert(b2bAgentsPage.includes('Company name, Agent Code, contact person, phone, and login email are required.') && b2bAgentsPage.includes("/^B2B-\\d{3,}$/"), 'B2B Agent create mode must enforce the live required profile fields and Agent Code convention before provisioning.');
+assert(b2bAgentsPage.includes("if (/already|registered|exists|in use/i.test(message))") && b2bAgentsPage.includes('Agent Code ${agentCode} is already in use.'), 'B2B Agent create failures must safely distinguish duplicate emails and duplicate Agent Codes.');
 assert(nextConfig.includes("output: 'export'"), 'The website must remain a Next.js static export.');
 assert(deployWorkflow.includes('local-dir: ./out/') && deployWorkflow.includes('SamKirkland/FTP-Deploy-Action'), 'The existing static-export FTP deployment architecture must remain unchanged.');
 assert(portalAccess.includes("path === '/admin/my-profile'") && portalAccess.includes("path === '/admin/manager/my-profile'"), 'Approved self-profile routes must retain their mutation exception.');
