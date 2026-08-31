@@ -15,6 +15,7 @@ import { supabase } from '@/lib/supabase-client';
 import type { PublicLocale } from '@/lib/i18n/locales';
 import type { ContactMessages } from '@/lib/i18n/types';
 import { enMessages } from '@/lib/i18n/messages/en';
+import { trackMetaEvent } from '@/lib/meta-pixel';
 
 type FormState = {
   name: string;
@@ -147,6 +148,7 @@ export function ContactForm({ locale = 'en', messages = enMessages.contactForm }
       setReference(row.reference);
       setStatus('saved');
       setForm(initialForm);
+      trackMetaEvent('Lead');
       return;
     }
 
@@ -157,6 +159,7 @@ export function ContactForm({ locale = 'en', messages = enMessages.contactForm }
         setReference(legacyResult.reference || '');
         setStatus('saved');
         setForm(initialForm);
+        trackMetaEvent('Lead');
         return;
       }
 

@@ -21,6 +21,7 @@ import { BookingSummaryTicket } from './booking-summary-ticket';
 import type { PublicLocale } from '@/lib/i18n/locales';
 import type { BookingMessages, PackageMessages } from '@/lib/i18n/types';
 import { enMessages } from '@/lib/i18n/messages/en';
+import { trackBookingSchedule } from '@/lib/meta-pixel';
 
 const steps = ['Select Package', 'Select Duration', 'Vehicles & Guests', 'Date & Time', 'Contact Details', 'Review & Submit'];
 const fieldLabel = 'grid gap-1.5 text-sm font-semibold text-foreground';
@@ -336,6 +337,13 @@ export function BookingWizard({ locale = 'en', messages = enMessages.booking, pa
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
+  function continueToNextStep() {
+    if (step === 3 && canContinue) {
+      trackBookingSchedule(`${draft.preferredDate}|${draft.preferredTime}`);
+    }
+    setStep((current) => Math.min(5, current + 1));
+  }
+
   function startAnother() {
     setDraft((current) => ({
       ...initialBookingDraft,
@@ -406,7 +414,7 @@ export function BookingWizard({ locale = 'en', messages = enMessages.booking, pa
               <div className="mt-5 flex flex-col-reverse justify-between gap-3 border-t border-border/70 pt-4 sm:flex-row">
                 <Button type="button" variant="outline" disabled={step === 0 || (packageFlow && step === 1)} onClick={() => setStep((current) => Math.max(packageFlow ? 1 : 0, current - 1))}><ArrowLeft data-icon aria-hidden="true" />{messages.back}</Button>
                 {step < 5 ? (
-                  <Button type="button" disabled={!canContinue} onClick={() => setStep((current) => Math.min(5, current + 1))}>{step === 4 ? messages.reviewBooking : messages.continue}<ArrowRight data-icon aria-hidden="true" /></Button>
+                  <Button type="button" disabled={!canContinue} onClick={continueToNextStep}>{step === 4 ? messages.reviewBooking : messages.continue}<ArrowRight data-icon aria-hidden="true" /></Button>
                 ) : (
                   <Button type="button" onClick={submitRequest}><Send data-icon aria-hidden="true" />{messages.submit}</Button>
                 )}

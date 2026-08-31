@@ -78,12 +78,12 @@ if (fs.existsSync(file('sw.js'))) {
   assert(serviceWorker.includes("startsWith('/agent/')"), 'Service worker must bypass B2B agent pages.');
 }
 
-assert(fs.existsSync(file('meta-pixel-frame.html')), 'Isolated Meta measurement frame must be exported.');
+assert(!fs.existsSync(file('meta-pixel-frame.html')), 'Retired Meta iframe asset must not be exported.');
 for (const route of ['index.html', 'ar/index.html', 'ru/index.html', 'admin/index.html', 'my-booking/index.html', 'agent/index.html']) {
   if (!fs.existsSync(file(route))) continue;
   const html = read(route);
-  assert(!/<script[^>]+src="https:\/\/connect.facebook.net/.test(html), `Meta must not load directly in ${route}.`);
-  assert(!/<iframe[^>]+src="\/meta-pixel-frame.html/.test(html), `Meta must wait for client URL eligibility checks in ${route}.`);
+  assert(!/<script[^>]+src="https:\/\/connect.facebook.net/.test(html), `Meta must wait for client-side public-route eligibility checks in ${route}.`);
+  assert(!/<iframe[^>]+src="\/meta-pixel-frame.html/.test(html), `Retired Meta iframe must not return in ${route}.`);
   assert(!/www.facebook.com\/tr\?/.test(html), `Unconditional tracking image bypasses URL eligibility in ${route}.`);
 }
 
