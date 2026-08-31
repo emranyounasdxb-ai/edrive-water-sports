@@ -70,6 +70,7 @@ const b2bOfferRpc = packageOfferMigration.split('create or replace function publ
 const packagePricing = read('lib/package-pricing.ts');
 const packageOfferPrice = read('components/edrive/shared/package-offer-price.tsx');
 const agentNewBooking = read('app/agent/new-booking/page.tsx');
+const agentPortalProvider = read('components/edrive/agent/agent-portal-provider.tsx');
 const fleetEnumMigration = read('supabase/fleet-status-enum-values.sql');
 const fleetLegacyPreflight = read('supabase/fleet-legacy-data-preflight.sql');
 const fleetMigration = read('supabase/fleet-asset-hardening.sql');
@@ -378,6 +379,13 @@ assert(packageShowcase.includes('PackageOfferRibbon pricing={item}') && !package
 assert(packageOfferPrice.includes("audience = 'b2c'") && packageOfferPrice.includes('getPackagePricePresentation(pricing, audience)'), 'Shared offer ribbons must validate prices for the requested audience while preserving the B2C default.');
 assert(bookingWizard.includes("getPackagePricePresentation(row, 'b2c')") && bookingWizard.includes('price: price.effectivePrice'), 'Public booking selection must store validated effective B2C pricing.');
 assert(agentNewBooking.includes("getPackagePricePresentation(selected, 'b2b')") && agentNewBooking.includes('audience="b2b"'), 'B2B booking previews and ribbons must use validated B2B pricing.');
+assert(agentNewBooking.includes('const { profile, walletBalance: balance') && agentNewBooking.includes("profile.contact_person?.trim()") && agentNewBooking.includes("profile.phone?.trim()") && agentNewBooking.includes("profile.login_email?.trim() || profile.email?.trim()"), 'B2B bookings must derive identity from the authenticated Agent portal profile.');
+assert(agentPortalProvider.includes(".eq('auth_user_id', session.session.user.id)") && agentPortalProvider.includes(".select('id,agent_code,company_name,contact_person,login_email,email,phone,status')"), 'The Agent portal profile must resolve through the current Supabase Auth user and b2b_agents.auth_user_id.');
+assert(agentNewBooking.includes('customer_name: agentContact') && agentNewBooking.includes('customer_phone: agentPhone') && agentNewBooking.includes('customer_email: agentEmail'), 'B2B booking payloads must retain the database customer fields using authenticated Agent identity.');
+assert(!agentNewBooking.toLowerCase().includes('hydro@edrivedubai.ae') && !/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i.test(agentNewBooking), 'B2B booking identity must not contain a Hydro-specific email or fixed Agent UUID.');
+assert(agentNewBooking.includes("{ title: 'Package', icon: Package }, { title: 'Schedule', icon: CalendarDays }, { title: 'Review', icon: CheckCircle2 }") && !agentNewBooking.includes("title: 'Customer'") && !agentNewBooking.includes('function CustomerStep'), 'The B2B booking wizard must remain a three-step Package, Schedule, Review flow without a manual Customer step.');
+assert(!agentNewBooking.includes('form.customerName') && !agentNewBooking.includes('form.customerPhone') && !agentNewBooking.includes('Customer name and phone are required.'), 'B2B booking must not validate or accept manual customer identity fields.');
+assert(bookingWizard.includes('draft.customerName') && bookingWizard.includes('draft.customerPhone') && bookingWizard.includes('draft.customerEmail'), 'The public booking wizard must retain its direct-customer identity fields.');
 assert(!packageShowcase.includes('normalPrice=') && !packageShowcase.includes('offerPrice='), 'Public booking URLs must not include client-controlled price parameters.');
 assert(packageOfferMigration.includes('insert into public.booking_requests') && !packageOfferMigration.includes('public.bookings'), 'Package offers must keep public.booking_requests as the live booking source.');
 assert(packagesPage.includes("rpc('delete_package_if_unused'"), 'Package deletion must use the booking-aware delete RPC.');
