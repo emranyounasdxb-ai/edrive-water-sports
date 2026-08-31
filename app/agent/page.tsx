@@ -16,6 +16,7 @@ import type { B2BRefundRequest, B2BWalletLedgerEntry } from '@/services/b2b-fina
 type Booking = { id: string; booking_code: string | null; customer_name: string | null; selected_package_name: string | null; preferred_date: string | null; preferred_time: string | null; status: string | null; created_at: string | null };
 
 const niceDate = (value?: string | null) => value ? new Intl.DateTimeFormat('en-AE', { day: '2-digit', month: 'short', timeZone: 'Asia/Dubai' }).format(new Date(value.includes('T') ? value : `${value}T12:00:00`)) : '';
+const agentDashboardPanelClass = 'border-slate-200/70 bg-white shadow-[0_8px_24px_rgba(15,23,42,0.04)] [&>header]:border-slate-200/60';
 
 export default function AgentDashboardPage() {
   const { profile, agentId, walletBalance, financeSummary: summary, refreshPortal } = useAgentPortal();
@@ -97,22 +98,22 @@ export default function AgentDashboardPage() {
         <AgentMetricCard label="Refund Credits" value={formatAed(approvedRefunds)} detail="Approved wallet refund credits." icon={ReceiptText} tone="green" />
       </section>
       <section className="mt-3 grid gap-3 xl:grid-cols-[minmax(0,2fr)_minmax(18rem,1fr)]">
-        <DashboardPanel title="Booking Activity" description="Partner bookings created over recent months">
+        <DashboardPanel title="Booking Activity" description="Partner bookings created over recent months" className={agentDashboardPanelClass}>
           <DashboardAreaChart labels={monthly.map(([month]) => month)} series={[{ name: 'Bookings', color: '#0f8f91', values: monthly.map(([, value]) => value) }]} ariaLabel="Monthly B2B Agent booking activity" />
         </DashboardPanel>
-        <DashboardPanel title="Needs Attention" description="Partner actions and account notices"><DashboardActionList items={attention} /></DashboardPanel>
+        <DashboardPanel title="Needs Attention" description="Partner actions and account notices" className={agentDashboardPanelClass}><DashboardActionList items={attention} /></DashboardPanel>
       </section>
       <section className="mt-3 grid gap-3 lg:grid-cols-2">
-        <DashboardPanel title="Top Booked Packages"><DashboardProgressList items={packages.map(([label, value]) => ({ label, value }))} empty="No package activity is available." /></DashboardPanel>
-        <DashboardPanel title="Recent Wallet Activity">
+        <DashboardPanel title="Top Booked Packages" className={agentDashboardPanelClass}><DashboardProgressList items={packages.map(([label, value]) => ({ label, value }))} empty="No package activity is available." /></DashboardPanel>
+        <DashboardPanel title="Recent Wallet Activity" className={agentDashboardPanelClass}>
           <DashboardActivityList items={ledger.slice(0, 6).map((entry) => ({ title: entry.description || (entry.direction === 'credit' ? 'Wallet credit' : 'Wallet debit'), meta: `${entry.direction === 'credit' ? '+' : '-'} ${formatAed(Number(entry.amount_aed || 0))}`, time: niceDate(entry.created_at), icon: WalletCards, href: '/agent/wallet' }))} empty="No wallet transactions are available." />
         </DashboardPanel>
       </section>
       <section className="mt-3 grid gap-3 lg:grid-cols-[minmax(0,2fr)_minmax(16rem,1fr)]">
-        <DashboardPanel title="Upcoming & Recent Bookings">
+        <DashboardPanel title="Upcoming & Recent Bookings" className={agentDashboardPanelClass}>
           <DashboardActivityList items={bookings.slice(0, 7).map((booking) => ({ title: `${booking.booking_code || 'Booking'} · ${booking.customer_name || 'Guest'}`, meta: `${booking.selected_package_name || 'Package'} · ${booking.status || 'Pending'}`, time: niceDate(booking.preferred_date), icon: BookCheck, href: '/agent/bookings' }))} empty="No partner bookings are available." />
         </DashboardPanel>
-        <DashboardPanel title="Partner Support">
+        <DashboardPanel title="Partner Support" className={agentDashboardPanelClass}>
           <div className="flex min-h-36 flex-col p-4"><div className="flex items-center gap-2 text-sm font-bold"><Headphones className="size-4 text-primary" />eDrive Partner Team</div><p className="mt-2 text-xs leading-5 text-muted-foreground">Get help with bookings or arrange wallet top-up assistance.</p><a href="tel:+97146113114" className="mt-2 text-base font-bold text-primary">+971 4 611 3114</a>{!walletFunded ? <div className="mt-3 flex items-center gap-2 text-xs font-semibold text-amber-800"><CircleAlert className="size-4" />Top-up required before booking.</div> : null}</div>
         </DashboardPanel>
       </section>
