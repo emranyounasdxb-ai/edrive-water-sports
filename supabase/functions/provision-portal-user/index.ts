@@ -85,7 +85,8 @@ Deno.serve(async (request) => {
   const email = clean(body.email).toLowerCase();
   const password = clean(body.initial_password);
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return response(origin, 400, { error: 'A valid login email is required.' });
-  if (!validPassword(password)) return response(origin, 400, { error: 'Password must be at least 12 characters and include uppercase, lowercase, number, and special characters.' });
+  if (!password) return response(origin, 400, { error: 'An initial login password is required.' });
+  if (accountType === 'b2b_agent' && !validPassword(password)) return response(origin, 400, { error: 'Password must be at least 12 characters and include uppercase, lowercase, number, and special characters.' });
 
   const [{ data: staffLinks }, { data: agentLoginLinks }, { data: agentEmailLinks }] = await Promise.all([
     adminClient.from('admin_users').select('id').ilike('email', email).limit(1),
@@ -107,7 +108,14 @@ Deno.serve(async (request) => {
   });
   if (createError || !created.user) {
     const conflict = /already|registered|exists/i.test(createError?.message || '');
-    return response(origin, conflict ? 409 : 400, { error: conflict ? 'An Auth user already exists for this email.' : 'Unable to create the Auth user.' });
+    const passwordRejected = /password/i.test(createError?.message || '');
+    return response(origin, conflict ? 409 : 400, {
+      error: conflict
+        ? 'An Auth user already exists for this email.'
+        : passwordRejected
+          ? 'The password does not meet the current login password requirements.'
+          : 'Unable to create the Auth user.'
+    });
   }
 
   const authUserId = created.user.id;

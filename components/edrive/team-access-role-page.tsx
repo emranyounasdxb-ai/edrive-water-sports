@@ -144,7 +144,7 @@ function TeamModal({ row, saving, error, onClose, onSave }: { row: TeamRow | nul
             {!row ? <>
               <label className="relative grid gap-1.5 text-sm font-semibold">Initial Password<Input type={showPassword ? 'text' : 'password'} autoComplete="new-password" value={form.initialPassword} onChange={(event) => change('initialPassword', event.target.value)} required className="h-11 rounded-xl pr-11" /><button type="button" aria-label={showPassword ? 'Hide password' : 'Show password'} onClick={() => setShowPassword((value) => !value)} className="absolute bottom-0 right-0 flex size-11 items-center justify-center text-muted-foreground">{showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}</button></label>
               <label className="grid gap-1.5 text-sm font-semibold">Confirm Password<Input type={showPassword ? 'text' : 'password'} autoComplete="new-password" value={form.confirmPassword} onChange={(event) => change('confirmPassword', event.target.value)} required className="h-11 rounded-xl" /></label>
-              <p className="text-xs leading-5 text-muted-foreground sm:col-span-2">Use at least 12 characters with uppercase, lowercase, a number, and a special character.</p>
+              <p className="text-xs leading-5 text-muted-foreground sm:col-span-2">Enter the initial login password and confirm it.</p>
             </> : null}
             <label className="grid gap-1.5 text-sm font-semibold">Phone<Input value={form.phone} onChange={(event) => change('phone', event.target.value)} className="h-11 rounded-xl" /></label>
             <label className="grid gap-1.5 text-sm font-semibold">Nationality<select value={form.nationality} onChange={(event) => change('nationality', event.target.value)} required className="h-11 rounded-xl border border-border bg-white px-3 text-sm font-semibold"><option value="">Select nationality</option>{nationalityOptions.map((option) => <option key={`${option.code}-${option.value}`} value={option.value}>{option.label}</option>)}</select></label>
@@ -198,9 +198,6 @@ export function TeamAccessRolePage() {
     try {
       if (!editing) {
         if (form.initialPassword !== form.confirmPassword) throw new Error('Passwords do not match.');
-        if (!(form.initialPassword.length >= 12 && /[A-Z]/.test(form.initialPassword) && /[a-z]/.test(form.initialPassword) && /\d/.test(form.initialPassword) && /[^A-Za-z0-9]/.test(form.initialPassword))) {
-          throw new Error('Password must be at least 12 characters and include uppercase, lowercase, a number, and a special character.');
-        }
         await provisionInternalPortalUser({
           full_name: form.fullName.trim(),
           email: form.email.trim().toLowerCase(),
@@ -242,7 +239,7 @@ export function TeamAccessRolePage() {
       await load();
     } catch (saveError) {
       console.error('Team access save failed', saveError);
-      setError('Team access could not be saved. Please try again.');
+      setError(!editing && saveError instanceof Error ? saveError.message : 'Team access could not be saved. Please try again.');
     } finally {
       setSaving(false);
     }
