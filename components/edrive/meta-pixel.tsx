@@ -6,9 +6,9 @@ import {
   connectMetaEvents,
   discardPendingMetaEvents,
   isMetaEligibleUrl,
+  trackBookingInteraction,
   trackMetaContentView,
   trackMetaEvent,
-  trackMetaInitiateCheckout,
   trackMetaPageView
 } from '@/lib/meta-pixel';
 
@@ -69,6 +69,14 @@ function isContactLink(target: EventTarget | null) {
     || /(?:wa\.me|whatsapp\.com)/i.test(href);
 }
 
+function isBookingLink(target: EventTarget | null) {
+  if (!(target instanceof Element)) return false;
+  const href = target.closest('a[href]')?.getAttribute('href');
+  if (!href) return false;
+  const pathname = new URL(href, window.location.href).pathname.replace(/\/$/, '');
+  return /^\/(?:ar\/|ru\/)?booking$/.test(pathname);
+}
+
 export function MetaPixel() {
   const pathname = usePathname();
   const search = useSearchParams().toString();
@@ -81,17 +89,16 @@ export function MetaPixel() {
     }
 
     const fbq = ensureMetaPixel();
-    const disconnect = connectMetaEvents((event) => fbq('track', event));
+    const disconnect = connectMetaEvents((event) => fbq(event === 'BookingDateSelected' ? 'trackCustom' : 'track', event));
     const onClick = (event: MouseEvent) => {
-      if (isMetaEligibleUrl(new URL(window.location.href)) && isContactLink(event.target)) {
-        trackMetaEvent('Contact');
-      }
+      if (!isMetaEligibleUrl(new URL(window.location.href))) return;
+      if (isContactLink(event.target)) trackMetaEvent('Contact');
+      else if (isBookingLink(event.target)) trackBookingInteraction();
     };
 
     document.addEventListener('click', onClick, true);
     trackMetaPageView(url);
     trackMetaContentView(url);
-    trackMetaInitiateCheckout(url);
 
     return () => {
       document.removeEventListener('click', onClick, true);

@@ -21,7 +21,7 @@ import { BookingSummaryTicket } from './booking-summary-ticket';
 import type { PublicLocale } from '@/lib/i18n/locales';
 import type { BookingMessages, PackageMessages } from '@/lib/i18n/types';
 import { enMessages } from '@/lib/i18n/messages/en';
-import { trackBookingSchedule } from '@/lib/meta-pixel';
+import { trackBookingInteraction, trackMetaCustomEvent, trackMetaEvent } from '@/lib/meta-pixel';
 
 const steps = ['Select Package', 'Select Duration', 'Vehicles & Guests', 'Date & Time', 'Contact Details', 'Review & Submit'];
 const fieldLabel = 'grid gap-1.5 text-sm font-semibold text-foreground';
@@ -209,6 +209,9 @@ export function BookingWizard({ locale = 'en', messages = enMessages.booking, pa
   const [packageGroups, setPackageGroups] = useState<PackageGroup[]>([]);
   const [packageError, setPackageError] = useState('');
   const [now, setNow] = useState(() => new Date());
+  const [bookingDateTracked, setBookingDateTracked] = useState(false);
+  const [checkoutTracked, setCheckoutTracked] = useState(false);
+  const [registrationTracked, setRegistrationTracked] = useState(false);
 
   const experience = getExperience(draft.experienceType);
   const isSales = experience.serviceType === 'sales_inquiry';
@@ -231,6 +234,7 @@ export function BookingWizard({ locale = 'en', messages = enMessages.booking, pa
 
   function selectPackageGroup(group: PackageGroup) {
     setDraft(draftFromPackageGroup(group));
+    trackBookingInteraction();
   }
 
   useEffect(() => {
@@ -339,9 +343,22 @@ export function BookingWizard({ locale = 'en', messages = enMessages.booking, pa
 
   function continueToNextStep() {
     if (step === 3 && canContinue) {
-      trackBookingSchedule(`${draft.preferredDate}|${draft.preferredTime}`);
+      if (!checkoutTracked) {
+        trackMetaEvent('InitiateCheckout');
+        setCheckoutTracked(true);
+      }
+    }
+    if (step === 4 && canContinue && !registrationTracked) {
+      trackMetaEvent('CompleteRegistration');
+      setRegistrationTracked(true);
     }
     setStep((current) => Math.min(5, current + 1));
+  }
+
+  function trackBookingDate() {
+    if (bookingDateTracked) return;
+    trackMetaCustomEvent('BookingDateSelected');
+    setBookingDateTracked(true);
   }
 
   function startAnother() {
@@ -407,7 +424,7 @@ export function BookingWizard({ locale = 'en', messages = enMessages.booking, pa
               {step === 0 && !packageFlow ? <PackageSelectionStep groups={packageGroups} selectedRateId={draft.selectedPackageRateId || ''} onSelect={selectPackageGroup} messages={messages} packageMessages={packageMessages} /> : null}
               {step === 1 ? <DurationStep draft={draft} onUpdate={updateDraft} messages={messages} /> : null}
               {step === 2 ? <PartyStep draft={draft} capacity={capacity} capacityPerVehicle={capacityPerVehicle} exceeded={capacityExceeded} onUpdate={updateDraft} messages={messages} /> : null}
-              {step === 3 ? <ScheduleStep draft={draft} now={now} onUpdate={updateDraft} locale={locale} messages={messages} /> : null}
+              {step === 3 ? <ScheduleStep draft={draft} now={now} onUpdate={updateDraft} onDateSelected={trackBookingDate} locale={locale} messages={messages} /> : null}
               {step === 4 ? <ContactStep draft={draft} onUpdate={updateDraft} messages={messages} /> : null}
               {step === 5 ? <ReviewStep draft={draft} locale={locale} messages={messages} /> : null}
 
@@ -519,7 +536,7 @@ function Counter({ label, helper, value, min, max, onChange }: { label: string; 
   return <div className="rounded-[1.25rem] border border-border bg-white p-4"><div className="flex items-center justify-between gap-4"><div><p className="font-semibold text-foreground">{label}</p><p className="mt-1 text-xs text-muted-foreground">{helper}</p></div><div className="flex items-center gap-3"><button type="button" disabled={value <= min} onClick={() => onChange(value - 1)} className="flex size-8 items-center justify-center rounded-full border border-border bg-background text-primary transition hover:bg-primary-50 disabled:opacity-35" aria-label={`Decrease ${label}`}><Minus className="size-4" /></button><span className="w-6 text-center text-base font-bold text-foreground">{value}</span><button type="button" disabled={value >= max} onClick={() => onChange(value + 1)} className="flex size-8 items-center justify-center rounded-full border border-border bg-background text-primary transition hover:bg-primary-50 disabled:opacity-35" aria-label={`Increase ${label}`}><Plus className="size-4" /></button></div></div></div>;
 }
 
-function ScheduleStep({ draft, now, onUpdate, locale, messages }: { draft: BookingDraft; now: Date; onUpdate: (values: Partial<BookingDraft>) => void; locale: PublicLocale; messages: BookingMessages }) {
+function ScheduleStep({ draft, now, onUpdate, onDateSelected, locale, messages }: { draft: BookingDraft; now: Date; onUpdate: (values: Partial<BookingDraft>) => void; onDateSelected: () => void; locale: PublicLocale; messages: BookingMessages }) {
   const todayIso = dubaiDateValue(now);
   const todayParts = dubaiDateParts(now);
   const [visibleMonth, setVisibleMonth] = useState(() => new Date(todayParts.year, todayParts.month - 1, 1));
@@ -535,6 +552,7 @@ function ScheduleStep({ draft, now, onUpdate, locale, messages }: { draft: Booki
   function selectDate(iso: string) {
     const nextTime = draft.preferredTime && isSelectableDubaiBookingTime(iso, draft.preferredTime, now) ? draft.preferredTime : '';
     onUpdate({ preferredDate: iso, preferredTime: nextTime });
+    onDateSelected();
   }
 
   return (

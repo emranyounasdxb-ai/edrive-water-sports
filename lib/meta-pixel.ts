@@ -1,17 +1,18 @@
-export type MetaEvent = 'PageView' | 'ViewContent' | 'Contact' | 'Lead' | 'Schedule' | 'InitiateCheckout' | 'CompleteRegistration';
-type EventSink = (event: MetaEvent) => void;
+export type MetaEvent = 'PageView' | 'ViewContent' | 'Contact' | 'Lead' | 'InitiateCheckout' | 'CompleteRegistration';
+export type MetaCustomEvent = 'BookingDateSelected';
+type TrackedMetaEvent = MetaEvent | MetaCustomEvent;
+type EventSink = (event: TrackedMetaEvent) => void;
 
 const marketingPaths = new Set(['/', '/rentals', '/fleet', '/jet-ski-rentals', '/jet-car-rentals', '/membership', '/contact', '/booking', '/privacy-policy', '/terms-and-conditions', '/refund-replacement-policy']);
 const contentPaths = new Set(['/rentals', '/jet-ski-rentals', '/jet-car-rentals', '/membership']);
 const bookingParameters = new Set(['package', 'category', 'capacity', 'duration']);
 const marketingParameters = new Set(['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'fbclid', 'gclid']);
-const completedBookings = new Set<string>();
-const completedSchedules = new Set<string>();
+const completedBookingLeads = new Set<string>();
 let sink: EventSink | undefined;
-let pendingEvents: MetaEvent[] = [];
+let pendingEvents: TrackedMetaEvent[] = [];
 let lastPageView = '';
 let lastContentView = '';
-let lastCheckout = '';
+let bookingInteractionTracked = false;
 
 function normalizedPathname(url: URL) {
   return url.pathname.replace(/^\/(ar|ru)(?=\/|$)/, '').replace(/\/$/, '') || '/';
@@ -57,6 +58,14 @@ export function trackMetaEvent(event: MetaEvent) {
   } catch { /* Analytics must never affect public actions. */ }
 }
 
+export function trackMetaCustomEvent(event: MetaCustomEvent) {
+  try {
+    if (!eligibleNow()) return;
+    if (sink) sink(event);
+    else pendingEvents.push(event);
+  } catch { /* Analytics must never affect public actions. */ }
+}
+
 export function trackMetaPageView(url: URL) {
   const key = viewKey(url);
   if (!isMetaEligibleUrl(url) || lastPageView === key) return;
@@ -71,39 +80,25 @@ export function trackMetaContentView(url: URL) {
   trackMetaEvent('ViewContent');
 }
 
-export function trackMetaInitiateCheckout(url: URL) {
-  const key = viewKey(url);
-  if (!isMetaEligibleUrl(url) || normalizedPathname(url) !== '/booking' || lastCheckout === key) return;
-  lastCheckout = key;
-  trackMetaEvent('InitiateCheckout');
-}
-
-// The selected date/time stay local and are used only to suppress repeat events.
-export function trackBookingSchedule(localScheduleKey: string) {
+export function trackBookingInteraction() {
   try {
-    if (!eligibleNow() || !localScheduleKey) return;
-    const pathname = window.location.pathname.replace(/\/$/, '');
-    if (!/^\/(?:ar\/|ru\/)?booking$/.test(pathname)) return;
-    const key = `edrive:meta:schedule:${localScheduleKey}`;
-    if (completedSchedules.has(key)) return;
-    try { if (sessionStorage.getItem(key)) return; } catch { /* Storage may be disabled. */ }
-    completedSchedules.add(key);
-    try { sessionStorage.setItem(key, '1'); } catch { /* In-memory protection remains. */ }
-    trackMetaEvent('Schedule');
-  } catch { /* Analytics must never affect booking progress. */ }
+    if (!eligibleNow() || bookingInteractionTracked) return;
+    bookingInteractionTracked = true;
+    trackMetaEvent('Contact');
+  } catch { /* Analytics must never affect booking interaction. */ }
 }
 
 // The reference stays local: it is never included in the Meta event.
-export function trackBookingCompletion(localBookingKey: string) {
+export function trackBookingLead(localBookingKey: string) {
   try {
     if (!eligibleNow() || !localBookingKey) return;
     const pathname = window.location.pathname.replace(/\/$/, '');
     if (!/^\/(?:ar\/|ru\/)?booking$/.test(pathname)) return;
-    const key = `edrive:meta:completed:${localBookingKey}`;
-    if (completedBookings.has(key)) return;
+    const key = `edrive:meta:lead:${localBookingKey}`;
+    if (completedBookingLeads.has(key)) return;
     try { if (sessionStorage.getItem(key)) return; } catch { /* Storage may be disabled. */ }
-    completedBookings.add(key);
+    completedBookingLeads.add(key);
     try { sessionStorage.setItem(key, '1'); } catch { /* In-memory protection remains. */ }
-    trackMetaEvent('CompleteRegistration');
+    trackMetaEvent('Lead');
   } catch { /* Analytics must never affect booking success. */ }
 }
