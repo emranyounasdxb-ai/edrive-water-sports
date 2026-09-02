@@ -53,7 +53,7 @@ if (fs.existsSync(file('index.html'))) {
   assert(home.includes(expectedTitle), 'Homepage SEO title is missing or duplicated.');
   assert(!home.includes('| eDrive Water Sports | eDrive Water Sports'), 'Homepage contains a duplicated brand suffix.');
   assert(home.includes('application/ld+json'), 'Homepage structured data is missing.');
-  assert(home.includes('+971 4 611 3114'), 'Final company phone number is missing from homepage export.');
+  assert(home.includes('+971568282268'), 'Final company phone number is missing from homepage export.');
 }
 
 if (fs.existsSync(file('my-booking/index.html'))) {
