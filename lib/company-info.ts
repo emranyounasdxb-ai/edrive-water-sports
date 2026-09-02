@@ -1,7 +1,7 @@
 export const companyInfo = {
   supportEmail: 'info@edrivedubai.ae',
   bookingEmail: 'booking@edrivedubai.ae',
-  landlineDisplay: '+971568282268',
+  landlineDisplay: '+971 56 828 2268',
   landlineHref: '+971568282268',
   whatsappDisplay: '+971568282268',
   whatsappHref: '971568282268',
